@@ -1,5 +1,6 @@
 import type { Address } from "viem";
 import {
+  IPFS_GATEWAY_URL,
   PUMP_FACTORY_ADDRESS,
   PUMP_NUSD_ADDRESS,
   PUMP_START_BLOCK,
@@ -7,6 +8,7 @@ import {
 } from "@/lib/publicConfig";
 
 export {
+  IPFS_GATEWAY_URL,
   PUMP_FACTORY_ADDRESS,
   PUMP_NUSD_ADDRESS,
   PUMP_START_BLOCK,
@@ -16,10 +18,6 @@ export {
 export const ZERO_ADDRESS: Address = "0x0000000000000000000000000000000000000000";
 
 export const PUMP_CHAIN_ID = 4441 as const;
-export const IPFS_GATEWAY_URL = (
-  process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL?.trim() ||
-  "https://gateway.pinata.cloud/ipfs/"
-).replace(/\/*$/, "/");
 
 export const PUMP_CREATE_FEE = 1_000_000_000_000_000_000n;
 export const PUMP_BPS_DENOMINATOR = 10_000n;

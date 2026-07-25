@@ -19,3 +19,4 @@ export const PUMP_NUSD_ADDRESS: Address = "0x5317e21aba902c6c7087a84457bc02ffe99
 export const PUMP_START_BLOCK = 32_907_625n;
 export const PUMP_SUBGRAPH_URL =
   "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxpump-testnet/staging/gn" as const;
+export const IPFS_GATEWAY_URL = "https://gateway.pinata.cloud/ipfs/" as const;
