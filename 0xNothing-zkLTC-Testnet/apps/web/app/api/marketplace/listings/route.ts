@@ -73,16 +73,24 @@ export async function GET(request: Request) {
       15_000,
       "Marketplace listing read timed out",
     );
-    const purchasable = await withTimeout(
-      filterPurchasableListings(candidates),
-      15_000,
-      "Marketplace listing validation timed out",
-    );
-    const tokens = await withTimeout(
-      fetchTokensForListings(purchasable),
+    const [purchasable, pixelTokens] = await Promise.all([
+      withTimeout(
+        filterPurchasableListings(candidates),
+        15_000,
+        "Marketplace listing validation timed out",
+      ),
+      withTimeout(
+        fetchPixelTokensForListings(candidates),
+        30_000,
+        "Marketplace pixel metadata read timed out",
+      ),
+    ]);
+    const genericTokens = await withTimeout(
+      fetchGenericTokensForListings(purchasable),
       30_000,
-      "Marketplace metadata read timed out",
+      "Marketplace NFT metadata read timed out",
     );
+    const tokens = { ...pixelTokens, ...genericTokens };
 
     const listings = purchasable.filter((listing) => {
       if (isPixelCollection(listing.collection)) return true;
@@ -186,38 +194,55 @@ async function fetchActiveListingsOnchain(): Promise<ListingDTO[]> {
 
 async function filterPurchasableListings(listings: ListingDTO[]): Promise<ListingDTO[]> {
   if (listings.length === 0) return [];
+  const approvalPairs = new Map<string, { collection: Address; seller: Address }>();
+  for (const listing of listings) {
+    const key = `${listing.collection.toLowerCase()}:${listing.seller.toLowerCase()}`;
+    if (!approvalPairs.has(key)) {
+      approvalPairs.set(key, { collection: listing.collection, seller: listing.seller });
+    }
+  }
+  const uniqueApprovalPairs = [...approvalPairs.entries()];
+  const approvalResultIndex = new Map(
+    uniqueApprovalPairs.map(([key], index) => [key, listings.length * 2 + index]),
+  );
   const results = await publicClient.multicall({
     allowFailure: true,
     batchSize: MARKETPLACE_MULTICALL_BATCH_SIZE,
-    contracts: listings.flatMap((listing) => {
-      const tokenId = BigInt(listing.tokenId);
-      return [
+    contracts: [
+      ...listings.flatMap((listing) => {
+        const tokenId = BigInt(listing.tokenId);
+        return [
+          {
+            address: listing.collection,
+            abi: PixelNFTABI,
+            functionName: "ownerOf" as const,
+            args: [tokenId] as const,
+          },
+          {
+            address: listing.collection,
+            abi: PixelNFTABI,
+            functionName: "getApproved" as const,
+            args: [tokenId] as const,
+          },
+        ];
+      }),
+      ...uniqueApprovalPairs.map(([, pair]) => (
         {
-          address: listing.collection,
-          abi: PixelNFTABI,
-          functionName: "ownerOf" as const,
-          args: [tokenId] as const,
-        },
-        {
-          address: listing.collection,
-          abi: PixelNFTABI,
-          functionName: "getApproved" as const,
-          args: [tokenId] as const,
-        },
-        {
-          address: listing.collection,
+          address: pair.collection,
           abi: PixelNFTABI,
           functionName: "isApprovedForAll" as const,
-          args: [listing.seller, PIXEL_MARKETPLACE_ADDRESS] as const,
-        },
-      ];
-    }),
+          args: [pair.seller, PIXEL_MARKETPLACE_ADDRESS] as const,
+        }
+      )),
+    ],
   });
 
   return listings.filter((listing, index) => {
-    const owner = results[index * 3];
-    const approved = results[index * 3 + 1];
-    const approvedForAll = results[index * 3 + 2];
+    const owner = results[index * 2];
+    const approved = results[index * 2 + 1];
+    const pairKey = `${listing.collection.toLowerCase()}:${listing.seller.toLowerCase()}`;
+    const approvedForAllIndex = approvalResultIndex.get(pairKey);
+    const approvedForAll = approvedForAllIndex === undefined ? undefined : results[approvedForAllIndex];
     const ownerMatches =
       owner?.status === "success" &&
       String(owner.result).toLowerCase() === listing.seller.toLowerCase();
@@ -230,7 +255,7 @@ async function filterPurchasableListings(listings: ListingDTO[]): Promise<Listin
   });
 }
 
-async function fetchTokensForListings(
+async function fetchPixelTokensForListings(
   listings: ListingDTO[],
 ): Promise<Record<string, TokenDTO | null>> {
   const output: Record<string, TokenDTO | null> = {};
@@ -253,15 +278,20 @@ async function fetchTokensForListings(
     output[marketplaceNftKey(listing.collection, listing.tokenId)] = metadata;
   }
 
+  return output;
+}
+
+async function fetchGenericTokensForListings(
+  listings: ListingDTO[],
+): Promise<Record<string, TokenDTO | null>> {
   const genericListings = listings.filter((listing) => !isPixelCollection(listing.collection));
-  const genericMetadata = await fetchValidatedErc721Metadata(
+  if (genericListings.length === 0) return {};
+  return fetchValidatedErc721Metadata(
     genericListings.map((listing) => ({
       collection: listing.collection,
       tokenId: listing.tokenId,
     })),
   );
-  Object.assign(output, genericMetadata);
-  return output;
 }
 
 async function fetchPixelTokensOnchain(

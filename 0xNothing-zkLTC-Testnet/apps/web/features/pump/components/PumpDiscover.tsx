@@ -58,7 +58,7 @@ export function PumpDiscover() {
           <PumpErrorState message={trendingQuery.error.message} onRetry={() => void trendingQuery.refetch()} />
         ) : trendingMarkets.length ? (
           <div className="pump-token-grid pump-trending-grid">
-            {trendingMarkets.map((market) => <TokenCard key={market.tokenAddress} market={market} />)}
+            {trendingMarkets.map((market) => <TokenCard key={market.tokenAddress} market={market} priority />)}
           </div>
         ) : (
           <p className="pump-empty-inline">No traded markets yet.</p>

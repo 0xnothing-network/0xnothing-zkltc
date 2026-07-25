@@ -24,6 +24,6 @@ export async function GET(request: Request) {
     limit: Number(params.get("limit") || PUMP_CANDLE_LIMITS[period]),
   });
   return NextResponse.json(payload, {
-    headers: { "Cache-Control": "public, s-maxage=8, stale-while-revalidate=15" },
+    headers: { "Cache-Control": "private, no-store, max-age=0, must-revalidate" },
   });
 }

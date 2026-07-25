@@ -58,6 +58,11 @@ interface GraphResponse<T> {
   errors?: Array<{ message?: string }>;
 }
 
+interface GraphMeta {
+  block: { number: number | string };
+  hasIndexingErrors: boolean;
+}
+
 interface GraphMarket {
   id: string;
   token: string;
@@ -92,6 +97,7 @@ interface GraphTrade {
   priceNusd: string;
   timestamp: string;
   blockNumber: string;
+  logIndex: string;
   txHash: string;
 }
 
@@ -107,6 +113,10 @@ interface GraphCandle {
   close: string;
   volumeNusd: string;
   tradeCount: string;
+}
+
+interface GraphCandleMarket {
+  priceNusd: string;
 }
 
 interface GraphTokenBalance {
@@ -288,6 +298,7 @@ export async function getPumpMarket(token: Address): Promise<PumpMarketResponse>
 
 export async function getPumpTrades(options: {
   token?: Address;
+  trader?: Address;
   limit?: number;
   skip?: number;
 }): Promise<PumpTradesResponse> {
@@ -299,15 +310,25 @@ export async function getPumpTrades(options: {
   const skip = clamp(options.skip ?? 0, 0, 10_000);
   if (PUMP_SUBGRAPH_URL) {
     try {
-      const where = options.token ? "where: { market: $market }," : "";
+      const filters: string[] = [];
       const variables: Record<string, unknown> = { first: limit, skip };
-      const declaration = options.token ? "$market: Bytes!, " : "";
-      if (options.token) variables.market = options.token.toLowerCase();
+      const declarations = ["$first: Int!", "$skip: Int!"];
+      if (options.token) {
+        filters.push("market: $market");
+        declarations.unshift("$market: Bytes!");
+        variables.market = options.token.toLowerCase();
+      }
+      if (options.trader) {
+        filters.push("trader: $trader");
+        declarations.unshift("$trader: Bytes!");
+        variables.trader = options.trader.toLowerCase();
+      }
+      const where = filters.length > 0 ? `where: { ${filters.join(", ")} },` : "";
       const payload = await graphFetch<{ trades: GraphTrade[] }>(
-        `query PumpTrades(${declaration}$first: Int!, $skip: Int!) {
+        `query PumpTrades(${declarations.join(", ")}) {
           trades(first: $first, skip: $skip, ${where} orderBy: timestamp, orderDirection: desc) {
             id market { id token } trader side nusdAmount userNusdAmount tokenAmount
-            feeNusd priceNusd timestamp blockNumber txHash
+            feeNusd priceNusd timestamp blockNumber logIndex txHash
           }
         }`,
         variables,
@@ -319,7 +340,7 @@ export async function getPumpTrades(options: {
       };
     } catch (error) {
       return {
-        trades: await getRpcTrades(options.token, limit, skip),
+        trades: await getRpcTrades(options.token, limit, skip, undefined, options.trader),
         source: "rpc",
         configured: true,
         warning: warningMessage(error, "Subgraph unavailable; using recent RPC trades."),
@@ -328,7 +349,7 @@ export async function getPumpTrades(options: {
   }
 
   return {
-    trades: await getRpcTrades(options.token, limit, skip),
+    trades: await getRpcTrades(options.token, limit, skip, undefined, options.trader),
     source: "rpc",
     configured: true,
     warning: "Pump subgraph is not configured; history is limited to recent RPC logs.",
@@ -441,8 +462,14 @@ export async function getPumpCandles(options: {
   );
   if (PUMP_SUBGRAPH_URL) {
     try {
-      const payload = await graphFetch<{ candles: GraphCandle[] }>(
+      const payload = await graphFetch<{
+        candles: GraphCandle[];
+        market: GraphCandleMarket | null;
+        _meta: GraphMeta;
+      }>(
         `query PumpCandles($market: Bytes!, $period: Int!, $first: Int!) {
+          _meta { block { number } hasIndexingErrors }
+          market(id: $market) { priceNusd }
           candles(
             first: $first
             where: { market: $market, period: $period }
@@ -454,27 +481,62 @@ export async function getPumpCandles(options: {
         }`,
         { market: options.token.toLowerCase(), period: period / 60, first: limit },
       );
-      if (period === 60 && payload.candles.length === 0) {
-        const tradeHistory = await getPumpTrades({
-          token: options.token,
-          limit: 200,
-          skip: 0,
-        });
+      let candles = payload.candles
+        .map((candle) => normalizeGraphCandle(candle, period))
+        .reverse();
+      let source: PumpCandlesResponse["source"] = "subgraph";
+      let warning: string | undefined;
+      if (payload._meta.hasIndexingErrors) {
+        const rpcTrades = await getRpcTrades(options.token, 500, 0, RPC_TRADE_LOOKBACK);
         return {
-          candles: aggregateCandles(tradeHistory.trades, period).slice(-limit),
-          source: tradeHistory.source,
+          candles: aggregateCandles(rpcTrades, period).slice(-limit),
+          source: "rpc",
           configured: true,
-          warning: tradeHistory.warning
-            ?? "The 1m view uses indexed trades until the candle index is reindexed.",
+          warning: "The candle index reported an error; chart data is using live RPC trades.",
         };
       }
+      if (period === 60 && payload.candles.length === 0) {
+        const rpcTrades = await getRpcTrades(
+          options.token,
+          Math.min(500, Math.max(limit, 200)),
+          0,
+          RPC_TRADE_LOOKBACK,
+        );
+        candles = aggregateCandles(rpcTrades, period).slice(-limit);
+        source = "rpc";
+        warning = "The 1m view uses live RPC trades until the candle index is reindexed.";
+      }
+
+      const indexedBlock = safeBigInt(payload._meta?.block.number);
+      if (source === "subgraph" && indexedBlock > 0n) {
+        try {
+          const liveHead = await getRpcTradesAfterBlock(options.token, indexedBlock);
+          candles = mergeLiveTradesIntoCandles(
+            candles,
+            liveHead.trades,
+            period,
+            limit,
+            decimalString(payload.market?.priceNusd ?? "0"),
+          );
+          if (liveHead.truncated) {
+            warning = "The live RPC overlay was limited because the subgraph is far behind.";
+          }
+        } catch (error) {
+          warning = warningMessage(
+            error,
+            "Live RPC updates are temporarily delayed; indexed chart history remains available.",
+          );
+        }
+      }
+
       return {
-        candles: payload.candles.map((candle) => normalizeGraphCandle(candle, period)).reverse(),
-        source: "subgraph",
+        candles,
+        source,
         configured: true,
+        warning,
       };
     } catch (error) {
-      const trades = await getRpcTrades(options.token, 500, 0);
+      const trades = await getRpcTrades(options.token, 500, 0, RPC_TRADE_LOOKBACK);
       return {
         candles: aggregateCandles(trades, period).slice(-limit),
         source: "rpc",
@@ -484,7 +546,7 @@ export async function getPumpCandles(options: {
     }
   }
 
-  const trades = await getRpcTrades(options.token, 500, 0);
+  const trades = await getRpcTrades(options.token, 500, 0, RPC_TRADE_LOOKBACK);
   return {
     candles: aggregateCandles(trades, period).slice(-limit),
     source: "rpc",
@@ -818,14 +880,15 @@ async function getRpcTrades(
   token: Address | undefined,
   limit: number,
   skip: number,
+  maxLookbackBlocks?: bigint,
+  trader?: Address,
 ): Promise<PumpTrade[]> {
   const latest = await publicClient.getBlockNumber();
-  const fromBlock =
-    PUMP_START_BLOCK > 0n
-      ? PUMP_START_BLOCK
-      : latest > RPC_TRADE_LOOKBACK
-        ? latest - RPC_TRADE_LOOKBACK
-        : 0n;
+  const deploymentBlock = PUMP_START_BLOCK > 0n ? PUMP_START_BLOCK : 0n;
+  const lookbackBlock = maxLookbackBlocks !== undefined && latest > maxLookbackBlocks
+    ? latest - maxLookbackBlocks
+    : 0n;
+  const fromBlock = deploymentBlock > lookbackBlock ? deploymentBlock : lookbackBlock;
   const newestFirst: PumpTradeLog[] = [];
   let chunkTo = latest;
   const needed = skip + limit;
@@ -833,13 +896,17 @@ async function getRpcTrades(
     const chunkFrom = chunkTo - fromBlock + 1n > RPC_LOG_BLOCK_CHUNK
       ? chunkTo - RPC_LOG_BLOCK_CHUNK + 1n
       : fromBlock;
-    const chunk = await fetchPumpTradeLogChunk(token, chunkFrom, chunkTo);
+    const chunk = await fetchPumpTradeLogChunk(token, chunkFrom, chunkTo, trader);
     newestFirst.push(...chunk.reverse());
     if (chunkFrom === fromBlock) break;
     chunkTo = chunkFrom - 1n;
   }
   const selected = newestFirst.slice(skip, skip + limit);
-  const blockNumbers = [...new Set(selected.map((log) => log.blockNumber.toString()))];
+  return hydratePumpTradeLogs(selected);
+}
+
+async function hydratePumpTradeLogs(logs: PumpTradeLog[]): Promise<PumpTrade[]> {
+  const blockNumbers = [...new Set(logs.map((log) => log.blockNumber.toString()))];
   const timestamps = new Map<string, number>();
   await Promise.all(
     blockNumbers.map(async (blockNumber) => {
@@ -848,7 +915,7 @@ async function getRpcTrades(
     }),
   );
 
-  return selected.map((log) => {
+  return logs.map((log) => {
     const args = log.args;
     const tokenAddress = args.token ? getAddress(args.token) : ZERO_ADDRESS;
     return {
@@ -858,11 +925,13 @@ async function getRpcTrades(
       trader: args.trader ? getAddress(args.trader) : ZERO_ADDRESS,
       side: args.isBuy ? "BUY" : "SELL",
       nusdAmount: (args.curveNusdAmount ?? 0n).toString(),
+      userNusdAmount: (args.userNusdAmount ?? 0n).toString(),
       tokenAmount: (args.tokenAmount ?? 0n).toString(),
       feeNusd: (args.feeNusd ?? 0n).toString(),
       priceNusd: formatUnits(args.spotPriceNusdWad ?? 0n, 18),
       timestamp: timestamps.get(log.blockNumber.toString()) ?? 0,
       blockNumber: safeNumber(log.blockNumber),
+      logIndex: Number(log.logIndex ?? 0),
       txHash: log.transactionHash ?? ZERO_HASH,
     };
   });
@@ -872,17 +941,106 @@ async function fetchPumpTradeLogChunk(
   token: Address | undefined,
   fromBlock: bigint,
   toBlock: bigint,
+  trader?: Address,
 ) {
+  const args = token && trader
+    ? { token, trader }
+    : token
+      ? { token }
+      : trader
+        ? { trader }
+        : undefined;
   return publicClient.getLogs({
     address: PUMP_FACTORY_ADDRESS,
     event: TOKEN_TRADED_EVENT,
-    args: token ? { token } : undefined,
+    args,
     fromBlock,
     toBlock,
   });
 }
 
 type PumpTradeLog = Awaited<ReturnType<typeof fetchPumpTradeLogChunk>>[number];
+
+async function getRpcTradesAfterBlock(
+  token: Address,
+  indexedBlock: bigint,
+): Promise<{ trades: PumpTrade[]; truncated: boolean }> {
+  const latest = await publicClient.getBlockNumber();
+  if (indexedBlock >= latest) return { trades: [], truncated: false };
+
+  const oldestRealtimeBlock = latest >= RPC_TRADE_LOOKBACK
+    ? latest - RPC_TRADE_LOOKBACK + 1n
+    : 0n;
+  let chunkFrom = indexedBlock + 1n;
+  const truncated = chunkFrom < oldestRealtimeBlock;
+  if (truncated) chunkFrom = oldestRealtimeBlock;
+
+  const logs: PumpTradeLog[] = [];
+  while (chunkFrom <= latest) {
+    const candidateTo = chunkFrom + RPC_LOG_BLOCK_CHUNK - 1n;
+    const chunkTo = candidateTo < latest ? candidateTo : latest;
+    logs.push(...await fetchPumpTradeLogChunk(token, chunkFrom, chunkTo));
+    chunkFrom = chunkTo + 1n;
+  }
+
+  return {
+    trades: await hydratePumpTradeLogs(logs),
+    truncated,
+  };
+}
+
+function mergeLiveTradesIntoCandles(
+  indexedCandles: PumpCandle[],
+  liveTrades: PumpTrade[],
+  period: PumpCandlePeriod,
+  limit: number,
+  indexedPrice: string,
+): PumpCandle[] {
+  if (!liveTrades.length) return indexedCandles.slice(-limit);
+
+  const candles = new Map<number, PumpCandle>(
+    indexedCandles.map((candle) => [candle.bucket, { ...candle }]),
+  );
+  // getLogs returns canonical block/transaction/log order, and the forward
+  // chunk scan preserves it. Do not sort by transaction hash: that can change
+  // the close price when multiple trades land in the same block.
+  for (const trade of liveTrades) {
+    if (!trade.timestamp || Number(trade.priceNusd) <= 0) continue;
+    const bucket = Math.floor(trade.timestamp / period) * period;
+    const existing = candles.get(bucket);
+    if (existing) {
+      existing.high = decimalMax(existing.high, trade.priceNusd);
+      existing.low = decimalMin(existing.low, trade.priceNusd);
+      existing.close = trade.priceNusd;
+      existing.volumeNusd = (BigInt(existing.volumeNusd) + BigInt(trade.nusdAmount)).toString();
+      existing.tradeCount += 1;
+      continue;
+    }
+
+    const previous = [...candles.values()]
+      .filter((candle) => candle.bucket < bucket)
+      .sort((left, right) => right.bucket - left.bucket)[0];
+    const open = previous?.close
+      ?? (Number(indexedPrice) > 0 ? indexedPrice : trade.priceNusd);
+    candles.set(bucket, {
+      id: `${trade.tokenAddress}-${period}-${bucket}`,
+      marketAddress: trade.tokenAddress,
+      period,
+      bucket,
+      timestamp: bucket,
+      open,
+      high: decimalMax(open, trade.priceNusd),
+      low: decimalMin(open, trade.priceNusd),
+      close: trade.priceNusd,
+      volumeNusd: trade.nusdAmount,
+      tradeCount: 1,
+    });
+  }
+
+  return [...candles.values()]
+    .sort((left, right) => left.timestamp - right.timestamp)
+    .slice(-limit);
+}
 
 function aggregateCandles(trades: PumpTrade[], period: PumpCandlePeriod): PumpCandle[] {
   const buckets = new Map<number, PumpCandle>();
@@ -974,11 +1132,13 @@ function normalizeGraphTrade(trade: GraphTrade): PumpTrade {
     trader: safeAddress(trade.trader),
     side: trade.side === "SELL" ? "SELL" : "BUY",
     nusdAmount: integerString(trade.nusdAmount),
+    userNusdAmount: integerString(trade.userNusdAmount),
     tokenAmount: integerString(trade.tokenAmount),
     feeNusd: integerString(trade.feeNusd),
     priceNusd: decimalString(trade.priceNusd),
     timestamp: safeNumber(trade.timestamp),
     blockNumber: safeNumber(trade.blockNumber),
+    logIndex: safeNumber(trade.logIndex),
     txHash: /^0x[0-9a-fA-F]{64}$/.test(trade.txHash) ? (trade.txHash as Hex) : ZERO_HASH,
   };
 }
@@ -1058,6 +1218,15 @@ function safeAddress(value: string): Address {
 function safeNumber(value: string | number | bigint): number {
   const number = Number(value);
   return Number.isSafeInteger(number) && number >= 0 ? number : 0;
+}
+
+function safeBigInt(value: string | number | bigint | undefined): bigint {
+  try {
+    const number = BigInt(value ?? 0);
+    return number >= 0n ? number : 0n;
+  } catch {
+    return 0n;
+  }
 }
 
 function integerString(value: string): string {

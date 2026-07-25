@@ -28,6 +28,11 @@ export function ipfsToGatewayUrl(uri: string): string {
   if (!uri) return "";
   if (uri.startsWith("ipfs://")) {
     const cidPath = uri.slice("ipfs://".length).replace(/^ipfs\//, "");
+    const [cid, ...pathParts] = cidPath.split("/");
+    if (/^b[a-z2-7]{20,}$/i.test(cid)) {
+      const path = pathParts.length > 0 ? `/${pathParts.join("/")}` : "/";
+      return `https://${cid.toLowerCase()}.ipfs.dweb.link${path}`;
+    }
     return `${IPFS_GATEWAY_URL}${cidPath}`;
   }
   return /^https?:\/\//i.test(uri) ? uri : "";

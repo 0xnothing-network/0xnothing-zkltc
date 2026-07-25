@@ -8803,6 +8803,27 @@ img[src^="data:image/svg+xml"],
   color: var(--pump-green);
 }
 
+.pump-portfolio-profit {
+  display: block;
+  margin-top: 4px;
+  color: var(--pump-muted);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.pump-portfolio-profit-positive {
+  color: var(--pump-green);
+}
+
+.pump-portfolio-profit-negative {
+  color: var(--pump-red);
+}
+
 .pump-portfolio-arrow {
   color: var(--pump-muted);
   font-size: 13px;

@@ -60,6 +60,14 @@ interface ActivityResponse {
 
 const PAGE_SIZE = 20;
 const ACTIVITY_PAGE_SIZE = 24;
+const LISTINGS_CACHE_KEY = "0xpixel-marketplace-listings-v1";
+const LISTINGS_FRESH_FOR_MS = 15_000;
+const LISTINGS_SESSION_MAX_AGE_MS = 5 * 60_000;
+
+interface ListingsCacheEntry {
+  data: ListingsResponse;
+  timestamp: number;
+}
 
 const ACTIVITY_FILTERS: Array<{ key: ActivityFilter; label: string }> = [
   { key: "all", label: "All" },
@@ -105,23 +113,23 @@ function MarketplaceBody({ userAddress }: BodyProps) {
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
   const [activityRefreshKey, setActivityRefreshKey] = useState(0);
-  const abortRef = useRef<AbortController | null>(null);
+  const requestRef = useRef<{ controller: AbortController; force: boolean } | null>(null);
   const forceRefreshRef = useRef(false);
 
   // Cache for API responses (persists across renders)
   const cacheRef = useRef<{ data: ListingsResponse | null; timestamp: number }>({ data: null, timestamp: 0 });
-  const CACHE_DURATION = 15_000; // 15 seconds
 
   const fetchListings = useCallback(async (force = false) => {
-    abortRef.current?.abort();
+    if (!force && requestRef.current && !requestRef.current.controller.signal.aborted) return;
+    requestRef.current?.controller.abort();
     const ctrl = new AbortController();
-    abortRef.current = ctrl;
+    requestRef.current = { controller: ctrl, force };
     setLoading(true);
     setError(null);
     try {
       // Check cache first
       const now = Date.now();
-      if (!force && cacheRef.current.data && now - cacheRef.current.timestamp < CACHE_DURATION) {
+      if (!force && cacheRef.current.data && now - cacheRef.current.timestamp < LISTINGS_FRESH_FOR_MS) {
         setData(cacheRef.current.data);
         setLoading(false);
         return;
@@ -136,23 +144,52 @@ function MarketplaceBody({ userAddress }: BodyProps) {
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const body = (await r.json()) as ListingsResponse;
-      cacheRef.current = { data: body, timestamp: Date.now() };
+      const entry = { data: body, timestamp: Date.now() };
+      cacheRef.current = entry;
+      writeListingsSessionCache(entry);
       setData(body);
     } catch (err) {
       if ((err as { name?: string }).name === "AbortError") return;
       console.error("[marketplace] load failed:", err);
-      setError("Couldn't load listings. Please retry.");
+      if (!cacheRef.current.data) {
+        setError("Couldn't load listings. Please retry.");
+      }
     } finally {
-      if (!ctrl.signal.aborted) setLoading(false);
+      if (requestRef.current?.controller === ctrl) {
+        requestRef.current = null;
+        if (!ctrl.signal.aborted) setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     const force = forceRefreshRef.current;
     forceRefreshRef.current = false;
+    if (!force) {
+      const persisted = readListingsSessionCache();
+      if (persisted) {
+        cacheRef.current = persisted;
+        setData(persisted.data);
+        setLoading(false);
+      }
+    }
     void fetchListings(force);
-    return () => abortRef.current?.abort();
+    return () => {
+      const request = requestRef.current;
+      request?.controller.abort();
+      if (requestRef.current === request) requestRef.current = null;
+    };
   }, [fetchListings, reloadKey]);
+
+  useEffect(() => {
+    const refreshStaleListings = () => {
+      if (Date.now() - cacheRef.current.timestamp >= LISTINGS_FRESH_FOR_MS) {
+        void fetchListings(false);
+      }
+    };
+    window.addEventListener("focus", refreshStaleListings);
+    return () => window.removeEventListener("focus", refreshStaleListings);
+  }, [fetchListings]);
 
   const listings: RawListing[] = useMemo(() => {
     if (!data) return [];
@@ -189,7 +226,8 @@ function MarketplaceBody({ userAddress }: BodyProps) {
   const pageItems = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const handleRefresh = useCallback(() => {
-    cacheRef.current = { data: null, timestamp: 0 };
+    cacheRef.current = { data: cacheRef.current.data, timestamp: 0 };
+    clearListingsSessionCache();
     forceRefreshRef.current = true;
     setPage(1);
     setReloadKey((k) => k + 1);
@@ -281,9 +319,47 @@ function MarketplaceBody({ userAddress }: BodyProps) {
         </>
       )}
 
-      <MarketplaceActivity refreshKey={activityRefreshKey} />
+      {data ? <MarketplaceActivity refreshKey={activityRefreshKey} /> : null}
     </div>
   );
+}
+
+function readListingsSessionCache(): ListingsCacheEntry | null {
+  try {
+    const raw = window.sessionStorage.getItem(LISTINGS_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<ListingsCacheEntry>;
+    if (
+      typeof parsed.timestamp !== "number" ||
+      Date.now() - parsed.timestamp > LISTINGS_SESSION_MAX_AGE_MS ||
+      !parsed.data ||
+      !Array.isArray(parsed.data.listings) ||
+      typeof parsed.data.tokens !== "object" ||
+      parsed.data.tokens === null
+    ) {
+      window.sessionStorage.removeItem(LISTINGS_CACHE_KEY);
+      return null;
+    }
+    return parsed as ListingsCacheEntry;
+  } catch {
+    return null;
+  }
+}
+
+function writeListingsSessionCache(entry: ListingsCacheEntry) {
+  try {
+    window.sessionStorage.setItem(LISTINGS_CACHE_KEY, JSON.stringify(entry));
+  } catch {
+    // Storage may be unavailable in private browsing; the in-memory cache still works.
+  }
+}
+
+function clearListingsSessionCache() {
+  try {
+    window.sessionStorage.removeItem(LISTINGS_CACHE_KEY);
+  } catch {
+    // Ignore storage access failures.
+  }
 }
 
 function Pagination({ page, totalPages, onChange }: { page: number; totalPages: number; onChange: (p: number) => void }) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { formatUnits, maxUint256, parseUnits } from "viem";
 import {
   useAccount,
@@ -38,6 +39,7 @@ function displayAmount(value: bigint): string {
 
 export function TradePanel({ market, onComplete }: { market: PumpMarket; onComplete?: () => void }) {
   const toast = useToast();
+  const queryClient = useQueryClient();
   const { address, isConnected, chainId } = useAccount();
   const publicClient = usePublicClient();
   const { switchChain } = useSwitchChain();
@@ -109,6 +111,8 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
       nusdAllowance.refetch(),
       tokenAllowance.refetch(),
       mode === "buy" ? buyQuote.refetch() : sellQuote.refetch(),
+      queryClient.invalidateQueries({ queryKey: ["pump-candles", market.tokenAddress] }),
+      queryClient.invalidateQueries({ queryKey: ["pump-trades", market.tokenAddress] }),
     ]);
     onComplete?.();
   };

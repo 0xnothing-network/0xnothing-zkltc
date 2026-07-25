@@ -52,11 +52,13 @@ export interface PumpTrade {
   trader: Address;
   side: PumpTradeSide;
   nusdAmount: string;
+  userNusdAmount: string;
   tokenAmount: string;
   feeNusd: string;
   priceNusd: string;
   timestamp: number;
   blockNumber: number;
+  logIndex: number;
   txHash: Hex;
 }
 

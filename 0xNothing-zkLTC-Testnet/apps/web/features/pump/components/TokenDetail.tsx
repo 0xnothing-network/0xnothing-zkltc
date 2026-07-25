@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
 import type { Address } from "viem";
 import { usePumpMarket } from "@/features/pump/hooks/usePumpData";
@@ -49,6 +50,7 @@ export function TokenDetail({ token }: { token: Address }) {
   }
 
   const imageUrl = ipfsToGatewayUrl(market.imageURI);
+  const optimizeImage = market.imageURI.startsWith("ipfs://");
   const website = metadata.data?.external_url || metadata.data?.properties?.website;
   const social = metadata.data?.properties?.twitter;
   const links = [
@@ -68,9 +70,18 @@ export function TokenDetail({ token }: { token: Address }) {
 
       <section className="pump-token-identity">
         <div className="pump-detail-logo">
-          {imageUrl ? (
+          {imageUrl && optimizeImage ? (
+            <Image
+              src={imageUrl}
+              alt={`${market.name} logo`}
+              width={96}
+              height={96}
+              sizes="(max-width: 640px) 60px, (max-width: 900px) 72px, 96px"
+              priority
+            />
+          ) : imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={imageUrl} alt={`${market.name} logo`} />
+            <img src={imageUrl} alt={`${market.name} logo`} decoding="async" fetchPriority="high" />
           ) : <span>{market.symbol.slice(0, 2)}</span>}
         </div>
         <div className="pump-token-identity-copy">
