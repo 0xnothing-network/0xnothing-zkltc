@@ -1,0 +1,12 @@
+{
+  "network": "litvm-mainnet-pending",
+  "chainId": null,
+  "rpcUrl": null,
+  "contractAddress": "0x0000000000000000000000000000000000000000",
+  "startBlock": 0,
+  "deploymentName": "zeroxpump-mainnet",
+  "deploymentVersion": "1.0.0",
+  "deploymentTag": "prod",
+  "goldskySupported": false,
+  "approvedNetworks": []
+}

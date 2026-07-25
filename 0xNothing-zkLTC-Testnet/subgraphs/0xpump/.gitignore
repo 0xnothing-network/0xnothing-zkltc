@@ -1,0 +1,5 @@
+.env
+build/
+generated/
+node_modules/
+tests/.latest.json

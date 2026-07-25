@@ -1,0 +1,32 @@
+{
+  "status": "blocked-until-official-network-values-are-published",
+  "chainId": null,
+  "rpcUrl": null,
+  "explorerUrl": null,
+  "nativeCurrency": {
+    "name": "zkLTC",
+    "symbol": "zkLTC",
+    "decimals": 18
+  },
+  "diaLtcUsdAdapter": null,
+  "officialStablecoin": {
+    "address": null,
+    "symbol": null,
+    "decimals": null
+  },
+  "pump": {
+    "marketCapDefinition": "spotPriceNusdWad * fixedTotalSupply / 1e18",
+    "initialVirtualMarketCapNusd": "1500",
+    "readyMarketCapNusd": "6000",
+    "derivedRealReserveTargetNusd": "1500"
+  },
+  "graduation": {
+    "enabled": false,
+    "nusdConversionOrBridgeRoute": null,
+    "majorDex": null,
+    "adapter": null,
+    "requiresSynchronousSettlement": true,
+    "requiredLiquidityPositionType": "erc20-lp-token"
+  },
+  "goldskyNetwork": null
+}

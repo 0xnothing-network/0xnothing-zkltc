@@ -1,0 +1,22 @@
+[profile.default]
+src = "src"
+test = "test"
+script = "script"
+out = "out"
+cache_path = "cache"
+libs = ["lib"]
+solc_version = "0.8.34"
+evm_version = "paris"
+optimizer = true
+optimizer_runs = 20_000
+via_ir = true
+skip = ["src/0xpixel/reference/*"]
+fs_permissions = [{ access = "read-write", path = "./deployments" }]
+
+[fuzz]
+runs = 512
+
+[invariant]
+runs = 128
+depth = 32
+fail_on_revert = false

@@ -1,0 +1,42 @@
+{
+  "name": "LitVM LiteForge Testnet",
+  "chainId": 4441,
+  "rpcUrl": "https://liteforge.rpc.caldera.xyz/infra-partner-http",
+  "explorerUrl": "https://liteforge.explorer.caldera.xyz",
+  "nativeCurrency": {
+    "name": "zkLTC",
+    "symbol": "zkLTC",
+    "decimals": 18
+  },
+  "dia": {
+    "ltcUsdAdapter": "0x45dDa5d881BD2C917976CCfde74fFd6f6412da29",
+    "documentedHeartbeatSeconds": 3600,
+    "maximumAcceptedAgeSeconds": 5400
+  },
+  "nusdRiskModel": {
+    "version": "oracle-nusd-v1",
+    "model": "oracle-priced-native-reserve",
+    "collateralAsset": "native-zkLTC",
+    "priceUnit": "USD-WAD",
+    "mintFormula": "floor(nativeWei * priceWad / 1e18)",
+    "redeemFormula": "floor(nusdWei * 1e18 / priceWad)",
+    "protocolFeeBps": 0,
+    "supplyCeilingEnv": "NUSD_DEBT_CEILING",
+    "supplyCeilingUnit": "NUSD wei",
+    "vaultCompatibility": "self",
+    "overcollateralizationGuaranteed": false,
+    "adminReserveSweep": false,
+    "legacyStateMigrated": false
+  },
+  "pump": {
+    "marketCapDefinition": "spotPriceNusdWad * fixedTotalSupply / 1e18",
+    "initialVirtualMarketCapNusd": "1500",
+    "readyMarketCapNusd": "6000",
+    "derivedRealReserveTargetNusd": "1500",
+    "creationFeeNusd": "1",
+    "tradeFeeBps": 10,
+    "graduationMigrationEnabled": false,
+    "graduationAdapter": null
+  },
+  "goldskyNetwork": "liteforge"
+}

@@ -1,0 +1,31 @@
+{
+  "status": "not-deployed",
+  "releaseTag": null,
+  "chainId": null,
+  "nusd": null,
+  "diaOracleAdapter": null,
+  "nativeCollateralVault": null,
+  "launchpad": null,
+  "officialStablecoin": null,
+  "nusdConversionOrBridgeRoute": null,
+  "majorDex": null,
+  "graduationRouter": null,
+  "graduationAdapter": null,
+  "liquidityLocker": null,
+  "configuration": {
+    "unit": "wei",
+    "initialVirtualNusdReserve": "1500000000000000000000",
+    "graduationMarketCapTargetNusd": "6000000000000000000000",
+    "graduationReserveThresholdNusd": "1500000000000000000000",
+    "createFeeNusd": "1000000000000000000",
+    "tradeFeeBps": 10
+  },
+  "graduation": {
+    "enabled": false,
+    "requiresSynchronousSettlement": true,
+    "requiredLiquidityPositionType": "erc20-lp-token"
+  },
+  "deploymentBlock": null,
+  "subgraphVersion": null,
+  "subgraphUrl": null
+}

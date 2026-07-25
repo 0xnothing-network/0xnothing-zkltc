@@ -2,6 +2,8 @@
 out/
 cache/
 broadcast/
+0xNothing-zkLTC-Testnet/contracts/lib/
+0xNothing-zkLTC-Mainnet/contracts/lib/
 .gas-snapshot
 coverage/
 coverage.json
@@ -26,10 +28,18 @@ dist/
 # --- Misc ---
 .DS_Store
 *.pem
+.env
+.env.*
+!.env.example
 .env*.local
 .vercel
 *.tsbuildinfo
 next-env.d.ts
+
+# --- Runtime credentials and deployment scratch files ---
+*.keystore
+*.secret
+deployments/**/latest.local.json
 
 # --- Editor ---
 .idea/

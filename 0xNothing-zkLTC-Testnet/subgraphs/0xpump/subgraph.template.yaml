@@ -1,0 +1,68 @@
+specVersion: 1.0.0
+schema:
+  file: ./schema.graphql
+indexerHints:
+  prune: auto
+dataSources:
+  - kind: ethereum
+    name: ZeroXPump
+    network: __NETWORK__
+    source:
+      address: "__CONTRACT_ADDRESS__"
+      abi: ZeroXPump
+      startBlock: __START_BLOCK__
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/mapping.ts
+      entities:
+        - Protocol
+        - Account
+        - CreationFeePayment
+        - Market
+        - TokenBalance
+        - Trade
+        - Candle
+        - GraduationReadiness
+        - CurveReopening
+        - Graduation
+        - FeeWithdrawal
+      abis:
+        - name: ZeroXPump
+          file: ./abis/ZeroXPump.json
+      eventHandlers:
+        - event: CreationFeePaid(indexed address,indexed bytes32,uint256)
+          handler: handleCreationFeePaid
+        - event: TokenCreated(indexed address,indexed address,indexed bytes32,string,string,string,string,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
+          handler: handleTokenCreated
+        - event: TokenTraded(indexed address,indexed address,indexed bool,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
+          handler: handleTokenTraded
+        - event: TokenReadyForGraduation(indexed address,uint256,uint256,uint256)
+          handler: handleTokenReadyForGraduation
+        - event: TokenCurveReopened(indexed address,uint256,uint256)
+          handler: handleTokenCurveReopened
+        - event: TokenGraduated(indexed address,indexed address,indexed bytes32,address,uint256,uint256,uint256,address)
+          handler: handleTokenGraduated
+        - event: ProtocolFeesWithdrawn(indexed address,uint256)
+          handler: handleProtocolFeesWithdrawn
+templates:
+  - kind: ethereum/contract
+    name: PumpToken
+    network: __NETWORK__
+    source:
+      abi: PumpToken
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/tokenMapping.ts
+      entities:
+        - Market
+        - TokenBalance
+      abis:
+        - name: PumpToken
+          file: ./abis/PumpToken.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer

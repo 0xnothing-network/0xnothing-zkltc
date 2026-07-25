@@ -1,0 +1,207 @@
+enum MarketStatus {
+  CURVE
+  READY
+  GRADUATED
+}
+
+enum TradeSide {
+  BUY
+  SELL
+}
+
+type Protocol @entity(immutable: false) {
+  id: ID!
+  tokenCount: BigInt!
+  activeTokenCount: BigInt!
+  readyTokenCount: BigInt!
+  graduatedTokenCount: BigInt!
+  tradeCount: BigInt!
+  buyCount: BigInt!
+  sellCount: BigInt!
+  totalVolumeNusd: BigInt!
+  totalTradeFeesNusd: BigInt!
+  totalCreationFeesNusd: BigInt!
+  totalFeesNusd: BigInt!
+  totalFeesWithdrawnNusd: BigInt!
+  updatedAt: BigInt!
+}
+
+type Account @entity(immutable: false) {
+  id: Bytes!
+  createdTokenCount: BigInt!
+  tradeCount: BigInt!
+  buyCount: BigInt!
+  sellCount: BigInt!
+  buyVolumeNusd: BigInt!
+  sellVolumeNusd: BigInt!
+  feesPaidNusd: BigInt!
+  createdAt: BigInt!
+  updatedAt: BigInt!
+  createdMarkets: [Market!]! @derivedFrom(field: "creatorAccount")
+  trades: [Trade!]! @derivedFrom(field: "traderAccount")
+}
+
+type CreationFeePayment @entity(immutable: true) {
+  id: Bytes!
+  owner: Bytes! @index
+  ownerAccount: Account!
+  contentHash: Bytes! @index
+  feeNusd: BigInt!
+  timestamp: BigInt! @index
+  blockNumber: BigInt!
+  txHash: Bytes!
+  logIndex: BigInt!
+}
+
+type Market @entity(immutable: false) {
+  id: Bytes!
+  token: Bytes! @index
+  factory: Bytes! @index
+  creator: Bytes! @index
+  creatorAccount: Account!
+  contentHash: Bytes! @index
+  name: String!
+  symbol: String!
+  decimals: Int!
+  metadataURI: String!
+  imageURI: String!
+  status: MarketStatus! @index
+  holderCount: BigInt!
+  totalSupply: BigInt!
+  curveTokenSupply: BigInt!
+  reserveNusd: BigInt!
+  reserveToken: BigInt!
+  virtualNusd: BigInt!
+  virtualToken: BigInt!
+  circulatingSupply: BigInt!
+  priceNusdWad: BigInt!
+  priceNusd: BigDecimal!
+  marketCapNusd: BigInt!
+  graduationThresholdNusd: BigInt!
+  graduationReserveThresholdNusd: BigInt!
+  progressBps: Int!
+  creationFeeNusd: BigInt!
+  tradeCount: BigInt!
+  buyCount: BigInt!
+  sellCount: BigInt!
+  volumeNusd: BigInt!
+  feesNusd: BigInt!
+  createdAt: BigInt! @index
+  createdBlock: BigInt!
+  createdTx: Bytes!
+  lastTradeAt: BigInt!
+  readyAt: BigInt
+  readyBlock: BigInt
+  readyTx: Bytes
+  updatedAt: BigInt!
+  graduation: Graduation
+  trades: [Trade!]! @derivedFrom(field: "market")
+  candles: [Candle!]! @derivedFrom(field: "market")
+  readinessEvents: [GraduationReadiness!]! @derivedFrom(field: "market")
+  reopeningEvents: [CurveReopening!]! @derivedFrom(field: "market")
+  holders: [TokenBalance!]! @derivedFrom(field: "market")
+}
+
+type TokenBalance @entity(immutable: false) {
+  id: Bytes!
+  market: Market!
+  token: Bytes! @index
+  holder: Bytes! @index
+  balance: BigInt!
+  isCreator: Boolean! @index
+  isFactory: Boolean! @index
+  createdAt: BigInt!
+  updatedAt: BigInt!
+  updatedBlock: BigInt!
+}
+
+type Trade @entity(immutable: true) {
+  id: Bytes!
+  market: Market!
+  trader: Bytes! @index
+  traderAccount: Account!
+  side: TradeSide! @index
+  nusdAmount: BigInt!
+  curveNusdAmount: BigInt!
+  userNusdAmount: BigInt!
+  tokenAmount: BigInt!
+  feeNusd: BigInt!
+  priceNusdWad: BigInt!
+  priceNusd: BigDecimal!
+  reserveNusdAfter: BigInt!
+  reserveTokenAfter: BigInt!
+  virtualNusdAfter: BigInt!
+  virtualTokenAfter: BigInt!
+  circulatingSupplyAfter: BigInt!
+  progressBps: Int!
+  timestamp: BigInt! @index
+  blockNumber: BigInt!
+  txHash: Bytes!
+  logIndex: BigInt!
+}
+
+type Candle @entity(immutable: false) {
+  id: ID!
+  market: Market!
+  period: Int! @index
+  bucket: BigInt! @index
+  timestamp: BigInt! @index
+  open: BigDecimal!
+  high: BigDecimal!
+  low: BigDecimal!
+  close: BigDecimal!
+  volumeNusd: BigInt!
+  volumeToken: BigInt!
+  buyCount: BigInt!
+  sellCount: BigInt!
+  tradeCount: BigInt!
+}
+
+type GraduationReadiness @entity(immutable: true) {
+  id: Bytes!
+  market: Market!
+  reserveNusd: BigInt!
+  reserveToken: BigInt!
+  thresholdNusd: BigInt!
+  timestamp: BigInt! @index
+  blockNumber: BigInt!
+  txHash: Bytes!
+  logIndex: BigInt!
+}
+
+type CurveReopening @entity(immutable: true) {
+  id: Bytes!
+  market: Market!
+  reserveNusd: BigInt!
+  reserveToken: BigInt!
+  timestamp: BigInt! @index
+  blockNumber: BigInt!
+  txHash: Bytes!
+  logIndex: BigInt!
+}
+
+type Graduation @entity(immutable: true) {
+  id: Bytes!
+  market: Market!
+  dex: Bytes! @index
+  pairId: Bytes!
+  pool: Bytes!
+  nusdLiquidity: BigInt!
+  tokenLiquidity: BigInt!
+  lpAmount: BigInt!
+  lpRecipient: Bytes!
+  timestamp: BigInt! @index
+  blockNumber: BigInt!
+  txHash: Bytes!
+  logIndex: BigInt!
+}
+
+type FeeWithdrawal @entity(immutable: true) {
+  id: Bytes!
+  recipient: Bytes! @index
+  amountNusd: BigInt!
+  timestamp: BigInt! @index
+  blockNumber: BigInt!
+  txHash: Bytes!
+  logIndex: BigInt!
+}
