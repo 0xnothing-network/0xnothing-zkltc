@@ -2,6 +2,7 @@
   "status": "not-deployed",
   "releaseTag": null,
   "chainId": null,
+  "oracleNusd": null,
   "nusd": null,
   "diaOracleAdapter": null,
   "nativeCollateralVault": null,
@@ -14,6 +15,9 @@
   "liquidityLocker": null,
   "configuration": {
     "unit": "wei",
+    "riskModel": "oracle-priced-native-reserve",
+    "vaultCompatibility": "self",
+    "supplyCeilingNusd": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
     "initialVirtualNusdReserve": "1500000000000000000000",
     "graduationMarketCapTargetNusd": "6000000000000000000000",
     "graduationReserveThresholdNusd": "1500000000000000000000",

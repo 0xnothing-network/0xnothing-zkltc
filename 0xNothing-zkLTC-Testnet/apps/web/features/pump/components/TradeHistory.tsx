@@ -19,15 +19,15 @@ export function TradeHistory({ token }: { token: Address }) {
         <div className="pump-table-wrap" tabIndex={0} aria-label="Recent trades table, scroll horizontally for all columns">
           <table className="pump-table">
             <caption className="sr-only">Recent indexed trades for this token</caption>
-            <thead><tr><th>Side</th><th>NUSD</th><th>Tokens</th><th>Price</th><th>Fee</th><th>Trader</th><th>Time</th></tr></thead>
+            <thead><tr><th>Trade</th><th>NUSD</th><th>Tokens</th><th>Price</th><th>Fee</th><th>Trader</th><th>Time</th></tr></thead>
             <tbody>
               {(query.data?.trades ?? []).map((trade) => (
                 <tr key={trade.id}>
                   <td><span className={`pump-side pump-side-${trade.side.toLowerCase()}`}>{trade.side}</span></td>
-                  <td>{formatWad(trade.nusdAmount, 4)}</td>
+                  <td>${formatWad(trade.nusdAmount, 4)}</td>
                   <td>{formatWad(trade.tokenAmount, 4)}</td>
-                  <td>{formatDecimal(trade.priceNusd)}</td>
-                  <td>{formatWad(trade.feeNusd, 5)}</td>
+                  <td>${formatDecimal(trade.priceNusd)}</td>
+                  <td>${formatWad(trade.feeNusd, 5)}</td>
                   <td><span title={trade.trader}>{shortAddress(trade.trader)}</span></td>
                   <td>{formatRelativeTime(trade.timestamp)}</td>
                 </tr>

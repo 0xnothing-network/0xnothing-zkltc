@@ -136,7 +136,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
     }
     if (!tradeAllowed) {
       toast.info(
-        market.status === "GRADUATED" ? "Curve closed" : "6,000 NUSD market cap reached",
+        market.status === "GRADUATED" ? "Curve closed" : "$6,000 market cap reached",
         market.status === "GRADUATED"
           ? "Trading on this bonding curve has ended."
           : "Buys pause at READY. A sell can reopen the bonding curve.",
@@ -217,15 +217,15 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
       </div>
 
       <div className="pump-trade-details">
-        {mode === "buy" ? <div><span>Actual spend</span><strong>{displayAmount(actualInput)} NUSD</strong></div> : null}
-        <div><span>Protocol fee</span><strong>{displayAmount(quoteFee)} NUSD (0.1%)</strong></div>
+        {mode === "buy" ? <div><span>Actual spend</span><strong>${displayAmount(actualInput)}</strong></div> : null}
+        <div><span>Protocol fee</span><strong>${displayAmount(quoteFee)} (0.1%)</strong></div>
         <div><span>Slippage</span><span className="pump-inline-options">{[50n, 100n, 200n].map((value) => <button key={value.toString()} type="button" className={slippageBps === value ? "active" : ""} aria-pressed={slippageBps === value} onClick={() => setSlippageBps(value)}>{Number(value) / 100}%</button>)}</span></div>
-        {mode === "buy" && buyQuote.data?.[4] ? <p>This buy reaches the 6,000 NUSD READY target.</p> : null}
+        {mode === "buy" && buyQuote.data?.[4] ? <p>This buy reaches the $6,000 READY target.</p> : null}
       </div>
 
       {quoteError ? <p className="pump-inline-error">Quote unavailable. <button type="button" onClick={() => void (mode === "buy" ? buyQuote.refetch() : sellQuote.refetch())}>Retry</button></p> : null}
 
-      {market.status === "READY" ? <p className="pump-form-hint">Buys are paused at the 6,000 NUSD market-cap target. Selling remains available and reopens the curve.</p> : null}
+      {market.status === "READY" ? <p className="pump-form-hint">Buys are paused at the $6,000 market-cap target. Selling remains available and reopens the curve.</p> : null}
       <button type="button" className="pump-button pump-button-primary pump-button-large pump-button-full" disabled={pending || !configured || quotePending || Boolean(quoteError) || !tradeAllowed} onClick={() => void submit()}>{buttonLabel}</button>
       {!configured ? <p className="pump-form-hint">Trading activates after deployment addresses are configured.</p> : null}
     </aside>

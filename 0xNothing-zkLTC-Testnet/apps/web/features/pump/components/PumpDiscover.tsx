@@ -69,7 +69,7 @@ export function PumpDiscover() {
         <div><span>Markets</span><strong>{stats?.marketCount ?? "--"}</strong></div>
         <div><span>Trading</span><strong>{stats?.tradingCount ?? "--"}</strong></div>
         <div><span>Ready</span><strong>{stats?.readyCount ?? "--"}</strong></div>
-        <div><span>Volume</span><strong>{stats ? `${formatWad(stats.volumeNusd)} NUSD` : "--"}</strong></div>
+        <div><span>Volume</span><strong>{stats ? `$${formatWad(stats.volumeNusd)}` : "--"}</strong></div>
       </section>
 
       <section className="pump-market-section">

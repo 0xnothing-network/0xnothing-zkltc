@@ -1,7 +1,7 @@
 # 0xNothing zkLTC Mainnet Contracts
 
-This Foundry project mirrors the tested NUSD, 0xPump, and graduation architecture
-without assuming a mainnet DIA feed or DEX deployment.
+This Foundry project contains the mainnet-candidate OracleNUSD, 0xPump, and
+graduation architecture without assuming a mainnet DIA feed or DEX deployment.
 
 ## Test
 
@@ -21,9 +21,15 @@ fees from `CreationFeePaid`, including abandoned reservations. After creation,
 client loses its transaction receipt and prevents that owner from reserving the
 same content hash again.
 
-NUSD has no grantable minter or burner roles: its constructor binder calls
-`bindVault` once, after which that vault is the sole mint/burn authority and the
-binding cannot be changed. `burnFrom` still requires the token owner's allowance.
+`OracleNUSD` is both the NUSD ERC-20 and its native zkLTC reserve. A user deposits
+native zkLTC directly through `mintAtOracle`; the contract mints
+`floor(msg.value * priceWad / 1e18)` NUSD, so `$1` of zkLTC at the DIA oracle
+price mints `1 NUSD`. `redeemAtOracle` burns the caller's NUSD and returns
+`floor(amountNusd * 1e18 / priceWad)` native zkLTC at the current oracle price.
+There is no borrowing position, minimum collateral ratio, interest, or
+liquidation. `vault()` returns the OracleNUSD contract itself for Pump
+compatibility. The legacy `NUSD.sol` and `NativeCollateralVault.sol` remain only
+as reference code and are not instantiated by `DeployMainnet.s.sol`.
 
 ## Deployment dry run
 
@@ -31,12 +37,15 @@ binding cannot be changed. `burnFrom` still requires the token owner's allowance
 forge script script/DeployMainnet.s.sol:DeployMainnet --rpc-url $env:MAINNET_RPC_URL
 ```
 
-Required: `PRIVATE_KEY`, `DIA_LTC_USD_FEED`, `NUSD_DEBT_CEILING`,
-`EXPECTED_MAINNET_CHAIN_ID`, and the explicit release gate
+Required: `PRIVATE_KEY`, `DIA_LTC_USD_FEED`, `EXPECTED_MAINNET_CHAIN_ID`,
+and the explicit release gate
 `MAINNET_RELEASE_APPROVED=true`. Optional settings are
 `PROTOCOL_ADMIN`, `DIA_MAX_PRICE_AGE`, `GRADUATION_TIMELOCK`,
 and `PUMP_TOKEN_TOTAL_SUPPLY`. The release curve fixes the initial virtual
 market cap at `1,500 NUSD` and READY at a literal `6,000 NUSD` market cap.
+The deployment fixes `supplyCeilingNusd` to `type(uint256).max`, so there is no
+practical protocol-wide issuance cap. Every mint still requires a native zkLTC
+deposit valued 1:1 in USD by the DIA oracle.
 
 The script rejects chain ID `4441`, local chain ID `31337`, zero, and any RPC
 whose chain ID differs from `EXPECTED_MAINNET_CHAIN_ID`. Its
@@ -51,14 +60,16 @@ route, DEX interface, and pool semantics are final. When `PROTOCOL_ADMIN` differ
 from the deployer, the admin must call `acceptAdmin()` on the router. Do not use
 `--broadcast` until the deployment phase has been explicitly approved.
 
-Mainnet oracle release blocker: validate the final DIA feed, debt ceiling, price
-monitoring, and a deviation/value-bound policy before setting
-`MAINNET_RELEASE_APPROVED=true`. The vault has separate mint/withdraw and
-liquidation pauses for incident response: `setRiskOperationsPaused` stops new
-debt and collateral withdrawals, while `setLiquidationsPaused` stops
-liquidations only. Deposits, debt repayment, and bad-debt coverage remain
-available. A single-feed deviation policy still requires an explicit production
-decision and audit.
+Mainnet oracle release blocker: validate the final DIA feed, the maximum supply
+ceiling decision, price monitoring, and a deviation/value-bound policy before
+setting `MAINNET_RELEASE_APPROVED=true`. OracleNUSD has independent mint and
+redeem pause controls, and anyone can add native backing through `coverReserve`.
+This model is not overcollateralized: if zkLTC falls after NUSD is minted, the
+reserve's current USD value can fall below the NUSD supply and full redemption
+can require more zkLTC than the contract holds. A reserve deficit blocks the
+affected redemption until backing is added; it is not automatically socialized
+or liquidated. This behavior and the single-feed policy require an explicit
+production decision and audit.
 
 Graduation is admin/multisig-triggered, not permissionless. The Pump pause stops
 market creation and curve trades; the router enable/adapter controls are the

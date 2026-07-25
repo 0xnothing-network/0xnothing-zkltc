@@ -6,6 +6,7 @@ import {MockDIAFeed} from "../mocks/MockDIAFeed.sol";
 import {NUSD} from "../../src/nusd/NUSD.sol";
 import {DIAOracleAdapter} from "../../src/nusd/DIAOracleAdapter.sol";
 import {NativeCollateralVault} from "../../src/nusd/NativeCollateralVault.sol";
+import {OracleNUSD} from "../../src/nusd/OracleNUSD.sol";
 import {ZeroXPump} from "../../src/pump/ZeroXPump.sol";
 import {GraduationRouter} from "../../src/graduation/GraduationRouter.sol";
 import {PermanentLiquidityLocker} from "../../src/graduation/PermanentLiquidityLocker.sol";
@@ -33,6 +34,16 @@ contract ConstructorValidationTest is TestBase {
     function testOracleRejectsEoaFeed() public {
         vm.expectRevert();
         new DIAOracleAdapter(address(0xD1A), 2 hours);
+    }
+
+    function testOracleNusdRejectsEoaOracleAdapter() public {
+        vm.expectRevert();
+        new OracleNUSD(DIAOracleAdapter(address(0xD1A)), address(this), type(uint256).max);
+    }
+
+    function testOracleNusdRejectsZeroSupplyCeiling() public {
+        vm.expectRevert();
+        new OracleNUSD(oracle, address(this), 0);
     }
 
     function testVaultRejectsNonContractDependencies() public {

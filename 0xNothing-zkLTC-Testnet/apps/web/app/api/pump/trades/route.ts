@@ -32,6 +32,6 @@ export async function GET(request: Request) {
     skip: Number(params.get("skip") || 0),
   });
   return NextResponse.json(payload, {
-    headers: { "Cache-Control": "public, s-maxage=8, stale-while-revalidate=15" },
+    headers: { "Cache-Control": "no-store" },
   });
 }

@@ -31,7 +31,6 @@ export function TokenHolders({ token, symbol }: { token: Address; symbol: string
           <span className="pump-holder-count">
             {data ? `${data.holderCount} active holder${data.holderCount === 1 ? "" : "s"}` : "Loading holders"}
           </span>
-          <span className="pump-source-label">{data?.source ?? "loading"}</span>
         </div>
       </div>
 
@@ -70,11 +69,13 @@ export function TokenHolders({ token, symbol }: { token: Address; symbol: string
                   <a href={getAddressExplorerUrl(holder.account)} target="_blank" rel="noopener noreferrer" title={holder.account}>
                     {shortAddress(holder.account, 7, 6)}
                   </a>
-                  <small>
-                    {holder.isCreator ? <em className="pump-holder-badge">Creator</em> : "Wallet"}
-                    {!isActive ? <span>Not currently holding</span> : null}
-                    {isActive && !hasKnownRank ? <span>Outside top {HOLDER_LIMIT}</span> : null}
-                  </small>
+                  {holder.isCreator || !isActive || (isActive && !hasKnownRank) ? (
+                    <small>
+                      {holder.isCreator ? <em className="pump-holder-badge">Creator</em> : null}
+                      {!isActive ? <span>Not currently holding</span> : null}
+                      {isActive && !hasKnownRank ? <span>Outside top {HOLDER_LIMIT}</span> : null}
+                    </small>
+                  ) : null}
                 </span>
                 <span className="pump-holder-balance" role="cell">{formatTokenAmount(toBigInt(holder.balance))} {symbol}</span>
                 <strong className="pump-holder-share" role="cell">{formatSupplyPercentage(holder.balance, data.totalSupply)}</strong>

@@ -195,7 +195,7 @@ export function CreateTokenForm() {
           }),
         ]);
         if (currentBalance < fee) {
-          toast.warning("Not enough NUSD", `Reserving a market costs ${formatUnits(fee, 18)} NUSD.`);
+          toast.warning("Not enough NUSD", `Reserving a market costs $${formatUnits(fee, 18)}.`);
           return;
         }
         if (currentAllowance < fee) {
@@ -340,7 +340,7 @@ export function CreateTokenForm() {
       <section className="pump-panel pump-create-form">
         <div className="pump-panel-heading">
           <div><span className="pump-eyebrow">Token details</span><h2>Create a market</h2></div>
-          <span className="pump-fee-chip">Fee {formatUnits(fee, 18)} NUSD</span>
+          <span className="pump-fee-chip">Fee ${formatUnits(fee, 18)}</span>
         </div>
 
         {!PUMP_CONFIGURED || !NUSD_CONFIGURED ? <PumpConfigNotice compact /> : null}

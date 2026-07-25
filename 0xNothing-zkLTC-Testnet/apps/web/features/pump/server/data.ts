@@ -324,8 +324,9 @@ export async function getPumpTrades(options: {
         variables.trader = options.trader.toLowerCase();
       }
       const where = filters.length > 0 ? `where: { ${filters.join(", ")} },` : "";
-      const payload = await graphFetch<{ trades: GraphTrade[] }>(
+      const payload = await graphFetch<{ trades: GraphTrade[]; _meta: GraphMeta }>(
         `query PumpTrades(${declarations.join(", ")}) {
+          _meta { block { number } hasIndexingErrors }
           trades(first: $first, skip: $skip, ${where} orderBy: timestamp, orderDirection: desc) {
             id market { id token } trader side nusdAmount userNusdAmount tokenAmount
             feeNusd priceNusd timestamp blockNumber logIndex txHash
@@ -333,10 +334,45 @@ export async function getPumpTrades(options: {
         }`,
         variables,
       );
+      if (payload._meta.hasIndexingErrors) {
+        return {
+          trades: await getRpcTrades(options.token, limit, skip, RPC_TRADE_LOOKBACK, options.trader),
+          source: "rpc",
+          configured: true,
+          warning: "The trade index reported an error; recent trades are using live RPC logs.",
+        };
+      }
+      let trades = payload.trades.map(normalizeGraphTrade);
+      let warning: string | undefined;
+      const indexedBlock = safeBigInt(payload._meta.block.number);
+      const canOverlayLiveTrades = Boolean(
+        skip === 0 &&
+        indexedBlock > 0n &&
+        (options.token || (options.trader && payload.trades.length < limit)),
+      );
+      if (canOverlayLiveTrades) {
+        try {
+          const liveHead = await getRpcTradesAfterBlock(
+            options.token,
+            indexedBlock,
+            options.trader,
+          );
+          trades = mergePumpTrades(liveHead.trades, trades).slice(0, limit);
+          if (liveHead.truncated) {
+            warning = "Live trade updates were limited because the subgraph is far behind.";
+          }
+        } catch (error) {
+          warning = warningMessage(
+            error,
+            "Live RPC updates are temporarily delayed; indexed trades remain available.",
+          );
+        }
+      }
       return {
-        trades: payload.trades.map(normalizeGraphTrade),
+        trades,
         source: "subgraph",
         configured: true,
+        warning,
       };
     } catch (error) {
       return {
@@ -962,8 +998,9 @@ async function fetchPumpTradeLogChunk(
 type PumpTradeLog = Awaited<ReturnType<typeof fetchPumpTradeLogChunk>>[number];
 
 async function getRpcTradesAfterBlock(
-  token: Address,
+  token: Address | undefined,
   indexedBlock: bigint,
+  trader?: Address,
 ): Promise<{ trades: PumpTrade[]; truncated: boolean }> {
   const latest = await publicClient.getBlockNumber();
   if (indexedBlock >= latest) return { trades: [], truncated: false };
@@ -979,7 +1016,7 @@ async function getRpcTradesAfterBlock(
   while (chunkFrom <= latest) {
     const candidateTo = chunkFrom + RPC_LOG_BLOCK_CHUNK - 1n;
     const chunkTo = candidateTo < latest ? candidateTo : latest;
-    logs.push(...await fetchPumpTradeLogChunk(token, chunkFrom, chunkTo));
+    logs.push(...await fetchPumpTradeLogChunk(token, chunkFrom, chunkTo, trader));
     chunkFrom = chunkTo + 1n;
   }
 
@@ -987,6 +1024,17 @@ async function getRpcTradesAfterBlock(
     trades: await hydratePumpTradeLogs(logs),
     truncated,
   };
+}
+
+function mergePumpTrades(liveTrades: PumpTrade[], indexedTrades: PumpTrade[]) {
+  const merged = new Map<string, PumpTrade>();
+  for (const trade of [...liveTrades, ...indexedTrades]) {
+    const key = `${trade.txHash.toLowerCase()}:${trade.logIndex}`;
+    if (!merged.has(key)) merged.set(key, trade);
+  }
+  return [...merged.values()].sort(
+    (left, right) => right.blockNumber - left.blockNumber || right.logIndex - left.logIndex,
+  );
 }
 
 function mergeLiveTradesIntoCandles(

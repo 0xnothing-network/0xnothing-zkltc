@@ -4,8 +4,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAccount, usePublicClient } from "wagmi";
 import type { Address } from "viem";
-import { pumpTokenAbi, zeroXPumpAbi } from "@/features/pump/abis";
-import { PUMP_FACTORY_ADDRESS } from "@/features/pump/config";
+import { pumpTokenAbi } from "@/features/pump/abis";
 import {
   DEFAULT_PUMP_CANDLE_PERIOD,
   PUMP_CANDLE_LIMITS,
@@ -18,12 +17,10 @@ import {
   type PumpMarketSort,
   type PumpStatsResponse,
   type PumpStatus,
-  type PumpTrade,
   type PumpTradesResponse,
 } from "@/features/pump/types";
 
 const EMPTY_MARKETS: PumpMarket[] = [];
-const EMPTY_TRADES: PumpTrade[] = [];
 const EMPTY_BALANCES = new Map<string, bigint>();
 
 async function apiJson<T>(url: string, signal?: AbortSignal): Promise<T> {
@@ -171,8 +168,10 @@ export function usePumpTrades(token: Address | undefined, limit = 40) {
     queryFn: ({ signal }) =>
       apiJson<PumpTradesResponse>(`/api/pump/trades?${params.toString()}`, signal),
     enabled: Boolean(token),
-    staleTime: 5_000,
-    refetchInterval: 10_000,
+    staleTime: 0,
+    refetchInterval: 2_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 }
 
@@ -223,12 +222,6 @@ export function usePumpPortfolio() {
     queryFn: ({ signal }) => fetchAllMarkets(address, signal),
     enabled: Boolean(address),
     staleTime: 15_000,
-  });
-  const tradesQuery = useQuery({
-    queryKey: ["pump-portfolio-trades", address],
-    queryFn: ({ signal }) => fetchAllWalletTrades(address as Address, signal),
-    enabled: Boolean(address),
-    staleTime: 8_000,
   });
   const markets = marketsQuery.data?.markets ?? EMPTY_MARKETS;
   const tokensKey = useMemo(
@@ -290,62 +283,11 @@ export function usePumpPortfolio() {
     ),
     [balances, markets],
   );
-  const quotableHeld = useMemo(
-    () => held.filter((market) => market.status !== "GRADUATED"),
-    [held],
-  );
-  const quoteKey = useMemo(
-    () => quotableHeld.map((market) => (
-      `${market.tokenAddress.toLowerCase()}:${balances.get(market.tokenAddress.toLowerCase()) ?? 0n}`
-    )).join(","),
-    [balances, quotableHeld],
-  );
-  const sellQuotesQuery = useQuery({
-    queryKey: ["pump-portfolio-sell-quotes", address, quoteKey],
-    enabled: Boolean(address && publicClient && quotableHeld.length > 0),
-    queryFn: async () => {
-      if (!publicClient) return new Map<string, bigint>();
-      const results = await publicClient.multicall({
-        allowFailure: true,
-        contracts: quotableHeld.map((market) => ({
-          address: PUMP_FACTORY_ADDRESS,
-          abi: zeroXPumpAbi,
-          functionName: "quoteSell" as const,
-          args: [
-            market.tokenAddress,
-            balances.get(market.tokenAddress.toLowerCase()) ?? 0n,
-          ] as const,
-        })),
-      });
-      const sellValues = new Map<string, bigint>();
-      results.forEach((result, index) => {
-        if (result.status !== "success") return;
-        sellValues.set(
-          quotableHeld[index].tokenAddress.toLowerCase(),
-          (result.result as readonly [bigint, bigint, bigint])[1],
-        );
-      });
-      return sellValues;
-    },
-    staleTime: 5_000,
-  });
-  const profitBps = useMemo(
-    () => calculatePortfolioProfitBps(
-      held,
-      balances,
-      tradesQuery.data?.trades ?? EMPTY_TRADES,
-      sellQuotesQuery.data ?? EMPTY_BALANCES,
-    ),
-    [balances, held, sellQuotesQuery.data, tradesQuery.data?.trades],
-  );
-
   return {
     address,
     created,
     held,
     balances,
-    profitBps,
-    profitIsLoading: tradesQuery.isLoading || (quotableHeld.length > 0 && sellQuotesQuery.isLoading),
     balanceWarning: balancesQuery.data?.failed
       ? `${balancesQuery.data.failed} token balance${balancesQuery.data.failed === 1 ? "" : "s"} could not be checked.`
       : undefined,
@@ -358,68 +300,10 @@ export function usePumpPortfolio() {
     refetchHeld: () => {
       void marketsQuery.refetch();
       void balancesQuery.refetch();
-      void tradesQuery.refetch();
-      void sellQuotesQuery.refetch();
     },
     refetchCreated: () => void createdQuery.refetch(),
     configured: (marketsQuery.data?.configured ?? true) && (createdQuery.data?.configured ?? true),
   };
-}
-
-function calculatePortfolioProfitBps(
-  markets: PumpMarket[],
-  balances: Map<string, bigint>,
-  trades: PumpTrade[],
-  sellValues: Map<string, bigint>,
-) {
-  const tradesByToken = new Map<string, PumpTrade[]>();
-  for (const trade of trades) {
-    const key = trade.tokenAddress.toLowerCase();
-    const tokenTrades = tradesByToken.get(key) ?? [];
-    tokenTrades.push(trade);
-    tradesByToken.set(key, tokenTrades);
-  }
-
-  const result = new Map<string, bigint | null>();
-  for (const market of markets) {
-    const key = market.tokenAddress.toLowerCase();
-    const balance = balances.get(key) ?? 0n;
-    const tokenTrades = [...(tradesByToken.get(key) ?? [])].sort(
-      (left, right) => left.blockNumber - right.blockNumber || left.logIndex - right.logIndex,
-    );
-    let purchasedTokens = 0n;
-    let costBasisNusd = 0n;
-
-    for (const trade of tokenTrades) {
-      const tokenAmount = safeMarketBigInt(trade.tokenAmount);
-      if (tokenAmount === 0n) continue;
-      if (trade.side === "BUY") {
-        purchasedTokens += tokenAmount;
-        costBasisNusd += safeMarketBigInt(trade.userNusdAmount);
-        continue;
-      }
-      if (purchasedTokens === 0n) continue;
-      const soldTokens = tokenAmount < purchasedTokens ? tokenAmount : purchasedTokens;
-      costBasisNusd -= costBasisNusd * soldTokens / purchasedTokens;
-      purchasedTokens -= soldTokens;
-    }
-
-    if (balance === 0n || purchasedTokens === 0n || balance !== purchasedTokens) {
-      result.set(key, null);
-      continue;
-    }
-    if (costBasisNusd <= 0n) {
-      result.set(key, null);
-      continue;
-    }
-    const currentValueNusd = sellValues.get(key);
-    if (currentValueNusd === undefined) {
-      result.set(key, null);
-      continue;
-    }
-    result.set(key, (currentValueNusd - costBasisNusd) * 10_000n / costBasisNusd);
-  }
-  return result;
 }
 
 async function fetchAllMarkets(creator: Address | undefined, signal?: AbortSignal) {
@@ -449,33 +333,4 @@ async function fetchAllMarkets(creator: Address | undefined, signal?: AbortSigna
   }
 
   return { markets, configured, source, warning } satisfies PumpListResponse;
-}
-
-async function fetchAllWalletTrades(trader: Address, signal?: AbortSignal) {
-  const pageSize = 200;
-  const trades: PumpTrade[] = [];
-  const seen = new Set<string>();
-  let configured = true;
-  let source: PumpTradesResponse["source"] = "unconfigured";
-  let warning: string | undefined;
-
-  for (let skip = 0; skip <= 10_000; skip += pageSize) {
-    const params = new URLSearchParams({
-      trader,
-      limit: pageSize.toString(),
-      skip: skip.toString(),
-    });
-    const page = await apiJson<PumpTradesResponse>(`/api/pump/trades?${params.toString()}`, signal);
-    configured = page.configured;
-    source = page.source;
-    warning ||= page.warning;
-    for (const trade of page.trades) {
-      if (seen.has(trade.id)) continue;
-      seen.add(trade.id);
-      trades.push(trade);
-    }
-    if (page.trades.length < pageSize) break;
-  }
-
-  return { trades, configured, source, warning } satisfies PumpTradesResponse;
 }

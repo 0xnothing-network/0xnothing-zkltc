@@ -51,15 +51,15 @@ export function TokenCard({ market, priority = false }: { market: PumpMarket; pr
       <dl className="pump-token-metrics">
         <div>
           <dt>Price</dt>
-          <dd>{formatDecimal(market.priceNusd)} NUSD</dd>
+          <dd>${formatDecimal(market.priceNusd)}</dd>
         </div>
         <div>
           <dt>Market cap</dt>
-          <dd>{formatWad(market.marketCapNusd)} NUSD</dd>
+          <dd>${formatWad(market.marketCapNusd)}</dd>
         </div>
         <div>
           <dt>Volume</dt>
-          <dd>{formatWad(market.volumeNusd)} NUSD</dd>
+          <dd>${formatWad(market.volumeNusd)}</dd>
         </div>
         <div>
           <dt>Trades</dt>
@@ -68,7 +68,7 @@ export function TokenCard({ market, priority = false }: { market: PumpMarket; pr
       </dl>
 
       <div className="pump-progress-label">
-        <span>To 6,000 NUSD READY</span>
+        <span>To $6,000 READY</span>
         <span>{(market.progressBps / 100).toFixed(1)}%</span>
       </div>
       <div className="pump-progress" role="progressbar" aria-label="Progress to READY" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, market.progressBps / 100)}>

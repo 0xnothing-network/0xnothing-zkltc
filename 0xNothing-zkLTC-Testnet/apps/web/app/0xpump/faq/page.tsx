@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 const FAQ_ITEMS = [
   {
     question: "What does it cost?",
-    answer: "Creating a market costs 1 NUSD. Each buy and sell pays a 0.1% protocol fee.",
+    answer: "Creating a market costs $1. Each buy and sell pays a 0.1% protocol fee.",
   },
   {
     question: "How does trading work?",
@@ -16,7 +16,7 @@ const FAQ_ITEMS = [
   },
   {
     question: "What is READY?",
-    answer: "A market reaches READY at a 6,000 NUSD market cap. On testnet, buys pause at READY and a sell can reopen the curve.",
+    answer: "A market reaches READY at a $6,000 market cap. On testnet, buys pause at READY and a sell can reopen the curve.",
   },
   {
     question: "How is NUSD minted?",

@@ -93,13 +93,13 @@ export function TokenDetail({ token }: { token: Address }) {
             {links.map((item) => <a href={item.href} key={item.href} target="_blank" rel="noopener noreferrer">{item.label}</a>)}
           </div>
         </div>
-        <div className="pump-token-price"><span>Curve price</span><strong>{formatDecimal(market.priceNusd)} NUSD</strong><small>{market.tradeCount > 0 && market.lastTradeAt ? formatRelativeTime(market.lastTradeAt) : "No trades yet"}</small></div>
+        <div className="pump-token-price"><span>Curve price</span><strong>${formatDecimal(market.priceNusd)}</strong><small>{market.tradeCount > 0 && market.lastTradeAt ? formatRelativeTime(market.lastTradeAt) : "No trades yet"}</small></div>
       </section>
 
       <section className="pump-detail-stats">
-        <div><span>Market cap</span><strong>{formatWad(market.marketCapNusd)} NUSD</strong></div>
-        <div><span>Total volume</span><strong>{formatWad(market.volumeNusd)} NUSD</strong></div>
-        <div><span>Curve reserve</span><strong>{formatWad(market.reserveNusd)} NUSD</strong></div>
+        <div><span>Market cap</span><strong>${formatWad(market.marketCapNusd)}</strong></div>
+        <div><span>Total volume</span><strong>${formatWad(market.volumeNusd)}</strong></div>
+        <div><span>Curve reserve</span><strong>${formatWad(market.reserveNusd)}</strong></div>
         <div><span>Trades</span><strong>{market.tradeCount}</strong></div>
         <div><span>Curve progress</span><strong>{(market.progressBps / 100).toFixed(2)}%</strong></div>
       </section>
@@ -113,7 +113,7 @@ export function TokenDetail({ token }: { token: Address }) {
       </div>
 
       <section className="pump-graduation-line">
-        <div><span>6,000 NUSD READY target</span><strong>{market.status === "TRADING" ? `${(market.progressBps / 100).toFixed(1)}% funded` : market.status === "READY" ? "Market-cap target reached" : "Liquidity migrated"}</strong></div>
+        <div><span>$6,000 READY target</span><strong>{market.status === "TRADING" ? `${(market.progressBps / 100).toFixed(1)}% funded` : market.status === "READY" ? "Market-cap target reached" : "Liquidity migrated"}</strong></div>
         <div className="pump-progress" role="progressbar" aria-label="Progress to READY" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, market.progressBps / 100)}><span style={{ width: `${Math.min(100, market.progressBps / 100)}%` }} /></div>
       </section>
 

@@ -9,6 +9,12 @@
     "decimals": 18
   },
   "diaLtcUsdAdapter": null,
+  "nusd": {
+    "model": "oracle-priced-native-reserve",
+    "minting": "oracle-value-1-to-1",
+    "supplyCeiling": "uint256-max",
+    "vaultCompatibility": "self"
+  },
   "officialStablecoin": {
     "address": null,
     "symbol": null,

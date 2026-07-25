@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {NUSD} from "../src/nusd/NUSD.sol";
 import {DIAOracleAdapter} from "../src/nusd/DIAOracleAdapter.sol";
-import {NativeCollateralVault} from "../src/nusd/NativeCollateralVault.sol";
+import {OracleNUSD} from "../src/nusd/OracleNUSD.sol";
 import {ZeroXPump} from "../src/pump/ZeroXPump.sol";
 import {GraduationRouter} from "../src/graduation/GraduationRouter.sol";
 import {PermanentLiquidityLocker} from "../src/graduation/PermanentLiquidityLocker.sol";
@@ -24,6 +23,9 @@ interface VmDeploy {
     function serializeBool(string calldata objectKey, string calldata valueKey, bool value)
         external
         returns (string memory json);
+    function serializeString(string calldata objectKey, string calldata valueKey, string calldata value)
+        external
+        returns (string memory json);
     function writeJson(string calldata json, string calldata path) external;
     function startBroadcast(uint256 privateKey) external;
     function stopBroadcast() external;
@@ -33,17 +35,20 @@ contract DeployMainnet {
     error MainnetReleaseNotApproved();
     error InvalidExpectedChainId(uint256 chainId);
     error WrongChain(uint256 expectedChainId, uint256 actualChainId);
+    error UnexpectedOracleNusdConfiguration();
+    error UnexpectedPumpConfiguration();
+    error UnsafeInitialGraduationState();
 
     VmDeploy private constant vm = VmDeploy(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     uint256 public constant PUMP_INITIAL_MARKET_CAP_NUSD = 1_500 ether;
     uint256 public constant PUMP_GRADUATION_MARKET_CAP_NUSD = 6_000 ether;
     uint256 public constant PUMP_GRADUATION_RESERVE_NUSD = 1_500 ether;
+    uint256 public constant NUSD_SUPPLY_CEILING = type(uint256).max;
 
     struct Deployment {
-        NUSD nusd;
         DIAOracleAdapter oracle;
-        NativeCollateralVault vault;
+        OracleNUSD oracleNusd;
         PermanentLiquidityLocker locker;
         GraduationRouter router;
         ZeroXPump pump;
@@ -52,12 +57,12 @@ contract DeployMainnet {
     event DeploymentCompleted(
         uint256 indexed chainId,
         address indexed pump,
-        address indexed nusd,
-        address vault,
-        address oracle,
+        address indexed oracleNusd,
+        address diaOracleAdapter,
         address router,
         address locker,
-        address protocolAdmin
+        address protocolAdmin,
+        uint256 supplyCeilingNusd
     );
 
     function run() external returns (Deployment memory deployment) {
@@ -74,30 +79,18 @@ contract DeployMainnet {
         address diaFeed = vm.envAddress("DIA_LTC_USD_FEED");
         uint256 maxPriceAge = vm.envOr("DIA_MAX_PRICE_AGE", uint256(90 minutes));
         uint256 routerDelay = vm.envOr("GRADUATION_TIMELOCK", uint256(7 days));
-        uint256 debtCeilingNusd = vm.envUint("NUSD_DEBT_CEILING");
         uint256 totalSupply = vm.envOr("PUMP_TOKEN_TOTAL_SUPPLY", uint256(1_000_000_000 ether));
 
         vm.startBroadcast(privateKey);
 
-        deployment.nusd = new NUSD(deployer);
         deployment.oracle = new DIAOracleAdapter(diaFeed, maxPriceAge);
-        deployment.vault = new NativeCollateralVault(
-            address(deployment.nusd),
-            address(deployment.oracle),
-            protocolAdmin,
-            17_500,
-            15_000,
-            800,
-            5_000,
-            debtCeilingNusd
-        );
-        deployment.nusd.bindVault(address(deployment.vault));
+        deployment.oracleNusd = new OracleNUSD(deployment.oracle, protocolAdmin, NUSD_SUPPLY_CEILING);
 
         deployment.locker = new PermanentLiquidityLocker(deployer);
         deployment.router = new GraduationRouter(deployer, routerDelay, address(deployment.locker));
         deployment.pump = new ZeroXPump(
-            address(deployment.nusd),
-            address(deployment.vault),
+            address(deployment.oracleNusd),
+            address(deployment.oracleNusd),
             address(deployment.router),
             protocolAdmin,
             totalSupply,
@@ -109,6 +102,23 @@ contract DeployMainnet {
         }
         deployment.router.bindPump(address(deployment.pump));
         deployment.locker.bindRouter(address(deployment.router));
+
+        if (
+            address(deployment.oracleNusd.oracle()) != address(deployment.oracle)
+                || deployment.oracleNusd.vault() != address(deployment.oracleNusd)
+                || deployment.oracleNusd.supplyCeilingNusd() != NUSD_SUPPLY_CEILING
+                || deployment.oracleNusd.mintPaused() || deployment.oracleNusd.redeemPaused()
+        ) revert UnexpectedOracleNusdConfiguration();
+        if (
+            deployment.pump.initialVirtualNusdReserve() != PUMP_INITIAL_MARKET_CAP_NUSD
+                || deployment.pump.graduationThresholdNusd() != PUMP_GRADUATION_MARKET_CAP_NUSD
+                || deployment.pump.graduationReserveThresholdNusd() != PUMP_GRADUATION_RESERVE_NUSD
+                || deployment.pump.createFee() != 1 ether || deployment.pump.tradeFeeBps() != 10
+                || deployment.pump.paused()
+        ) revert UnexpectedPumpConfiguration();
+        if (deployment.router.enabled() || deployment.router.enableAt() != 0) {
+            revert UnsafeInitialGraduationState();
+        }
 
         if (protocolAdmin != deployer) {
             deployment.router.transferAdmin(protocolAdmin);
@@ -123,9 +133,16 @@ contract DeployMainnet {
         vm.serializeBool(objectKey, "broadcasted", false);
         vm.serializeUint(objectKey, "chainId", block.chainid);
         vm.serializeUint(objectKey, "scriptExecutionBlock", block.number);
-        vm.serializeAddress(objectKey, "nusd", address(deployment.nusd));
+        vm.serializeAddress(objectKey, "oracleNusd", address(deployment.oracleNusd));
+        vm.serializeAddress(objectKey, "nusd", address(deployment.oracleNusd));
+        vm.serializeAddress(objectKey, "vault", address(deployment.oracleNusd));
         vm.serializeAddress(objectKey, "oracle", address(deployment.oracle));
-        vm.serializeAddress(objectKey, "vault", address(deployment.vault));
+        vm.serializeUint(objectKey, "supplyCeilingNusd", deployment.oracleNusd.supplyCeilingNusd());
+        vm.serializeBool(objectKey, "mintPaused", deployment.oracleNusd.mintPaused());
+        vm.serializeBool(objectKey, "redeemPaused", deployment.oracleNusd.redeemPaused());
+        vm.serializeString(objectKey, "riskModelVersion", "oracle-nusd-v1");
+        vm.serializeString(objectKey, "riskModel", "oracle-priced-native-reserve");
+        vm.serializeString(objectKey, "vaultCompatibility", "self");
         vm.serializeAddress(objectKey, "locker", address(deployment.locker));
         vm.serializeAddress(objectKey, "router", address(deployment.router));
         vm.serializeAddress(objectKey, "protocolAdmin", protocolAdmin);
@@ -139,12 +156,12 @@ contract DeployMainnet {
         emit DeploymentCompleted(
             block.chainid,
             address(deployment.pump),
-            address(deployment.nusd),
-            address(deployment.vault),
+            address(deployment.oracleNusd),
             address(deployment.oracle),
             address(deployment.router),
             address(deployment.locker),
-            protocolAdmin
+            protocolAdmin,
+            deployment.oracleNusd.supplyCeilingNusd()
         );
     }
 }

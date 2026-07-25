@@ -193,7 +193,7 @@ export async function POST(request: Request) {
     return jsonError("Could not verify the on-chain creation reservation", 503);
   }
   if (!reserved) {
-    return jsonError("Pay the 1 NUSD creation reservation before uploading", 403);
+    return jsonError("Pay the $1 creation reservation before uploading", 403);
   }
 
   const contentKey = `${submittedAddress}:${submittedContentHash}`;

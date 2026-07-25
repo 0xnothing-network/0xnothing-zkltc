@@ -13,12 +13,20 @@ These are release blockers, not values to guess around.
 
 ## Phase 1: protocol hardening
 
-- Audit the NUSD token, native-collateral vault, oracle normalization, liquidation math, bad-debt path, and shutdown behavior.
+- Audit OracleNUSD's direct oracle-priced mint/redeem math, floor rounding, native-reserve accounting, reserve-deficit behavior, and shutdown controls.
+- Review the deliberate `type(uint256).max` supply ceiling. There is no practical protocol-wide cap, but every mint requires a native zkLTC deposit whose current oracle value equals the NUSD issued.
 - Audit the Pump curve, reserve accounting, rounding, fee isolation, and the exact transition from a `1,500 NUSD` initial virtual market cap to the fixed `6,000 NUSD` READY market-cap target.
 - Audit the paid content-reservation flow end to end so one `1 NUSD` reservation authorizes only its owner and exact canonical metadata/logo hash.
-- Add reviewed oracle-deviation and value circuit breakers in addition to the independent mint/withdraw and liquidation pause domains.
+- Add reviewed oracle-deviation and value circuit breakers in addition to the independent mint and redeem pause domains.
 - Move ownership, pause, fee-recipient, and adapter-governance roles to a Safe multisig with a documented delay.
 - Add redundant RPC, paid IPFS pinning, durable upload rate limits, monitoring, and incident procedures.
+
+The mainnet candidate is an oracle-priced native reserve, not an
+overcollateralized debt system. It has no user debt positions, minimum collateral
+ratio, or liquidation path. A zkLTC price decline can make the reserve worth less
+than outstanding NUSD and can block redemptions that require more native zkLTC
+than remains in the contract. Reserve coverage and incident response must be
+tested before release.
 
 ## Phase 2: official stablecoin settlement and DEX adapter
 
@@ -73,7 +81,7 @@ Graduation is submitted by the protocol Safe after the adapter is active. The Sa
 
 - Independent smart-contract audit and remediation complete
 - High-volume fuzz, invariant, and mainnet-fork suites pass
-- Oracle outage, price crash, liquidation, bad debt, and shutdown drills pass
+- Oracle outage, price crash, reserve deficit, mint/redeem pause, reserve coverage, and shutdown drills pass
 - DEX graduation fork proves price continuity and LP lock
 - Official stablecoin contract, decimals, conversion/bridge route, and minimum-output behavior are independently verified
 - Graduation succeeds atomically on a fork, or the router is redesigned and audited for the official asynchronous route

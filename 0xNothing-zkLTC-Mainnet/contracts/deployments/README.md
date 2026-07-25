@@ -7,4 +7,7 @@ and live post-deployment verification.
 The release manifest must keep the official zkLTC stablecoin, approved NUSD
 conversion/bridge route, major DEX, adapter, and LP-lock details unset until each
 address and interface is independently verified. It must also record the fixed
-`6,000 NUSD` READY market-cap target and the derived reserve target.
+`6,000 NUSD` READY market-cap target and the derived reserve target. Record and
+verify the OracleNUSD address, DIA adapter, self-vault binding,
+`type(uint256).max` supply ceiling, independent pause states, and native-reserve
+risk-model version.

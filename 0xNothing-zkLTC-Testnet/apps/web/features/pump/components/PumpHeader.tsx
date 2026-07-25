@@ -41,6 +41,11 @@ function displayBalance(value: bigint | undefined, pending: boolean): string {
   return pending ? "..." : "--";
 }
 
+function displayUsdBalance(value: bigint | undefined, pending: boolean): string {
+  const amount = displayBalance(value, pending);
+  return amount === "..." || amount === "--" ? amount : `$${amount}`;
+}
+
 export function PumpHeader() {
   const pathname = usePathname();
   const toast = useToast();
@@ -110,10 +115,10 @@ export function PumpHeader() {
           >
             <div
               className="pump-header-balance"
-              title={nusdBalance.data !== undefined ? `${formatUnits(nusdBalance.data, 18)} NUSD` : "NUSD balance"}
+              title={nusdBalance.data !== undefined ? `$${formatUnits(nusdBalance.data, 18)} NUSD balance` : "NUSD balance"}
             >
               <span>NUSD</span>
-              <strong>{displayBalance(nusdBalance.data, NUSD_CONFIGURED && nusdBalance.isPending)}</strong>
+              <strong>{displayUsdBalance(nusdBalance.data, NUSD_CONFIGURED && nusdBalance.isPending)}</strong>
             </div>
             <div
               className="pump-header-balance"
