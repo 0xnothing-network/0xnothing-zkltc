@@ -6,7 +6,7 @@
 
 0xPump is a separate NUSD launchpad. It does not depend on the removed legacy DEX.
 
-## OracleNUSD and DIA
+# OracleNUSD and DIA
 
 DIA is the price source; it does not mint NUSD. `OracleNUSD` is both the ERC-20
 and the native-zkLTC reserve. It reads the DIA adapter for every mint and redeem,
