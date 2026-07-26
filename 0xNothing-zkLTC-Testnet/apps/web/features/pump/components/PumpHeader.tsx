@@ -22,16 +22,16 @@ import { formatWad, shortAddress } from "@/features/pump/format";
 import { useToast } from "@/components/Toast";
 
 const PUMP_NAV = [
-  { href: "/0xpump", label: "Discover" },
-  { href: "/0xpump/create", label: "Create" },
-  { href: "/0xpump/nusd", label: "NUSD" },
-  { href: "/0xpump/portfolio", label: "Portfolio" },
-  { href: "/0xpump/faq", label: "FAQ" },
+  { href: "/0xPump", label: "Discover" },
+  { href: "/0xPump/create", label: "Create" },
+  { href: "/0xPump/nusd", label: "NUSD" },
+  { href: "/0xPump/portfolio", label: "Portfolio" },
+  { href: "/0xPump/faq", label: "FAQ" },
 ] as const;
 
 function isActiveRoute(pathname: string, href: (typeof PUMP_NAV)[number]["href"]): boolean {
-  if (href === "/0xpump") {
-    return pathname === href || pathname.startsWith("/0xpump/token/");
+  if (href === "/0xPump") {
+    return pathname === href || pathname.startsWith("/0xPump/token/");
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }

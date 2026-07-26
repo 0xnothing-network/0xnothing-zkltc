@@ -9,7 +9,7 @@ export function PumpConfigNotice({ compact = false }: { compact?: boolean }) {
         <h2>0xPump contracts are not configured</h2>
         <p>Browsing stays available, but create, trade, and vault actions remain disabled until deployment addresses are set.</p>
       </div>
-      {!compact ? <Link href="/0xpump/create" className="pump-text-link">Review create flow</Link> : null}
+      {!compact ? <Link href="/0xPump/create" className="pump-text-link">Review create flow</Link> : null}
     </section>
   );
 }

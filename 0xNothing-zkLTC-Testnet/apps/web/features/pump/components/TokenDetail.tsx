@@ -45,7 +45,7 @@ export function TokenDetail({ token }: { token: Address }) {
   }
   if (!market) {
     return (
-      <main className="pump-page"><div className="pump-empty-state"><span className="pump-eyebrow">Market not found</span><h1>This token is not indexed by 0xPump</h1><Link href="/0xpump" className="pump-button pump-button-muted">Back to markets</Link></div></main>
+      <main className="pump-page"><div className="pump-empty-state"><span className="pump-eyebrow">Market not found</span><h1>This token is not indexed by 0xPump</h1><Link href="/0xPump" className="pump-button pump-button-muted">Back to markets</Link></div></main>
     );
   }
 
@@ -66,7 +66,7 @@ export function TokenDetail({ token }: { token: Address }) {
     <main className="pump-page">
       {query.data?.configured === false ? <PumpConfigNotice /> : null}
       {query.data?.warning ? <p className="pump-source-note">{query.data.warning}</p> : null}
-      <Link href="/0xpump" className="pump-back-link">&larr; All markets</Link>
+      <Link href="/0xPump" className="pump-back-link">&larr; All markets</Link>
 
       <section className="pump-token-identity">
         <div className="pump-detail-logo">

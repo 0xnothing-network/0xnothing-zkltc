@@ -155,7 +155,7 @@ export function CreateTokenForm() {
       };
       const routeToCreatedToken = (token: Address, title: string) => {
         toast.success(title, `${symbol.trim().toUpperCase()} already exists at ${token}.`);
-        router.push(`/0xpump/token/${token}`);
+        router.push(`/0xPump/token/${token}`);
       };
 
       const recoveredBeforeReservation = await readCreatedToken();
@@ -296,7 +296,7 @@ export function CreateTokenForm() {
         }
       }
       toast.success("Token market created", `${symbol.trim().toUpperCase()} is live on 0xPump.`);
-      router.push(token ? `/0xpump/token/${token}` : "/0xpump");
+      router.push(token ? `/0xPump/token/${token}` : "/0xPump");
     } catch (error) {
       if (contentHash) {
         try {
@@ -309,7 +309,7 @@ export function CreateTokenForm() {
           if (recoveredToken.toLowerCase() !== ZERO_ADDRESS) {
             const token = getAddress(recoveredToken);
             toast.success("Market transaction recovered", `${symbol.trim().toUpperCase()} is live at ${token}.`);
-            router.push(`/0xpump/token/${token}`);
+            router.push(`/0xPump/token/${token}`);
             return;
           }
         } catch {

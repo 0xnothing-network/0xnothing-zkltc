@@ -48,7 +48,7 @@ export function PumpDiscover() {
       <section className="pump-trending-section" aria-labelledby="pump-trending-title">
         <div className="pump-trending-heading">
           <h1 id="pump-trending-title">Trending</h1>
-          <Link href="/0xpump/create" className="pump-button pump-button-primary">
+          <Link href="/0xPump/create" className="pump-button pump-button-primary">
             Create token
           </Link>
         </div>

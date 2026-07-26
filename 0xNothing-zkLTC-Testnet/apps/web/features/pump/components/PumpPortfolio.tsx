@@ -42,7 +42,7 @@ export function PumpPortfolio() {
                   )}
                 />
               ))}</div>
-            ) : <div className="pump-empty-inline"><p>No 0xPump token balances found.</p><Link href="/0xpump">Browse markets</Link></div>}
+            ) : <div className="pump-empty-inline"><p>No 0xPump token balances found.</p><Link href="/0xPump">Browse markets</Link></div>}
           </section>
 
           <section className="pump-portfolio-section">
@@ -60,7 +60,7 @@ export function PumpPortfolio() {
                   value={`$${formatWad(market.marketCapNusd)}`}
                 />
               ))}</div>
-            ) : <div className="pump-empty-inline"><p>This wallet has not launched a market.</p><Link href="/0xpump/create">Create token</Link></div>}
+            ) : <div className="pump-empty-inline"><p>This wallet has not launched a market.</p><Link href="/0xPump/create">Create token</Link></div>}
           </section>
         </>
       )}
@@ -82,7 +82,7 @@ function PortfolioRow({
   const image = ipfsToGatewayUrl(market.imageURI);
   const optimizeImage = market.imageURI.startsWith("ipfs://");
   return (
-    <Link href={`/0xpump/token/${market.tokenAddress}`} className="pump-portfolio-row">
+    <Link href={`/0xPump/token/${market.tokenAddress}`} className="pump-portfolio-row">
       <span className="pump-portfolio-logo">
         {image && optimizeImage ? (
           <Image src={image} alt="" width={42} height={42} sizes="42px" />

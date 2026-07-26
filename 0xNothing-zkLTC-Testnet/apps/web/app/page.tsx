@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 
 const links = [
   { href: "/0xpixel", label: "0xPixel", tone: "light" },
-  { href: "/0xpump", label: "0xPump", tone: "dark" },
+  { href: "/0xPump", label: "0xPump", tone: "dark" },
 ] as const;
 
 export default function Home() {

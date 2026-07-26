@@ -8,7 +8,7 @@ export function TokenCard({ market, priority = false }: { market: PumpMarket; pr
   const image = ipfsToGatewayUrl(market.imageURI);
   const optimizeImage = market.imageURI.startsWith("ipfs://");
   return (
-    <Link href={`/0xpump/token/${market.tokenAddress}`} className="pump-token-card">
+    <Link href={`/0xPump/token/${market.tokenAddress}`} className="pump-token-card">
       <div className="pump-token-card-head">
         <div className="pump-token-logo">
           {image && optimizeImage ? (
