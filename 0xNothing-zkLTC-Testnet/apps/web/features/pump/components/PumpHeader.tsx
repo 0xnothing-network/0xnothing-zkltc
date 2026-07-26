@@ -26,7 +26,7 @@ const PUMP_NAV = [
   { href: "/0xPump/create", label: "Create" },
   { href: "/0xPump/nusd", label: "NUSD" },
   { href: "/0xPump/portfolio", label: "Portfolio" },
-  { href: "/0xPump/faq", label: "FAQ" },
+  { href: "/0xPump/stats", label: "Stats" },
 ] as const;
 
 function isActiveRoute(pathname: string, href: (typeof PUMP_NAV)[number]["href"]): boolean {

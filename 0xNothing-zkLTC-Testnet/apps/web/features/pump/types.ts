@@ -127,14 +127,21 @@ export interface PumpProtocolStats {
   readyCount: number;
   graduatedCount: number;
   tradeCount: number;
+  buyCount: number;
+  sellCount: number;
   volumeNusd: string;
   feesNusd: string;
+  tradeFeesNusd: string;
+  creationFeesNusd: string;
+  withdrawnFeesNusd: string;
 }
 
 export interface PumpStatsResponse {
   stats: PumpProtocolStats;
   source: PumpDataSource;
   configured: boolean;
+  indexedBlock?: number;
+  updatedAt?: number;
   warning?: string;
 }
 

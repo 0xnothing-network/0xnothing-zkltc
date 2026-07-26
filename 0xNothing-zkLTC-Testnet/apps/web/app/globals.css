@@ -1552,12 +1552,161 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .pump-create-page { max-width: 1000px; }
 .pump-nusd-page { max-width: 1080px; }
 .pump-nusd-page .pump-vault { margin-top: 0; }
-.pump-faq-page { max-width: 1000px; }
-.pump-faq-list { margin: 28px 0 0; border-top: 1px solid var(--pump-line); }
-.pump-faq-list > div { display: grid; grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr); gap: 40px; border-bottom: 1px solid var(--pump-line); padding: 22px 0 25px; }
-.pump-faq-list dt { display: flex; gap: 14px; color: var(--pump-text); font-size: 13px; }
-.pump-faq-list dt span { flex: none; color: var(--pump-green); font-size: 9px; }
-.pump-faq-list dd { max-width: 680px; margin: 0; color: var(--pump-muted); font-size: 12px; line-height: 1.7; }
+.pump-stats-page { max-width: 1120px; }
+.pump-stats-heading { padding-top: 10px; }
+.pump-stats-source {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  border-bottom: 1px solid var(--pump-line);
+  color: var(--pump-muted);
+  font-size: 9px;
+  text-transform: uppercase;
+}
+.pump-stats-source span:first-child { color: var(--pump-green); }
+.pump-stats-primary {
+  display: grid;
+  grid-template-columns: 1.2fr repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--pump-line);
+  border-top: 0;
+}
+.pump-stats-primary > div {
+  display: grid;
+  min-width: 0;
+  min-height: 142px;
+  align-content: space-between;
+  gap: 10px;
+  border-left: 1px solid var(--pump-line);
+  padding: 20px;
+}
+.pump-stats-primary > div:first-child { border-left: 0; }
+.pump-stats-primary span,
+.pump-dev-claimable > span { color: var(--pump-muted); font-size: 9px; text-transform: uppercase; }
+.pump-stats-primary strong {
+  color: var(--pump-text);
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+.pump-stats-primary-featured strong { color: var(--pump-green); font-size: 32px; }
+.pump-stats-primary small,
+.pump-dev-claimable small { color: var(--pump-muted); font-size: 9px; line-height: 1.5; }
+.pump-stats-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+.pump-stats-section {
+  min-width: 0;
+  border: 1px solid var(--pump-line);
+  padding: 22px;
+  background: var(--pump-panel);
+}
+.pump-stats-section-heading,
+.pump-dev-fees-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+.pump-stats-section-heading h2,
+.pump-dev-fees-heading h2 { margin: 0; color: var(--pump-text); font-size: 18px; font-weight: 500; }
+.pump-stats-section-heading > strong { color: var(--pump-green); font-size: 18px; font-weight: 500; }
+.pump-stats-list { display: grid; margin: 22px 0 0; }
+.pump-stats-list > div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-top: 1px solid var(--pump-line);
+  padding: 13px 0;
+}
+.pump-stats-list dt { color: var(--pump-muted); font-size: 9px; text-transform: uppercase; }
+.pump-stats-list dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: var(--pump-text); font-size: 11px; text-align: right; }
+.pump-stats-lifecycle { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 25px; }
+.pump-stats-lifecycle > div { min-width: 0; border-left: 1px solid var(--pump-line); padding: 2px 14px; }
+.pump-stats-lifecycle > div:first-child { border-left: 0; padding-left: 0; }
+.pump-stats-lifecycle strong { display: block; color: var(--pump-text); font-size: 25px; font-weight: 500; }
+.pump-stats-lifecycle span { display: block; margin-top: 7px; color: var(--pump-muted); font-size: 8px; text-transform: uppercase; }
+.pump-stats-leaderboard { margin-top: 12px; padding-bottom: 8px; }
+.pump-stats-market-list { margin-top: 18px; }
+.pump-stats-market-list > a {
+  display: grid;
+  grid-template-columns: 34px minmax(170px, 1fr) 92px 100px minmax(110px, auto);
+  min-height: 58px;
+  align-items: center;
+  gap: 14px;
+  border-top: 1px solid var(--pump-line);
+  color: var(--pump-text);
+}
+.pump-stats-market-list > a:hover { background: rgba(255, 255, 255, 0.025); }
+.pump-stats-rank { color: var(--pump-green); font-size: 8px; }
+.pump-stats-market-name { display: block; min-width: 0; }
+.pump-stats-market-name strong,
+.pump-stats-market-name small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pump-stats-market-name strong { font-size: 11px; font-weight: 500; }
+.pump-stats-market-name small { margin-top: 4px; color: var(--pump-green); font-size: 8px; }
+.pump-stats-market-trades { color: var(--pump-muted); font-size: 9px; text-align: right; }
+.pump-stats-market-volume { font-size: 12px; font-weight: 500; text-align: right; }
+.pump-stats-inline-error { margin: 18px 0 8px; color: var(--pump-red); font-size: 10px; }
+.pump-admin-check-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 12px;
+  border: 1px solid rgba(255, 102, 125, 0.4);
+  padding: 14px 16px;
+  color: var(--pump-red);
+  font-size: 10px;
+}
+.pump-admin-check-error button { min-height: 36px; border: 0; color: inherit; font: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.pump-dev-fees {
+  margin-top: 12px;
+  border: 1px solid rgba(119, 255, 177, 0.45);
+  padding: 22px;
+  background: rgba(119, 255, 177, 0.025);
+}
+.pump-dev-fees-heading p { max-width: 620px; margin: 9px 0 0; color: var(--pump-muted); font-size: 10px; line-height: 1.6; }
+.pump-dev-badge {
+  display: inline-flex;
+  min-height: 28px;
+  flex: none;
+  align-items: center;
+  border: 1px solid rgba(119, 255, 177, 0.45);
+  padding: 0 10px;
+  color: var(--pump-green);
+  font-size: 8px;
+  text-transform: uppercase;
+}
+.pump-dev-fees-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.8fr) minmax(280px, 1.2fr) 190px;
+  align-items: end;
+  gap: 28px;
+  margin-top: 24px;
+  border-top: 1px solid var(--pump-line);
+  padding-top: 22px;
+}
+.pump-dev-claimable { display: grid; min-width: 0; gap: 11px; }
+.pump-dev-claimable strong { overflow-wrap: anywhere; color: var(--pump-green); font-size: 25px; font-weight: 500; line-height: 1.1; }
+.pump-dev-fees-grid .pump-stats-list { margin: 0; }
+.pump-dev-fees-grid .pump-stats-list > div:first-child { border-top: 0; }
+.pump-stats-market-skeleton,
+.pump-skeleton-block,
+.pump-stats-metric-skeleton > * { background: #171a1d; animation: pump-pulse 1.4s ease-in-out infinite; }
+.pump-stats-market-skeleton { height: 180px; margin-top: 18px; }
+.pump-stats-loading .pump-stats-source { min-height: 42px; }
+.pump-stats-metric-skeleton > * { display: block; }
+.pump-stats-metric-skeleton span { width: 45%; height: 8px; }
+.pump-stats-metric-skeleton strong { width: 70%; height: 26px; }
+.pump-stats-metric-skeleton small { width: 85%; height: 8px; }
+.pump-stats-loading .pump-stats-detail-grid > div { min-height: 230px; }
 
 .pump-shell :where(a, button, input, select, textarea):focus-visible {
   outline: 1px solid var(--pump-green) !important;
@@ -1604,6 +1753,11 @@ input[type="range"]::-webkit-slider-thumb:hover {
   .pump-detail-stats { grid-template-columns: repeat(3, minmax(0,1fr)); }
   .pump-vault-metrics { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .pump-vault-oracle-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pump-stats-primary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pump-stats-primary > div:nth-child(odd) { border-left: 0; }
+  .pump-stats-primary > div:nth-child(n + 3) { border-top: 1px solid var(--pump-line); }
+  .pump-dev-fees-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pump-dev-fees-grid > .pump-button { grid-column: 1 / -1; }
 }
 
 @media (max-width: 760px) {
@@ -1704,7 +1858,19 @@ input[type="range"]::-webkit-slider-thumb:hover {
   .pump-chart-heading .pump-periods button { flex: 1; }
   .pump-vault-workspace { grid-template-columns: 1fr; gap: 20px; }
   .pump-vault-preview { border-top: 1px solid var(--pump-line); border-left: 0; padding-top: 20px; padding-left: 0; }
-  .pump-faq-list > div { grid-template-columns: 1fr; gap: 12px; }
+  .pump-stats-detail-grid { grid-template-columns: 1fr; }
+  .pump-stats-section { padding: 18px; }
+  .pump-stats-market-list > a { grid-template-columns: 28px minmax(0, 1fr) minmax(94px, auto); gap: 10px; }
+  .pump-stats-market-list .pump-status,
+  .pump-stats-market-trades { display: none; }
+  .pump-stats-source,
+  .pump-stats-primary span,
+  .pump-stats-primary small,
+  .pump-stats-lifecycle span,
+  .pump-stats-rank,
+  .pump-stats-market-name small { font-size: 10px; }
+  .pump-dev-fees-grid { grid-template-columns: 1fr; gap: 20px; }
+  .pump-dev-fees-grid > .pump-button { grid-column: auto; }
   .pump-panel { padding: 18px; }
   .pump-chart-panel,
   .pump-holders,
@@ -1758,6 +1924,18 @@ input[type="range"]::-webkit-slider-thumb:hover {
   .pump-token-identity h1 { font-size: 24px; }
   .pump-token-price strong { font-size: 15px; }
   .pump-detail-stats { grid-template-columns: 1fr; }
+  .pump-stats-primary { grid-template-columns: 1fr; }
+  .pump-stats-primary > div,
+  .pump-stats-primary > div:nth-child(odd) { min-height: 124px; border-left: 0; }
+  .pump-stats-primary > div:nth-child(n + 2) { border-top: 1px solid var(--pump-line); }
+  .pump-stats-primary strong { font-size: 24px; }
+  .pump-stats-primary-featured strong { font-size: 28px; }
+  .pump-stats-lifecycle > div { padding-inline: 10px; }
+  .pump-stats-lifecycle strong { font-size: 21px; }
+  .pump-stats-section-heading,
+  .pump-dev-fees-heading { align-items: flex-start; flex-direction: column; gap: 12px; }
+  .pump-dev-fees { padding: 16px; }
+  .pump-dev-badge { align-self: flex-start; }
   .pump-stat-strip > div,
   .pump-detail-stats > div,
   .pump-vault-metrics > div,
@@ -8611,6 +8789,18 @@ img[src^="data:image/svg+xml"],
 .pump-shell .pump-panel {
   background: var(--pump-panel) !important;
   color: var(--pump-text) !important;
+}
+
+.pump-shell .pump-stats-section {
+  background: var(--pump-panel) !important;
+}
+
+.pump-shell .pump-stats-loading .pump-skeleton-block {
+  background: #171a1d !important;
+}
+
+.pump-shell .pump-dev-fees {
+  background: rgba(119, 255, 177, 0.025) !important;
 }
 
 .pump-shell .pump-nav-desktop {

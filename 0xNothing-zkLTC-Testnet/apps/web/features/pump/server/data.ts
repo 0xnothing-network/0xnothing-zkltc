@@ -136,8 +136,14 @@ interface GraphProtocol {
   readyTokenCount: string;
   graduatedTokenCount: string;
   tradeCount: string;
+  buyCount: string;
+  sellCount: string;
   totalVolumeNusd: string;
+  totalTradeFeesNusd: string;
+  totalCreationFeesNusd: string;
   totalFeesNusd: string;
+  totalFeesWithdrawnNusd: string;
+  updatedAt: string;
 }
 
 type RpcMarketState = readonly [
@@ -225,26 +231,37 @@ export async function getPumpStats(): Promise<PumpStatsResponse> {
 
   if (PUMP_SUBGRAPH_URL) {
     try {
-      const payload = await graphFetch<{ protocol: GraphProtocol | null }>(
+      const payload = await graphFetch<{ protocol: GraphProtocol | null; _meta: GraphMeta }>(
         `query PumpProtocolStats {
+          _meta { block { number } hasIndexingErrors }
           protocol(id: "global") {
             tokenCount activeTokenCount readyTokenCount graduatedTokenCount
-            tradeCount totalVolumeNusd totalFeesNusd
+            tradeCount buyCount sellCount totalVolumeNusd
+            totalTradeFeesNusd totalCreationFeesNusd totalFeesNusd
+            totalFeesWithdrawnNusd updatedAt
           }
         }`,
         {},
       );
+      if (payload._meta.hasIndexingErrors) {
+        throw new Error("Pump statistics index reported an error.");
+      }
       return {
         stats: payload.protocol ? normalizeGraphProtocol(payload.protocol) : emptyProtocolStats(),
         source: "subgraph",
         configured: true,
+        indexedBlock: safeNumber(payload._meta.block.number),
+        updatedAt: payload.protocol ? safeNumber(payload.protocol.updatedAt) : undefined,
       };
     } catch (error) {
       return {
         stats: await getRpcProtocolStats(),
         source: "rpc",
         configured: true,
-        warning: warningMessage(error, "Subgraph unavailable; using live RPC market totals."),
+        warning: warningMessage(
+          error,
+          "Subgraph unavailable; market and volume totals use live RPC. Trade and lifetime revenue totals are unavailable.",
+        ),
       };
     }
   }
@@ -253,7 +270,7 @@ export async function getPumpStats(): Promise<PumpStatsResponse> {
     stats: await getRpcProtocolStats(),
     source: "rpc",
     configured: true,
-    warning: "Pump subgraph is not configured; trade and fee totals are unavailable.",
+    warning: "Pump subgraph is not configured; trade and lifetime revenue totals are unavailable.",
   };
 }
 
@@ -653,7 +670,7 @@ async function getRpcProtocolStats(): Promise<PumpProtocolStats> {
 
   for (let start = 0; start < tokens.length; start += 100) {
     const page = tokens.slice(start, start + 100);
-    const results = await publicClient.multicall({
+    let results = await publicClient.multicall({
       allowFailure: true,
       contracts: page.map((token) => ({
         address: PUMP_FACTORY_ADDRESS,
@@ -662,6 +679,24 @@ async function getRpcProtocolStats(): Promise<PumpProtocolStats> {
         args: [token] as const,
       })),
     });
+    const retryTokens = page.filter((_, index) => results[index].status !== "success");
+    if (retryTokens.length) {
+      const retries = await publicClient.multicall({
+        allowFailure: true,
+        contracts: retryTokens.map((token) => ({
+          address: PUMP_FACTORY_ADDRESS,
+          abi: zeroXPumpAbi,
+          functionName: "markets" as const,
+          args: [token] as const,
+        })),
+      });
+      let retryIndex = 0;
+      results = results.map((result) =>
+        result.status === "success" ? result : retries[retryIndex++]);
+    }
+    if (results.some((result) => result.status !== "success")) {
+      throw new Error("Live RPC market totals are incomplete.");
+    }
     for (const result of results) {
       if (result.status !== "success") continue;
       const market = result.result;
@@ -1219,8 +1254,13 @@ function normalizeGraphProtocol(protocol: GraphProtocol): PumpProtocolStats {
     readyCount,
     graduatedCount: safeNumber(protocol.graduatedTokenCount),
     tradeCount: safeNumber(protocol.tradeCount),
+    buyCount: safeNumber(protocol.buyCount),
+    sellCount: safeNumber(protocol.sellCount),
     volumeNusd: integerString(protocol.totalVolumeNusd),
     feesNusd: integerString(protocol.totalFeesNusd),
+    tradeFeesNusd: integerString(protocol.totalTradeFeesNusd),
+    creationFeesNusd: integerString(protocol.totalCreationFeesNusd),
+    withdrawnFeesNusd: integerString(protocol.totalFeesWithdrawnNusd),
   };
 }
 
@@ -1231,8 +1271,13 @@ function emptyProtocolStats(): PumpProtocolStats {
     readyCount: 0,
     graduatedCount: 0,
     tradeCount: 0,
+    buyCount: 0,
+    sellCount: 0,
     volumeNusd: "0",
     feesNusd: "0",
+    tradeFeesNusd: "0",
+    creationFeesNusd: "0",
+    withdrawnFeesNusd: "0",
   };
 }
 

@@ -36,6 +36,15 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.moralis.io" },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/0xPump/faq",
+        destination: "/0xPump/stats",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

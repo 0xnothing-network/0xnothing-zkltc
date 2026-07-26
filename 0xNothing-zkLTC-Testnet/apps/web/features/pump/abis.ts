@@ -20,6 +20,9 @@ export const zeroXPumpAbi = parseAbi([
   "function nusd() view returns (address)",
   "function vault() view returns (address)",
   "function paused() view returns (bool)",
+  "function admin() view returns (address)",
+  "function accruedProtocolFeesNusd() view returns (uint256)",
+  "function withdrawProtocolFees(address recipient,uint256 amountNusd)",
   "function totalMarkets() view returns (uint256)",
   "function getAllTokens() view returns (address[])",
   "function getTokensByCreator(address creator) view returns (address[])",
@@ -29,6 +32,7 @@ export const zeroXPumpAbi = parseAbi([
   "event TokenReadyForGraduation(address indexed token,uint256 realNusdReserve,uint256 tokenReserve,uint256 thresholdNusd)",
   "event TokenCurveReopened(address indexed token,uint256 realNusdReserve,uint256 tokenReserve)",
   "event TokenGraduated(address indexed token,address indexed dex,bytes32 indexed pairId,address pool,uint256 nusdLiquidity,uint256 tokenLiquidity,uint256 lpAmount,address lpRecipient)",
+  "event ProtocolFeesWithdrawn(address indexed recipient,uint256 amountNusd)",
 ]);
 
 export const pumpTokenAbi = parseAbi([
