@@ -72,11 +72,7 @@ export default function Home() {
             {links.map((link) => {
               const content = <><span>{link.label}</span><span aria-hidden="true">&gt;</span></>;
               const className = `nothing-link nothing-link-${link.tone}`;
-              return link.href === "/0xFi" ? (
-                <a key={link.href} href={link.href} className={className}>{content}</a>
-              ) : (
-                <Link key={link.href} href={link.href} className={className}>{content}</Link>
-              );
+              return <Link key={link.href} href={link.href} className={className}>{content}</Link>;
             })}
           </nav>
         </section>

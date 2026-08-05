@@ -24,23 +24,16 @@ config/networks/                  public network configuration
 docs/                             architecture, security, and deployment runbooks
 ```
 
-The 0xFi web app uses the `/0xFi` base path and runs as a separate Next.js
-service. The main web app proxies `/0xFi` page, API, and asset requests to
-`OXFI_INTERNAL_ORIGIN` (default `http://127.0.0.1:3301`). For local development,
-run the main app on port `3300` and the 0xFi workspace web app on port `3301`.
+0xFi is compiled into the main Next.js app under `/0xFi`, exactly like 0xPump
+and 0xPixel. Its pages, API handlers, and supporting code live in
+`apps/web/app/0xFi` and `apps/web/features/fi`; no proxy or second web service is
+required.
 
-For Vercel, deploy two projects from the same repository:
-
-1. Set the 0xFi project's Root Directory to `0xNothing-zkLTC-Testnet/0xFi`.
-   Its `vercel.json` builds the `web` workspace and serves it under `/0xFi`.
-2. Set the gateway project's Root Directory to `0xNothing-zkLTC-Testnet/apps/web`.
-3. In the gateway project, set `OXFI_PUBLIC_ORIGIN` to the public HTTPS origin
-   of the first project, for example `https://zeroxfi-testnet.vercel.app`, then
-   redeploy the gateway. Do not use `localhost`, `127.0.0.1`, a private DNS
-   record, or the gateway's own domain; those destinations are blocked or loop.
-
-The gateway build fails explicitly when a Vercel deployment has no public 0xFi
-origin, preventing a deployment that later returns `DNS_HOSTNAME_RESOLVED_PRIVATE`.
+For Vercel, deploy one project with Root Directory
+`0xNothing-zkLTC-Testnet/apps/web`. The checked public LitVM testnet values are
+built in, while matching `NEXT_PUBLIC_*` variables can override them when a
+contract deployment changes. `OXFI_PUBLIC_ORIGIN` and `OXFI_INTERNAL_ORIGIN`
+are no longer used.
 
 ## Existing 0xPixel deployment
 

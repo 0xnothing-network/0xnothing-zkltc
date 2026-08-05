@@ -1,0 +1,72 @@
+export const nusdOracleAbi = [
+  {
+    type: "function",
+    name: "quoteMint",
+    stateMutability: "view",
+    inputs: [{ name: "collateralWei", type: "uint256" }],
+    outputs: [{ name: "amountNusd", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "mintAtOracle",
+    stateMutability: "payable",
+    inputs: [
+      { name: "minNusdOut", type: "uint256" },
+      { name: "recipient", type: "address" },
+    ],
+    outputs: [{ name: "amountNusd", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "quoteRedeem",
+    stateMutability: "view",
+    inputs: [{ name: "amountNusd", type: "uint256" }],
+    outputs: [{ name: "collateralOutWei", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "redeemAtOracle",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "amountNusd", type: "uint256" },
+      { name: "minCollateralOutWei", type: "uint256" },
+      { name: "recipient", type: "address" },
+    ],
+    outputs: [{ name: "collateralOutWei", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "mintPaused",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "redeemPaused",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "supplyCeilingNusd",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "totalSupply",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "totalCollateralWei",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+] as const;

@@ -1,46 +1,5 @@
 import type { NextConfig } from "next";
 
-function isPrivateHostname(hostname: string): boolean {
-  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  if (
-    normalized === "localhost"
-    || normalized.endsWith(".localhost")
-    || normalized.endsWith(".local")
-    || normalized === "::1"
-  ) return true;
-
-  const octets = normalized.split(".").map(Number);
-  if (octets.length !== 4 || octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)) {
-    return false;
-  }
-  return octets[0] === 0
-    || octets[0] === 10
-    || octets[0] === 127
-    || (octets[0] === 169 && octets[1] === 254)
-    || (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31)
-    || (octets[0] === 192 && octets[1] === 168);
-}
-
-function resolveOxFiOrigin(): string {
-  const configured = (process.env.OXFI_PUBLIC_ORIGIN || process.env.OXFI_INTERNAL_ORIGIN)?.trim();
-  const rawOrigin = configured || "http://127.0.0.1:3301";
-  const origin = new URL(rawOrigin);
-  const isVercelBuild = process.env.VERCEL === "1";
-
-  if (origin.pathname !== "/" || origin.search || origin.hash || origin.username || origin.password) {
-    throw new Error("0xFi origin must contain only scheme and hostname, without a path, query, or credentials");
-  }
-  if (isVercelBuild && (!configured || origin.protocol !== "https:" || isPrivateHostname(origin.hostname))) {
-    throw new Error(
-      "Set OXFI_PUBLIC_ORIGIN to the public HTTPS URL of the separate 0xFi Vercel project; localhost/private origins cannot be used by Vercel rewrites",
-    );
-  }
-
-  return origin.origin;
-}
-
-const oxFiOrigin = resolveOxFiOrigin();
-
 const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
@@ -51,6 +10,7 @@ const nextConfig: NextConfig = {
       "wagmi",
       "viem",
       "lightweight-charts",
+      "@phosphor-icons/react",
       "@tanstack/react-query",
     ],
   },
@@ -85,18 +45,6 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
     ];
-  },
-  async rewrites() {
-    return {
-      beforeFiles: [
-        {
-          source: "/0xFi/:path*",
-          destination: `${oxFiOrigin}/0xFi/:path*`,
-        },
-      ],
-      afterFiles: [],
-      fallback: [],
-    };
   },
   async headers() {
     return [

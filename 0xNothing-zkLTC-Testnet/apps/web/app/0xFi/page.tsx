@@ -1,8 +1,15 @@
-export default function FiPage() {
+import type { Metadata } from "next";
+import { PoolDirectory } from "@fi/components/PoolDirectory";
+
+export const metadata: Metadata = {
+  title: "Trade",
+  description: "Choose a live 0xFi market to trade on LitVM.",
+};
+
+export default function TradePage() {
   return (
-    <div style={{ padding: '50px', textAlign: 'center' }}>
-      <h1>0xFi Dashboard</h1>
-      <p>This is the 0xFi section. The full dashboard is available.</p>
+    <div className="fi-page fi-markets-page">
+      <PoolDirectory tradeOnly />
     </div>
   );
 }
