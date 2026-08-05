@@ -29,6 +29,19 @@ service. The main web app proxies `/0xFi` page, API, and asset requests to
 `OXFI_INTERNAL_ORIGIN` (default `http://127.0.0.1:3301`). For local development,
 run the main app on port `3300` and the 0xFi workspace web app on port `3301`.
 
+For Vercel, deploy two projects from the same repository:
+
+1. Set the 0xFi project's Root Directory to `0xNothing-zkLTC-Testnet/0xFi`.
+   Its `vercel.json` builds the `web` workspace and serves it under `/0xFi`.
+2. Set the gateway project's Root Directory to `0xNothing-zkLTC-Testnet/apps/web`.
+3. In the gateway project, set `OXFI_PUBLIC_ORIGIN` to the public HTTPS origin
+   of the first project, for example `https://zeroxfi-testnet.vercel.app`, then
+   redeploy the gateway. Do not use `localhost`, `127.0.0.1`, a private DNS
+   record, or the gateway's own domain; those destinations are blocked or loop.
+
+The gateway build fails explicitly when a Vercel deployment has no public 0xFi
+origin, preventing a deployment that later returns `DNS_HOSTNAME_RESOLVED_PRIVATE`.
+
 ## Existing 0xPixel deployment
 
 - NFT: `0x33A32b9b2BEe864f9e42BFa39cA7BDC72f655988`, start block `24867130`
