@@ -1,0 +1,23 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "pair", "type": "address" },
+      { "indexed": true, "internalType": "address", "name": "gauge", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "gaugeCount", "type": "uint256" }
+    ],
+    "name": "GaugeCreated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "pair", "type": "address" },
+      { "indexed": true, "internalType": "address", "name": "gauge", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "duration", "type": "uint256" }
+    ],
+    "name": "GaugeFunded",
+    "type": "event"
+  }
+]

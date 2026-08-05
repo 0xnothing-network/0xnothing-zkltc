@@ -1,0 +1,13 @@
+{
+  "broadcasted": false,
+  "cancelledCoreOperationId": "0xd8a32ab2cb94461c5ec7f74380beea9b0d1a17bb98797fd46920d1c32d69c057",
+  "cancelledMigrationOperationId": "0x0c33b8c3b0536dd89e9763e43752f749f41ab936fa55881e59126ef24205cd8e",
+  "chainId": 4441,
+  "deployer": "0x58633401dCc383F010688e950878000000000000",
+  "governance": "0x58633401dCc383F010688e950878000000000000",
+  "governanceMode": "direct-deployer-no-timelock",
+  "guardian": "0x58633401dCc383F010688e950878000000000000",
+  "pumpGraduationController": "0x2112Cea76b76817626cA58B205b3dC5560F05857",
+  "scriptExecutionBlock": 36095412,
+  "status": "direct-governance-prediction"
+}

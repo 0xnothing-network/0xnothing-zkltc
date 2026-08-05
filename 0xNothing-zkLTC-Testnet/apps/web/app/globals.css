@@ -1487,6 +1487,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .pump-about small { color: var(--pump-muted); font-size: 8px; }
 .pump-graduation-line { margin: 14px 0; border: 1px solid var(--pump-line); padding: 20px; background: var(--pump-panel); }
 .pump-graduation-line > div:first-child { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 12px; font-size: 10px; }
+.pump-graduation-line > .pump-button { margin-top: 14px; }
 .pump-graduation-line p { margin: 12px 0 0; color: var(--pump-muted); font-size: 9px; line-height: 1.6; }
 
 .pump-holders { margin-top: 14px; padding: 0; overflow: hidden; }

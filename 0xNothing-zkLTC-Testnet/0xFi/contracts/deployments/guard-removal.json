@@ -1,0 +1,21 @@
+{
+  "broadcasted": true,
+  "chainId": 4441,
+  "deployer": "0x58633401dCc383F010688e950878000000000000",
+  "gaugeFactory": "0x36F425fddc59d281c6ddEaDAc34B32E6f039EB13",
+  "lendingPool": "0x123b46508E2265E93172519F71fa02de6E68053B",
+  "nBTC": "0xc44B6027eBc4859d2E7e2bCF17188C29b1BC1655",
+  "nBTCNusdGauge": "0x622eAf97dfe1f284850a462039568aCF52c2B0B4",
+  "nBTCNusdPair": "0xF791643Bb8c86516e9e8a1c4F25cDDc438ced80C",
+  "nBTCVault": "0x620fB32a1e113aA3D1121baC0c65f919569dF1d3",
+  "nETH": "0x60590B1f4F17969B8c52c2c0B533404Bbb62206b",
+  "nETHNusdGauge": "0xa28656a5277Db9Bcf0Bd8fe0312A52Dd3e7a55c8",
+  "nETHNusdPair": "0x5cB49442b1684C39FC9348022114FEef6FdB3617",
+  "nETHVault": "0xA7dA20a8a0d833eFcc0B2ca8189011FCFeab7465",
+  "ownershipOperationId": "0x0c33b8c3b0536dd89e9763e43752f749f41ab936fa55881e59126ef24205cd8e",
+  "ownershipReadyAt": 1785816721,
+  "riskMode": "caps-pauses-oracles-no-nusd-health-guard",
+  "scriptExecutionBlock": 35855505,
+  "status": "guard-removal-broadcast-confirmed",
+  "wzkLtcNusdGauge": "0x0A183F6D225B888CfDBcC03f4afd78Ea244CfF03"
+}

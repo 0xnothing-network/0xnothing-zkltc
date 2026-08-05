@@ -32,8 +32,9 @@ constructor arguments, plus the fee recipient, fixed supply,
 target. Verify onchain that `graduationThresholdNusd` is the market-cap target,
 that `graduationReserveThresholdNusd` is the derived real-reserve target
 (`1,500 NUSD` for these parameters), and that the creation and trade fees are
-exactly `1 NUSD` and `10` basis points. The graduation router must start and
-remain disabled with no adapter on testnet.
+exactly `1 NUSD` and `10` basis points. The graduation router must start disabled
+with no adapter. A later 0xFi activation is a separate delayed operation and
+must not be folded into this deployment transaction.
 
 Write addresses and the receipt block to `deployments/liteforge-testnet/deployments.json` and the web public environment.
 
@@ -54,8 +55,9 @@ Record the endpoint in the deployment manifest and web configuration. Do not red
 - Upload that exact logo and metadata, then create the token without a second fee.
 - Confirm changed content cannot use the first reservation and a same-content retry can.
 - Buy and sell with the `0.1%` fee and confirm contract/subgraph agreement.
-- Confirm the market moves to `READY` at a `6,000 NUSD` market cap, while the
-  router remains disabled and no liquidity migration transaction is possible.
+- Confirm the market moves to `READY` at a `6,000 NUSD` market cap. Before 0xFi
+  activation, confirm migration is unavailable; after activation, confirm the
+  exact pinned adapter/controller/admin bindings before testing graduation.
 - Sell once from `READY` and confirm the contract, subgraph, and UI all reopen
   the curve as `TRADING`.
 - Confirm 0xPixel mint, gallery, marketplace, history, and fallback behavior remain unchanged.

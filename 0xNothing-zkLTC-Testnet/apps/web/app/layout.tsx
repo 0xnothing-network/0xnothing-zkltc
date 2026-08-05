@@ -17,10 +17,10 @@ const vercelAnalyticsEnabled = process.env.VERCEL === "1";
 export const metadata: Metadata = {
   metadataBase: new URL(PUBLIC_APP_URL),
   title: "0xNothing | Nothing to everything",
-  description: "0xPixel art and NUSD bonding-curve markets on LitVM Testnet.",
+  description: "0xPixel, 0xPump, and 0xFi on LitVM Testnet.",
   openGraph: {
     title: "0xNothing | Nothing to everything",
-    description: "0xPixel art and NUSD bonding-curve markets on LitVM Testnet.",
+    description: "0xPixel, 0xPump, and 0xFi on LitVM Testnet.",
     images: ["/0xNothing.jpg"],
   },
   icons: {

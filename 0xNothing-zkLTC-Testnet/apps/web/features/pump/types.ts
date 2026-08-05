@@ -43,6 +43,9 @@ export interface PumpMarket {
   tradeCount: number;
   volumeNusd: string;
   lastTradeAt: number;
+  dex: Address;
+  dexPairId: Hex;
+  pool: Address;
 }
 
 export interface PumpTrade {
@@ -173,5 +176,8 @@ export function emptyPumpMarket(tokenAddress: Address): PumpMarket {
     tradeCount: 0,
     volumeNusd: "0",
     lastTradeAt: 0,
+    dex: "0x0000000000000000000000000000000000000000",
+    dexPairId: `0x${"0".repeat(64)}` as Hex,
+    pool: "0x0000000000000000000000000000000000000000",
   };
 }

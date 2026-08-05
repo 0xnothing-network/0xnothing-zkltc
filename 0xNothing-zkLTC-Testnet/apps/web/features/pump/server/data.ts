@@ -288,10 +288,28 @@ export async function getPumpMarket(token: Address): Promise<PumpMarketResponse>
         { id: token.toLowerCase() },
       );
       if (payload.market) {
+        const indexedMarket = normalizeGraphMarket(payload.market);
+        const liveMarket = await hydrateRpcMarket(token).catch(() => null);
         return {
-          market: normalizeGraphMarket(payload.market),
+          market: liveMarket
+            ? {
+                ...indexedMarket,
+                status: liveMarket.status,
+                reserveNusd: liveMarket.reserveNusd,
+                reserveToken: liveMarket.reserveToken,
+                virtualNusd: liveMarket.virtualNusd,
+                virtualToken: liveMarket.virtualToken,
+                priceNusd: liveMarket.priceNusd,
+                marketCapNusd: liveMarket.marketCapNusd,
+                progressBps: liveMarket.progressBps,
+                dex: liveMarket.dex,
+                dexPairId: liveMarket.dexPairId,
+                pool: liveMarket.pool,
+              }
+            : indexedMarket,
           source: "subgraph",
           configured: true,
+          warning: liveMarket ? undefined : "Live market state is temporarily unavailable.",
         };
       }
     } catch (error) {
@@ -751,6 +769,9 @@ async function hydrateRpcMarket(token: Address): Promise<PumpMarket> {
     progressBps: Number.isFinite(progress) ? Math.min(progress, 10_000) : 0,
     createdAt: safeNumber(market[6]),
     volumeNusd: market[5].toString(),
+    dex: getAddress(market[8]),
+    dexPairId: market[9],
+    pool: getAddress(market[10]),
   };
 }
 

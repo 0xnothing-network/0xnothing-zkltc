@@ -1,14 +1,17 @@
 # 0xNothing zkLTC Testnet
 
-The active LitVM testnet workspace contains only 0xPixel and 0xPump.
+The LitVM testnet workspace contains 0xPixel, 0xPump, and the 0xFi DeFi suite.
 
 Every 0xPump market has a fixed `6,000 NUSD` READY market-cap target. Reaching
-that target stops buys, but does not migrate liquidity on testnet: the
-graduation router is deployed disabled with no adapter. A holder may still sell
-from `READY`, which reopens the curve as `TRADING`.
+that target stops buys. A holder may still sell from `READY`, which reopens the
+curve as `TRADING`. Graduation is permissionless only after the pinned 0xFi
+controller owns both Pump and its graduation router, the router is enabled, and
+the 0xFi adapter is allowed. The web client checks those live conditions before
+offering the action.
 
 ```text
-apps/web/                         Next.js application
+apps/web/                         0xNothing Next.js gateway and 0xPixel/0xPump UI
+0xFi/                             AMM, farming, lending, synths, indexer, and web UI
 contracts/                        Foundry contracts and tests
   src/0xpixel/reference/          exact source references for live deployments
   src/0xpump/                     bonding-curve launchpad
@@ -20,6 +23,11 @@ deployments/liteforge-testnet/    checked deployment manifest
 config/networks/                  public network configuration
 docs/                             architecture, security, and deployment runbooks
 ```
+
+The 0xFi web app uses the `/0xFi` base path and runs as a separate Next.js
+service. The main web app proxies `/0xFi` page, API, and asset requests to
+`OXFI_INTERNAL_ORIGIN` (default `http://127.0.0.1:3301`). For local development,
+run the main app on port `3300` and the 0xFi workspace web app on port `3301`.
 
 ## Existing 0xPixel deployment
 

@@ -10,5 +10,7 @@ compatibility. `nativeCollateralVault` is null. Before replacing those current
 fields, the finalizer preserves the previous NUSD and vault addresses as
 `legacyNusd` and `legacyNativeCollateralVault`.
 The finalized manifest must preserve the fixed `6,000 NUSD` READY market-cap
-target, its derived `1,500 NUSD` reserve target, and proof that testnet
-graduation remains disabled with no adapter.
+target and its derived `1,500 NUSD` reserve target. The receipt finalizer records
+the router's initial disabled/no-adapter state. Any later 0xFi activation update
+must come from explicit live RPC verification and record adapter, controller,
+admin-readiness, and verification-block fields rather than simulation output.

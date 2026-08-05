@@ -1,0 +1,10 @@
+.env.local
+web/.env.local
+node_modules/
+web/.next/
+subgraph/build/
+contracts/cache/
+contracts/out/
+contracts/broadcast/
+contracts/deployments/fresh-deployment.json
+npm-debug.log*

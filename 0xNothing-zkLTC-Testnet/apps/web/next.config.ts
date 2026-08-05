@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const oxFiOrigin = (process.env.OXFI_INTERNAL_ORIGIN || "http://127.0.0.1:3301").replace(/\/+$/, "");
+
 const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
@@ -44,6 +46,18 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
     ];
+  },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: "/0xFi/:path*",
+          destination: `${oxFiOrigin}/0xFi/:path*`,
+        },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
   },
   async headers() {
     return [

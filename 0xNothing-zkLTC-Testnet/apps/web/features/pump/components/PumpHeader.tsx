@@ -122,7 +122,9 @@ export function PumpHeader() {
             </div>
             <div
               className="pump-header-balance"
-              title={nativeBalance.data ? `${nativeBalance.data.formatted} zkLTC` : "zkLTC balance"}
+              title={nativeBalance.data
+                ? `${formatUnits(nativeBalance.data.value, nativeBalance.data.decimals)} ${nativeBalance.data.symbol}`
+                : "zkLTC balance"}
             >
               <span>zkLTC</span>
               <strong>{displayBalance(nativeBalance.data?.value, nativeBalance.isPending)}</strong>

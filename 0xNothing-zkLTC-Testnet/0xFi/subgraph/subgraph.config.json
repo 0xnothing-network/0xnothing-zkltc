@@ -1,0 +1,16 @@
+{
+  "network": "liteforge",
+  "factoryAddress": "0xe33fE815c2e12DC83b69397CeD12b09849Fa9C0D",
+  "gaugeFactoryAddress": "0x36F425fddc59d281c6ddEaDAc34B32E6f039EB13",
+  "nbtcVaultAddress": "0x620fB32a1e113aA3D1121baC0c65f919569dF1d3",
+  "nethVaultAddress": "0xA7dA20a8a0d833eFcc0B2ca8189011FCFeab7465",
+  "lendingPoolAddress": "0x099Fe8b7611A294eD33e6D96a0b958E189143622",
+  "nusdAddress": "0x5317e21aba902c6c7087a84457bc02fFe99604d1",
+  "startBlock": 35303686,
+  "factoryStartBlock": 35303686,
+  "gaugeFactoryStartBlock": 35855510,
+  "nbtcVaultStartBlock": 35855525,
+  "nethVaultStartBlock": 35855529,
+  "lendingPoolStartBlock": 36288464,
+  "deploymentName": "zeroxfi-testnet"
+}

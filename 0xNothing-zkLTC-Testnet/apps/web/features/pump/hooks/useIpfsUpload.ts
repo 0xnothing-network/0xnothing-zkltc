@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { getAccount } from "@wagmi/core";
+import { getAccount } from "wagmi/actions";
 import { useSignMessage } from "wagmi";
 import type { Hex } from "viem";
 import { PUMP_CHAIN_ID } from "@/features/pump/config";

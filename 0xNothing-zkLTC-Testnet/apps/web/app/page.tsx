@@ -4,13 +4,13 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "0xNothing | Nothing to everything",
-  description: "Create on-chain pixel art and launch NUSD bonding-curve tokens on LitVM.",
+  description: "Create on-chain pixel art, launch tokens, and access 0xFi markets on LitVM.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
     title: "0xNothing | Nothing to everything",
-    description: "0xPixel art and 0xPump NUSD token markets on LitVM.",
+    description: "0xPixel art, 0xPump launches, and 0xFi markets on LitVM.",
     url: "/",
     siteName: "0xNothing",
     images: [{ url: "/0xNothing.jpg", width: 1200, height: 630, alt: "0xNothing" }],
@@ -19,8 +19,9 @@ export const metadata: Metadata = {
 };
 
 const links = [
-  { href: "/0xpixel", label: "0xPixel", tone: "light" },
   { href: "/0xPump", label: "0xPump", tone: "dark" },
+  { href: "/0xFi", label: "0xFi", tone: "ghost" },
+  { href: "/0xpixel", label: "0xPixel", tone: "light" },
 ] as const;
 
 export default function Home() {
@@ -68,16 +69,15 @@ export default function Home() {
           </h1>
 
           <nav className="nothing-nav mt-16 flex flex-col items-center justify-center gap-3 sm:flex-row" aria-label="0xNothing apps">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`nothing-link nothing-link-${link.tone}`}
-              >
-                <span>{link.label}</span>
-                <span aria-hidden="true">&gt;</span>
-              </Link>
-            ))}
+            {links.map((link) => {
+              const content = <><span>{link.label}</span><span aria-hidden="true">&gt;</span></>;
+              const className = `nothing-link nothing-link-${link.tone}`;
+              return link.href === "/0xFi" ? (
+                <a key={link.href} href={link.href} className={className}>{content}</a>
+              ) : (
+                <Link key={link.href} href={link.href} className={className}>{content}</Link>
+              );
+            })}
           </nav>
         </section>
       </main>

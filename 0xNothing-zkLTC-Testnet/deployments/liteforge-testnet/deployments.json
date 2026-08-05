@@ -1,89 +1,102 @@
 {
-    "chainId":  4441,
-    "pixel":  {
-                  "nft":  "0x33A32b9b2BEe864f9e42BFa39cA7BDC72f655988",
-                  "nftStartBlock":  24867130,
-                  "marketplace":  "0x13337cadA78d53C90E3c0EcE44C17c467C1a86F4",
-                  "marketplaceStartBlock":  24867505,
-                  "redeploy":  false
-              },
-    "pump":  {
-                 "broadcasted":  true,
-                 "liveVerified":  true,
-                 "nusd":  "0x5317e21aba902c6c7087a84457bc02ffe99604d1",
-                 "diaOracleAdapter":  "0x3579b31e3241de60f5f9462b3e0d759f346a49c8",
-                 "nativeCollateralVault":  null,
-                 "permanentLiquidityLocker":  "0x85d7d920f7267696522e56e9ccee409a18f7f2f2",
-                 "launchpad":  "0x4a0eaf310e3659aa9b360fd44e90208c31dbe0e2",
-                 "pumpTokenImplementation":  "0x18Ba01410FD2227A2c7B9A135Ad4741838914F82",
-                 "graduationRouter":  "0xdcf571c4b03a86c5e15b48864c1acbb6a8085904",
-                 "deploymentBlock":  32907625,
-                 "configuration":  {
-                                       "unit":  "wei",
-                                       "initialVirtualNusdReserve":  "1500000000000000000000",
-                                       "graduationMarketCapTargetNusd":  "6000000000000000000000",
-                                       "graduationReserveThresholdNusd":  "1500000000000000000000",
-                                       "createFeeNusd":  "1000000000000000000",
-                                       "tradeFeeBps":  10
-                                   },
-                 "graduation":  {
-                                    "enabled":  false,
-                                    "enableAt":  "0"
-                                },
-                 "subgraphVersion":  "0.1.3",
-                 "subgraphUrl":  "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxpump-testnet/staging/gn",
-                 "sourceVerification":  {
-                                            "status":  "verified",
-                                            "explorer":  "https://liteforge.explorer.caldera.xyz",
-                                            "compiler":  "v0.8.34+commit.80d5c536",
-                                            "optimizerRuns":  20000,
-                                            "evmVersion":  "paris",
-                                            "verifiedContractCount":  6
-                                        },
-                 "transactions":  {
-                                      "DIAOracleAdapter":  {
-                                                               "address":  "0x3579b31e3241de60f5f9462b3e0d759f346a49c8",
-                                                               "transactionHash":  "0x36ab073288e0efb0ef3ec8a47e0b80d606577339042b078c28851424c35b4c20",
-                                                               "receiptBlock":  32907608
-                                                           },
-                                      "OracleNUSD":  {
-                                                         "address":  "0x5317e21aba902c6c7087a84457bc02ffe99604d1",
-                                                         "transactionHash":  "0x7b76d045eac9e05808f845234459c621afb7cbbd24a0ce42e2e5929bcc9632cd",
-                                                         "receiptBlock":  32907612
-                                                     },
-                                      "PermanentLiquidityLocker":  {
-                                                                       "address":  "0x85d7d920f7267696522e56e9ccee409a18f7f2f2",
-                                                                       "transactionHash":  "0x9813eaf65b1b1bcc8b88a44f263ceeba5172736de600850434d634f5387614d5",
-                                                                       "receiptBlock":  32907616
-                                                                   },
-                                      "GraduationRouter":  {
-                                                               "address":  "0xdcf571c4b03a86c5e15b48864c1acbb6a8085904",
-                                                               "transactionHash":  "0x9b064e02458ec78785f821271de90d31e642f509b15614d5412836fcdd804f62",
-                                                               "receiptBlock":  32907621
-                                                           },
-                                      "ZeroXPump":  {
-                                                        "address":  "0x4a0eaf310e3659aa9b360fd44e90208c31dbe0e2",
-                                                        "transactionHash":  "0x1db8443ece4f32189c95a2cb0315c356c8ef003656261d15508107e21c05096e",
-                                                        "receiptBlock":  32907625
-                                                    }
-                                  },
-                 "oracleNusd":  "0x5317e21aba902c6c7087a84457bc02ffe99604d1",
-                 "nusdVault":  "0x5317e21aba902c6c7087a84457bc02ffe99604d1",
-                 "legacyNusd":  "0x3158165ce37062d2daaf03c8b3f350e33e0e066b",
-                 "legacyNativeCollateralVault":  "0xfa70be22653e6f3cdeb8c56a1cdea6f44863f80f",
-                 "riskModel":  {
-                                   "version":  "oracle-nusd-v1",
-                                   "model":  "oracle-priced-native-reserve",
-                                   "collateralAsset":  "native-zkLTC",
-                                   "supplyCeilingNusd":  "1000000000000000000000000",
-                                   "supplyCeilingUnit":  "NUSD wei",
-                                   "mintFeeBps":  0,
-                                   "redeemFeeBps":  0,
-                                   "mintPaused":  false,
-                                   "redeemPaused":  false,
-                                   "pumpPaused":  false,
-                                   "vaultCompatibility":  "self",
-                                   "legacyPositionsMigrated":  false
-                               }
-             }
+  "chainId": 4441,
+  "pixel": {
+    "nft": "0x33A32b9b2BEe864f9e42BFa39cA7BDC72f655988",
+    "nftStartBlock": 24867130,
+    "marketplace": "0x13337cadA78d53C90E3c0EcE44C17c467C1a86F4",
+    "marketplaceStartBlock": 24867505,
+    "redeploy": false
+  },
+  "pump": {
+    "broadcasted": true,
+    "liveVerified": true,
+    "nusd": "0x5317e21aba902c6c7087a84457bc02ffe99604d1",
+    "diaOracleAdapter": "0x3579b31e3241de60f5f9462b3e0d759f346a49c8",
+    "nativeCollateralVault": null,
+    "permanentLiquidityLocker": "0x85d7d920f7267696522e56e9ccee409a18f7f2f2",
+    "launchpad": "0x4a0eaf310e3659aa9b360fd44e90208c31dbe0e2",
+    "pumpTokenImplementation": "0x18Ba01410FD2227A2c7B9A135Ad4741838914F82",
+    "graduationRouter": "0xdcf571c4b03a86c5e15b48864c1acbb6a8085904",
+    "deploymentBlock": 32907625,
+    "configuration": {
+      "unit": "wei",
+      "initialVirtualNusdReserve": "1500000000000000000000",
+      "graduationMarketCapTargetNusd": "6000000000000000000000",
+      "graduationReserveThresholdNusd": "1500000000000000000000",
+      "createFeeNusd": "1000000000000000000",
+      "tradeFeeBps": 10
+    },
+    "graduation": {
+      "enabled": true,
+      "enableAt": "0",
+      "adapter": "0x935e05f60a05110c29eFA7e3a632dfe38123963e",
+      "adapterAllowed": true,
+      "adapterActivationTime": "0",
+      "controller": "0x2112Cea76b76817626cA58B205b3dC5560F05857",
+      "controllerOwnsPumpAdmin": true,
+      "controllerOwnsRouterAdmin": true,
+      "operational": true,
+      "lastVerifiedBlock": 36098801,
+      "controllerGovernance": "0x58633401dCc383F010688e950878000000000000",
+      "controllerGuardian": "0x58633401dCc383F010688e950878000000000000",
+      "controllerDeploymentBlock": 36095543,
+      "controllerDeploymentHash": "0x4897cb0a7e5fed3686ec99cad78f9df91eb551f122a78f019fb32918079941d2",
+      "activatedAt": "2026-08-02T21:10:06.732Z"
+    },
+    "subgraphVersion": "0.1.3",
+    "subgraphUrl": "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxpump-testnet/staging/gn",
+    "sourceVerification": {
+      "status": "verified",
+      "explorer": "https://liteforge.explorer.caldera.xyz",
+      "compiler": "v0.8.34+commit.80d5c536",
+      "optimizerRuns": 20000,
+      "evmVersion": "paris",
+      "verifiedContractCount": 6
+    },
+    "transactions": {
+      "DIAOracleAdapter": {
+        "address": "0x3579b31e3241de60f5f9462b3e0d759f346a49c8",
+        "transactionHash": "0x36ab073288e0efb0ef3ec8a47e0b80d606577339042b078c28851424c35b4c20",
+        "receiptBlock": 32907608
+      },
+      "OracleNUSD": {
+        "address": "0x5317e21aba902c6c7087a84457bc02ffe99604d1",
+        "transactionHash": "0x7b76d045eac9e05808f845234459c621afb7cbbd24a0ce42e2e5929bcc9632cd",
+        "receiptBlock": 32907612
+      },
+      "PermanentLiquidityLocker": {
+        "address": "0x85d7d920f7267696522e56e9ccee409a18f7f2f2",
+        "transactionHash": "0x9813eaf65b1b1bcc8b88a44f263ceeba5172736de600850434d634f5387614d5",
+        "receiptBlock": 32907616
+      },
+      "GraduationRouter": {
+        "address": "0xdcf571c4b03a86c5e15b48864c1acbb6a8085904",
+        "transactionHash": "0x9b064e02458ec78785f821271de90d31e642f509b15614d5412836fcdd804f62",
+        "receiptBlock": 32907621
+      },
+      "ZeroXPump": {
+        "address": "0x4a0eaf310e3659aa9b360fd44e90208c31dbe0e2",
+        "transactionHash": "0x1db8443ece4f32189c95a2cb0315c356c8ef003656261d15508107e21c05096e",
+        "receiptBlock": 32907625
+      }
+    },
+    "oracleNusd": "0x5317e21aba902c6c7087a84457bc02ffe99604d1",
+    "nusdVault": "0x5317e21aba902c6c7087a84457bc02ffe99604d1",
+    "legacyNusd": "0x3158165ce37062d2daaf03c8b3f350e33e0e066b",
+    "legacyNativeCollateralVault": "0xfa70be22653e6f3cdeb8c56a1cdea6f44863f80f",
+    "riskModel": {
+      "version": "oracle-nusd-v1",
+      "model": "oracle-priced-native-reserve",
+      "collateralAsset": "native-zkLTC",
+      "supplyCeilingNusd": "1000000000000000000000000",
+      "supplyCeilingUnit": "NUSD wei",
+      "mintFeeBps": 0,
+      "redeemFeeBps": 0,
+      "mintPaused": false,
+      "redeemPaused": false,
+      "pumpPaused": false,
+      "vaultCompatibility": "self",
+      "legacyPositionsMigrated": false
+    }
+  }
 }

@@ -1,0 +1,23 @@
+[
+  {"type":"function","name":"totalSupplied","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},
+  {"type":"function","name":"totalBorrowed","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},
+  {"type":"function","name":"totalBadDebtNusd","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},
+  {"type":"function","name":"borrowIndexWad","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},
+  {"type":"function","name":"supplyCapNusd","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},
+  {"type":"function","name":"borrowCapNusd","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},
+  {"type":"function","name":"supplyPaused","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},
+  {"type":"function","name":"borrowPaused","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},
+  {"type":"function","name":"collateralWithdrawalPaused","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},
+  {"type":"event","name":"InterestAccrued","anonymous":false,"inputs":[{"indexed":false,"name":"previousBorrowIndexWad","type":"uint256"},{"indexed":false,"name":"newBorrowIndexWad","type":"uint256"},{"indexed":false,"name":"elapsedSeconds","type":"uint256"}]},
+  {"type":"event","name":"Supplied","anonymous":false,"inputs":[{"indexed":true,"name":"payer","type":"address"},{"indexed":true,"name":"account","type":"address"},{"indexed":false,"name":"amountNusd","type":"uint256"},{"indexed":false,"name":"sharesMinted","type":"uint256"}]},
+  {"type":"event","name":"Withdrawn","anonymous":false,"inputs":[{"indexed":true,"name":"account","type":"address"},{"indexed":true,"name":"recipient","type":"address"},{"indexed":false,"name":"amountNusd","type":"uint256"},{"indexed":false,"name":"sharesBurned","type":"uint256"}]},
+  {"type":"event","name":"CollateralDeposited","anonymous":false,"inputs":[{"indexed":true,"name":"payer","type":"address"},{"indexed":true,"name":"account","type":"address"},{"indexed":true,"name":"asset","type":"address"},{"indexed":false,"name":"amount","type":"uint256"}]},
+  {"type":"event","name":"CollateralWithdrawn","anonymous":false,"inputs":[{"indexed":true,"name":"account","type":"address"},{"indexed":true,"name":"recipient","type":"address"},{"indexed":true,"name":"asset","type":"address"},{"indexed":false,"name":"amount","type":"uint256"}]},
+  {"type":"event","name":"Borrowed","anonymous":false,"inputs":[{"indexed":true,"name":"account","type":"address"},{"indexed":true,"name":"recipient","type":"address"},{"indexed":false,"name":"amountNusd","type":"uint256"},{"indexed":false,"name":"debtSharesMinted","type":"uint256"}]},
+  {"type":"event","name":"Repaid","anonymous":false,"inputs":[{"indexed":true,"name":"payer","type":"address"},{"indexed":true,"name":"account","type":"address"},{"indexed":false,"name":"amountNusd","type":"uint256"},{"indexed":false,"name":"debtSharesBurned","type":"uint256"}]},
+  {"type":"event","name":"Liquidated","anonymous":false,"inputs":[{"indexed":true,"name":"liquidator","type":"address"},{"indexed":true,"name":"account","type":"address"},{"indexed":true,"name":"collateralAsset","type":"address"},{"indexed":false,"name":"amountRepaidNusd","type":"uint256"},{"indexed":false,"name":"collateralOut","type":"uint256"},{"indexed":false,"name":"recipient","type":"address"}]},
+  {"type":"event","name":"BadDebtRecognized","anonymous":false,"inputs":[{"indexed":true,"name":"account","type":"address"},{"indexed":false,"name":"amountNusd","type":"uint256"}]},
+  {"type":"event","name":"BadDebtRepaid","anonymous":false,"inputs":[{"indexed":true,"name":"payer","type":"address"},{"indexed":true,"name":"account","type":"address"},{"indexed":false,"name":"amountNusd","type":"uint256"}]},
+  {"type":"event","name":"CapsUpdated","anonymous":false,"inputs":[{"indexed":false,"name":"supplyCapNusd","type":"uint256"},{"indexed":false,"name":"borrowCapNusd","type":"uint256"}]},
+  {"type":"event","name":"PausesUpdated","anonymous":false,"inputs":[{"indexed":false,"name":"supplyPaused","type":"bool"},{"indexed":false,"name":"borrowPaused","type":"bool"},{"indexed":false,"name":"collateralWithdrawalPaused","type":"bool"}]}
+]

@@ -1,0 +1,122 @@
+{
+  "name": "LitVM LiteForge Testnet",
+  "chainId": 4441,
+  "rpcUrl": "https://liteforge.rpc.caldera.xyz/infra-partner-http",
+  "fallbackRpcUrl": "https://liteforge.rpc.caldera.xyz/http",
+  "websocketUrl": "wss://liteforge.rpc.caldera.xyz/ws",
+  "explorerUrl": "https://liteforge.explorer.caldera.xyz",
+  "nativeCurrency": {
+    "name": "zkLTC",
+    "symbol": "zkLTC",
+    "decimals": 18
+  },
+  "existingContracts": {
+    "nusd": "0x5317e21aba902c6c7087a84457bc02ffe99604d1",
+    "pump": "0x4a0eaf310e3659aa9b360fd44e90208c31dbe0e2",
+    "pumpGraduationRouter": "0xdcf571c4b03a86c5e15b48864c1acbb6a8085904",
+    "pumpLiquidityLocker": "0x85d7d920f7267696522e56e9ccee409a18f7f2f2"
+  },
+  "pumpGraduation": {
+    "minimumDelaySeconds": 172800
+  },
+  "dia": {
+    "oracleV2": "0xE7F65d4bAdcfABc4eA57B8F66bBa044363D89eec",
+    "decimals": 18,
+    "documentedHeartbeatSeconds": 3600,
+    "maximumAcceptedAgeSeconds": 5400,
+    "feeds": {
+      "wzkLTC": "0x45dDa5d881BD2C917976CCfde74fFd6f6412da29",
+      "nBTC": "0x7d0445782E383223c7B4B660bb96b87213e9b605",
+      "nETH": "0xc760B46beF9eD3F9A3d2b825164324D6703F0185"
+    },
+    "keys": {
+      "wzkLTC": "LTC/USD Oracle",
+      "nBTC": "BTC/USD Oracle",
+      "nETH": "ETH/USD Oracle"
+    }
+  },
+  "goldsky": {
+    "network": "liteforge",
+    "subgraph": "zeroxfi-testnet/0.1.1",
+    "tag": "staging",
+    "endpoint": "https://api.goldsky.com/api/public/project_cms8vgtcn6a6z01r5fo87d6im/subgraphs/zeroxfi-testnet/staging/gn"
+  },
+  "deployment": {
+    "status": "direct-governance-no-timelock",
+    "governanceMode": "direct-deployer-no-timelock",
+    "governance": "0x58633401dCc383F010688e950878000000000000",
+    "guardian": "0x58633401dCc383F010688e950878000000000000",
+    "coreOwnershipStatus": "direct-deployer-owner-no-pending",
+    "deploymentBlock": "35303686",
+    "finalizedAt": "2026-07-31T13:45:34.036Z",
+    "contracts": {
+      "timelock": "0x5F4145733F1B7Eb25f176A9B95e27fB6E2205F22",
+      "ltcOracle": "0x54361dB5F9DF455B448E882Ce65612D5e418f3Ee",
+      "btcOracle": "0x781178849cE1D131EFbedff1EF52323A6E117813",
+      "ethOracle": "0x8E9BD05a80542B171719ac0d749a7A609D69E324",
+      "wzkLTC": "0xE93d4373CE1eDA3df6c3Ab7ed3ab07A07aA5939F",
+      "dexFactory": "0xe33fE815c2e12DC83b69397CeD12b09849Fa9C0D",
+      "dexRouter": "0xc572A6779ccd69032d9Ce5f74fC47878A6D9c9E3",
+      "pumpGraduationAdapter": "0x935e05f60a05110c29eFA7e3a632dfe38123963e",
+      "gaugeFactory": "0x36F425fddc59d281c6ddEaDAc34B32E6f039EB13",
+      "nBTC": "0xc44B6027eBc4859d2E7e2bCF17188C29b1BC1655",
+      "nETH": "0x60590B1f4F17969B8c52c2c0B533404Bbb62206b",
+      "nBTCVault": "0x620fB32a1e113aA3D1121baC0c65f919569dF1d3",
+      "nETHVault": "0xA7dA20a8a0d833eFcc0B2ca8189011FCFeab7465",
+      "lendingPool": "0x099Fe8b7611A294eD33e6D96a0b958E189143622",
+      "wzkLtcNusdPair": "0x8dd79c3966c8392b08b609FAEce029c3329f9E9E",
+      "nBTCNusdPair": "0xF791643Bb8c86516e9e8a1c4F25cDDc438ced80C",
+      "nETHNusdPair": "0x5cB49442b1684C39FC9348022114FEef6FdB3617",
+      "wzkLtcNusdGauge": "0x0A183F6D225B888CfDBcC03f4afd78Ea244CfF03",
+      "nBTCNusdGauge": "0x622eAf97dfe1f284850a462039568aCF52c2B0B4",
+      "nETHNusdGauge": "0xa28656a5277Db9Bcf0Bd8fe0312A52Dd3e7a55c8",
+      "pumpGraduationController": "0x2112Cea76b76817626cA58B205b3dC5560F05857"
+    },
+    "pumpGraduationControllerDeploymentBlock": "36095543",
+    "pumpGraduationControllerDeploymentHash": "0x4897cb0a7e5fed3686ec99cad78f9df91eb551f122a78f019fb32918079941d2",
+    "pumpAdapterActivationTime": "1785678315",
+    "pumpRouterEnableAt": "1785678316",
+    "ownershipReadyAt": "1785678314",
+    "graduationAutomationStatus": "active-permissionless",
+    "graduationControllerGovernance": "0x58633401dCc383F010688e950878000000000000",
+    "pumpAdministrationStatus": "controller-admin-active",
+    "directGovernanceMigrationStatus": "finalized",
+    "lendingCollateralConfigurationStatus": "configured-three-assets-oracle-only",
+    "lendingImplementationStatus": "bad-debt-inclusive-borrow-cap-fix",
+    "lendingImplementationMigrationRequired": false,
+    "lendingCollateralCaps": {
+      "wzkLTC": "50000000000000000000",
+      "nBTC": "10000000000000000",
+      "nETH": "250000000000000000"
+    },
+    "migrationDeploymentBlock": "35855505",
+    "migrationOwnershipOperationId": "0x0c33b8c3b0536dd89e9763e43752f749f41ab936fa55881e59126ef24205cd8e",
+    "migrationOwnershipReadyAt": "1785816721",
+    "migrationBroadcastedAt": "2026-08-02T04:14:16.901Z",
+    "riskMode": "caps-pauses-oracles-no-nusd-health-guard",
+    "legacyActivationAttemptAt": "2026-08-02T15:44:08.314Z",
+    "directGovernanceMigrationBlock": "36095487",
+    "graduationLastVerifiedBlock": "36098801",
+    "directGovernanceFinalizedAt": "2026-08-02T21:10:06.732Z",
+    "lendingV2Migration": {
+      "previousPool": "0x123b46508E2265E93172519F71fa02de6E68053B",
+      "pool": "0x099Fe8b7611A294eD33e6D96a0b958E189143622",
+      "block": "36288464",
+      "finalizedAt": "2026-08-03T10:24:30.441Z",
+      "migratedNusd": "19999999999999999000",
+      "residualNusd": "1000",
+      "transactionHashes": [
+        "0x4ea37674ba00c58602a55d48c918e2b9ac0f5d760d8e62d9cbb5dbfd055b18d9",
+        "0xac6e0eae81bb7c7bd30e88f1caa3c499ace17602f859a4b4f2ac2630a421d152",
+        "0x55362ba055fe581dd45ebb4641be71550b8784cf4b25c6be1e7eb3481907adeb",
+        "0x747cad2a0f268840ca5b2cc5f9b05711b4efda37605fc95831303f280e0b1802",
+        "0x3f782fb44b955483973a18f217ae49ade22ff43ca5e416b5111260f20d106d5c",
+        "0x3aed7a96dc48e1efbdc4c44eae1366a5d2717b3906ce15d3faff456a84ad834f",
+        "0xcc12517d24a953b6c67038efcc88ab1f2e9cfe4e40334e13d9ab502992372e62",
+        "0xf6014e2148403ffa49f6ed44821315ca914e1998d350a43e7ba06226c6be585c",
+        "0x8496f32f0e156497d41dc0dd382ceae1a6d30bd86357825ab252fc03852f92cd"
+      ],
+      "implementationStatus": "bad-debt-inclusive-borrow-cap-fix"
+    }
+  }
+}

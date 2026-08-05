@@ -1,0 +1,20 @@
+{
+  "name": "@0xnothing/0xfi-subgraph-testnet",
+  "version": "0.1.2",
+  "private": true,
+  "scripts": {
+    "configure": "node ./scripts/configure.mjs",
+    "codegen": "npm run configure && graph codegen subgraph.yaml",
+    "build": "npm run configure && graph build subgraph.yaml",
+    "check": "npm run codegen && npm run build",
+    "deploy:check": "node ./scripts/check-deploy-ready.mjs",
+    "audit:live": "node ./scripts/check-live-indexer.mjs",
+    "deploy": "npm run deploy:check && npm run build && goldsky subgraph deploy zeroxfi-testnet/0.1.2 --path . --tag staging"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-ts": "0.38.2"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "0.98.1"
+  }
+}

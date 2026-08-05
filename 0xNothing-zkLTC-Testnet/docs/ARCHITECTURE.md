@@ -49,18 +49,21 @@ on the `6,000 NUSD` market-cap boundary. `curveProgressBps` measures progress
 toward that derived reserve target.
 
 At the target, the market moves to `READY` and further buys stop. No DEX call
-occurs inside the target-crossing buy. Testnet liquidity migration is disabled:
-the router starts disabled and has no adapter. Holders retain an exit while
-graduation is unavailable; the first successful sell from `READY` atomically
-returns the market to `TRADING` and emits `TokenCurveReopened`.
+occurs inside the target-crossing buy. The router was deployed disabled and
+without an adapter; the delayed 0xFi adapter activation has since completed.
+The pinned controller still does not own Pump or router administration, so its
+permissionless graduation path remains inactive and the client fails closed.
+Holders retain an exit while activation is incomplete: the first successful sell
+from `READY` atomically returns the market to `TRADING` and emits
+`TokenCurveReopened`.
 
-`GRADUATED` is terminal but is not reachable in this testnet release. Mainnet
-graduation requires a separately audited adapter that atomically converts or
-bridges NUSD into the official zkLTC stablecoin, creates liquidity on the
-approved major DEX at the terminal curve price, verifies balance deltas, and
-permanently locks the resulting liquidity position. The official stablecoin,
-route, DEX, and adapter addresses remain unset until their production interfaces
-are published and reviewed.
+After both admin handovers, anyone may ask the controller to graduate a READY
+market. It derives the exact terminal token/NUSD amounts, atomically prepares an
+empty protected 0xFi pair, pins the expected LP output, and routes LP tokens to
+the permanent locker. A caller cannot select the adapter, pool, reserves,
+recipient, price, or slippage. `GRADUATED` is terminal. Mainnet still requires
+independent review of the adapter, DEX, terminal-price continuity, and liquidity
+lock assumptions before this testnet topology is reused.
 
 ## Read paths
 

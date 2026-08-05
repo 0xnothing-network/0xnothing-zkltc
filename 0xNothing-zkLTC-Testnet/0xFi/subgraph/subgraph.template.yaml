@@ -1,0 +1,265 @@
+specVersion: 1.0.0
+schema:
+  file: ./schema.graphql
+indexerHints:
+  prune: auto
+dataSources:
+  - kind: ethereum
+    name: ZeroXFiFactory
+    network: __NETWORK__
+    source:
+      address: "__FACTORY_ADDRESS__"
+      abi: ZeroXFiFactory
+      startBlock: __FACTORY_START_BLOCK__
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/factory.ts
+      entities: [Protocol, Token, Pool]
+      abis:
+        - name: ZeroXFiFactory
+          file: ./abis/ZeroXFiFactory.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: PairCreated(indexed address,indexed address,address,indexed bytes32,bool,uint256)
+          handler: handlePairCreated
+  - kind: ethereum
+    name: GaugeFactory
+    network: __NETWORK__
+    source:
+      address: "__GAUGE_FACTORY_ADDRESS__"
+      abi: GaugeFactory
+      startBlock: __GAUGE_FACTORY_START_BLOCK__
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/gaugeFactory.ts
+      entities: [Protocol, Gauge, GaugeAction]
+      abis:
+        - name: GaugeFactory
+          file: ./abis/GaugeFactory.json
+      eventHandlers:
+        - event: GaugeCreated(indexed address,indexed address,uint256)
+          handler: handleGaugeCreated
+        - event: GaugeFunded(indexed address,indexed address,uint256,uint256)
+          handler: handleGaugeFunded
+  # SYNTH_FEE_GAUGE_FACTORY_START
+  - kind: ethereum
+    name: SynthFeeGaugeFactory
+    network: __NETWORK__
+    source:
+      address: "__SYNTH_FEE_GAUGE_FACTORY_ADDRESS__"
+      abi: GaugeFactory
+      startBlock: __SYNTH_FEE_GAUGE_FACTORY_START_BLOCK__
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/gaugeFactory.ts
+      entities: [Protocol, Gauge, GaugeAction]
+      abis:
+        - name: GaugeFactory
+          file: ./abis/GaugeFactory.json
+      eventHandlers:
+        - event: GaugeCreated(indexed address,indexed address,uint256)
+          handler: handleGaugeCreated
+        - event: GaugeFunded(indexed address,indexed address,uint256,uint256)
+          handler: handleGaugeFunded
+  # SYNTH_FEE_GAUGE_FACTORY_END
+  - kind: ethereum
+    name: NbtcVault
+    network: __NETWORK__
+    source:
+      address: "__NBTC_VAULT_ADDRESS__"
+      abi: SyntheticVault
+      startBlock: __NBTC_VAULT_START_BLOCK__
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/syntheticVault.ts
+      entities: [SyntheticMarket, SyntheticAction]
+      abis:
+        - name: SyntheticVault
+          file: ./abis/SyntheticVault.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      blockHandlers:
+        - handler: handleInitialize
+          filter:
+            kind: once
+      eventHandlers:
+        - event: CollateralDeposited(indexed address,indexed address,uint256)
+          handler: handleCollateralDeposited
+        - event: ReserveCollateralAllocated(indexed address,uint256)
+          handler: handleReserveCollateralAllocated
+        - event: ReserveCollateralReleased(indexed address,uint256)
+          handler: handleReserveCollateralReleased
+        - event: ReserveCollateralLost(indexed address,uint256)
+          handler: handleReserveCollateralLost
+        - event: SyntheticMinted(indexed address,indexed address,uint256,uint256)
+          handler: handleSyntheticMinted
+        - event: SyntheticRepaid(indexed address,indexed address,uint256,uint256)
+          handler: handleSyntheticRepaid
+        - event: CollateralWithdrawn(indexed address,indexed address,uint256)
+          handler: handleCollateralWithdrawn
+        - event: PositionLiquidated(indexed address,indexed address,indexed address,uint256,uint256)
+          handler: handlePositionLiquidated
+        - event: BadDebtRecognized(indexed address,uint256)
+          handler: handleBadDebtRecognized
+        - event: BadDebtCovered(indexed address,indexed address,uint256)
+          handler: handleBadDebtCovered
+        - event: DebtCeilingUpdated(uint256,uint256)
+          handler: handleDebtCeilingUpdated
+        - event: MintPauseUpdated(bool)
+          handler: handleMintPauseUpdated
+        - event: WithdrawPauseUpdated(bool)
+          handler: handleWithdrawPauseUpdated
+  - kind: ethereum
+    name: NethVault
+    network: __NETWORK__
+    source:
+      address: "__NETH_VAULT_ADDRESS__"
+      abi: SyntheticVault
+      startBlock: __NETH_VAULT_START_BLOCK__
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/syntheticVault.ts
+      entities: [SyntheticMarket, SyntheticAction]
+      abis:
+        - name: SyntheticVault
+          file: ./abis/SyntheticVault.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      blockHandlers:
+        - handler: handleInitialize
+          filter:
+            kind: once
+      eventHandlers:
+        - event: CollateralDeposited(indexed address,indexed address,uint256)
+          handler: handleCollateralDeposited
+        - event: ReserveCollateralAllocated(indexed address,uint256)
+          handler: handleReserveCollateralAllocated
+        - event: ReserveCollateralReleased(indexed address,uint256)
+          handler: handleReserveCollateralReleased
+        - event: ReserveCollateralLost(indexed address,uint256)
+          handler: handleReserveCollateralLost
+        - event: SyntheticMinted(indexed address,indexed address,uint256,uint256)
+          handler: handleSyntheticMinted
+        - event: SyntheticRepaid(indexed address,indexed address,uint256,uint256)
+          handler: handleSyntheticRepaid
+        - event: CollateralWithdrawn(indexed address,indexed address,uint256)
+          handler: handleCollateralWithdrawn
+        - event: PositionLiquidated(indexed address,indexed address,indexed address,uint256,uint256)
+          handler: handlePositionLiquidated
+        - event: BadDebtRecognized(indexed address,uint256)
+          handler: handleBadDebtRecognized
+        - event: BadDebtCovered(indexed address,indexed address,uint256)
+          handler: handleBadDebtCovered
+        - event: DebtCeilingUpdated(uint256,uint256)
+          handler: handleDebtCeilingUpdated
+        - event: MintPauseUpdated(bool)
+          handler: handleMintPauseUpdated
+        - event: WithdrawPauseUpdated(bool)
+          handler: handleWithdrawPauseUpdated
+  - kind: ethereum
+    name: LendingPool
+    network: __NETWORK__
+    source:
+      address: "__LENDING_POOL_ADDRESS__"
+      abi: LendingPool
+      startBlock: __LENDING_POOL_START_BLOCK__
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/lending.ts
+      entities: [LendingMarket, LendingAction]
+      abis:
+        - name: LendingPool
+          file: ./abis/LendingPool.json
+      blockHandlers:
+        - handler: handleInitialize
+          filter:
+            kind: once
+      eventHandlers:
+        - event: InterestAccrued(uint256,uint256,uint256)
+          handler: handleInterestAccrued
+        - event: Supplied(indexed address,indexed address,uint256,uint256)
+          handler: handleSupplied
+        - event: Withdrawn(indexed address,indexed address,uint256,uint256)
+          handler: handleWithdrawn
+        - event: CollateralDeposited(indexed address,indexed address,indexed address,uint256)
+          handler: handleCollateralDeposited
+        - event: CollateralWithdrawn(indexed address,indexed address,indexed address,uint256)
+          handler: handleCollateralWithdrawn
+        - event: Borrowed(indexed address,indexed address,uint256,uint256)
+          handler: handleBorrowed
+        - event: Repaid(indexed address,indexed address,uint256,uint256)
+          handler: handleRepaid
+        - event: Liquidated(indexed address,indexed address,indexed address,uint256,uint256,address)
+          handler: handleLiquidated
+        - event: BadDebtRecognized(indexed address,uint256)
+          handler: handleBadDebtRecognized
+        - event: BadDebtRepaid(indexed address,indexed address,uint256)
+          handler: handleBadDebtRepaid
+        - event: CapsUpdated(uint256,uint256)
+          handler: handleCapsUpdated
+        - event: PausesUpdated(bool,bool,bool)
+          handler: handlePausesUpdated
+templates:
+  - kind: ethereum/contract
+    name: Pair
+    network: __NETWORK__
+    source:
+      abi: Pair
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/pair.ts
+      entities: [Protocol, Pool, Swap, LiquidityEvent, Candle]
+      abis:
+        - name: Pair
+          file: ./abis/Pair.json
+      eventHandlers:
+        - event: Sync(uint112,uint112)
+          handler: handleSync
+        - event: Mint(indexed address,uint256,uint256,indexed address,uint256)
+          handler: handleMint
+        - event: Burn(indexed address,uint256,uint256,indexed address,uint256)
+          handler: handleBurn
+        - event: Swap(indexed address,uint256,uint256,uint256,uint256,indexed address)
+          handler: handleSwap
+        - event: BootstrapCompleted(indexed address)
+          handler: handleBootstrapCompleted
+  - kind: ethereum/contract
+    name: LiquidityGauge
+    network: __NETWORK__
+    source:
+      abi: LiquidityGauge
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/gauge.ts
+      entities: [Gauge, GaugeAction]
+      abis:
+        - name: LiquidityGauge
+          file: ./abis/LiquidityGauge.json
+      eventHandlers:
+        - event: Staked(indexed address,uint256)
+          handler: handleStaked
+        - event: Withdrawn(indexed address,uint256)
+          handler: handleWithdrawn
+        - event: RewardPaid(indexed address,uint256)
+          handler: handleRewardPaid
+        - event: RewardAdded(uint256,uint256,uint256,uint256)
+          handler: handleRewardAdded
+        - event: DepositsPauseUpdated(bool)
+          handler: handleDepositsPauseUpdated

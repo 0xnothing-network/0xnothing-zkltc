@@ -54,11 +54,13 @@ ZeroXPump as both its NUSD and vault address. When
 on the router before scheduling any future DEX adapter. Do not use `--broadcast`
 until the deployment phase has been explicitly approved.
 
-Testnet liquidity migration is unavailable: the router is disabled with no
-adapter. Reaching a `6,000 NUSD` market cap moves a market to READY and pauses
-buys, but does not call a DEX. While a market remains READY, holders may sell;
-that atomically reopens the curve to TRADING and prevents funds being locked
-while no migration path is available.
+The initial deployment deliberately leaves liquidity migration unavailable.
+The live testnet router has since completed its delayed enable and 0xFi adapter
+activation, but the pinned controller does not yet own Pump and router
+administration. Until both handovers complete, the controller path and UI remain
+inactive. Reaching a `6,000 NUSD` market cap moves a market to READY and pauses
+buys; while a market remains READY, holders may sell, atomically reopening the
+curve to TRADING.
 
 After an approved broadcast, preview authoritative receipt data with:
 

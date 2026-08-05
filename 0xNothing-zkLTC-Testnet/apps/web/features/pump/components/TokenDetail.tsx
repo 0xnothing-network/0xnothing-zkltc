@@ -2,11 +2,22 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Address } from "viem";
+import { useAccount, usePublicClient, useReadContract, useSwitchChain, useWriteContract } from "wagmi";
+import { pumpGraduationControllerAbi, pumpGraduationRouterAbi, zeroXPumpAbi } from "@/features/pump/abis";
 import { usePumpMarket } from "@/features/pump/hooks/usePumpData";
-import { ipfsToGatewayUrl } from "@/features/pump/config";
+import {
+  ipfsToGatewayUrl,
+  PUMP_CHAIN_ID,
+  PUMP_FACTORY_ADDRESS,
+  PUMP_GRADUATION_ADAPTER_ADDRESS,
+  PUMP_GRADUATION_ROUTER_ADDRESS,
+  ZERO_ADDRESS,
+} from "@/features/pump/config";
 import { formatDecimal, formatRelativeTime, formatWad, shortAddress } from "@/features/pump/format";
+import type { PumpMarket } from "@/features/pump/types";
 import { getAddressExplorerUrl } from "@/lib/explorer";
 import { PumpChart } from "@/features/pump/components/PumpChart";
 import { TradePanel } from "@/features/pump/components/TradePanel";
@@ -19,6 +30,137 @@ interface TokenMetadata {
   description?: string;
   external_url?: string;
   properties?: { website?: string; twitter?: string };
+}
+
+function GraduationAction({ market, onComplete }: { market: PumpMarket; onComplete: () => void }) {
+  const toast = useToast();
+  const { address, isConnected, chainId } = useAccount();
+  const publicClient = usePublicClient({ chainId: PUMP_CHAIN_ID });
+  const { switchChain } = useSwitchChain();
+  const { writeContractAsync } = useWriteContract();
+  const [pending, setPending] = useState(false);
+  const pumpAdmin = useReadContract({
+    address: PUMP_FACTORY_ADDRESS,
+    abi: zeroXPumpAbi,
+    functionName: "admin",
+    query: { enabled: market.status === "READY", refetchInterval: 10_000 },
+  });
+  const pumpRouter = useReadContract({
+    address: PUMP_FACTORY_ADDRESS,
+    abi: zeroXPumpAbi,
+    functionName: "graduationRouter",
+    query: { enabled: market.status === "READY", staleTime: Infinity },
+  });
+  const controllerAddress = pumpAdmin.data;
+  const controllerReadEnabled = market.status === "READY" && Boolean(controllerAddress);
+  const controllerPaused = useReadContract({
+    address: controllerAddress,
+    abi: pumpGraduationControllerAbi,
+    functionName: "graduationsPaused",
+    query: { enabled: controllerReadEnabled, refetchInterval: 10_000 },
+  });
+  const controllerPump = useReadContract({
+    address: controllerAddress,
+    abi: pumpGraduationControllerAbi,
+    functionName: "pump",
+    query: { enabled: controllerReadEnabled, staleTime: Infinity },
+  });
+  const controllerRouter = useReadContract({
+    address: controllerAddress,
+    abi: pumpGraduationControllerAbi,
+    functionName: "router",
+    query: { enabled: controllerReadEnabled, staleTime: Infinity },
+  });
+  const controllerAdapter = useReadContract({
+    address: controllerAddress,
+    abi: pumpGraduationControllerAbi,
+    functionName: "adapter",
+    query: { enabled: controllerReadEnabled, staleTime: Infinity },
+  });
+  const routerAdmin = useReadContract({
+    address: PUMP_GRADUATION_ROUTER_ADDRESS,
+    abi: pumpGraduationRouterAbi,
+    functionName: "admin",
+    query: { enabled: market.status === "READY", refetchInterval: 10_000 },
+  });
+  const routerEnabled = useReadContract({
+    address: PUMP_GRADUATION_ROUTER_ADDRESS,
+    abi: pumpGraduationRouterAbi,
+    functionName: "enabled",
+    query: { enabled: market.status === "READY", refetchInterval: 10_000 },
+  });
+  const adapterAllowed = useReadContract({
+    address: PUMP_GRADUATION_ROUTER_ADDRESS,
+    abi: pumpGraduationRouterAbi,
+    functionName: "isAdapterAllowed",
+    args: [PUMP_GRADUATION_ADAPTER_ADDRESS],
+    query: { enabled: market.status === "READY", refetchInterval: 10_000 },
+  });
+  const operational = Boolean(controllerAddress)
+    && controllerPump.data?.toLowerCase() === PUMP_FACTORY_ADDRESS.toLowerCase()
+    && pumpRouter.data?.toLowerCase() === PUMP_GRADUATION_ROUTER_ADDRESS.toLowerCase()
+    && controllerRouter.data?.toLowerCase() === PUMP_GRADUATION_ROUTER_ADDRESS.toLowerCase()
+    && controllerAdapter.data?.toLowerCase() === PUMP_GRADUATION_ADAPTER_ADDRESS.toLowerCase()
+    && routerAdmin.data?.toLowerCase() === controllerAddress?.toLowerCase()
+    && controllerPaused.data === false
+    && routerEnabled.data === true
+    && adapterAllowed.data === true;
+
+  if (market.status === "GRADUATED" && market.pool !== ZERO_ADDRESS) {
+    return <a href={`/0xFi/pools/${market.pool}`} className="pump-button pump-button-primary">0xFi pool</a>;
+  }
+  if (market.status !== "READY") return null;
+
+  async function graduate() {
+    if (!operational || !controllerAddress) return;
+    if (!isConnected || !address) {
+      toast.warning("Connect wallet", "Connect a wallet to submit graduation.");
+      return;
+    }
+    if (chainId !== PUMP_CHAIN_ID) {
+      switchChain({ chainId: PUMP_CHAIN_ID });
+      return;
+    }
+    if (!publicClient) {
+      toast.error("RPC unavailable", "Refresh and try again.");
+      return;
+    }
+    try {
+      setPending(true);
+      await publicClient.simulateContract({
+        account: address,
+        address: controllerAddress,
+        abi: pumpGraduationControllerAbi,
+        functionName: "graduateReady",
+        args: [market.tokenAddress],
+      });
+      const hash = await writeContractAsync({
+        address: controllerAddress,
+        abi: pumpGraduationControllerAbi,
+        functionName: "graduateReady",
+        args: [market.tokenAddress],
+      });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      if (receipt.status !== "success") throw new Error("Graduation reverted");
+      toast.success("Graduated", "The 0xFi pool is live.");
+      onComplete();
+    } catch (error) {
+      toast.handleError(error, "Graduation failed");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  const label = !operational
+    ? "Awaiting activation"
+    : pending
+      ? "Graduating"
+      : !isConnected
+        ? "Connect wallet"
+        : chainId !== PUMP_CHAIN_ID
+          ? "Switch network"
+          : "Graduate";
+  return <button type="button" className="pump-button pump-button-primary" disabled={!operational || pending} onClick={() => void graduate()}>{label}</button>;
 }
 
 export function TokenDetail({ token }: { token: Address }) {
@@ -115,6 +257,7 @@ export function TokenDetail({ token }: { token: Address }) {
       <section className="pump-graduation-line">
         <div><span>$6,000 READY target</span><strong>{market.status === "TRADING" ? `${(market.progressBps / 100).toFixed(1)}% funded` : market.status === "READY" ? "Market-cap target reached" : "Liquidity migrated"}</strong></div>
         <div className="pump-progress" role="progressbar" aria-label="Progress to READY" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, market.progressBps / 100)}><span style={{ width: `${Math.min(100, market.progressBps / 100)}%` }} /></div>
+        <GraduationAction market={market} onComplete={() => void query.refetch()} />
       </section>
 
       <TokenHolders token={market.tokenAddress} symbol={market.symbol} />

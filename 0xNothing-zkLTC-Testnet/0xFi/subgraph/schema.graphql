@@ -1,0 +1,224 @@
+type Protocol @entity(immutable: false) {
+  id: ID!
+  pairCount: BigInt!
+  swapCount: BigInt!
+  mintCount: BigInt!
+  burnCount: BigInt!
+  gaugeCount: BigInt!
+  totalVolumeNusd: BigInt!
+  updatedAt: BigInt!
+}
+
+type Token @entity(immutable: false) {
+  id: Bytes!
+  symbol: String!
+  name: String!
+  decimals: Int!
+  createdAt: BigInt!
+}
+
+type Pool @entity(immutable: false) {
+  id: Bytes!
+  pairId: Bytes!
+  token0: Token!
+  token1: Token!
+  protectedBootstrap: Boolean!
+  bootstrapped: Boolean!
+  reserve0: BigInt!
+  reserve1: BigInt!
+  price0: BigDecimal!
+  price1: BigDecimal!
+  swapCount: BigInt!
+  mintCount: BigInt!
+  burnCount: BigInt!
+  volume0: BigInt!
+  volume1: BigInt!
+  volumeNusd: BigInt!
+  createdAt: BigInt!
+  createdBlock: BigInt!
+  createdTx: Bytes!
+  updatedAt: BigInt!
+  swaps: [Swap!]! @derivedFrom(field: "pool")
+  liquidityEvents: [LiquidityEvent!]! @derivedFrom(field: "pool")
+  candles: [Candle!]! @derivedFrom(field: "pool")
+  gauge: Gauge @derivedFrom(field: "pool")
+}
+
+type Swap @entity(immutable: true) {
+  id: Bytes!
+  pool: Pool!
+  sender: Bytes! @index
+  recipient: Bytes! @index
+  amount0In: BigInt!
+  amount1In: BigInt!
+  amount0Out: BigInt!
+  amount1Out: BigInt!
+  amountNusd: BigInt!
+  price0: BigDecimal!
+  price1: BigDecimal!
+  reserve0After: BigInt!
+  reserve1After: BigInt!
+  timestamp: BigInt! @index
+  blockNumber: BigInt!
+  txHash: Bytes!
+  logIndex: BigInt!
+}
+
+enum LiquidityAction {
+  MINT
+  BURN
+}
+
+type LiquidityEvent @entity(immutable: true) {
+  id: Bytes!
+  pool: Pool!
+  action: LiquidityAction! @index
+  sender: Bytes! @index
+  recipient: Bytes! @index
+  amount0: BigInt!
+  amount1: BigInt!
+  liquidity: BigInt!
+  timestamp: BigInt! @index
+  blockNumber: BigInt!
+  txHash: Bytes!
+  logIndex: BigInt!
+}
+
+type Candle @entity(immutable: false) {
+  id: ID!
+  pool: Pool!
+  period: Int! @index
+  bucket: BigInt! @index
+  timestamp: BigInt! @index
+  open: BigDecimal!
+  high: BigDecimal!
+  low: BigDecimal!
+  close: BigDecimal!
+  volume0: BigInt!
+  volume1: BigInt!
+  volumeNusd: BigInt!
+  tradeCount: BigInt!
+}
+
+type Gauge @entity(immutable: false) {
+  id: Bytes!
+  pool: Pool!
+  totalStaked: BigInt!
+  totalFunded: BigInt!
+  totalPaid: BigInt!
+  rewardRate: BigInt!
+  periodFinish: BigInt!
+  depositsPaused: Boolean!
+  createdAt: BigInt!
+  updatedAt: BigInt!
+  actions: [GaugeAction!]! @derivedFrom(field: "gauge")
+}
+
+enum GaugeActionType {
+  STAKE
+  WITHDRAW
+  REWARD
+  FUND
+}
+
+type GaugeAction @entity(immutable: true) {
+  id: Bytes!
+  gauge: Gauge!
+  account: Bytes! @index
+  action: GaugeActionType! @index
+  amount: BigInt!
+  duration: BigInt!
+  timestamp: BigInt! @index
+  blockNumber: BigInt!
+  txHash: Bytes!
+  logIndex: BigInt!
+}
+
+type SyntheticMarket @entity(immutable: false) {
+  id: Bytes!
+  asset: Bytes!
+  symbol: String!
+  safetyReserve: Bytes!
+  totalCollateralNusd: BigInt!
+  totalUserCollateralNusd: BigInt!
+  totalReserveCollateralNusd: BigInt!
+  totalDebtSynthetic: BigInt!
+  totalBadDebtSynthetic: BigInt!
+  debtCeilingSynthetic: BigInt!
+  mintPaused: Boolean!
+  withdrawPaused: Boolean!
+  updatedAt: BigInt!
+  actions: [SyntheticAction!]! @derivedFrom(field: "market")
+}
+
+enum SyntheticActionType {
+  DEPOSIT
+  RESERVE_ALLOCATE
+  RESERVE_RELEASE
+  RESERVE_LOSS
+  MINT
+  REPAY
+  WITHDRAW
+  LIQUIDATE
+  BAD_DEBT
+  COVER_BAD_DEBT
+}
+
+type SyntheticAction @entity(immutable: true) {
+  id: Bytes!
+  market: SyntheticMarket!
+  action: SyntheticActionType! @index
+  actor: Bytes! @index
+  account: Bytes! @index
+  recipient: Bytes!
+  collateralNusd: BigInt!
+  syntheticAmount: BigInt!
+  timestamp: BigInt! @index
+  blockNumber: BigInt!
+  txHash: Bytes!
+  logIndex: BigInt!
+}
+
+type LendingMarket @entity(immutable: false) {
+  id: Bytes!
+  totalSuppliedNusd: BigInt!
+  totalBorrowedNusd: BigInt!
+  totalBadDebtNusd: BigInt!
+  borrowIndexWad: BigInt!
+  supplyCapNusd: BigInt!
+  borrowCapNusd: BigInt!
+  supplyPaused: Boolean!
+  borrowPaused: Boolean!
+  collateralWithdrawalPaused: Boolean!
+  updatedAt: BigInt!
+  actions: [LendingAction!]! @derivedFrom(field: "market")
+}
+
+enum LendingActionType {
+  SUPPLY
+  WITHDRAW
+  COLLATERAL_DEPOSIT
+  COLLATERAL_WITHDRAW
+  BORROW
+  REPAY
+  LIQUIDATE
+  BAD_DEBT
+  REPAY_BAD_DEBT
+}
+
+type LendingAction @entity(immutable: true) {
+  id: Bytes!
+  market: LendingMarket!
+  action: LendingActionType! @index
+  actor: Bytes! @index
+  account: Bytes! @index
+  recipient: Bytes!
+  asset: Bytes!
+  amountNusd: BigInt!
+  assetAmount: BigInt!
+  shares: BigInt!
+  timestamp: BigInt! @index
+  blockNumber: BigInt!
+  txHash: Bytes!
+  logIndex: BigInt!
+}
