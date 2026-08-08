@@ -32,7 +32,7 @@ contract PooledNUSDLendingPoolTest is TestBase {
         btcOracle = new MockPriceOracle(100_000 ether);
         ethOracle = new MockPriceOracle(4000 ether);
 
-        pool = new PooledNUSDLendingPool(address(nusd), address(this), 10_000_000 ether, 8_000_000 ether);
+        pool = new PooledNUSDLendingPool(address(nusd), address(this), 10_000_000 ether, 8_000_000 ether, true);
         pool.configureCollateral(address(wzklTC), address(ltcOracle), 1_000_000 ether, 8000, 8500, 9000, 500, true);
         pool.configureCollateral(address(nbtc), address(btcOracle), 1000 ether, 8000, 8500, 9000, 500, true);
         pool.configureCollateral(address(neth), address(ethOracle), 10_000 ether, 8000, 8500, 9000, 500, true);
@@ -44,6 +44,93 @@ contract PooledNUSDLendingPoolTest is TestBase {
         wzklTC.mint(ALICE, 100_000 ether);
         vm.prank(ALICE);
         wzklTC.approve(address(pool), type(uint256).max);
+    }
+
+    function testInactiveMigrationPoolBlocksPublicActionsUntilBootstrapAndActivation() public {
+        PooledNUSDLendingPool stagedPool =
+            new PooledNUSDLendingPool(address(nusd), address(this), 5000 ether, 2500 ether, false);
+        stagedPool.configureCollateral(address(wzklTC), address(ltcOracle), 50 ether, 8000, 8500, 9000, 500, true);
+
+        assertFalse(stagedPool.activated(), "migration pool starts inactive");
+        assertTrue(stagedPool.bootstrapOpen(), "one-time bootstrap starts open");
+        assertTrue(stagedPool.supplyPaused(), "public supply starts paused");
+        assertTrue(stagedPool.borrowPaused(), "borrowing starts paused");
+        assertTrue(stagedPool.collateralWithdrawalPaused(), "collateral withdrawals start paused");
+        assertEq(stagedPool.maxBorrow(ALICE), 0, "inactive pool exposes no borrow quote");
+
+        vm.expectRevert(PooledNUSDLendingPool.MarketNotActivated.selector);
+        vm.prank(SUPPLIER);
+        stagedPool.supply(1 ether, SUPPLIER);
+
+        vm.expectRevert(PooledNUSDLendingPool.MarketNotActivated.selector);
+        vm.prank(ALICE);
+        stagedPool.depositCollateral(address(wzklTC), 1 ether, ALICE);
+
+        vm.expectRevert(PooledNUSDLendingPool.MarketNotActivated.selector);
+        vm.prank(ALICE);
+        stagedPool.borrow(1 ether, ALICE);
+
+        vm.expectRevert(PooledNUSDLendingPool.MarketNotActivated.selector);
+        stagedPool.setPauses(false, false, false);
+
+        nusd.mint(address(this), 20 ether);
+        nusd.approve(address(stagedPool), type(uint256).max);
+        vm.expectRevert();
+        vm.prank(SUPPLIER);
+        stagedPool.bootstrapSupply(20 ether, SUPPLIER);
+
+        uint256 shares = stagedPool.bootstrapSupply(20 ether, address(this));
+        assertEq(shares, 20 ether - stagedPool.MINIMUM_LOCKED_SHARES(), "bootstrap share quote");
+        assertEq(stagedPool.totalSupply(), 20 ether, "bootstrap assets are fully represented");
+        assertFalse(stagedPool.bootstrapOpen(), "bootstrap closes atomically");
+        assertFalse(stagedPool.activated(), "bootstrap does not activate risk");
+        assertTrue(stagedPool.supplyPaused(), "supply remains paused after bootstrap");
+        assertTrue(stagedPool.borrowPaused(), "borrowing remains paused after bootstrap");
+
+        vm.expectRevert(PooledNUSDLendingPool.BootstrapUnavailable.selector);
+        stagedPool.bootstrapSupply(1 ether, address(this));
+        vm.expectRevert();
+        vm.prank(SUPPLIER);
+        stagedPool.activateRiskOperations();
+
+        stagedPool.activateRiskOperations();
+        assertTrue(stagedPool.activated(), "activation is explicit");
+        assertFalse(stagedPool.supplyPaused(), "activation opens supply");
+        assertFalse(stagedPool.borrowPaused(), "activation opens borrowing");
+        assertFalse(stagedPool.collateralWithdrawalPaused(), "activation opens collateral withdrawals");
+
+        vm.expectRevert(PooledNUSDLendingPool.BootstrapUnavailable.selector);
+        stagedPool.activateRiskOperations();
+
+        vm.startPrank(SUPPLIER);
+        nusd.approve(address(stagedPool), type(uint256).max);
+        stagedPool.supply(1 ether, SUPPLIER);
+        vm.stopPrank();
+
+        vm.startPrank(ALICE);
+        wzklTC.approve(address(stagedPool), type(uint256).max);
+        stagedPool.depositCollateral(address(wzklTC), 1 ether, ALICE);
+        vm.stopPrank();
+        assertEq(stagedPool.collateralBalance(ALICE, address(wzklTC)), 1 ether, "activated collateral deposit");
+    }
+
+    function testInactivePoolCannotActivateWithoutBootstrapAndCollateralConfiguration() public {
+        PooledNUSDLendingPool stagedPool =
+            new PooledNUSDLendingPool(address(nusd), address(this), 5000 ether, 2500 ether, false);
+
+        vm.expectRevert(PooledNUSDLendingPool.BootstrapUnavailable.selector);
+        stagedPool.activateRiskOperations();
+
+        nusd.mint(address(this), 20 ether);
+        nusd.approve(address(stagedPool), 20 ether);
+        stagedPool.bootstrapSupply(20 ether, address(this));
+
+        vm.expectRevert(PooledNUSDLendingPool.BootstrapUnavailable.selector);
+        stagedPool.activateRiskOperations();
+
+        stagedPool.configureCollateral(address(wzklTC), address(ltcOracle), 50 ether, 8000, 8500, 9000, 500, true);
+        stagedPool.activateRiskOperations();
+        assertTrue(stagedPool.activated(), "configured and bootstrapped pool activates");
     }
 
     function testSuppliersReceiveSharesInOnePooledMarket() public {

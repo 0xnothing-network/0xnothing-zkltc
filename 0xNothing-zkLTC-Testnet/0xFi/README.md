@@ -49,9 +49,15 @@ npm.cmd run check:subgraph
 npm.cmd run check:web
 npm.cmd run deploy:dry
 npm.cmd run activate:check
+npm.cmd run audit:live
+npm.cmd run liquidity:bootstrap:check
 npm.cmd run pump:controller:check
 npm.cmd run pump:keeper:check
 ```
+
+The 0xFi frontend is part of the unified app at `../apps/web` and is served at
+`/0xFi`. `check:web` validates that app directly; there is no standalone 0xFi
+Next.js service.
 
 Only run `npm.cmd run deploy:testnet` after every local gate passes and the
 printed chain, deployer, existing NUSD, DIA oracle, and Pump addresses are exact.
@@ -68,10 +74,21 @@ The keeper requires `KEEPER_PRIVATE_KEY`; it never falls back to the deployer
 key. Anyone can call the same controller function if that gas-only process is
 offline.
 
-The lending pool uses isolated caps for WzkLTC, nBTC, and nETH. For an older
-deployment, run `npm.cmd run lending:collateral:check` and then
-`npm.cmd run lending:collateral:configure` before graduation activation. A stale
-DIA feed blocks both configuration changes and borrowing.
+The active testnet lending pool is
+`0x7CB638F8e10f1bd200A3c5C3fD014C3FD97BA914`. It uses the fixed
+4.5% borrower / 4% lender / 0.5% protocol spread and isolated 80/85/90 risk
+parameters for WzkLTC, nBTC, and nETH. The replacement synth vaults, fee gauges,
+and lending risk actions were activated in the fail-closed order documented in
+`docs/DEPLOYMENT.md`; `npm.cmd run audit:live` verifies that topology directly
+from chain state. The migration and activation commands remain idempotent
+recovery tools, not routine deploy steps. A stale DIA feed still blocks every
+debt-increasing action.
+
+The three canonical pools contain deliberately small testnet bootstrap
+liquidity. Run `npm.cmd run liquidity:bootstrap:check` to verify it without
+sending transactions. `npm.cmd run liquidity:bootstrap` is receipt-aware and
+idempotent, but it spends deployer assets and must only be used for an explicit
+testnet liquidity operation.
 
 See `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, and `docs/DEPLOYMENT.md` before
 changing risk parameters or enabling 0xPump graduation.

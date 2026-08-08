@@ -45,7 +45,6 @@ npm.cmd run deploy:dry
 npm.cmd run deploy:testnet
 npm.cmd run deploy:resume
 npm.cmd run deploy:finalize
-npm.cmd run migrate:finalize
 npm.cmd run governance:direct:check
 npm.cmd run governance:direct:broadcast
 npm.cmd run governance:direct:resume
@@ -67,12 +66,11 @@ and pause checks. Falling below 90,000 NUSD disables new sponsorship without
 removing collateral already assigned to existing positions.
 
 The old guard-removal migration is permanently retired and must not be replayed.
-To replace the currently empty synth markets with reserve-aware vaults, run the
-dedicated migration dry-run, review its predicted addresses, then broadcast and
-finalize. The migration refuses nonzero legacy vault debt/collateral, synth
-supply, LP/gauge state, or lending collateral. It pauses old minting and gauge
-deposits, but deliberately leaves old vault withdrawals open so no later deposit
-can be trapped.
+The reserve-aware synth replacement used a dedicated receipt-journaled workflow.
+It refused legacy debt, bad debt, synth supply, lending collateral, and nonzero
+legacy pair/gauge state. Debt-free, fully backed legacy user collateral was
+allowed so the migration could not confiscate or strand a user withdrawal. Old
+minting and gauge deposits remain paused while old vault withdrawals stay open.
 
 The same migration deploys the replacement fee router and a separate synth-fee
 gauge factory. The existing gauge factory remains canonical for WzkLTC and old
@@ -80,11 +78,14 @@ gauge factory. The existing gauge factory remains canonical for WzkLTC and old
 fee routes. No existing LP token or pool reserve is moved.
 
 ```powershell
-$env:PRIVATE_KEY = "<testnet-deployer-key>"
-forge script script/MigrateSynthSafetyReserve.s.sol:MigrateSynthSafetyReserve --root contracts --rpc-url $env:LITEFORGE_RPC_URL
-forge script script/MigrateSynthSafetyReserve.s.sol:MigrateSynthSafetyReserve --root contracts --rpc-url $env:LITEFORGE_RPC_URL --broadcast
-node scripts/finalize-synth-safety-reserve.mjs
-Remove-Item Env:PRIVATE_KEY
+npm.cmd run synth:safety-reserve:check
+npm.cmd run synth:safety-reserve:broadcast
+# Interrupted transaction sequence only:
+npm.cmd run synth:safety-reserve:resume
+# Transactions landed but local publication failed only:
+npm.cmd run synth:safety-reserve:finalize
+npm.cmd run synth:safety-reserve:activate:check
+npm.cmd run synth:safety-reserve:activate
 ```
 
 The receipt-aware finalizer verifies the current creation bytecode, successful
@@ -94,6 +95,37 @@ collateral before publishing any address. It publishes the router, vaults,
 synth-fee factory, public environment, and second subgraph factory source from
 the same receipt set; partial local publication is rejected. Funding the reserve is a separate,
 irreversible `fund(uint256)` action and is never performed by migration.
+
+The fixed-rate replacement is active at
+`0x7CB638F8e10f1bd200A3c5C3fD014C3FD97BA914`. Its receipt journal is stored in
+`contracts/deployments/lending-fixed-rate.json`; the finalized historical
+manifest remains preserved. The workflow refused borrowing, bad debt, or
+lending collateral, paused all risk-increasing actions on the old pool,
+conserved the deployer-owned NUSD shares, and validated the fixed 4.5% borrower /
+4% lender / 0.5% protocol spread plus 80/85/90 collateral risk before
+publication.
+
+```powershell
+npm.cmd run lending:fixed-rate:check
+npm.cmd run lending:fixed-rate:broadcast
+# Interrupted transaction sequence only:
+npm.cmd run lending:fixed-rate:resume
+# Transactions landed but local publication failed only:
+npm.cmd run lending:fixed-rate:finalize
+# Finalization publishes the replacement in a paused staged state. Verify first,
+# then use the owner-only, receipt-aware activation step:
+npm.cmd run lending:fixed-rate:activate:check
+npm.cmd run lending:fixed-rate:activate
+```
+
+No broadcast command is part of a normal build. Review the dry-run prediction
+and generated transaction sequence before using a broadcast command. The
+lending finalizer always leaves supply, borrow, and collateral withdrawals
+paused. Lending activation is deliberately rejected until the synth migration
+is finalized and both replacement vaults and gauges are active. The only safe
+order is: finalize staged lending, migrate/finalize synth, activate both synth
+vaults and gauges, then activate lending last. Every wrapper is idempotent and
+receipt-aware for interrupted local publication.
 
 The legacy migration originally scheduled timelock ownership. This testnet now
 uses direct deployer governance. To cancel those pending operations, clear every
@@ -112,10 +144,13 @@ owner/guardian bindings, controller bindings, router state, and both Pump admin
 slots match. These commands are hard-pinned to chain 4441 and are not a mainnet
 governance template.
 
-After broadcast, deploy the configured Goldsky subgraph and copy its endpoint
-to `NEXT_PUBLIC_GOLDSKY_ENDPOINT` in `web/.env.local`. Rebuild the web app after
-that endpoint change. The app uses Goldsky for historical candles/activity and
-RPC for live state plus the bounded tail.
+After both migrations are finalized, deploy the configured Goldsky subgraph
+with `npm.cmd run deploy` from `subgraph`, wait for 100% sync, and run
+`npm.cmd run audit:live` there. The checked generated web configuration already
+contains the staging endpoint; production does not depend on an ignored local
+environment file. Rebuild the unified web app after publication. The app uses
+Goldsky for historical candles/activity and RPC for live state plus the bounded
+tail.
 
 `activate:testnet` verifies core governance first, then transfers Pump and router
 administration to the controller. If the second phase is interrupted, rerun the
@@ -123,18 +158,37 @@ same command or use `pump:automation:activate`; both paths resume from live
 state. `activate:core` exists only for isolated legacy-timelock recovery; use
 `activate:core:check` before it.
 
-For an already-finalized deployment, verify and apply the three lending
-collateral bindings before graduation activation:
+For a fresh recovery, verify the staged lending configuration, complete and
+activate synth first, then activate lending and run the live audits:
 
 ```powershell
 npm.cmd run lending:collateral:check
-npm.cmd run lending:collateral:configure
+npm.cmd run synth:safety-reserve:check
+npm.cmd run synth:safety-reserve:activate:check
+npm.cmd run synth:safety-reserve:activate
+npm.cmd run lending:fixed-rate:activate:check
+npm.cmd run lending:fixed-rate:activate
 npm.cmd run audit:live
+Push-Location subgraph
+npm.cmd run audit:live
+Pop-Location
 ```
 
-The configure command is idempotent, simulates every changed call, and only
-uses the current lending owner. It does not bypass DIA freshness, collateral
-caps, LTV thresholds, liquidity checks, or guardian pauses.
+The migration already configures all three collateral assets while risk actions
+remain paused. Activation is idempotent, simulates the owner call, requires
+fresh DIA oracles and exact caps/80-85-90 risk, and verifies the successful
+receipt before public configuration is enabled. The legacy collateral configure
+command remains available for isolated recovery, but is not part of this staged
+migration path.
+
+Canonical liquidity is a separate, asset-spending operation. It is not hidden
+inside migration or build commands. Verify current reserves, stakes, and reward
+routes first; only broadcast when the explicit bootstrap budget is approved:
+
+```powershell
+npm.cmd run liquidity:bootstrap:check
+npm.cmd run liquidity:bootstrap
+```
 
 The keeper must use `KEEPER_PRIVATE_KEY`, a separate wallet holding only gas.
 There is deliberately no fallback to `DEPLOYER_PRIVATE_KEY`.

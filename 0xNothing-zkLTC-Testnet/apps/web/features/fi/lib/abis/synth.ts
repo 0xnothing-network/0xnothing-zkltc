@@ -1,5 +1,6 @@
 export const synthVaultAbi = [
   { type: "function", name: "safetyReserve", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "address" }] },
+  { type: "function", name: "activated", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "bool" }] },
   { type: "function", name: "depositCollateral", stateMutability: "nonpayable", inputs: [{ name: "amountNusd", type: "uint256" }, { name: "onBehalfOf", type: "address" }], outputs: [] },
   { type: "function", name: "depositAndMint", stateMutability: "nonpayable", inputs: [{ name: "collateralAmountNusd", type: "uint256" }, { name: "syntheticAmount", type: "uint256" }, { name: "maximumFeeNusd", type: "uint256" }, { name: "recipient", type: "address" }], outputs: [] },
   { type: "function", name: "mint", stateMutability: "nonpayable", inputs: [{ name: "amountSynthetic", type: "uint256" }, { name: "maximumFeeNusd", type: "uint256" }, { name: "recipient", type: "address" }], outputs: [] },
@@ -50,4 +51,18 @@ export const synthSafetyReserveAbi = [
   { type: "function", name: "sponsorshipActive", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "bool" }] },
   { type: "function", name: "eligibleSince", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "allocationsPaused", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "bool" }] },
+] as const;
+
+export const legacySynthVaultAbi = [
+  {
+    type: "function", name: "positions", stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [
+      { name: "collateralNusd", type: "uint256" },
+      { name: "debtSynthetic", type: "uint256" },
+    ],
+  },
+  { type: "function", name: "mintPaused", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "bool" }] },
+  { type: "function", name: "withdrawPaused", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "bool" }] },
+  { type: "function", name: "withdrawCollateral", stateMutability: "nonpayable", inputs: [{ name: "amountNusd", type: "uint256" }, { name: "recipient", type: "address" }], outputs: [] },
 ] as const;

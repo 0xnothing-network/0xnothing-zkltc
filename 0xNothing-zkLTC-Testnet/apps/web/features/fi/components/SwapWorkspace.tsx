@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ArrowsDownUp } from "@phosphor-icons/react";
-import { zeroAddress } from "viem";
+import { formatUnits, zeroAddress } from "viem";
 import { useAccount, useBalance, useReadContract } from "wagmi";
 import { AmountField } from "@fi/components/AmountField";
 import { AssetSelect, type AssetSelectOption } from "@fi/components/AssetSelect";
@@ -289,7 +289,7 @@ export function SwapWorkspace() {
       {isOracleNusdRoute ? <div className="fi-inline-state"><div><strong>DIA / $1 = 1 NUSD</strong><p>{isMintRoute ? "Mint / 0% fee" : "Redeem / 0% fee"}</p></div></div> : assetIn?.graduated || assetOut?.graduated ? <div className="fi-inline-state fi-inline-positive"><div><strong>Graduated DEX market</strong><p>Liquidity was seeded automatically after the 0xPump bonding curve completed.</p></div></div> : null}
       <div className="fi-form">
         <AssetSelect id="swap-in-token" label="Pay asset" value={tokenIn} entries={selectorEntries} onChange={chooseIn} />
-        <AmountField id="swap-amount-in" label="You pay" asset={assetIn?.symbol ?? "--"} value={amountText} balance={formatAmount(balance, assetIn?.decimals ?? 18)} error={validation} onChange={setAmountText} onMax={spendableBalance !== undefined && spendableBalance > 0n ? () => setAmountText(formatAmount(spendableBalance, assetIn?.decimals ?? 18, 18).replace(/,/g, "")) : undefined} />
+        <AmountField id="swap-amount-in" label="You pay" asset={assetIn?.symbol ?? "--"} value={amountText} balance={formatAmount(balance, assetIn?.decimals ?? 18)} error={validation} onChange={setAmountText} onMax={spendableBalance !== undefined && spendableBalance > 0n ? () => setAmountText(formatUnits(spendableBalance, assetIn?.decimals ?? 18)) : undefined} />
         <button type="button" className="fi-icon-button fi-swap-arrow" onClick={flip} aria-label="Reverse swap direction"><ArrowsDownUp size={18} weight="bold" aria-hidden="true" /></button>
         <AssetSelect id="swap-out-token" label="Receive asset" value={tokenOut} entries={selectorEntries} onChange={chooseOut} />
         <AmountField id="swap-amount-out" label="Expected output" asset={assetOut?.symbol ?? "--"} value={amountOut ? formatAmount(amountOut, assetOut?.decimals ?? 18, 18).replace(/,/g, "") : ""} helper={quoteFetching ? "Refreshing quote" : undefined} readOnly />

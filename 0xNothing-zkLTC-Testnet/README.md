@@ -10,8 +10,8 @@ the 0xFi adapter is allowed. The web client checks those live conditions before
 offering the action.
 
 ```text
-apps/web/                         0xNothing Next.js gateway and 0xPixel/0xPump UI
-0xFi/                             AMM, farming, lending, synths, indexer, and web UI
+apps/web/                         unified 0xNothing UI for 0xPixel, 0xPump, and 0xFi
+0xFi/                             AMM, farming, lending, synths, indexer, and operations
 contracts/                        Foundry contracts and tests
   src/0xpixel/reference/          exact source references for live deployments
   src/0xpump/                     bonding-curve launchpad

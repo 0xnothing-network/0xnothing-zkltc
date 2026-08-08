@@ -10,6 +10,12 @@ import {
   saveRuntime,
   sendContract,
 } from "./lib/graduation-runtime.mjs";
+import {
+  CURRENT_LENDING_COLLATERAL_RISK,
+  CURRENT_LENDING_IMPLEMENTATION_ID,
+  lendingCollateralConfigurationMatches,
+  lendingRuntimeState,
+} from "./lib/lending-implementation.mjs";
 
 const broadcast = process.argv.includes("--broadcast");
 if (process.argv.some((argument) => argument.startsWith("--") && argument !== "--broadcast")) {
@@ -29,10 +35,37 @@ const mode = governanceMode(deployment);
 const lendingAbi = parseAbi([
   "function owner() view returns (address)",
   "function pendingOwner() view returns (address)",
-  "function collateralConfigs(address asset) view returns (address oracle,uint256 supplyCap,uint16 loanToValueBps,uint16 liquidationThresholdBps,uint16 liquidationBonusBps,uint8 decimals,bool enabled)",
-  "function configureCollateral(address asset,address oracle,uint256 supplyCap,uint16 loanToValueBps,uint16 liquidationThresholdBps,uint16 liquidationBonusBps,bool enabled)",
+  "function collateralConfigs(address asset) view returns (address oracle,uint256 supplyCap,uint16 loanToValueBps,uint16 liquidationThresholdBps,uint16 liquidationBonusBps,uint8 decimals,bool enabled,uint16 marginCallThresholdBps)",
+  "function configureCollateral(address asset,address oracle,uint256 supplyCap,uint16 loanToValueBps,uint16 marginCallThresholdBps,uint16 liquidationThresholdBps,uint16 liquidationBonusBps,bool enabled)",
+]);
+const lendingIdentityAbi = parseAbi([
+  "function IMPLEMENTATION_ID() view returns (bytes32)",
 ]);
 const oracleAbi = parseAbi(["function isFresh() view returns (bool)"]);
+const risk = CURRENT_LENDING_COLLATERAL_RISK;
+
+const liveImplementationId = await publicClient.readContract({
+  address: lendingPool,
+  abi: lendingIdentityAbi,
+  functionName: "IMPLEMENTATION_ID",
+}).catch(() => null);
+const implementation = lendingRuntimeState(deployment, liveImplementationId);
+if (!implementation.runtimeCompatible) {
+  console.log(JSON.stringify({
+    mode: broadcast ? "broadcast" : "check",
+    lendingPool,
+    implementationCompatible: false,
+    expectedImplementationId: CURRENT_LENDING_IMPLEMENTATION_ID,
+    liveImplementationId,
+    requiredAction: implementation.requiredAction,
+    changesRequired: [],
+    error: "Collateral configuration is blocked until the lending implementation is migrated",
+  }, null, 2));
+  if (broadcast) {
+    throw new Error("Refusing to broadcast against an incompatible lending implementation");
+  }
+  process.exit(1);
+}
 
 function positiveBigInt(value, fallback, label) {
   const raw = value?.trim() || String(fallback);
@@ -85,13 +118,10 @@ for (const configuration of configurations) {
     }),
     publicClient.readContract({ address: configuration.oracle, abi: oracleAbi, functionName: "isFresh" }),
   ]);
-  const matches = current[0].toLowerCase() === configuration.oracle.toLowerCase()
-    && current[1] === configuration.cap
-    && current[2] === 5000
-    && current[3] === 6500
-    && current[4] === 500
-    && current[5] === 18
-    && current[6];
+  const matches = lendingCollateralConfigurationMatches(current, {
+    oracle: configuration.oracle,
+    cap: configuration.cap,
+  });
   state.push({ ...configuration, current, oracleFresh, matches });
 }
 
@@ -117,7 +147,16 @@ for (const item of changes) {
     address: lendingPool,
     abi: lendingAbi,
     functionName: "configureCollateral",
-    args: [item.asset, item.oracle, item.cap, 5000, 6500, 500, true],
+    args: [
+      item.asset,
+      item.oracle,
+      item.cap,
+      risk.loanToValueBps,
+      risk.marginCallThresholdBps,
+      risk.liquidationThresholdBps,
+      risk.liquidationBonusBps,
+      true,
+    ],
   });
 }
 
@@ -135,6 +174,13 @@ if (!broadcast) {
       configured: item.matches,
       oracleFresh: item.oracleFresh,
       supplyCap: item.cap.toString(),
+      currentRisk: {
+        loanToValueBps: item.current[2],
+        marginCallThresholdBps: item.current[7],
+        liquidationThresholdBps: item.current[3],
+        liquidationBonusBps: item.current[4],
+      },
+      targetRisk: risk,
     })),
   }, null, 2));
   process.exit(0);
@@ -147,7 +193,16 @@ for (const item of changes) {
     lendingPool,
     lendingAbi,
     "configureCollateral",
-    [item.asset, item.oracle, item.cap, 5000, 6500, 500, true],
+    [
+      item.asset,
+      item.oracle,
+      item.cap,
+      risk.loanToValueBps,
+      risk.marginCallThresholdBps,
+      risk.liquidationThresholdBps,
+      risk.liquidationBonusBps,
+      true,
+    ],
   );
   hashes.push(hash);
 }
@@ -159,15 +214,10 @@ for (const item of configurations) {
     functionName: "collateralConfigs",
     args: [item.asset],
   });
-  if (
-    configured[0].toLowerCase() !== item.oracle.toLowerCase()
-    || configured[1] !== item.cap
-    || configured[2] !== 5000
-    || configured[3] !== 6500
-    || configured[4] !== 500
-    || configured[5] !== 18
-    || !configured[6]
-  ) throw new Error(`Post-configuration verification failed for ${item.key}`);
+  if (!lendingCollateralConfigurationMatches(configured, {
+    oracle: item.oracle,
+    cap: item.cap,
+  })) throw new Error(`Post-configuration verification failed for ${item.key}`);
 }
 
 deployment.wzkLtcCollateralCap = configurations[0].cap.toString();

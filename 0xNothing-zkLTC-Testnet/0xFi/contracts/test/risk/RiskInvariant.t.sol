@@ -145,7 +145,8 @@ contract RiskInvariantTest is TestBase {
             address(synthReserve),
             address(feeDistributor),
             address(this),
-            1000 ether
+            1000 ether,
+            true
         );
         SyntheticVault secondVault = new SyntheticVault(
             address(nusd),
@@ -154,7 +155,8 @@ contract RiskInvariantTest is TestBase {
             address(synthReserve),
             address(feeDistributor),
             address(this),
-            1000 ether
+            1000 ether,
+            true
         );
         synthReserve.bindVaults(address(vault), address(secondVault));
         synthetic.bindVault(address(vault));
@@ -164,7 +166,7 @@ contract RiskInvariantTest is TestBase {
 
         collateral = new MockCollateralToken("Wrapped zkLTC", "WzkLTC", 18);
         MockPriceOracle ltcOracle = new MockPriceOracle(100 ether);
-        pool = new PooledNUSDLendingPool(address(nusd), address(this), 20_000_000 ether, 10_000_000 ether);
+        pool = new PooledNUSDLendingPool(address(nusd), address(this), 20_000_000 ether, 10_000_000 ether, true);
         pool.configureCollateral(address(collateral), address(ltcOracle), 1_000_000 ether, 8000, 8500, 9000, 500, true);
         nusd.mint(address(this), 2_000_000 ether);
         nusd.approve(address(pool), type(uint256).max);

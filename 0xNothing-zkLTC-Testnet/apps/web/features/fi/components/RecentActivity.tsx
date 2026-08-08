@@ -15,6 +15,23 @@ function isTransactionHash(value: string): boolean {
   return /^0x[0-9a-fA-F]{64}$/.test(value);
 }
 
+function formatActivityAmount(value: string): string {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return value;
+  const magnitude = Math.abs(parsed);
+  const maximumFractionDigits = magnitude === 0
+    ? 0
+    : magnitude >= 1_000
+      ? 2
+      : magnitude >= 1
+        ? 4
+        : Math.min(12, Math.max(6, Math.ceil(-Math.log10(magnitude)) + 4));
+  return parsed.toLocaleString("en-US", {
+    maximumFractionDigits,
+    signDisplay: value.trim().startsWith("+") ? "always" : "auto",
+  });
+}
+
 export function RecentActivity({ pair }: { pair: string }) {
   const [activity, setActivity] = useState<ActivityPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +72,9 @@ export function RecentActivity({ pair }: { pair: string }) {
               {activity.map((event) => (
                 <tr key={event.id}>
                   <td><span className="fi-status" data-state={event.type === "swap" ? "live" : "warning"}>{event.type.toUpperCase()}</span></td>
-                  <td>{event.amount0} / {event.amount1}</td>
+                  <td title={`${event.amount0} / ${event.amount1}`}>
+                    {formatActivityAmount(event.amount0)} / {formatActivityAmount(event.amount1)}
+                  </td>
                   <td>{formatRelativeTimestamp(event.timestamp)}</td>
                   <td>{isTransactionHash(event.transactionHash) ? <a className="fi-text-link" href={`${deployment.chain.explorerUrl}/tx/${event.transactionHash}`} target="_blank" rel="noreferrer">{shortValue(event.transactionHash)}</a> : "Invalid hash"}</td>
                 </tr>

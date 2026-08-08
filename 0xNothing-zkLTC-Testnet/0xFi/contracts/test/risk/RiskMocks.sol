@@ -44,6 +44,8 @@ contract MockMintFeeDistributor {
     IERC20 public immutable nusd;
     uint256 public totalRoutedNusd;
     bool public shouldRevert;
+    mapping(address => address) public mintFeePairForVault;
+    mapping(address => address) public mintFeeVaultForPair;
 
     constructor(address nusdAddress) {
         nusd = IERC20(nusdAddress);
@@ -51,6 +53,11 @@ contract MockMintFeeDistributor {
 
     function setShouldRevert(bool value) external {
         shouldRevert = value;
+    }
+
+    function bindVault(address vault, address pair) external {
+        mintFeePairForVault[vault] = pair;
+        mintFeeVaultForPair[pair] = vault;
     }
 
     function routeMintFee(uint256 amountNusd) external returns (uint256 amountFlushedNusd) {

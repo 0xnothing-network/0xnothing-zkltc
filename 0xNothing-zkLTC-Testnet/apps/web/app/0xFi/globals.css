@@ -278,7 +278,7 @@
   color: var(--fi-red);
 }
 
-.fi-mobile-menu-button,
+.fi-icon-button.fi-mobile-menu-button,
 .fi-nav-mobile {
   display: none;
 }
@@ -477,6 +477,10 @@
   background: var(--fi-line);
 }
 
+.fi-metric-strip[data-count="5"] {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .fi-metric-strip > div {
   min-width: 0;
   padding: 15px 17px;
@@ -565,6 +569,47 @@
 
 .fi-protocol-row > svg {
   color: var(--fi-muted);
+}
+
+.fi-legacy-recovery {
+  margin-top: 14px;
+}
+
+.fi-panel-copy {
+  margin-top: 8px;
+  color: var(--fi-muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.fi-legacy-recovery-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) auto auto minmax(170px, auto);
+  min-height: 72px;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--fi-line);
+}
+
+.fi-legacy-recovery-row > :is(span, div) {
+  display: grid;
+  gap: 4px;
+  color: var(--fi-muted);
+  font-size: 9px;
+}
+
+.fi-legacy-recovery-row strong {
+  color: var(--fi-text);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.fi-legacy-recovery-action {
+  justify-items: end;
+}
+
+.fi-legacy-recovery-action .fi-transaction-status {
+  max-width: 280px;
 }
 
 .fi-segmented {
@@ -1262,7 +1307,7 @@
     display: none;
   }
 
-  .fi-mobile-menu-button {
+  .fi-icon-button.fi-mobile-menu-button {
     display: inline-grid;
   }
 
@@ -1286,6 +1331,10 @@
   }
 
   .fi-metric-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fi-metric-strip[data-count="5"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -1332,6 +1381,16 @@
     flex-direction: column;
     gap: 18px;
     padding: 22px 0;
+  }
+
+  .fi-legacy-recovery-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 12px 0;
+  }
+
+  .fi-legacy-recovery-action {
+    grid-column: 1 / -1;
+    justify-items: stretch;
   }
 
   .fi-page-heading h1 {
@@ -1566,8 +1625,13 @@
 .fi-market-list-head > button:hover { color: var(--fi-text); }
 
 .fi-market-list {
+  margin: 0;
   border-bottom: 1px solid var(--fi-line-strong);
+  padding: 0;
+  list-style: none;
 }
+
+.fi-market-item { margin: 0; }
 
 .fi-market-row {
   min-height: 74px;
@@ -1576,7 +1640,7 @@
   transition: background-color 160ms ease, transform 160ms ease;
 }
 
-.fi-market-row:last-child { border-bottom: 0; }
+.fi-market-item:last-child .fi-market-row { border-bottom: 0; }
 .fi-market-row:hover { background: rgba(255, 255, 255, 0.035); }
 .fi-market-row:active { transform: translateY(1px); }
 

@@ -40,7 +40,8 @@ contract SyntheticVaultTest is TestBase {
             address(reserve),
             address(feeDistributor),
             address(this),
-            100 ether
+            100 ether,
+            true
         );
         secondVault = new SyntheticVault(
             address(nusd),
@@ -49,7 +50,8 @@ contract SyntheticVaultTest is TestBase {
             address(reserve),
             address(feeDistributor),
             address(this),
-            1000 ether
+            1000 ether,
+            true
         );
         reserve.bindVaults(address(vault), address(secondVault));
         nbtc.bindVault(address(vault));
@@ -69,6 +71,81 @@ contract SyntheticVaultTest is TestBase {
         nbtc.approve(address(vault), type(uint256).max);
         vm.prank(LIQUIDATOR);
         nbtc.approve(address(vault), type(uint256).max);
+    }
+
+    function testStagedVaultBlocksRiskUntilEveryPermanentBindingIsReady() public {
+        SynthSafetyReserve stagedReserve = new SynthSafetyReserve(address(nusd), address(this));
+        MockMintFeeDistributor stagedFeeDistributor = new MockMintFeeDistributor(address(nusd));
+        SyntheticAsset stagedNbtc = new SyntheticAsset("Staged Bitcoin", "snBTC", address(this));
+        SyntheticAsset stagedNeth = new SyntheticAsset("Staged Ether", "snETH", address(this));
+        SyntheticVault stagedVault = new SyntheticVault(
+            address(nusd),
+            address(stagedNbtc),
+            address(btcOracle),
+            address(stagedReserve),
+            address(stagedFeeDistributor),
+            address(this),
+            100 ether,
+            false
+        );
+        SyntheticVault stagedSecondVault = new SyntheticVault(
+            address(nusd),
+            address(stagedNeth),
+            address(ethOracle),
+            address(stagedReserve),
+            address(stagedFeeDistributor),
+            address(this),
+            1000 ether,
+            false
+        );
+
+        assertFalse(stagedVault.activated(), "migration vault starts inactive");
+        assertTrue(stagedVault.mintPaused(), "mint starts paused");
+        assertTrue(stagedVault.withdrawPaused(), "withdraw starts paused");
+
+        vm.expectRevert(SyntheticVault.MarketNotActivated.selector);
+        vm.prank(ALICE);
+        stagedVault.depositCollateral(1 ether, ALICE);
+        vm.expectRevert(SyntheticVault.MarketNotActivated.selector);
+        vm.prank(ALICE);
+        stagedVault.depositAndMint(150_000 ether, 1 ether, type(uint256).max, ALICE);
+        vm.expectRevert(SyntheticVault.MarketNotActivated.selector);
+        vm.prank(ALICE);
+        stagedVault.mint(1 ether, type(uint256).max, ALICE);
+        vm.expectRevert(SyntheticVault.MarketNotActivated.selector);
+        stagedVault.setMintPaused(false);
+        vm.expectRevert(SyntheticVault.MarketNotActivated.selector);
+        stagedVault.setWithdrawPaused(false);
+
+        vm.expectRevert(SyntheticVault.ActivationUnavailable.selector);
+        stagedVault.activateRiskOperations();
+        stagedReserve.bindVaults(address(stagedVault), address(stagedSecondVault));
+        vm.expectRevert(SyntheticVault.ActivationUnavailable.selector);
+        stagedVault.activateRiskOperations();
+        stagedNbtc.bindVault(address(stagedVault));
+        stagedNeth.bindVault(address(stagedSecondVault));
+        vm.expectRevert(SyntheticVault.ActivationUnavailable.selector);
+        stagedVault.activateRiskOperations();
+        stagedFeeDistributor.bindVault(address(stagedVault), address(0xB7C));
+        stagedFeeDistributor.bindVault(address(stagedSecondVault), address(0xE7C));
+
+        vm.expectRevert();
+        vm.prank(ALICE);
+        stagedVault.activateRiskOperations();
+        stagedVault.activateRiskOperations();
+        stagedSecondVault.activateRiskOperations();
+
+        assertTrue(stagedVault.activated(), "owner activation is explicit");
+        assertFalse(stagedVault.mintPaused(), "activation opens minting atomically");
+        assertFalse(stagedVault.withdrawPaused(), "activation opens withdrawals atomically");
+        vm.expectRevert(SyntheticVault.ActivationUnavailable.selector);
+        stagedVault.activateRiskOperations();
+
+        vm.startPrank(ALICE);
+        nusd.approve(address(stagedVault), type(uint256).max);
+        stagedVault.depositAndMint(150_000 ether, 1 ether, type(uint256).max, ALICE);
+        vm.stopPrank();
+        assertEq(stagedNbtc.balanceOf(ALICE), 1 ether, "activated vault can mint");
     }
 
     function testInactiveModeUses150PercentAndInputScopedQuote() public {
@@ -445,7 +522,8 @@ contract SyntheticVaultTest is TestBase {
             address(feeReserve),
             address(feeTokenDistributor),
             address(this),
-            1000 ether
+            1000 ether,
+            true
         );
         asset.bindVault(address(feeVault));
         feeToken.mint(ALICE, 100 ether);

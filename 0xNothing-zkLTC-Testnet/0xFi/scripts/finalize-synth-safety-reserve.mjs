@@ -17,7 +17,11 @@ import {
 } from "viem";
 
 import { atomicWriteFile } from "./lib/graduation-runtime.mjs";
-import { creationInputMatchesArtifact } from "./lib/lending-implementation.mjs";
+import {
+  creationInputMatchesArtifact,
+  CURRENT_LENDING_COLLATERAL_RISK,
+  CURRENT_LENDING_IMPLEMENTATION_ID,
+} from "./lib/lending-implementation.mjs";
 import { writePublicEnvironment } from "./lib/public-environment.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -112,6 +116,16 @@ if (!/^[a-zA-Z0-9_-]+$/.test(subgraphDeploymentName) || !/^\d+\.\d+\.\d+$/.test(
 }
 
 if (Number(prediction.chainId) !== CHAIN_ID) throw new Error("Prediction chain ID is invalid");
+if (![
+  "synth-safety-reserve-migration-prediction",
+  "synth-safety-reserve-migration-staged",
+].includes(prediction.status)) {
+  throw new Error(`Prediction status is not recoverable: ${prediction.status}`);
+}
+if (prediction.status === "synth-safety-reserve-migration-staged") {
+  requireEqual(prediction.broadcasted, true, "staged prediction broadcast marker");
+}
+requireEqual(prediction.vaultActivationRequired, true, "prediction activation requirement");
 const rpcUrl = (process.env.LITEFORGE_RPC_URL || network.rpcUrl || "").trim();
 const fallbackUrl = (process.env.LITEFORGE_FALLBACK_RPC_URL || "https://liteforge.rpc.caldera.xyz/http").trim();
 if (!rpcUrl) throw new Error("LITEFORGE_RPC_URL or network.rpcUrl is required");
@@ -149,20 +163,83 @@ const addresses = {
   oldNETHNusdGauge: address(prediction.oldNETHNusdGauge, "old nETH/NUSD gauge"),
 };
 
-for (const [predictionKey, previousKey] of [
-  ["oldNBTC", "nBTC"],
-  ["oldNETH", "nETH"],
-  ["oldNBTCVault", "nBTCVault"],
-  ["oldNETHVault", "nETHVault"],
-  ["oldNBTCNusdPair", "nBTCNusdPair"],
-  ["oldNETHNusdPair", "nETHNusdPair"],
-  ["oldNBTCNusdGauge", "nBTCNusdGauge"],
-  ["oldNETHNusdGauge", "nETHNusdGauge"],
+function requireRecoverableReplacement(
+  actual,
+  oldAddress,
+  newAddress,
+  migration,
+  oldKey,
+  newKey,
+  label,
+) {
+  if (sameAddress(actual, oldAddress)) return;
+  if (!sameAddress(actual, newAddress)) {
+    throw new Error(`${label}: expected ${oldAddress} or ${newAddress}, got ${actual}`);
+  }
+  requireAddress(migration?.[oldKey], oldAddress, `${label} staged previous address`);
+  requireAddress(migration?.[newKey], newAddress, `${label} staged replacement address`);
+}
+
+for (const [property, predictionOldKey, migrationOldKey] of [
+  ["nBTC", "oldNBTC", "previousNBTC"],
+  ["nETH", "oldNETH", "previousNETH"],
+  ["nBTCVault", "oldNBTCVault", "previousNBTCVault"],
+  ["nETHVault", "oldNETHVault", "previousNETHVault"],
+  ["nBTCNusdPair", "oldNBTCNusdPair", "previousNBTCNusdPair"],
+  ["nETHNusdPair", "oldNETHNusdPair", "previousNETHNusdPair"],
+  ["nBTCNusdGauge", "oldNBTCNusdGauge", "previousNBTCNusdGauge"],
+  ["nETHNusdGauge", "oldNETHNusdGauge", "previousNETHNusdGauge"],
 ]) {
-  requireAddress(prediction[predictionKey], previous[previousKey], `stale migration guard ${previousKey}`);
+  for (const [actual, migration, label] of [
+    [previous[property], previous.synthSafetyReserveMigration, `top-level ${property}`],
+    [previous.contracts?.[property], previous.synthSafetyReserveMigration, `nested ${property}`],
+    [
+      network.deployment?.contracts?.[property],
+      network.deployment?.synthSafetyReserveMigration,
+      `network ${property}`,
+    ],
+  ]) {
+    requireRecoverableReplacement(
+      actual,
+      prediction[predictionOldKey],
+      prediction[property],
+      migration,
+      migrationOldKey,
+      property,
+      label,
+    );
+  }
+}
+for (const [contracts, migration, label] of [
+  [previous, previous.synthSafetyReserveMigration, "top-level synth topology"],
+  [previous.contracts, previous.synthSafetyReserveMigration, "nested synth topology"],
+  [
+    network.deployment?.contracts,
+    network.deployment?.synthSafetyReserveMigration,
+    "network synth topology",
+  ],
+]) {
+  if (!migration) {
+    if (contracts?.synthFeeGaugeFactory || contracts?.synthSafetyReserve) {
+      throw new Error(`${label} contains unrecorded staged contracts`);
+    }
+    continue;
+  }
+  requireAddress(contracts?.dexRouter, addresses.dexRouter, `${label} DEX router`);
+  requireAddress(
+    contracts?.synthFeeGaugeFactory,
+    addresses.synthFeeGaugeFactory,
+    `${label} fee gauge factory`,
+  );
+  requireAddress(contracts?.synthSafetyReserve, addresses.reserve, `${label} safety reserve`);
+}
+if (previous.synthRiskActionsEnabled === true) {
+  throw new Error("The staged synth markets are already activated; refusing to restage them");
 }
 requireAddress(addresses.deployer, previous.deployer, "migration deployer");
 requireAddress(prediction.gaugeFactory, addresses.gaugeFactory, "legacy gauge factory continuity");
+requireAddress(prediction.lendingPool, addresses.lending, "fixed-rate lending pool continuity");
+requireAddress(network.deployment?.contracts?.lendingPool, addresses.lending, "network lending pool continuity");
 requireEqual(uint(prediction.sponsorshipEntryTvlNusd, "entry TVL"), ENTRY_TVL_NUSD, "entry TVL");
 requireEqual(uint(prediction.sponsorshipExitTvlNusd, "exit TVL"), EXIT_TVL_NUSD, "exit TVL");
 requireEqual(uint(prediction.sponsorshipActivationDelay, "activation delay"), ACTIVATION_DELAY, "activation delay");
@@ -209,6 +286,28 @@ for (const hash of hashes) {
   const receipt = await client.waitForTransactionReceipt({ hash, timeout: 120_000 });
   if (receipt.status !== "success") throw new Error(`Migration transaction reverted: ${hash}`);
   receipts.push(receipt);
+}
+const receiptByHash = new Map(receipts.map((receipt) => [
+  receipt.transactionHash.toLowerCase(),
+  receipt,
+]));
+for (const transaction of transactions) {
+  const receipt = receiptByHash.get(transaction.hash.toLowerCase());
+  if (!receipt) throw new Error(`Missing receipt evidence for ${transaction.hash}`);
+  requireAddress(receipt.from, addresses.deployer, `receipt sender for ${transaction.hash}`);
+  if (transaction.transactionType === "CREATE") {
+    if (!receipt.contractAddress) {
+      throw new Error(`CREATE receipt has no contract address: ${transaction.hash}`);
+    }
+    requireAddress(
+      receipt.contractAddress,
+      transaction.contractAddress,
+      `CREATE receipt address for ${transaction.hash}`,
+    );
+  } else if (transaction.transaction?.to) {
+    if (!receipt.to) throw new Error(`Call receipt has no target: ${transaction.hash}`);
+    requireAddress(receipt.to, transaction.transaction.to, `receipt target for ${transaction.hash}`);
+  }
 }
 const deploymentBlock = receipts.reduce(
   (minimum, receipt) => receipt.blockNumber < minimum ? receipt.blockNumber : minimum,
@@ -279,6 +378,7 @@ const vaultAbi = parseAbi([
   "function totalBadDebtSynthetic() view returns (uint256)",
   "function mintPaused() view returns (bool)",
   "function withdrawPaused() view returns (bool)",
+  "function activated() view returns (bool)",
 ]);
 const factoryAbi = parseAbi([
   "function getPair(address,address) view returns (address)",
@@ -327,7 +427,21 @@ const gaugeAbi = parseAbi([
   "function pausedRewardDuration() view returns (uint256)",
 ]);
 const lendingAbi = parseAbi([
-  "function collateralConfigs(address) view returns (address,uint256,uint16,uint16,uint16,uint8,bool)",
+  "function owner() view returns (address)",
+  "function pendingOwner() view returns (address)",
+  "function guardian() view returns (address)",
+  "function nusd() view returns (address)",
+  "function IMPLEMENTATION_ID() view returns (bytes32)",
+  "function activated() view returns (bool)",
+  "function bootstrapOpen() view returns (bool)",
+  "function supplyPaused() view returns (bool)",
+  "function borrowPaused() view returns (bool)",
+  "function collateralWithdrawalPaused() view returns (bool)",
+  "function totalBorrowed() view returns (uint256)",
+  "function totalBadDebtNusd() view returns (uint256)",
+  "function collateralAssetCount() view returns (uint256)",
+  "function collateralAssetAt(uint256) view returns (address)",
+  "function collateralConfigs(address) view returns (address,uint256,uint16,uint16,uint16,uint8,bool,uint16)",
   "function totalCollateralByAsset(address) view returns (uint256)",
 ]);
 const oracleAbi = parseAbi(["function readPriceWad() view returns (uint256,uint256,uint256)"]);
@@ -447,6 +561,7 @@ async function verifyVault(vault, asset, oracle, ceiling, label, retired = false
     read(vault, vaultAbi, "totalBadDebtSynthetic"),
     read(vault, vaultAbi, "mintPaused"),
     read(vault, vaultAbi, "withdrawPaused"),
+    ...(!retired ? [read(vault, vaultAbi, "activated")] : []),
     read(addresses.nusd, erc20Abi, "balanceOf", [vault]),
     ...(!retired ? [read(addresses.nusd, erc20Abi, "allowance", [vault, addresses.reserve])] : []),
     ...(!retired
@@ -468,8 +583,9 @@ async function verifyVault(vault, asset, oracle, ceiling, label, retired = false
   if (!retired) requireEqual(collateral, 0n, `${label} collateral`);
   requireEqual(state[index++], 0n, `${label} debt`);
   requireEqual(state[index++], 0n, `${label} bad debt`);
-  requireEqual(state[index++], retired, `${label} mint pause`);
-  requireEqual(state[index++], false, `${label} withdrawal pause`);
+  requireEqual(state[index++], true, `${label} mint pause`);
+  requireEqual(state[index++], !retired, `${label} withdrawal pause`);
+  if (!retired) requireEqual(state[index++], false, `${label} activation state`);
   const rawNusdBalance = state[index++];
   if (rawNusdBalance < collateral) {
     throw new Error(`${label} raw NUSD is below accounted collateral`);
@@ -534,7 +650,7 @@ async function verifyGauge(gauge, pair, distributor, label, retired) {
   for (const [index, suffix] of [[3, "stake"], [4, "funded"], [5, "paid"], [6, "rate"], [7, "period finish"], [8, "last update"], [9, "reward accumulator"]]) {
     requireEqual(state[index], 0n, `${label} ${suffix}`);
   }
-  requireEqual(state[10], retired, `${label} deposit pause`);
+  requireEqual(state[10], true, `${label} deposit pause`);
   if (!retired) requireEqual(state[11], 0n, `${label} paused reward duration`);
 }
 
@@ -604,6 +720,51 @@ requireAddress(
   "old nETH gauge lookup",
 );
 
+const lendingState = await Promise.all([
+  read(addresses.lending, lendingAbi, "owner"),
+  read(addresses.lending, lendingAbi, "pendingOwner"),
+  read(addresses.lending, lendingAbi, "guardian"),
+  read(addresses.lending, lendingAbi, "nusd"),
+  read(addresses.lending, lendingAbi, "IMPLEMENTATION_ID"),
+  read(addresses.lending, lendingAbi, "activated"),
+  read(addresses.lending, lendingAbi, "bootstrapOpen"),
+  read(addresses.lending, lendingAbi, "supplyPaused"),
+  read(addresses.lending, lendingAbi, "borrowPaused"),
+  read(addresses.lending, lendingAbi, "collateralWithdrawalPaused"),
+  read(addresses.lending, lendingAbi, "totalBorrowed"),
+  read(addresses.lending, lendingAbi, "totalBadDebtNusd"),
+  read(addresses.lending, lendingAbi, "collateralAssetCount"),
+  ...[0n, 1n, 2n, 3n, 4n].map((index) => (
+    read(addresses.lending, lendingAbi, "collateralAssetAt", [index])
+  )),
+  read(addresses.lending, lendingAbi, "totalCollateralByAsset", [addresses.wzkLTC]),
+]);
+requireAddress(lendingState[0], addresses.deployer, "staged lending owner");
+requireAddress(lendingState[1], zeroAddress, "staged lending pending owner");
+requireAddress(lendingState[2], addresses.deployer, "staged lending guardian");
+requireAddress(lendingState[3], addresses.nusd, "staged lending NUSD");
+requireEqual(
+  String(lendingState[4]).toLowerCase(),
+  CURRENT_LENDING_IMPLEMENTATION_ID,
+  "staged lending implementation",
+);
+requireEqual(lendingState[5], false, "staged lending activation");
+requireEqual(lendingState[6], false, "staged lending bootstrap state");
+requireEqual(lendingState[7], true, "staged lending supply pause");
+requireEqual(lendingState[8], true, "staged lending borrow pause");
+requireEqual(lendingState[9], true, "staged lending collateral-withdrawal pause");
+requireEqual(lendingState[10], 0n, "staged lending debt");
+requireEqual(lendingState[11], 0n, "staged lending bad debt");
+requireEqual(lendingState[12], 5n, "staged lending collateral count");
+for (const [index, expected] of [
+  [13, addresses.wzkLTC],
+  [14, addresses.oldNBTC],
+  [15, addresses.oldNETH],
+  [16, addresses.nBTC],
+  [17, addresses.nETH],
+]) requireAddress(lendingState[index], expected, `staged lending collateral asset ${index - 13}`);
+requireEqual(lendingState[18], 0n, "staged WzkLTC lending collateral");
+
 async function verifyCollateral(asset, oracle, cap, enabled, label) {
   const [config, total, rawBalance] = await Promise.all([
     read(addresses.lending, lendingAbi, "collateralConfigs", [asset]),
@@ -612,11 +773,24 @@ async function verifyCollateral(asset, oracle, cap, enabled, label) {
   ]);
   requireAddress(config[0], oracle, `${label} lending oracle`);
   requireEqual(config[1], cap, `${label} lending cap`);
-  requireEqual(config[2], 5000, `${label} lending LTV`);
-  requireEqual(config[3], 6500, `${label} liquidation threshold`);
-  requireEqual(config[4], 500, `${label} liquidation bonus`);
-  requireEqual(config[5], 18, `${label} decimals`);
+  requireEqual(config[2], CURRENT_LENDING_COLLATERAL_RISK.loanToValueBps, `${label} lending LTV`);
+  requireEqual(
+    config[3],
+    CURRENT_LENDING_COLLATERAL_RISK.liquidationThresholdBps,
+    `${label} liquidation threshold`,
+  );
+  requireEqual(
+    config[4],
+    CURRENT_LENDING_COLLATERAL_RISK.liquidationBonusBps,
+    `${label} liquidation bonus`,
+  );
+  requireEqual(config[5], CURRENT_LENDING_COLLATERAL_RISK.decimals, `${label} decimals`);
   requireEqual(config[6], enabled, `${label} enabled`);
+  requireEqual(
+    config[7],
+    CURRENT_LENDING_COLLATERAL_RISK.marginCallThresholdBps,
+    `${label} margin-call threshold`,
+  );
   requireEqual(total, 0n, `${label} lending collateral`);
   requireEqual(rawBalance, 0n, `${label} raw lending balance`);
 }
@@ -637,11 +811,34 @@ for (const [oracle, label] of [[addresses.btcOracle, "BTC"], [addresses.ethOracl
   }
 }
 
-const finalizedAt = new Date().toISOString();
+function migrationMatches(migration) {
+  try {
+    return Boolean(
+      migration
+        && sameAddress(migration.reserve, addresses.reserve)
+        && sameAddress(migration.synthFeeGaugeFactory, addresses.synthFeeGaugeFactory)
+        && sameAddress(migration.nBTC, addresses.nBTC)
+        && sameAddress(migration.nETH, addresses.nETH)
+        && sameAddress(migration.nBTCVault, addresses.nBTCVault)
+        && sameAddress(migration.nETHVault, addresses.nETHVault)
+        && sameAddress(migration.nBTCNusdPair, addresses.nBTCNusdPair)
+        && sameAddress(migration.nETHNusdPair, addresses.nETHNusdPair)
+        && sameAddress(migration.nBTCNusdGauge, addresses.nBTCNusdGauge)
+        && sameAddress(migration.nETHNusdGauge, addresses.nETHNusdGauge),
+    );
+  } catch {
+    return false;
+  }
+}
+const existingMigration = [
+  previous.synthSafetyReserveMigration,
+  network.deployment?.synthSafetyReserveMigration,
+].find(migrationMatches);
+const finalizedAt = existingMigration?.finalizedAt || prediction.finalizedAt || new Date().toISOString();
 const migrationRecord = {
   reserve: addresses.reserve,
   synthFeeGaugeFactory: addresses.synthFeeGaugeFactory,
-  previousDexRouter: previous.dexRouter,
+  previousDexRouter: existingMigration?.previousDexRouter || previous.dexRouter,
   dexRouter: addresses.dexRouter,
   previousNBTC: addresses.oldNBTC,
   previousNETH: addresses.oldNETH,
@@ -651,6 +848,14 @@ const migrationRecord = {
   previousNETHNusdPair: addresses.oldNETHNusdPair,
   previousNBTCNusdGauge: addresses.oldNBTCNusdGauge,
   previousNETHNusdGauge: addresses.oldNETHNusdGauge,
+  nBTC: addresses.nBTC,
+  nETH: addresses.nETH,
+  nBTCVault: addresses.nBTCVault,
+  nETHVault: addresses.nETHVault,
+  nBTCNusdPair: addresses.nBTCNusdPair,
+  nETHNusdPair: addresses.nETHNusdPair,
+  nBTCNusdGauge: addresses.nBTCNusdGauge,
+  nETHNusdGauge: addresses.nETHNusdGauge,
   block: String(deploymentBlock),
   finalizedAt,
   transactionHashes: hashes,
@@ -659,6 +864,8 @@ const migrationRecord = {
   activationDelaySeconds: ACTIVATION_DELAY.toString(),
   legacyWithdrawalsOpen: true,
   userNusdMoved: "0",
+  activationRequired: true,
+  activationCompleted: false,
 };
 const transactionHashes = [...new Set([...(previous.transactionHashes || []), ...hashes])];
 const replacementContracts = {
@@ -679,6 +886,8 @@ const nextDeployment = {
   ...replacementContracts,
   synthSafetyReserveStatus: "threshold-hysteresis-24h-delay",
   synthSafetyReserveMigration: migrationRecord,
+  synthRiskActivationStatus: "pending-owner-activation",
+  synthRiskActionsEnabled: false,
   transactionHashes,
   contracts: { ...previous.contracts, ...replacementContracts },
 };
@@ -692,6 +901,8 @@ const nextNetwork = {
     ...network.deployment,
     synthSafetyReserveStatus: nextDeployment.synthSafetyReserveStatus,
     synthSafetyReserveMigration: migrationRecord,
+    synthRiskActivationStatus: "pending-owner-activation",
+    synthRiskActionsEnabled: false,
     contracts: { ...network.deployment?.contracts, ...replacementContracts },
   },
 };
@@ -729,18 +940,22 @@ if (/__[A-Z0-9_]+__/.test(subgraphManifest)) throw new Error("Subgraph template 
 const finalizedPrediction = {
   ...prediction,
   broadcasted: true,
-  status: "synth-safety-reserve-migration-finalized",
+  status: "synth-safety-reserve-migration-staged",
   deploymentBlock: String(deploymentBlock),
   finalizedAt,
   transactionHashes: hashes,
+  activationRequired: true,
+  activationCompleted: false,
 };
 
-writeJson(latestPath, nextDeployment);
-writeJson(networkPath, nextNetwork);
 writeJson(subgraphConfigPath, nextSubgraphConfig);
 atomicWriteFile(subgraphManifestPath, subgraphManifest);
 writeJson(predictionPath, finalizedPrediction);
 writePublicEnvironment({ root, deployment: nextDeployment, network: nextNetwork, rpcUrl });
+writeJson(networkPath, nextNetwork);
+// latest.json is the local commit marker. All preceding writes are idempotent,
+// so --finalize-only repairs a local crash without replaying transactions.
+writeJson(latestPath, nextDeployment);
 
 console.log(JSON.stringify({
   status: finalizedPrediction.status,
@@ -754,4 +969,6 @@ console.log(JSON.stringify({
   transactionCount: hashes.length,
   sponsorshipActive: false,
   userNusdMoved: "0",
+  activationRequired: true,
+  riskActionsEnabled: false,
 }, null, 2));

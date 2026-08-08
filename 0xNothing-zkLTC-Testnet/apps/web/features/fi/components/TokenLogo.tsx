@@ -1,18 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { tokenImageUrl } from "@fi/lib/tokenImage";
+
+export { tokenImageUrl } from "@fi/lib/tokenImage";
 
 export type TokenLogoSize = "sm" | "md" | "lg";
-
-export function tokenImageUrl(uri: string | undefined): string | undefined {
-  const value = uri?.trim();
-  if (!value) return undefined;
-  if (value.startsWith("ipfs://")) {
-    const path = value.slice("ipfs://".length).replace(/^ipfs\//, "").replace(/^\/+/, "");
-    return path ? `https://dweb.link/ipfs/${path}` : undefined;
-  }
-  return /^https?:\/\//i.test(value) ? value : undefined;
-}
 
 function fallbackLabel(symbol: string): string {
   const clean = symbol.replace(/[^a-z0-9]/gi, "").toUpperCase();
@@ -59,9 +52,16 @@ export function TokenLogo({
   return (
     <span className="fi-token-logo" data-size={size} data-tone={logoTone(symbol)}>
       {normalizedImage && !failed ? (
-        // Token images are user-provided immutable metadata and may use any IPFS gateway host.
+        // Token images are user-provided immutable metadata served only by allow-listed gateways.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={normalizedImage} alt={`${symbol} token logo`} onError={() => setFailed(true)} />
+        <img
+          src={normalizedImage}
+          alt={`${symbol} token logo`}
+          decoding="async"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setFailed(true)}
+        />
       ) : (
         <span aria-hidden="true">{fallbackLabel(symbol)}</span>
       )}

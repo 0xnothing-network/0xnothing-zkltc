@@ -16,6 +16,11 @@ export const lendingPoolAbi = [
     inputs: [],
     outputs: [{ name: "", type: "bytes32" }],
   },
+  { type: "function", name: "activated", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "bool" }] },
+  { type: "function", name: "bootstrapOpen", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "bool" }] },
+  { type: "function", name: "supplyPaused", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "bool" }] },
+  { type: "function", name: "borrowPaused", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "bool" }] },
+  { type: "function", name: "collateralWithdrawalPaused", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "bool" }] },
   {
     type: "function",
     name: "totalSupplied",

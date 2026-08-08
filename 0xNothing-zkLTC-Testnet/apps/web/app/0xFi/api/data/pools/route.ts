@@ -15,6 +15,7 @@ import { canonicalOracleMarketForIdentifier, canonicalOracleMarkets } from "@fi/
 import type { DataEnvelope, PoolPoint, PoolTokenPoint } from "@fi/lib/data";
 import { queryGoldsky, unconfiguredEnvelope } from "@fi/lib/server/goldsky";
 import { loadPairTail } from "@fi/lib/server/rpcTail";
+import { tokenImageUrl } from "@fi/lib/tokenImage";
 
 type PoolRow = Omit<PoolPoint, "id" | "token0" | "token1" | "totalSupply"> & {
   id: string;
@@ -25,6 +26,8 @@ type Result = { pools?: PoolRow[] };
 
 const MAX_RPC_TAIL_BLOCKS = 5_000n;
 const MAX_FACTORY_PAIRS = 1_000;
+const POOLS_CACHE_TTL_MS = 15_000;
+const POOLS_CACHE_CONTROL = "public, max-age=5, s-maxage=15, stale-while-revalidate=45";
 const lifecycleAbi = [{
   type: "function", name: "status", stateMutability: "view",
   inputs: [{ name: "token", type: "address" }],
@@ -191,17 +194,7 @@ async function tokenPoint(address: Address): Promise<PoolTokenPoint> {
     client.readContract({ address, abi: erc20Abi, functionName: "decimals" }).catch(() => 18),
     client.readContract({ address, abi: tokenImageAbi, functionName: "imageURI" }).catch(() => ""),
   ]);
-  return { id: address, symbol, name, decimals, imageUrl: publicTokenImageUrl(imageURI) };
-}
-
-function publicTokenImageUrl(uri: string): string | undefined {
-  const value = uri.trim();
-  if (!value) return undefined;
-  if (value.startsWith("ipfs://")) {
-    const ipfsPath = value.slice("ipfs://".length).replace(/^ipfs\//, "").replace(/^\/+/, "");
-    return ipfsPath ? `https://dweb.link/ipfs/${ipfsPath}` : undefined;
-  }
-  return /^https?:\/\//i.test(value) ? value : undefined;
+  return { id: address, symbol, name, decimals, imageUrl: tokenImageUrl(imageURI) };
 }
 
 async function enrichPumpTokenImages(pools: PoolPoint[]): Promise<void> {
@@ -220,7 +213,7 @@ async function enrichPumpTokenImages(pools: PoolPoint[]): Promise<void> {
       abi: tokenImageAbi,
       functionName: "imageURI",
     }).catch(() => "");
-    return [key, publicTokenImageUrl(imageURI)] as const;
+    return [key, tokenImageUrl(imageURI)] as const;
   })));
   for (const pool of pools) {
     const image0 = images.get(pool.token0.id.toLowerCase());
@@ -347,7 +340,7 @@ async function loadFactoryPools(): Promise<PoolPoint[]> {
   return rows.filter((pool): pool is PoolPoint => Boolean(pool));
 }
 
-export async function GET() {
+async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
   try {
     let envelope: DataEnvelope<PoolPoint[]>;
     try {
@@ -517,11 +510,54 @@ export async function GET() {
       }
     } catch { /* non-fatal */ }
 
-    return NextResponse.json(envelope);
+    return envelope;
   } catch (error) {
+    throw error;
+  }
+}
+
+let cachedPools: { envelope: DataEnvelope<PoolPoint[]>; expiresAt: number } | undefined;
+let poolsLoadInFlight: Promise<DataEnvelope<PoolPoint[]>> | undefined;
+
+function poolsResponse(envelope: DataEnvelope<PoolPoint[]>, cacheStatus: "HIT" | "MISS" | "COALESCED" | "STALE") {
+  return NextResponse.json(envelope, {
+    headers: {
+      "Cache-Control": POOLS_CACHE_CONTROL,
+      "X-0xFi-Cache": cacheStatus,
+    },
+  });
+}
+
+export async function GET() {
+  const now = Date.now();
+  if (cachedPools && cachedPools.expiresAt > now) {
+    return poolsResponse(cachedPools.envelope, "HIT");
+  }
+
+  const joinedExistingRequest = Boolean(poolsLoadInFlight);
+  if (!poolsLoadInFlight) {
+    poolsLoadInFlight = loadPoolsEnvelope().then((envelope) => {
+      cachedPools = { envelope, expiresAt: Date.now() + POOLS_CACHE_TTL_MS };
+      return envelope;
+    });
+  }
+  const request = poolsLoadInFlight;
+
+  try {
+    const envelope = await request;
+    return poolsResponse(envelope, joinedExistingRequest ? "COALESCED" : "MISS");
+  } catch (error) {
+    if (cachedPools) {
+      return poolsResponse({
+        ...cachedPools.envelope,
+        warning: `${cachedPools.envelope.warning ? `${cachedPools.envelope.warning} ` : ""}Live refresh failed; serving the last successful market snapshot.`,
+      }, "STALE");
+    }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Indexer query failed" },
-      { status: 502 },
+      { status: 502, headers: { "Cache-Control": "no-store" } },
     );
+  } finally {
+    if (poolsLoadInFlight === request) poolsLoadInFlight = undefined;
   }
 }

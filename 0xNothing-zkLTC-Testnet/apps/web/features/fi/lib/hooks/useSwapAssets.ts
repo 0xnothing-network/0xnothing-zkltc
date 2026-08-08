@@ -1,10 +1,9 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { getAddress, type Address } from "viem";
 import { assetList } from "@fi/config/assets";
-import { fiPath } from "@fi/config/paths";
-import type { DataEnvelope, PoolPoint } from "@fi/lib/data";
+import { usePools } from "@fi/lib/hooks/usePools";
 
 export interface SwapAsset {
   id: string;
@@ -29,17 +28,18 @@ const CORE_ASSETS: SwapAsset[] = assetList.map((asset) => ({
 }));
 
 export function useSwapAssets() {
-  return useQuery({
-    queryKey: ["swap-assets"],
-    queryFn: async (): Promise<SwapAsset[]> => {
-      const response = await fetch(fiPath("/api/data/pools"), { cache: "no-store" });
-      if (!response.ok) return CORE_ASSETS;
-      const payload = (await response.json()) as DataEnvelope<PoolPoint[]>;
+  const poolsQuery = usePools();
+  const data = useMemo((): SwapAsset[] => {
       const known = new Set(CORE_ASSETS.map((asset) => asset.poolAddress?.toLowerCase()).filter(Boolean));
       const discovered: SwapAsset[] = [];
-      for (const pool of payload.data) {
-        const liquid = BigInt(pool.totalSupply || "0") > 0n
-          || (BigInt(pool.reserve0 || "0") > 0n && BigInt(pool.reserve1 || "0") > 0n);
+      for (const pool of poolsQuery.data ?? []) {
+        let liquid = false;
+        try {
+          liquid = BigInt(pool.totalSupply || "0") > 0n
+            || (BigInt(pool.reserve0 || "0") > 0n && BigInt(pool.reserve1 || "0") > 0n);
+        } catch {
+          continue;
+        }
         if (!liquid) continue;
         for (const token of [pool.token0, pool.token1]) {
           if (known.has(token.id.toLowerCase())) continue;
@@ -59,9 +59,7 @@ export function useSwapAssets() {
       }
       discovered.sort((a, b) => a.symbol.localeCompare(b.symbol));
       return [...CORE_ASSETS, ...discovered];
-    },
-    initialData: CORE_ASSETS,
-    staleTime: 20_000,
-    refetchInterval: 30_000,
-  });
+  }, [poolsQuery.data]);
+
+  return { ...poolsQuery, data };
 }

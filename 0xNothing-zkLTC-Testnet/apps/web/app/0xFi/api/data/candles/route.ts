@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createPublicClient, formatUnits, getAddress, http, isAddress } from "viem";
+import { createPublicClient, formatUnits, getAddress, http, isAddress, type Address } from "viem";
 import { assetForPool, canonicalPairs, deployedPairForSlug, pairSlug, parsePairSlug } from "@fi/config/assets";
 import type { CandlePoint, DataEnvelope } from "@fi/lib/data";
 import { queryGoldsky, unconfiguredEnvelope } from "@fi/lib/server/goldsky";
@@ -9,6 +9,10 @@ import { canonicalOracleMarketForIdentifier } from "@fi/lib/canonicalMarkets";
 import { decimal, isFactoryPair, loadPairTail, pairForTokens, pairTokenMetadata } from "@fi/lib/server/rpcTail";
 
 const PERIODS = { "5m": 300, "1h": 3_600, "4h": 14_400, "1d": 86_400 } as const;
+type CandlePeriod = keyof typeof PERIODS;
+const CANDLES_CACHE_TTL_MS = 15_000;
+const CANDLES_STALE_TTL_MS = 5 * 60_000;
+const CANDLES_CACHE_CONTROL = "public, max-age=5, s-maxage=15, stale-while-revalidate=60";
 const client = createPublicClient({ transport: http(deployment.chain.rpcUrl) });
 const QUERY = `
   query Candles($pool: Bytes!, $period: Int!, $first: Int!) {
@@ -22,6 +26,29 @@ const QUERY = `
 type Result = {
   candles?: Array<Record<"timestamp" | "open" | "high" | "low" | "close" | "volumeNusd", string>>;
 };
+
+type CachedCandles = {
+  envelope: DataEnvelope<CandlePoint[]>;
+  cachedAt: number;
+};
+
+const candlesCache = new Map<string, CachedCandles>();
+const candlesLoadInFlight = new Map<string, Promise<DataEnvelope<CandlePoint[]>>>();
+
+class CandleRouteError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+  }
+}
+
+function candlesResponse(envelope: DataEnvelope<CandlePoint[]>, cacheStatus: string): NextResponse {
+  return NextResponse.json(envelope, {
+    headers: {
+      "Cache-Control": CANDLES_CACHE_CONTROL,
+      "X-0xFi-Cache": cacheStatus,
+    },
+  });
+}
 
 function finite(value: string): number {
   const parsed = Number(value);
@@ -73,23 +100,16 @@ function normalizeCandles(source: CandlePoint[]): CandlePoint[] {
   });
 }
 
-export async function GET(request: NextRequest) {
-  const pair = request.nextUrl.searchParams.get("pair")?.toLowerCase() || "";
-  const period = request.nextUrl.searchParams.get("period") || "1h";
-  const validPairs = canonicalPairs.map(([a, b]) => pairSlug(a, b));
-  const dynamicPool = isAddress(pair) ? getAddress(pair) : undefined;
-  if ((!dynamicPool && !validPairs.includes(pair)) || !(period in PERIODS)) {
-    return NextResponse.json({ error: "Unsupported pair or period." }, { status: 400 });
-  }
-
+async function loadCandles(
+  pair: string,
+  period: CandlePeriod,
+  dynamicPool: Address | undefined,
+): Promise<DataEnvelope<CandlePoint[]>> {
   try {
     const canonicalMarket = canonicalOracleMarketForIdentifier(pair);
     if (canonicalMarket) {
       if (!canonicalMarket.oracle) {
-        return NextResponse.json(
-          { error: "DIA oracle is not configured for this market." },
-          { status: 503 },
-        );
+        throw new CandleRouteError(503, "DIA oracle is not configured for this market.");
       }
       const [snapshot, fresh, blockNumber] = await Promise.all([
         client.readContract({
@@ -134,24 +154,24 @@ export async function GET(request: NextRequest) {
         },
         warning: fresh ? undefined : "DIA oracle snapshot is stale.",
       };
-      return NextResponse.json(envelope);
+      return envelope;
     }
 
     const symbols = dynamicPool ? undefined : parsePairSlug(pair)!;
     if (dynamicPool && !(await isFactoryPair(deployment.contracts.dexFactory, dynamicPool))) {
-      return NextResponse.json({ error: "Unsupported pair." }, { status: 400 });
+      throw new CandleRouteError(400, "Unsupported pair.");
     }
     const pool = dynamicPool ?? deployedPairForSlug(pair) ?? await pairForTokens(
       deployment.contracts.dexFactory,
       symbols ? assetForPool(symbols[0]) : undefined,
       symbols ? assetForPool(symbols[1]) : undefined,
     );
-    if (!pool) return NextResponse.json(unconfiguredEnvelope([], "Pair address is not configured for indexed history."));
+    if (!pool) return unconfiguredEnvelope([], "Pair address is not configured for indexed history.");
     let envelope: DataEnvelope<CandlePoint[]>;
     try {
       envelope = await queryGoldsky<Result, CandlePoint[]>(
         QUERY,
-        { pool: pool.toLowerCase(), period: PERIODS[period as keyof typeof PERIODS], first: 500 },
+        { pool: pool.toLowerCase(), period: PERIODS[period], first: 500 },
         (data) => (data.candles || []).map((point) => ({
           time: Number(point.timestamp),
           open: finite(point.open),
@@ -179,7 +199,7 @@ export async function GET(request: NextRequest) {
         deployment.contracts.nusd
         && metadata.token1.toLowerCase() === deployment.contracts.nusd.toLowerCase(),
       );
-      const seconds = PERIODS[period as keyof typeof PERIODS];
+      const seconds = PERIODS[period];
       const byBucket = new Map(envelope.data.map((candle) => [candle.time, candle]));
       let reserve0 = 0n; let reserve1 = 0n; let tailTrades = 0;
       for (const event of tail.events) {
@@ -235,9 +255,63 @@ export async function GET(request: NextRequest) {
     }
     envelope.data = normalizeCandles(envelope.data).slice(-500);
     envelope.meta.priceSource = "dex";
-    return NextResponse.json(envelope);
+    return envelope;
   } catch (error) {
+    throw error instanceof Error ? error : new Error("Indexer query failed");
+  }
+}
+
+export async function GET(request: NextRequest) {
+  const pair = request.nextUrl.searchParams.get("pair")?.toLowerCase() || "";
+  const requestedPeriod = request.nextUrl.searchParams.get("period") || "1h";
+  const validPairs = canonicalPairs.map(([token0, token1]) => pairSlug(token0, token1));
+  const dynamicPool = isAddress(pair) ? getAddress(pair) : undefined;
+  if ((!dynamicPool && !validPairs.includes(pair)) || !(requestedPeriod in PERIODS)) {
+    return NextResponse.json(
+      { error: "Unsupported pair or period." },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const period = requestedPeriod as CandlePeriod;
+  const cacheKey = `${pair}:${period}`;
+  const now = Date.now();
+  const cached = candlesCache.get(cacheKey);
+  if (cached && now - cached.cachedAt < CANDLES_CACHE_TTL_MS) {
+    return candlesResponse(cached.envelope, "HIT");
+  }
+
+  let pending = candlesLoadInFlight.get(cacheKey);
+  const coalesced = Boolean(pending);
+  if (!pending) {
+    pending = loadCandles(pair, period, dynamicPool);
+    candlesLoadInFlight.set(cacheKey, pending);
+  }
+
+  try {
+    const envelope = await pending;
+    candlesCache.set(cacheKey, { envelope, cachedAt: Date.now() });
+    return candlesResponse(envelope, coalesced ? "COALESCED" : "MISS");
+  } catch (error) {
+    if (
+      cached
+      && now - cached.cachedAt < CANDLES_STALE_TTL_MS
+      && (!(error instanceof CandleRouteError) || error.status >= 500)
+    ) {
+      const warning = error instanceof Error ? error.message : "RPC request failed";
+      return candlesResponse({
+        ...cached.envelope,
+        meta: { ...cached.envelope.meta, generatedAt: new Date().toISOString() },
+        warning: `${cached.envelope.warning ? `${cached.envelope.warning} ` : ""}Serving cached candles after refresh failed: ${warning}`,
+      }, "STALE");
+    }
+    const status = error instanceof CandleRouteError ? error.status : 502;
     const message = error instanceof Error ? error.message : "Indexer query failed";
-    return NextResponse.json({ error: message }, { status: 502 });
+    return NextResponse.json(
+      { error: message },
+      { status, headers: { "Cache-Control": "no-store" } },
+    );
+  } finally {
+    if (candlesLoadInFlight.get(cacheKey) === pending) candlesLoadInFlight.delete(cacheKey);
   }
 }

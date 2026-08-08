@@ -5,7 +5,7 @@
   "description": "0xPixel, 0xPump, and 0xFi workspace for LitVM testnet and future zkLTC mainnet",
   "scripts": {
     "dev": "npm --prefix 0xNothing-zkLTC-Testnet/apps/web run dev -- --port 3300",
-    "dev:fi": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi/web run dev -- --port 3301",
+    "dev:fi": "npm --prefix 0xNothing-zkLTC-Testnet/apps/web run dev -- --port 3300",
     "build:web": "npm --prefix 0xNothing-zkLTC-Testnet/apps/web run build",
     "lint:web": "npm --prefix 0xNothing-zkLTC-Testnet/apps/web run lint",
     "typecheck:web": "npm --prefix 0xNothing-zkLTC-Testnet/apps/web run typecheck",
@@ -20,6 +20,6 @@
     "check:fi:scripts": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi run check:scripts",
     "check:fi": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi run build",
     "audit:fi:report": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi run audit:live:report",
-    "verify": "npm run test:contracts && npm run build:pixel-subgraph && npm run check:pump-subgraphs && npm run typecheck:web && npm run lint:web && npm run build:web && npm run check:fi"
+    "verify": "npm run test:contracts && npm run build:pixel-subgraph && npm run check:pump-subgraphs && npm run check:fi"
   }
 }

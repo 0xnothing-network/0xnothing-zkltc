@@ -15,6 +15,7 @@ interface ISynthSafetyReserve {
     function nusd() external view returns (address);
     function sponsorshipActive() external view returns (bool);
     function allocationsPaused() external view returns (bool);
+    function authorizedVault(address vault) external view returns (bool);
     function freeReserveNusd() external view returns (uint256);
     function allocateToVault(uint256 amountNusd) external;
     function releaseFromVault(uint256 amountNusd) external;
@@ -23,6 +24,8 @@ interface ISynthSafetyReserve {
 
 interface ISynthMintFeeDistributor {
     function nusd() external view returns (address);
+    function mintFeePairForVault(address vault) external view returns (address);
+    function mintFeeVaultForPair(address pair) external view returns (address);
     function routeMintFee(uint256 amountNusd) external returns (uint256 amountFlushedNusd);
 }
 
@@ -42,6 +45,8 @@ contract SyntheticVault is EmergencyGuardian, ReentrancyGuard {
     error AccountHasBadDebt();
     error SlippageExceeded();
     error MintFeeExceeded(uint256 feeNusd, uint256 maximumFeeNusd);
+    error MarketNotActivated();
+    error ActivationUnavailable();
 
     uint256 public constant WAD = 1e18;
     uint256 public constant BPS_DENOMINATOR = 10_000;
@@ -75,6 +80,7 @@ contract SyntheticVault is EmergencyGuardian, ReentrancyGuard {
     uint256 public debtCeilingSynthetic;
     bool public mintPaused;
     bool public withdrawPaused;
+    bool public activated;
 
     event CollateralDeposited(address indexed payer, address indexed account, uint256 amountNusd);
     event ReserveCollateralAllocated(address indexed account, uint256 amountNusd);
@@ -98,6 +104,7 @@ contract SyntheticVault is EmergencyGuardian, ReentrancyGuard {
     event MintPauseUpdated(bool paused);
     event WithdrawPauseUpdated(bool paused);
     event MintFeePaid(address indexed account, uint256 indexed amountSynthetic, uint256 amountNusd);
+    event MarketActivated();
 
     constructor(
         address nusdAddress,
@@ -106,7 +113,8 @@ contract SyntheticVault is EmergencyGuardian, ReentrancyGuard {
         address safetyReserveAddress,
         address mintFeeDistributorAddress,
         address initialOwner,
-        uint256 initialDebtCeilingSynthetic
+        uint256 initialDebtCeilingSynthetic,
+        bool initiallyActive
     ) EmergencyGuardian(initialOwner) {
         if (
             nusdAddress == address(0) || nusdAddress.code.length == 0 || syntheticAssetAddress == address(0)
@@ -128,6 +136,13 @@ contract SyntheticVault is EmergencyGuardian, ReentrancyGuard {
         safetyReserve = ISynthSafetyReserve(safetyReserveAddress);
         mintFeeDistributor = ISynthMintFeeDistributor(mintFeeDistributorAddress);
         debtCeilingSynthetic = initialDebtCeilingSynthetic;
+        activated = initiallyActive;
+        if (!initiallyActive) {
+            mintPaused = true;
+            withdrawPaused = true;
+            emit MintPauseUpdated(true);
+            emit WithdrawPauseUpdated(true);
+        }
         IERC20(nusdAddress).forceApprove(safetyReserveAddress, type(uint256).max);
     }
 
@@ -298,13 +313,31 @@ contract SyntheticVault is EmergencyGuardian, ReentrancyGuard {
     }
 
     function setMintPaused(bool paused) external onlyOwner {
+        if (!activated && !paused) revert MarketNotActivated();
         mintPaused = paused;
         emit MintPauseUpdated(paused);
     }
 
     function setWithdrawPaused(bool paused) external onlyOwner {
+        if (!activated && !paused) revert MarketNotActivated();
         withdrawPaused = paused;
         emit WithdrawPauseUpdated(paused);
+    }
+
+    /// @notice Opens an inactive migration vault only after all permanent routes are bound.
+    function activateRiskOperations() external onlyOwner {
+        address feePair = mintFeeDistributor.mintFeePairForVault(address(this));
+        if (
+            activated || !mintPaused || !withdrawPaused || syntheticAsset.vault() != address(this)
+                || !safetyReserve.authorizedVault(address(this)) || feePair == address(0)
+                || mintFeeDistributor.mintFeeVaultForPair(feePair) != address(this)
+        ) revert ActivationUnavailable();
+        activated = true;
+        mintPaused = false;
+        withdrawPaused = false;
+        emit MarketActivated();
+        emit MintPauseUpdated(false);
+        emit WithdrawPauseUpdated(false);
     }
 
     function pauseMinting() external onlyOwnerOrGuardian {
@@ -504,6 +537,7 @@ contract SyntheticVault is EmergencyGuardian, ReentrancyGuard {
     }
 
     function _depositCollateral(address payer, address account, uint256 amountNusd) internal {
+        if (!activated) revert MarketNotActivated();
         if (account == address(0)) revert InvalidRecipient();
         if (amountNusd == 0) revert InvalidAmount();
         _pullExact(nusd, payer, amountNusd);
@@ -515,6 +549,7 @@ contract SyntheticVault is EmergencyGuardian, ReentrancyGuard {
     function _mintSynthetic(address account, uint256 amountSynthetic, uint256 maximumFeeNusd, address recipient)
         internal
     {
+        if (!activated) revert MarketNotActivated();
         if (mintPaused) revert MintPaused();
         if (amountSynthetic == 0) revert InvalidAmount();
         if (recipient == address(0)) revert InvalidRecipient();

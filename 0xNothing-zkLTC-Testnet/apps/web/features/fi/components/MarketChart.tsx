@@ -34,6 +34,7 @@ type ChartDataState = {
 
 const MIN_VISIBLE_LOGICAL_BARS = 32;
 const RIGHT_PADDING_BARS = 4;
+const CHART_REFRESH_INTERVAL_MS = 12_000;
 
 function price(value: number): string {
   return value.toLocaleString(undefined, {
@@ -220,6 +221,7 @@ export function MarketChart({
   const priceFormatKeyRef = useRef("");
   const fitFrameRef = useRef<number | null>(null);
   const requestIdRef = useRef(0);
+  const requestAbortRef = useRef<AbortController | null>(null);
   const [period, setPeriod] = useState<Period>("1h");
   const [candles, setCandles] = useState<CandlePoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -231,11 +233,14 @@ export function MarketChart({
   const hasChartData = chartPoints.candles.length > 0;
 
   const load = useCallback(async (background = false) => {
+    requestAbortRef.current?.abort();
+    const controller = new AbortController();
+    requestAbortRef.current = controller;
     const requestId = ++requestIdRef.current;
     if (!background) setLoading(true);
     try {
       const response = await fetch(fiPath(`/api/data/candles?pair=${encodeURIComponent(pair)}&period=${period}`), {
-        cache: "no-store",
+        signal: controller.signal,
       });
       const payload = (await response.json()) as DataEnvelope<CandlePoint[]> & { error?: string };
       if (!response.ok) throw new Error(payload.error || "Chart request failed");
@@ -245,18 +250,49 @@ export function MarketChart({
       setOracleUpdatedAt(payload.meta.oracle?.updatedAt);
       setError(undefined);
     } catch (reason) {
+      if (controller.signal.aborted) return;
       if (requestId !== requestIdRef.current) return;
       setError(reason instanceof Error ? reason.message : "Chart request failed");
     } finally {
+      if (requestAbortRef.current === controller) requestAbortRef.current = null;
       if (requestId === requestIdRef.current) setLoading(false);
     }
   }, [pair, period]);
 
   useEffect(() => {
-    void load();
-    const timer = window.setInterval(() => void load(true), 3_000);
+    let disposed = false;
+    let generation = 0;
+    let timer: number | undefined;
+
+    const schedule = () => {
+      if (disposed || document.visibilityState === "hidden") return;
+      timer = window.setTimeout(() => void refresh(true), CHART_REFRESH_INTERVAL_MS);
+    };
+    const refresh = async (background: boolean) => {
+      const currentGeneration = ++generation;
+      if (document.visibilityState === "hidden") return;
+      await load(background);
+      if (!disposed && currentGeneration === generation) schedule();
+    };
+    const onVisibilityChange = () => {
+      if (timer !== undefined) window.clearTimeout(timer);
+      timer = undefined;
+      generation += 1;
+      if (document.visibilityState === "hidden") {
+        requestAbortRef.current?.abort();
+        return;
+      }
+      void refresh(true);
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    void refresh(false);
     return () => {
-      window.clearInterval(timer);
+      disposed = true;
+      generation += 1;
+      if (timer !== undefined) window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      requestAbortRef.current?.abort();
       requestIdRef.current += 1;
     };
   }, [load]);

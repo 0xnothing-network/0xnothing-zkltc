@@ -46,13 +46,36 @@ dataSources:
           handler: handleGaugeCreated
         - event: GaugeFunded(indexed address,indexed address,uint256,uint256)
           handler: handleGaugeFunded
+  # SYNTH_FEE_GAUGE_FACTORY_START
+  - kind: ethereum
+    name: SynthFeeGaugeFactory
+    network: liteforge
+    source:
+      address: "0xA6bd4C009ABBDEA193CF6381BeB62e2F5eDF8999"
+      abi: GaugeFactory
+      startBlock: 37983218
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/gaugeFactory.ts
+      entities: [Protocol, Gauge, GaugeAction]
+      abis:
+        - name: GaugeFactory
+          file: ./abis/GaugeFactory.json
+      eventHandlers:
+        - event: GaugeCreated(indexed address,indexed address,uint256)
+          handler: handleGaugeCreated
+        - event: GaugeFunded(indexed address,indexed address,uint256,uint256)
+          handler: handleGaugeFunded
+  # SYNTH_FEE_GAUGE_FACTORY_END
   - kind: ethereum
     name: NbtcVault
     network: liteforge
     source:
-      address: "0x620fB32a1e113aA3D1121baC0c65f919569dF1d3"
+      address: "0x3694a78B1E890E72F47933856B59EBa81EeCAb84"
       abi: SyntheticVault
-      startBlock: 35855525
+      startBlock: 37983218
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -99,9 +122,9 @@ dataSources:
     name: NethVault
     network: liteforge
     source:
-      address: "0xA7dA20a8a0d833eFcc0B2ca8189011FCFeab7465"
+      address: "0x43dB27A73a1CB305BFBee4CfAb7F0869000A1517"
       abi: SyntheticVault
-      startBlock: 35855529
+      startBlock: 37983218
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -148,9 +171,9 @@ dataSources:
     name: LendingPool
     network: liteforge
     source:
-      address: "0x099Fe8b7611A294eD33e6D96a0b958E189143622"
+      address: "0x7CB638F8e10f1bd200A3c5C3fD014C3FD97BA914"
       abi: LendingPool
-      startBlock: 36288464
+      startBlock: 37981388
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9

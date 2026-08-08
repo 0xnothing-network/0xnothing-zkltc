@@ -19,6 +19,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { atomicWriteFile } from "./lib/graduation-runtime.mjs";
 import {
   creationInputMatchesArtifact,
+  CURRENT_LENDING_COLLATERAL_RISK,
   CURRENT_LENDING_IMPLEMENTATION_STATUS,
 } from "./lib/lending-implementation.mjs";
 import { publicEnvironmentValues, writePublicEnvironment } from "./lib/public-environment.mjs";
@@ -244,7 +245,7 @@ async function finalizeDeployment(prediction) {
   const lendingAbi = parseAbi([
     "function supplyCapNusd() view returns (uint256)",
     "function borrowCapNusd() view returns (uint256)",
-    "function collateralConfigs(address) view returns (address,uint256,uint16,uint16,uint16,uint8,bool)",
+    "function collateralConfigs(address) view returns (address,uint256,uint16,uint16,uint16,uint8,bool,uint16)",
   ]);
   const pumpRouterAbi = parseAbi([
     "function admin() view returns (address)",
@@ -432,11 +433,14 @@ async function finalizeDeployment(prediction) {
     const [oracle, cap] = expectedCollateral[index];
     if (!sameAddress(config[0], oracle)
       || config[1] !== cap
-      || config[2] !== 5000
-      || config[3] !== 6500
-      || config[4] !== 500
-      || config[5] !== 18
-      || !config[6]) throw new Error(`Collateral configuration ${index + 1} mismatch`);
+      || config[2] !== CURRENT_LENDING_COLLATERAL_RISK.loanToValueBps
+      || config[3] !== CURRENT_LENDING_COLLATERAL_RISK.liquidationThresholdBps
+      || config[4] !== CURRENT_LENDING_COLLATERAL_RISK.liquidationBonusBps
+      || config[5] !== CURRENT_LENDING_COLLATERAL_RISK.decimals
+      || !config[6]
+      || config[7] !== CURRENT_LENDING_COLLATERAL_RISK.marginCallThresholdBps) {
+      throw new Error(`Collateral configuration ${index + 1} mismatch`);
+    }
   });
   expectAddress(routerAdmin, deployer, "Pump router admin");
   const expectedDelay = BigInt(network.pumpGraduation?.minimumDelaySeconds ?? 172_800);

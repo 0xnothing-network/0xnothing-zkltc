@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { ArrowRight, CaretUpDown, MagnifyingGlass } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Address } from "viem";
 import { TokenPairLogos } from "@fi/components/TokenLogo";
 import { EmptyState, ErrorState, SkeletonRows } from "@fi/components/UiStates";
 import { deployment } from "@fi/config/deployment";
 import { fiPath } from "@fi/config/paths";
-import type { DataEnvelope, PoolPoint } from "@fi/lib/data";
+import type { PoolPoint } from "@fi/lib/data";
+import { usePools } from "@fi/lib/hooks/usePools";
 
 type MarketFilter = "all" | "canonical" | "graduated";
 type SortKey = "price" | "change" | "tvl";
 type SortDirection = "asc" | "desc";
+const EMPTY_POOLS: PoolPoint[] = [];
 
 function normalizedSymbol(symbol: string): string {
   return symbol.toLowerCase() === "wzkltc" ? "zkLTC" : symbol;
@@ -70,6 +72,28 @@ function sortValue(pool: PoolPoint, key: SortKey): number {
   return numberValue(pool.tvlNusd);
 }
 
+function marketHref(pool: PoolPoint): string {
+  if (
+    deployment.contracts.wzkLtcNusdPair
+    && pool.id.toLowerCase() === deployment.contracts.wzkLtcNusdPair.toLowerCase()
+  ) {
+    return fiPath("/pools/zkltc-nusd");
+  }
+  if (
+    deployment.contracts.nbtcNusdPair
+    && pool.id.toLowerCase() === deployment.contracts.nbtcNusdPair.toLowerCase()
+  ) {
+    return fiPath("/pools/nbtc-nusd");
+  }
+  if (
+    deployment.contracts.nethNusdPair
+    && pool.id.toLowerCase() === deployment.contracts.nethNusdPair.toLowerCase()
+  ) {
+    return fiPath("/pools/neth-nusd");
+  }
+  return fiPath(`/pools/${pool.id.toLowerCase()}`);
+}
+
 function MarketRow({ pool, canonical }: { pool: PoolPoint; canonical: Set<string> }) {
   const type = marketType(pool, canonical);
   const live = hasLiquidity(pool);
@@ -82,28 +106,30 @@ function MarketRow({ pool, canonical }: { pool: PoolPoint; canonical: Set<string
   const token1 = normalizedSymbol(quoteToken.symbol);
 
   return (
-    <Link className="fi-market-row" href={fiPath(`/pools/${pool.id.toLowerCase()}`)} role="listitem">
-      <span className="fi-market-pair">
-        <TokenPairLogos token0={baseToken} token1={quoteToken} size="sm" />
-        <span>
-          <strong>{token0}<i>/</i>{token1}</strong>
-          <small><i data-state={live ? "live" : "empty"} />{type === "graduated" ? "0xPump" : type === "canonical" ? "Core" : "DEX"}</small>
+    <li className="fi-market-item">
+      <Link className="fi-market-row" href={marketHref(pool)}>
+        <span className="fi-market-pair">
+          <TokenPairLogos token0={baseToken} token1={quoteToken} size="sm" />
+          <span>
+            <strong>{token0}<i>/</i>{token1}</strong>
+            <small><i data-state={live ? "live" : "empty"} />{type === "graduated" ? "0xPump" : type === "canonical" ? "Core" : "DEX"}</small>
+          </span>
         </span>
-      </span>
-      <span className="fi-market-cell">
-        <small>Price</small>
-        <strong>{formatCompact(pool.priceNusd, "$")}</strong>
-      </span>
-      <span className="fi-market-cell" data-tone={change === undefined ? "muted" : change < 0 ? "danger" : "positive"}>
-        <small>24h</small>
-        <strong>{change === undefined ? "--" : `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`}</strong>
-      </span>
-      <span className="fi-market-cell">
-        <small>TVL</small>
-        <strong>{formatCompact(pool.tvlNusd, "$")}</strong>
-      </span>
-      <ArrowRight className="fi-market-arrow" size={18} weight="bold" aria-hidden="true" />
-    </Link>
+        <span className="fi-market-cell">
+          <small>Price</small>
+          <strong>{formatCompact(pool.priceNusd, "$")}</strong>
+        </span>
+        <span className="fi-market-cell" data-tone={change === undefined ? "muted" : change < 0 ? "danger" : "positive"}>
+          <small>24h</small>
+          <strong>{change === undefined ? "--" : `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`}</strong>
+        </span>
+        <span className="fi-market-cell">
+          <small>TVL</small>
+          <strong>{formatCompact(pool.tvlNusd, "$")}</strong>
+        </span>
+        <ArrowRight className="fi-market-arrow" size={18} weight="bold" aria-hidden="true" />
+      </Link>
+    </li>
   );
 }
 
@@ -114,35 +140,17 @@ export function PoolDirectory({
   tradeOnly?: boolean;
   title?: string;
 }) {
-  const [indexedPools, setIndexedPools] = useState<PoolPoint[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<MarketFilter>("all");
   const [sortKey, setSortKey] = useState<SortKey>("tvl");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(undefined);
-    try {
-      const response = await fetch(fiPath("/api/data/pools"), { cache: "no-store" });
-      const payload = (await response.json()) as DataEnvelope<PoolPoint[]> & { error?: string };
-      if (!response.ok) throw new Error(payload.error || "Pool request failed");
-      setIndexedPools(payload.data);
-    } catch (reason) {
-      setIndexedPools([]);
-      setError(reason instanceof Error ? reason.message : "Pool request failed");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-    const timer = window.setInterval(() => void load(), 30_000);
-    return () => window.clearInterval(timer);
-  }, [load]);
+  const poolsQuery = usePools();
+  const indexedPools = poolsQuery.data ?? EMPTY_POOLS;
+  const loading = poolsQuery.isPending;
+  const error = poolsQuery.isError && indexedPools.length === 0
+    ? poolsQuery.error instanceof Error ? poolsQuery.error.message : "Pool request failed"
+    : undefined;
 
   const canonical = useMemo(canonicalPoolAddresses, []);
   const markets = useMemo(() => {
@@ -228,11 +236,11 @@ export function PoolDirectory({
         ))}
         <span />
       </div>
-      <div className="fi-market-list" role="list">
+      <ul className="fi-market-list">
         {markets.map((pool) => <MarketRow pool={pool} canonical={canonical} key={pool.id} />)}
-      </div>
+      </ul>
       {loading && indexedPools.length === 0 ? <SkeletonRows count={4} label="Loading DEX markets" /> : null}
-      {!loading && error ? <ErrorState message={error} onRetry={() => void load()} /> : null}
+      {!loading && error ? <ErrorState message={error} onRetry={() => void poolsQuery.refetch()} /> : null}
       {!loading && !error && markets.length === 0 ? (
         <EmptyState title={indexedPools.length === 0 ? "No markets yet" : "No matching markets"} />
       ) : null}

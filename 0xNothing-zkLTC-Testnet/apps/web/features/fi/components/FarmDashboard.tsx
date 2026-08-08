@@ -31,14 +31,22 @@ function FarmRow({ pair }: { pair: readonly [AssetSymbol, AssetSymbol] }) {
     query: { enabled: Boolean(deployment.contracts.dexFactory && addressA && addressB) },
   });
   const pool = poolRead.data && poolRead.data !== zeroAddress ? poolRead.data : undefined;
+  const configuredGauge = tokenA === "zkLTC"
+    ? deployment.contracts.wzkLtcNusdGauge
+    : tokenA === "nBTC"
+      ? deployment.contracts.nbtcNusdGauge
+      : tokenA === "nETH"
+        ? deployment.contracts.nethNusdGauge
+        : undefined;
   const gaugeRead = useReadContract({
     address: deployment.contracts.farmFactory,
     abi: farmFactoryAbi,
     functionName: "gaugeForPair",
     args: pool ? [pool] : undefined,
-    query: { enabled: Boolean(deployment.contracts.farmFactory && pool), refetchInterval: 15_000 },
+    query: { enabled: Boolean(!configuredGauge && deployment.contracts.farmFactory && pool), refetchInterval: 15_000 },
   });
-  const gauge = gaugeRead.data && gaugeRead.data !== zeroAddress ? gaugeRead.data : undefined;
+  const gauge = configuredGauge
+    || (gaugeRead.data && gaugeRead.data !== zeroAddress ? gaugeRead.data : undefined);
   const stats = useReadContracts({
     contracts: gauge && pool ? [
       { address: gauge, abi: farmGaugeAbi, functionName: "rewardRate" },
@@ -47,6 +55,7 @@ function FarmRow({ pair }: { pair: readonly [AssetSymbol, AssetSymbol] }) {
       { address: gauge, abi: farmGaugeAbi, functionName: "balanceOf", args: [address || zeroAddress] },
       { address: gauge, abi: farmGaugeAbi, functionName: "earned", args: [address || zeroAddress] },
       { address: pool, abi: dexPoolAbi, functionName: "balanceOf", args: [address || zeroAddress] },
+      { address: gauge, abi: farmGaugeAbi, functionName: "depositsPaused" },
     ] as const : [],
     query: { enabled: Boolean(gauge && pool), refetchInterval: 12_000 },
   });
@@ -56,15 +65,16 @@ function FarmRow({ pair }: { pair: readonly [AssetSymbol, AssetSymbol] }) {
   const staked = stats.data?.[3]?.result as bigint | undefined;
   const earned = stats.data?.[4]?.result as bigint | undefined;
   const walletLp = stats.data?.[5]?.result as bigint | undefined;
+  const depositsPaused = stats.data?.[6]?.result as boolean | undefined;
   const available = mode === "stake" ? walletLp : staked;
   const live = Boolean(periodFinish && periodFinish > BigInt(Math.floor(Date.now() / 1000)));
   const invalid = useMemo(() => {
     if (!amountText) return undefined;
     if (!amount) return "Enter a valid LP amount.";
     if (available !== undefined && amount > available) return "Amount exceeds available LP balance.";
-    if (mode === "stake" && !live) return "Rewards are not active.";
+    if (mode === "stake" && depositsPaused) return "New deposits are paused.";
     return undefined;
-  }, [amount, amountText, available, live, mode]);
+  }, [amount, amountText, available, depositsPaused, mode]);
   const configured = Boolean(pool && gauge);
 
   async function positionAction() {
@@ -106,7 +116,7 @@ function FarmRow({ pair }: { pair: readonly [AssetSymbol, AssetSymbol] }) {
         </div>
         <AmountField id={`farm-${pairSlug(tokenA, tokenB)}`} label={mode === "stake" ? "Stake" : "Withdraw"} asset="LP" value={amountText} balance={formatAmount(available)} onChange={setAmountText} onMax={available && available > 0n ? () => setAmountText(formatUnits(available, 18)) : undefined} error={invalid} />
         <div className="fi-action-grid">
-          <button type="button" className={`fi-button ${mode === "stake" ? "fi-button-primary" : "fi-button-danger"}`} disabled={!configured || (mode === "stake" && !live) || !isConnected || !amount || Boolean(invalid) || tx.pending} onClick={() => void positionAction()}>{tx.pending ? "Processing" : mode === "stake" && !live ? "Rewards inactive" : mode === "stake" ? "Stake LP" : "Withdraw LP"}</button>
+          <button type="button" className={`fi-button ${mode === "stake" ? "fi-button-primary" : "fi-button-danger"}`} disabled={!configured || (mode === "stake" && depositsPaused) || !isConnected || !amount || Boolean(invalid) || tx.pending} onClick={() => void positionAction()}>{tx.pending ? "Processing" : mode === "stake" && depositsPaused ? "Deposits paused" : mode === "stake" ? "Stake LP" : "Withdraw LP"}</button>
           <button type="button" className="fi-button fi-button-muted" disabled={!configured || !isConnected || !earned || tx.pending} onClick={() => void claim()}>Claim rewards</button>
         </div>
         <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />

@@ -13,6 +13,7 @@ import { SyntheticVault } from "../src/synth/SyntheticVault.sol";
 
 interface VmMigrateSynthSafetyReserve {
     function addr(uint256 privateKey) external returns (address keyAddress);
+    function envAddress(string calldata key) external returns (address value);
     function envUint(string calldata key) external returns (uint256 value);
     function serializeAddress(string calldata objectKey, string calldata valueKey, address value)
         external
@@ -69,7 +70,7 @@ interface ILegacyPair is IERC20 {
     function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
 }
 
-/// @notice Replaces the empty synth markets with reserve-aware vaults without moving user or lending NUSD.
+/// @notice Replaces debt-free synth markets with reserve-aware vaults without moving user or lending NUSD.
 /// @dev The script writes only a prediction. A receipt-aware finalizer must verify the broadcast before publication.
 contract MigrateSynthSafetyReserve {
     error ActiveLegacyState();
@@ -88,13 +89,14 @@ contract MigrateSynthSafetyReserve {
     uint256 private constant ENTRY_TVL_NUSD = 100_000 ether;
     uint256 private constant EXIT_TVL_NUSD = 90_000 ether;
     uint256 private constant ACTIVATION_DELAY = 24 hours;
+    bytes32 private constant LENDING_IMPLEMENTATION_ID =
+        keccak256("0xfi.lending.fixed-4.5-4-0.5.80-85-90.paused-bootstrap.v2");
 
     address private constant DEPLOYER = 0x58633401dCc383F010688e950878000000000000;
     address private constant NUSD = 0x5317e21aba902c6c7087a84457bc02fFe99604d1;
     address private constant DEX_FACTORY = 0xe33fE815c2e12DC83b69397CeD12b09849Fa9C0D;
     address private constant LEGACY_GAUGE_FACTORY = 0x36F425fddc59d281c6ddEaDAc34B32E6f039EB13;
     address private constant WZKLTC = 0xE93d4373CE1eDA3df6c3Ab7ed3ab07A07aA5939F;
-    address private constant LENDING_POOL = 0x099Fe8b7611A294eD33e6D96a0b958E189143622;
     address private constant BTC_ORACLE = 0x781178849cE1D131EFbedff1EF52323A6E117813;
     address private constant ETH_ORACLE = 0x8E9BD05a80542B171719ac0d749a7A609D69E324;
 
@@ -127,9 +129,10 @@ contract MigrateSynthSafetyReserve {
         uint256 privateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(privateKey);
         if (deployer != DEPLOYER) revert WrongDeployer(DEPLOYER, deployer);
+        PooledNUSDLendingPool lendingPool = PooledNUSDLendingPool(vm.envAddress("LENDING_POOL"));
 
-        _requireLegacyConfiguration();
-        _requireLegacyStateEmpty();
+        _requireLegacyConfiguration(lendingPool);
+        _requireLegacyStateSafe(lendingPool);
 
         vm.startBroadcast(privateKey);
 
@@ -144,13 +147,13 @@ contract MigrateSynthSafetyReserve {
         legacyGaugeFactory.setGaugeDepositsPaused(OLD_NBTC_PAIR, true);
         legacyGaugeFactory.setGaugeDepositsPaused(OLD_NETH_PAIR, true);
 
-        PooledNUSDLendingPool lendingPool = PooledNUSDLendingPool(LENDING_POOL);
         lendingPool.configureCollateral(OLD_NBTC, BTC_ORACLE, NBTC_COLLATERAL_CAP, 8000, 8500, 9000, 500, false);
         lendingPool.configureCollateral(OLD_NETH, ETH_ORACLE, NETH_COLLATERAL_CAP, 8000, 8500, 9000, 500, false);
 
-        // Once the old entry points are retired, abort before deployment if any user state appeared.
-        _requireLegacyStateEmpty();
-        _validateRetiredMarkets();
+        // Deposits cannot be paused on the legacy vaults. Existing debt-free collateral remains
+        // fully backed and withdrawable while all debt/mint/LP/lending paths must stay empty.
+        _requireLegacyStateSafe(lendingPool);
+        _validateRetiredMarkets(lendingPool);
 
         migration.synthFeeGaugeFactory = new GaugeFactory(deployer, NUSD, DEX_FACTORY);
         migration.dexRouter = new ZeroXFiRouter(DEX_FACTORY, WZKLTC);
@@ -164,7 +167,8 @@ contract MigrateSynthSafetyReserve {
             address(migration.reserve),
             address(migration.synthFeeGaugeFactory),
             deployer,
-            NBTC_DEBT_CEILING
+            NBTC_DEBT_CEILING,
+            false
         );
         migration.nethVault = new SyntheticVault(
             NUSD,
@@ -173,7 +177,8 @@ contract MigrateSynthSafetyReserve {
             address(migration.reserve),
             address(migration.synthFeeGaugeFactory),
             deployer,
-            NETH_DEBT_CEILING
+            NETH_DEBT_CEILING,
+            false
         );
 
         migration.reserve.bindVaults(address(migration.nbtcVault), address(migration.nethVault));
@@ -187,6 +192,8 @@ contract MigrateSynthSafetyReserve {
         migration.nethNusdPair = dexFactory.createPair(address(migration.neth), NUSD);
         migration.nbtcNusdGauge = migration.synthFeeGaugeFactory.createGauge(migration.nbtcNusdPair);
         migration.nethNusdGauge = migration.synthFeeGaugeFactory.createGauge(migration.nethNusdPair);
+        migration.synthFeeGaugeFactory.setGaugeDepositsPaused(migration.nbtcNusdPair, true);
+        migration.synthFeeGaugeFactory.setGaugeDepositsPaused(migration.nethNusdPair, true);
         migration.synthFeeGaugeFactory.bindMintFeeVault(address(migration.nbtcVault), migration.nbtcNusdPair);
         migration.synthFeeGaugeFactory.bindMintFeeVault(address(migration.nethVault), migration.nethNusdPair);
 
@@ -197,24 +204,23 @@ contract MigrateSynthSafetyReserve {
             address(migration.neth), ETH_ORACLE, NETH_COLLATERAL_CAP, 8000, 8500, 9000, 500, true
         );
 
-        _validateMigration(migration);
+        _validateMigration(migration, lendingPool);
 
         vm.stopBroadcast();
-        _writePrediction(migration);
+        _writePrediction(migration, lendingPool);
     }
 
-    function _requireLegacyConfiguration() private view {
+    function _requireLegacyConfiguration(PooledNUSDLendingPool lendingPool) private view {
         ILegacySyntheticVault nbtcVault = ILegacySyntheticVault(OLD_NBTC_VAULT);
         ILegacySyntheticVault nethVault = ILegacySyntheticVault(OLD_NETH_VAULT);
         GaugeFactory legacyGaugeFactory = GaugeFactory(LEGACY_GAUGE_FACTORY);
-        PooledNUSDLendingPool lendingPool = PooledNUSDLendingPool(LENDING_POOL);
         IZeroXFiFactory dexFactory = IZeroXFiFactory(DEX_FACTORY);
 
         if (
             OLD_NBTC.code.length == 0 || OLD_NETH.code.length == 0 || OLD_NBTC_VAULT.code.length == 0
                 || OLD_NETH_VAULT.code.length == 0 || OLD_NBTC_PAIR.code.length == 0 || OLD_NETH_PAIR.code.length == 0
                 || OLD_NBTC_GAUGE.code.length == 0 || OLD_NETH_GAUGE.code.length == 0
-                || LEGACY_GAUGE_FACTORY.code.length == 0 || LENDING_POOL.code.length == 0
+                || LEGACY_GAUGE_FACTORY.code.length == 0 || address(lendingPool).code.length == 0
         ) revert UnexpectedConfiguration();
 
         if (
@@ -240,10 +246,7 @@ contract MigrateSynthSafetyReserve {
                 || dexFactory.getPair(OLD_NETH, NUSD) != OLD_NETH_PAIR
         ) revert UnexpectedConfiguration();
 
-        if (
-            address(lendingPool.nusd()) != NUSD || lendingPool.owner() != DEPLOYER
-                || lendingPool.pendingOwner() != address(0) || lendingPool.guardian() != DEPLOYER
-        ) revert UnexpectedConfiguration();
+        _validateStagedLending(lendingPool);
         _validateCollateral(lendingPool, OLD_NBTC, BTC_ORACLE, NBTC_COLLATERAL_CAP, true);
         _validateCollateral(lendingPool, OLD_NETH, ETH_ORACLE, NETH_COLLATERAL_CAP, true);
         _validatePairBinding(OLD_NBTC_PAIR, OLD_NBTC);
@@ -252,19 +255,22 @@ contract MigrateSynthSafetyReserve {
         _validateGaugeBinding(OLD_NETH_GAUGE, OLD_NETH_PAIR, LEGACY_GAUGE_FACTORY);
     }
 
-    function _requireLegacyStateEmpty() private view {
+    function _requireLegacyStateSafe(PooledNUSDLendingPool lendingPool) private view {
+        uint256 nbtcCollateral = ILegacySyntheticVault(OLD_NBTC_VAULT).totalCollateralNusd();
+        uint256 nethCollateral = ILegacySyntheticVault(OLD_NETH_VAULT).totalCollateralNusd();
         if (
-            ILegacySyntheticVault(OLD_NBTC_VAULT).totalCollateralNusd() != 0
-                || ILegacySyntheticVault(OLD_NBTC_VAULT).totalDebtSynthetic() != 0
+            ILegacySyntheticVault(OLD_NBTC_VAULT).totalDebtSynthetic() != 0
                 || ILegacySyntheticVault(OLD_NBTC_VAULT).totalBadDebtSynthetic() != 0
-                || ILegacySyntheticVault(OLD_NETH_VAULT).totalCollateralNusd() != 0
                 || ILegacySyntheticVault(OLD_NETH_VAULT).totalDebtSynthetic() != 0
                 || ILegacySyntheticVault(OLD_NETH_VAULT).totalBadDebtSynthetic() != 0
                 || IERC20(OLD_NBTC).totalSupply() != 0 || IERC20(OLD_NETH).totalSupply() != 0
                 || IERC20(OLD_NBTC).balanceOf(OLD_NBTC_VAULT) != 0 || IERC20(OLD_NETH).balanceOf(OLD_NETH_VAULT) != 0
-                || PooledNUSDLendingPool(LENDING_POOL).totalCollateralByAsset(OLD_NBTC) != 0
-                || PooledNUSDLendingPool(LENDING_POOL).totalCollateralByAsset(OLD_NETH) != 0
-                || IERC20(OLD_NBTC).balanceOf(LENDING_POOL) != 0 || IERC20(OLD_NETH).balanceOf(LENDING_POOL) != 0
+                || IERC20(NUSD).balanceOf(OLD_NBTC_VAULT) < nbtcCollateral
+                || IERC20(NUSD).balanceOf(OLD_NETH_VAULT) < nethCollateral
+                || lendingPool.totalCollateralByAsset(OLD_NBTC) != 0
+                || lendingPool.totalCollateralByAsset(OLD_NETH) != 0
+                || IERC20(OLD_NBTC).balanceOf(address(lendingPool)) != 0
+                || IERC20(OLD_NETH).balanceOf(address(lendingPool)) != 0
         ) revert ActiveLegacyState();
         _requirePairEmpty(OLD_NBTC_PAIR);
         _requirePairEmpty(OLD_NETH_PAIR);
@@ -272,7 +278,7 @@ contract MigrateSynthSafetyReserve {
         _requireGaugeEmpty(OLD_NETH_GAUGE);
     }
 
-    function _validateRetiredMarkets() private view {
+    function _validateRetiredMarkets(PooledNUSDLendingPool lendingPool) private view {
         if (
             !ILegacySyntheticVault(OLD_NBTC_VAULT).mintPaused()
                 || ILegacySyntheticVault(OLD_NBTC_VAULT).withdrawPaused()
@@ -281,12 +287,12 @@ contract MigrateSynthSafetyReserve {
                 || !ILegacyGauge(OLD_NBTC_GAUGE).depositsPaused() || !ILegacyGauge(OLD_NETH_GAUGE).depositsPaused()
         ) revert UnexpectedConfiguration();
 
-        PooledNUSDLendingPool lendingPool = PooledNUSDLendingPool(LENDING_POOL);
         _validateCollateral(lendingPool, OLD_NBTC, BTC_ORACLE, NBTC_COLLATERAL_CAP, false);
         _validateCollateral(lendingPool, OLD_NETH, ETH_ORACLE, NETH_COLLATERAL_CAP, false);
     }
 
-    function _validateMigration(Migration memory migration) private view {
+    function _validateMigration(Migration memory migration, PooledNUSDLendingPool lendingPool) private view {
+        _validateStagedLending(lendingPool);
         if (
             address(migration.reserve.nusd()) != NUSD || migration.reserve.owner() != DEPLOYER
                 || migration.reserve.pendingOwner() != address(0) || migration.reserve.guardian() != DEPLOYER
@@ -351,7 +357,8 @@ contract MigrateSynthSafetyReserve {
                 || migration.synthFeeGaugeFactory.mintFeeVaultForPair(migration.nbtcNusdPair)
                     != address(migration.nbtcVault)
                 || migration.synthFeeGaugeFactory.mintFeeVaultForPair(migration.nethNusdPair)
-                    != address(migration.nethVault)
+                    != address(migration.nethVault) || !ILegacyGauge(migration.nbtcNusdGauge).depositsPaused()
+                || !ILegacyGauge(migration.nethNusdGauge).depositsPaused()
         ) revert UnexpectedConfiguration();
         _validatePairBinding(migration.nbtcNusdPair, address(migration.nbtc));
         _validatePairBinding(migration.nethNusdPair, address(migration.neth));
@@ -362,7 +369,6 @@ contract MigrateSynthSafetyReserve {
         _requireGaugeEmpty(migration.nbtcNusdGauge);
         _requireGaugeEmpty(migration.nethNusdGauge);
 
-        PooledNUSDLendingPool lendingPool = PooledNUSDLendingPool(LENDING_POOL);
         _validateCollateral(lendingPool, OLD_NBTC, BTC_ORACLE, NBTC_COLLATERAL_CAP, false);
         _validateCollateral(lendingPool, OLD_NETH, ETH_ORACLE, NETH_COLLATERAL_CAP, false);
         _validateCollateral(lendingPool, address(migration.nbtc), BTC_ORACLE, NBTC_COLLATERAL_CAP, true);
@@ -372,6 +378,18 @@ contract MigrateSynthSafetyReserve {
                 || lendingPool.totalCollateralByAsset(address(migration.nbtc)) != 0
                 || lendingPool.totalCollateralByAsset(address(migration.neth)) != 0
         ) revert ActiveLegacyState();
+        _requireLegacyStateSafe(lendingPool);
+    }
+
+    function _validateStagedLending(PooledNUSDLendingPool lendingPool) private view {
+        if (
+            address(lendingPool.nusd()) != NUSD || lendingPool.owner() != DEPLOYER
+                || lendingPool.pendingOwner() != address(0) || lendingPool.guardian() != DEPLOYER
+                || lendingPool.IMPLEMENTATION_ID() != LENDING_IMPLEMENTATION_ID || lendingPool.activated()
+                || lendingPool.bootstrapOpen() || !lendingPool.supplyPaused() || !lendingPool.borrowPaused()
+                || !lendingPool.collateralWithdrawalPaused() || lendingPool.totalBorrowed() != 0
+                || lendingPool.totalBadDebtNusd() != 0 || lendingPool.totalCollateralByAsset(WZKLTC) != 0
+        ) revert UnexpectedConfiguration();
     }
 
     function _validateVault(
@@ -388,8 +406,8 @@ contract MigrateSynthSafetyReserve {
                 || address(vault.mintFeeDistributor()) != address(gaugeFactory) || vault.owner() != DEPLOYER
                 || vault.pendingOwner() != address(0) || vault.guardian() != DEPLOYER
                 || vault.debtCeilingSynthetic() != debtCeiling || vault.totalCollateralNusd() != 0
-                || vault.totalDebtSynthetic() != 0 || vault.totalBadDebtSynthetic() != 0 || vault.mintPaused()
-                || vault.withdrawPaused()
+                || vault.totalDebtSynthetic() != 0 || vault.totalBadDebtSynthetic() != 0 || vault.activated()
+                || !vault.mintPaused() || !vault.withdrawPaused()
                 || IERC20(NUSD).allowance(address(vault), address(reserve)) != type(uint256).max
                 || IERC20(NUSD).allowance(address(vault), address(gaugeFactory)) != 0
                 || asset.balanceOf(address(vault)) != 0
@@ -452,12 +470,13 @@ contract MigrateSynthSafetyReserve {
         ) revert ActiveLegacyState();
     }
 
-    function _writePrediction(Migration memory migration) private {
+    function _writePrediction(Migration memory migration, PooledNUSDLendingPool lendingPool) private {
         string memory key = "migration";
         vm.serializeBool(key, "broadcasted", false);
         vm.serializeUint(key, "chainId", CHAIN_ID);
         vm.serializeUint(key, "scriptExecutionBlock", block.number);
         vm.serializeAddress(key, "deployer", DEPLOYER);
+        vm.serializeAddress(key, "lendingPool", address(lendingPool));
         vm.serializeAddress(key, "gaugeFactory", LEGACY_GAUGE_FACTORY);
         vm.serializeAddress(key, "synthFeeGaugeFactory", address(migration.synthFeeGaugeFactory));
         vm.serializeAddress(key, "dexRouter", address(migration.dexRouter));
@@ -485,6 +504,7 @@ contract MigrateSynthSafetyReserve {
         vm.serializeUint(key, "sponsorshipEntryTvlNusd", ENTRY_TVL_NUSD);
         vm.serializeUint(key, "sponsorshipExitTvlNusd", EXIT_TVL_NUSD);
         vm.serializeUint(key, "sponsorshipActivationDelay", ACTIVATION_DELAY);
+        vm.serializeBool(key, "vaultActivationRequired", true);
         string memory json = vm.serializeString(key, "status", "synth-safety-reserve-migration-prediction");
         vm.writeJson(json, "./deployments/synth-safety-reserve.json");
     }

@@ -34,6 +34,8 @@ contract PooledNUSDLendingPool is ERC20, EmergencyGuardian, ReentrancyGuard {
     error AccountHasBadDebt();
     error SlippageExceeded();
     error ProtocolInterestExceeded();
+    error MarketNotActivated();
+    error BootstrapUnavailable();
 
     uint256 public constant WAD = 1e18;
     uint256 public constant BPS_DENOMINATOR = 10_000;
@@ -44,7 +46,7 @@ contract PooledNUSDLendingPool is ERC20, EmergencyGuardian, ReentrancyGuard {
     uint256 public constant MAX_COLLATERAL_ASSETS = 8;
     uint256 public constant SECONDS_PER_YEAR = 365 days;
     uint256 public constant MINIMUM_LOCKED_SHARES = 1000;
-    bytes32 public constant IMPLEMENTATION_ID = keccak256("0xfi.lending.fixed-4.5-4-0.5.80-85-90.v1");
+    bytes32 public constant IMPLEMENTATION_ID = keccak256("0xfi.lending.fixed-4.5-4-0.5.80-85-90.paused-bootstrap.v2");
     address public constant LOCKED_SHARE_RECIPIENT = address(1);
 
     struct CollateralConfig {
@@ -87,6 +89,8 @@ contract PooledNUSDLendingPool is ERC20, EmergencyGuardian, ReentrancyGuard {
     bool public supplyPaused;
     bool public borrowPaused;
     bool public collateralWithdrawalPaused;
+    bool public activated;
+    bool public bootstrapOpen;
 
     event InterestAccrued(uint256 previousBorrowIndexWad, uint256 newBorrowIndexWad, uint256 elapsedSeconds);
     event ProtocolInterestAccrued(uint256 amountNusd, uint256 accruedProtocolInterestNusd);
@@ -123,12 +127,15 @@ contract PooledNUSDLendingPool is ERC20, EmergencyGuardian, ReentrancyGuard {
     );
     event CapsUpdated(uint256 supplyCapNusd, uint256 borrowCapNusd);
     event PausesUpdated(bool supplyPaused, bool borrowPaused, bool collateralWithdrawalPaused);
+    event BootstrapSupplied(address indexed account, uint256 amountNusd, uint256 sharesMinted);
+    event MarketActivated();
 
     constructor(
         address nusdAddress,
         address initialOwner,
         uint256 initialSupplyCapNusd,
-        uint256 initialBorrowCapNusd
+        uint256 initialBorrowCapNusd,
+        bool initiallyActive
     ) ERC20("0xFi Pooled NUSD", "xfiNUSD") EmergencyGuardian(initialOwner) {
         if (
             nusdAddress == address(0) || nusdAddress.code.length == 0 || initialSupplyCapNusd == 0
@@ -141,6 +148,14 @@ contract PooledNUSDLendingPool is ERC20, EmergencyGuardian, ReentrancyGuard {
         borrowCapNusd = initialBorrowCapNusd;
         borrowIndexWad = WAD;
         lastAccrualTimestamp = block.timestamp;
+        activated = initiallyActive;
+        bootstrapOpen = !initiallyActive;
+        if (!initiallyActive) {
+            supplyPaused = true;
+            borrowPaused = true;
+            collateralWithdrawalPaused = true;
+            emit PausesUpdated(true, true, true);
+        }
     }
 
     function configureCollateral(
@@ -156,8 +171,7 @@ contract PooledNUSDLendingPool is ERC20, EmergencyGuardian, ReentrancyGuard {
         if (
             asset == address(0) || asset.code.length == 0 || asset == address(nusd) || oracleAddress == address(0)
                 || oracleAddress.code.length == 0 || collateralSupplyCap == 0 || loanToValueBps == 0
-                || loanToValueBps >= marginCallThresholdBps
-                || marginCallThresholdBps >= liquidationThresholdBps
+                || loanToValueBps >= marginCallThresholdBps || marginCallThresholdBps >= liquidationThresholdBps
                 || liquidationThresholdBps >= BPS_DENOMINATOR
                 || liquidationBonusBps > BPS_DENOMINATOR - liquidationThresholdBps
                 || collateralSupplyCap < totalCollateralByAsset[asset]
@@ -220,6 +234,9 @@ contract PooledNUSDLendingPool is ERC20, EmergencyGuardian, ReentrancyGuard {
     }
 
     function setPauses(bool pauseSupply, bool pauseBorrow, bool pauseCollateralWithdrawal) external onlyOwner {
+        if (!activated && (!pauseSupply || !pauseBorrow || !pauseCollateralWithdrawal)) {
+            revert MarketNotActivated();
+        }
         supplyPaused = pauseSupply;
         borrowPaused = pauseBorrow;
         collateralWithdrawalPaused = pauseCollateralWithdrawal;
@@ -238,8 +255,44 @@ contract PooledNUSDLendingPool is ERC20, EmergencyGuardian, ReentrancyGuard {
         return borrowIndexWad;
     }
 
+    /// @notice Seeds an inactive migration pool while public risk-increasing actions remain blocked.
+    /// @dev Available exactly once to the owner that deployed the inactive pool.
+    function bootstrapSupply(uint256 amountNusd, address onBehalfOf)
+        external
+        onlyOwner
+        nonReentrant
+        returns (uint256 sharesMinted)
+    {
+        if (
+            activated || !bootstrapOpen || !supplyPaused || !borrowPaused || !collateralWithdrawalPaused
+                || totalSupply() != 0
+        ) revert BootstrapUnavailable();
+        bootstrapOpen = false;
+        sharesMinted = _supplyNusd(amountNusd, onBehalfOf);
+        emit BootstrapSupplied(onBehalfOf, amountNusd, sharesMinted);
+    }
+
+    /// @notice Opens a fully bootstrapped migration pool in one owner-controlled state transition.
+    function activateRiskOperations() external onlyOwner {
+        if (
+            activated || bootstrapOpen || totalSupply() <= MINIMUM_LOCKED_SHARES || totalBorrowed() != 0
+                || totalBadDebtNusd != 0 || _collateralAssets.length == 0
+        ) revert BootstrapUnavailable();
+        activated = true;
+        supplyPaused = false;
+        borrowPaused = false;
+        collateralWithdrawalPaused = false;
+        emit MarketActivated();
+        emit PausesUpdated(false, false, false);
+    }
+
     function supply(uint256 amountNusd, address onBehalfOf) external nonReentrant returns (uint256 sharesMinted) {
+        if (!activated) revert MarketNotActivated();
         if (supplyPaused) revert SupplyPaused();
+        return _supplyNusd(amountNusd, onBehalfOf);
+    }
+
+    function _supplyNusd(uint256 amountNusd, address onBehalfOf) private returns (uint256 sharesMinted) {
         if (onBehalfOf == address(0)) revert InvalidRecipient();
         if (amountNusd == 0) revert InvalidAmount();
 
@@ -297,6 +350,7 @@ contract PooledNUSDLendingPool is ERC20, EmergencyGuardian, ReentrancyGuard {
     }
 
     function depositCollateral(address asset, uint256 amount, address onBehalfOf) external nonReentrant {
+        if (!activated) revert MarketNotActivated();
         CollateralConfig storage config = collateralConfigs[asset];
         if (!_knownCollateral[asset] || !config.enabled) revert UnsupportedCollateral();
         if (onBehalfOf == address(0)) revert InvalidRecipient();
@@ -332,6 +386,7 @@ contract PooledNUSDLendingPool is ERC20, EmergencyGuardian, ReentrancyGuard {
     }
 
     function borrow(uint256 amountNusd, address recipient) external nonReentrant returns (uint256 debtSharesMinted) {
+        if (!activated) revert MarketNotActivated();
         if (borrowPaused) revert BorrowPaused();
         if (recipient == address(0) || recipient == address(this)) revert InvalidRecipient();
         if (amountNusd == 0) revert InvalidAmount();
@@ -506,8 +561,9 @@ contract PooledNUSDLendingPool is ERC20, EmergencyGuardian, ReentrancyGuard {
             uint256 currentLtvBps
         )
     {
-        (collateralValueNusd, borrowingCapacityNusd, marginCallCapacityNusd, liquidationCapacityNusd) =
-            _accountCollateralValues(account);
+        (
+            collateralValueNusd, borrowingCapacityNusd, marginCallCapacityNusd, liquidationCapacityNusd
+        ) = _accountCollateralValues(account);
         debtNusd = debtBalance(account);
         currentLtvBps = collateralValueNusd == 0 ? 0 : _mulDivUp(debtNusd, BPS_DENOMINATOR, collateralValueNusd);
     }
@@ -544,14 +600,10 @@ contract PooledNUSDLendingPool is ERC20, EmergencyGuardian, ReentrancyGuard {
 
         (uint256 priceWad,,) = IPriceOracle(config.oracle).readPriceWad();
         uint256 scale = 10 ** config.decimals;
-        uint256 currentContribution = Math.mulDiv(
-            Math.mulDiv(balance, priceWad, scale), config.loanToValueBps, BPS_DENOMINATOR
-        );
-        amount = Math.mulDiv(
-            borrowingCapacity - debt,
-            scale * BPS_DENOMINATOR,
-            priceWad * uint256(config.loanToValueBps)
-        );
+        uint256 currentContribution =
+            Math.mulDiv(Math.mulDiv(balance, priceWad, scale), config.loanToValueBps, BPS_DENOMINATOR);
+        amount =
+            Math.mulDiv(borrowingCapacity - debt, scale * BPS_DENOMINATOR, priceWad * uint256(config.loanToValueBps));
         amount = _min(amount, balance);
 
         uint256 remainingValue = Math.mulDiv(balance - amount, priceWad, scale);
@@ -683,10 +735,8 @@ contract PooledNUSDLendingPool is ERC20, EmergencyGuardian, ReentrancyGuard {
             if (config.enabled) {
                 borrowingCapacityNusd += Math.mulDiv(assetValueNusd, config.loanToValueBps, BPS_DENOMINATOR);
             }
-            marginCallCapacityNusd +=
-                Math.mulDiv(assetValueNusd, config.marginCallThresholdBps, BPS_DENOMINATOR);
-            liquidationCapacityNusd +=
-                Math.mulDiv(assetValueNusd, config.liquidationThresholdBps, BPS_DENOMINATOR);
+            marginCallCapacityNusd += Math.mulDiv(assetValueNusd, config.marginCallThresholdBps, BPS_DENOMINATOR);
+            liquidationCapacityNusd += Math.mulDiv(assetValueNusd, config.liquidationThresholdBps, BPS_DENOMINATOR);
         }
     }
 
@@ -711,9 +761,7 @@ contract PooledNUSDLendingPool is ERC20, EmergencyGuardian, ReentrancyGuard {
         lastAccrualTimestamp = currentTimestamp;
         emit InterestAccrued(previousIndex, nextIndex, elapsed);
         if (nextProtocolInterest != previousProtocolInterest) {
-            emit ProtocolInterestAccrued(
-                nextProtocolInterest - previousProtocolInterest, nextProtocolInterest
-            );
+            emit ProtocolInterestAccrued(nextProtocolInterest - previousProtocolInterest, nextProtocolInterest);
         }
     }
 
@@ -724,8 +772,7 @@ contract PooledNUSDLendingPool is ERC20, EmergencyGuardian, ReentrancyGuard {
         if (elapsed == 0 || totalDebtShares == 0) return (nextIndex, nextProtocolInterest);
 
         uint256 previousDebt = _debtAtShares(totalDebtShares, nextIndex);
-        uint256 indexIncrease =
-            Math.mulDiv(nextIndex, BORROW_APR_BPS * elapsed, BPS_DENOMINATOR * SECONDS_PER_YEAR);
+        uint256 indexIncrease = Math.mulDiv(nextIndex, BORROW_APR_BPS * elapsed, BPS_DENOMINATOR * SECONDS_PER_YEAR);
         nextIndex += indexIncrease;
         uint256 grossInterestNusd = _debtAtShares(totalDebtShares, nextIndex) - previousDebt;
         nextProtocolInterest += Math.mulDiv(grossInterestNusd, PROTOCOL_APR_BPS, BORROW_APR_BPS);

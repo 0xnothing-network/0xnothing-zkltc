@@ -216,7 +216,7 @@ export function BorrowWorkspace() {
           {!configured ? <NotDeployed feature="Collateralized borrowing" /> : null}
           {pool && !lending.ready ? (
             <div className="fi-inline-state fi-inline-warning">
-              <div><strong>{lending.checking ? "Verifying lending pool" : "Lending upgrade required"}</strong><span>Fixed rates and 80 / 85 / 90 risk limits must match on-chain.</span></div>
+              <div><strong>{lending.title}</strong><span>{lending.message}</span></div>
             </div>
           ) : null}
           <div className="fi-segmented fi-segmented-six" aria-label="Borrow account action">
@@ -261,7 +261,7 @@ export function BorrowWorkspace() {
               {!configured
                 ? "Not deployed"
                 : migrationBlocked
-                  ? lending.checking ? "Verifying pool" : "Upgrade required"
+                  ? lending.actionLabel
                   : quoteBlocked
                     ? reads.isPending ? "Loading limit" : "Price unavailable"
                     : !isConnected

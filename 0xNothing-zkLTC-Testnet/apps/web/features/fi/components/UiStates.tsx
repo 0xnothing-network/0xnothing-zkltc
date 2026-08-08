@@ -55,7 +55,7 @@ export function MetricStrip({
   metrics: Array<{ label: string; value: React.ReactNode; tone?: "default" | "positive" | "warning" | "danger" }>;
 }) {
   return (
-    <dl className="fi-metric-strip">
+    <dl className="fi-metric-strip" data-count={metrics.length}>
       {metrics.map((metric) => (
         <div key={metric.label}>
           <dt>{metric.label}</dt>

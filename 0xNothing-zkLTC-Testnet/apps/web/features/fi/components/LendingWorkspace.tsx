@@ -89,7 +89,7 @@ export function LendingWorkspace() {
           {!pool || !assets.NUSD.address ? <NotDeployed feature="NUSD lending" /> : null}
           {pool && !lending.ready ? (
             <div className="fi-inline-state fi-inline-warning">
-              <div><strong>{lending.checking ? "Verifying lending pool" : "Lending upgrade required"}</strong><span>New supply stays disabled until the fixed-rate pool is verified.</span></div>
+              <div><strong>{lending.title}</strong><span>{lending.message}</span></div>
             </div>
           ) : null}
           <div className="fi-segmented" aria-label="Lending action">
@@ -98,7 +98,7 @@ export function LendingWorkspace() {
           </div>
           <div className="fi-form">
             <AmountField id="lend-amount" label={mode === "supply" ? "Supply" : "Withdraw"} asset="NUSD" value={amountText} balance={formatAmount(sourceBalance)} onChange={setAmountText} onMax={sourceBalance && sourceBalance > 0n ? () => setAmountText(formatUnits(sourceBalance, 18)) : undefined} error={error} />
-            <button type="button" className={`fi-button fi-button-block ${mode === "supply" ? "fi-button-primary" : "fi-button-danger"}`} disabled={!pool || !assets.NUSD.address || riskActionBlocked || !isConnected || !amount || Boolean(error) || tx.pending} onClick={() => void submit()}>{!pool ? "Not deployed" : riskActionBlocked ? lending.checking ? "Verifying pool" : "Upgrade required" : !isConnected ? "Connect wallet" : tx.pending ? "Processing" : mode === "supply" ? "Supply NUSD" : "Withdraw NUSD"}</button>
+            <button type="button" className={`fi-button fi-button-block ${mode === "supply" ? "fi-button-primary" : "fi-button-danger"}`} disabled={!pool || !assets.NUSD.address || riskActionBlocked || !isConnected || !amount || Boolean(error) || tx.pending} onClick={() => void submit()}>{!pool ? "Not deployed" : riskActionBlocked ? lending.actionLabel : !isConnected ? "Connect wallet" : tx.pending ? "Processing" : mode === "supply" ? "Supply NUSD" : "Withdraw NUSD"}</button>
             <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />
           </div>
         </section>

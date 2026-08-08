@@ -30,14 +30,15 @@
 
 ## Known economic risks
 
-- The active lending pool is `0x099Fe8b7611A294eD33e6D96a0b958E189143622`.
-  It was deployed from the bad-debt-inclusive borrow-cap implementation and
-  configured for WzkLTC, nBTC, and nETH with DIA-only collateral pricing. The
-  receipt-verified migration moved `19.999999999999999 NUSD` into the new pool;
-  the retired pool is paused and retains only its mandatory `1,000 wei` locked
-  share reserve. Supply, borrow, and healthy collateral withdrawal are enabled
-  on the replacement pool. They still fail closed when governance pauses the
-  relevant action, liquidity is insufficient, or a required DIA price is stale.
+- The active lending pool is `0x7CB638F8e10f1bd200A3c5C3fD014C3FD97BA914`.
+  It uses the fixed-rate, bad-debt-inclusive borrow-cap implementation and
+  DIA-only pricing for WzkLTC, nBTC, and nETH. The receipt-verified migration
+  moved `19.999999999999999 NUSD` into it; the retired pool at
+  `0x099Fe8b7611A294eD33e6D96a0b958E189143622` is paused and retains only its
+  mandatory `1,000 wei` locked-share reserve. Supply, borrow, and healthy
+  collateral withdrawal are enabled on the replacement. They still fail closed
+  when governance pauses the relevant action, liquidity is insufficient, or a
+  required DIA price is stale.
 - The existing OracleNUSD reserve model is not guaranteed overcollateralized.
   0xFi cannot repair a NUSD reserve shortfall inside its own contracts. Reserve
   coverage is monitored and surfaced to users. Lending and the synth 150% fallback

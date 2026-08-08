@@ -3,11 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "workspaces": [
-    "web",
     "subgraph"
   ],
   "scripts": {
-    "dev": "npm --workspace web run dev",
+    "dev": "npm --prefix ../apps/web run dev -- --port 3300",
     "build": "npm run check:scripts && npm run check:contracts && npm run check:subgraph && npm run check:web",
     "check:scripts": "node scripts/check-scripts.mjs && node --test scripts/test/*.test.mjs",
     "preflight": "node scripts/preflight.mjs",
@@ -15,12 +14,11 @@
     "audit:live:report": "node scripts/audit-live.mjs --allow-inactive",
     "check:contracts": "forge test --root contracts && forge build --root contracts --sizes --skip script --skip test",
     "check:subgraph": "npm --workspace subgraph run check",
-    "check:web": "npm --workspace web run typecheck && npm --workspace web run lint && npm --workspace web run build",
+    "check:web": "npm --prefix ../apps/web run typecheck && npm --prefix ../apps/web run lint && npm --prefix ../apps/web run build",
     "deploy:dry": "node scripts/deploy.mjs --dry-run",
     "deploy:testnet": "node scripts/deploy.mjs --broadcast",
     "deploy:resume": "node scripts/deploy.mjs --resume",
     "deploy:finalize": "node scripts/deploy.mjs --finalize-only",
-    "migrate:finalize": "node scripts/migrate-finalize.mjs",
     "activate:check": "node scripts/activate-all.mjs",
     "activate:core:check": "node scripts/activate.mjs",
     "activate:core": "node scripts/activate.mjs --broadcast",
@@ -31,6 +29,20 @@
     "governance:direct:finalize": "node scripts/direct-governance.mjs --finalize-only",
     "lending:collateral:check": "node scripts/configure-lending-collateral.mjs",
     "lending:collateral:configure": "node scripts/configure-lending-collateral.mjs --broadcast",
+    "lending:fixed-rate:check": "node scripts/migrate-lending-fixed-rate.mjs --dry-run",
+    "lending:fixed-rate:broadcast": "node scripts/migrate-lending-fixed-rate.mjs --broadcast",
+    "lending:fixed-rate:resume": "node scripts/migrate-lending-fixed-rate.mjs --resume",
+    "lending:fixed-rate:finalize": "node scripts/migrate-lending-fixed-rate.mjs --finalize-only",
+    "lending:fixed-rate:activate:check": "node scripts/activate-lending-fixed-rate.mjs",
+    "lending:fixed-rate:activate": "node scripts/activate-lending-fixed-rate.mjs --broadcast",
+    "synth:safety-reserve:check": "node scripts/migrate-synth-safety-reserve.mjs --dry-run",
+    "synth:safety-reserve:broadcast": "node scripts/migrate-synth-safety-reserve.mjs --broadcast",
+    "synth:safety-reserve:resume": "node scripts/migrate-synth-safety-reserve.mjs --resume",
+    "synth:safety-reserve:finalize": "node scripts/migrate-synth-safety-reserve.mjs --finalize-only",
+    "synth:safety-reserve:activate:check": "node scripts/activate-synth-safety-reserve.mjs",
+    "synth:safety-reserve:activate": "node scripts/activate-synth-safety-reserve.mjs --broadcast",
+    "liquidity:bootstrap:check": "node scripts/bootstrap-canonical-liquidity.mjs",
+    "liquidity:bootstrap": "node scripts/bootstrap-canonical-liquidity.mjs --broadcast",
     "pump:prepare": "node scripts/prepare-graduation.mjs",
     "pump:prepare:broadcast": "node scripts/prepare-graduation.mjs --broadcast",
     "pump:controller:check": "node scripts/deploy-graduation-controller.mjs",
@@ -43,16 +55,6 @@
   },
   "dependencies": {
     "dotenv": "17.2.3",
-    "next": "15.5.22",
     "viem": "2.55.10"
-  },
-  "devDependencies": {
-    "postcss": "8.5.25"
-  },
-  "overrides": {
-    "next": {
-      "postcss": "8.5.25",
-      "sharp": "0.35.3"
-    }
   }
 }

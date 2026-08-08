@@ -8,7 +8,7 @@
  *  - contracts/deployments/latest.json
  *  - config/liteforge-testnet.json
  *  - subgraph/subgraph.config.json
- *  - web/.env.local
+ *  - ../apps/web/.env.local
  */
 
 import fs from "node:fs";
@@ -456,7 +456,7 @@ console.log("  subgraph/subgraph.config.json ✓ (startBlock preserved at origin
 // Materialize every public address from the verified manifest. This removes
 // legacy aliases and clears stale optional values from an older deployment.
 writePublicEnvironment({ root, deployment: newDeployment, network, rpcUrl });
-console.log("  web/.env.local ✓");
+console.log("  ../apps/web/.env.local ✓");
 
 console.log(`
 Migration finalized successfully.

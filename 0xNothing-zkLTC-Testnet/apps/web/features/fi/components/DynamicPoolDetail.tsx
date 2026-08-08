@@ -33,7 +33,7 @@ function integerSquareRoot(value: bigint): bigint {
 
 function displaySymbol(symbol: string | undefined): string {
   if (!symbol) return "--";
-  return symbol.toLowerCase() === "wzkltc" ? "zkLTC" : symbol;
+  return symbol;
 }
 
 function displayMarketPrice(value: number | undefined): string {
@@ -364,7 +364,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
         </div>
         <dl className="fi-trade-quote">
           <div><dt>Price</dt><dd>{displayMarketPrice(marketPriceNusd)}</dd></div>
-          <div><dt>TVL</dt><dd>{tvlNusd === undefined ? "--" : `$${tvlNusd.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}</dd></div>
+          <div><dt>TVL</dt><dd>{tvlNusd === undefined ? "--" : `$${tvlNusd.toLocaleString("en-US", { maximumFractionDigits: 2 })}`}</dd></div>
         </dl>
       </header>
       <div className="fi-workspace-grid fi-trade-workspace">

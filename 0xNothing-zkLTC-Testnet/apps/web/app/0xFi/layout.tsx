@@ -11,7 +11,6 @@ export const metadata: Metadata = {
 export default function FiLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <div className="fi-root">
-      <a className="fi-skip-link" href="#fi-main">Skip to content</a>
       <ToastProvider>
         <div className="fi-shell">
           <FiHeader />

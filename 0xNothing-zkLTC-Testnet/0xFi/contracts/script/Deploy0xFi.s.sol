@@ -133,7 +133,8 @@ contract Deploy0xFi {
             address(deployment.synthSafetyReserve),
             address(deployment.gaugeFactory),
             deployer,
-            nbtcDebtCeiling
+            nbtcDebtCeiling,
+            true
         );
         deployment.nethVault = new SyntheticVault(
             NUSD,
@@ -142,13 +143,14 @@ contract Deploy0xFi {
             address(deployment.synthSafetyReserve),
             address(deployment.gaugeFactory),
             deployer,
-            nethDebtCeiling
+            nethDebtCeiling,
+            true
         );
         deployment.synthSafetyReserve.bindVaults(address(deployment.nbtcVault), address(deployment.nethVault));
         deployment.nbtc.bindVault(address(deployment.nbtcVault));
         deployment.neth.bindVault(address(deployment.nethVault));
 
-        deployment.lendingPool = new PooledNUSDLendingPool(NUSD, deployer, lendingSupplyCap, lendingBorrowCap);
+        deployment.lendingPool = new PooledNUSDLendingPool(NUSD, deployer, lendingSupplyCap, lendingBorrowCap, true);
         deployment.lendingPool
             .configureCollateral(
                 address(deployment.wzkLTC),
@@ -164,25 +166,11 @@ contract Deploy0xFi {
         // ceilings, so this cannot create unbounded recursive leverage.
         deployment.lendingPool
             .configureCollateral(
-                address(deployment.nbtc),
-                address(deployment.btcOracle),
-                nbtcCollateralCap,
-                8000,
-                8500,
-                9000,
-                500,
-                true
+                address(deployment.nbtc), address(deployment.btcOracle), nbtcCollateralCap, 8000, 8500, 9000, 500, true
             );
         deployment.lendingPool
             .configureCollateral(
-                address(deployment.neth),
-                address(deployment.ethOracle),
-                nethCollateralCap,
-                8000,
-                8500,
-                9000,
-                500,
-                true
+                address(deployment.neth), address(deployment.ethOracle), nethCollateralCap, 8000, 8500, 9000, 500, true
             );
 
         deployment.wzkLtcNusdPair = deployment.dexFactory.createPair(address(deployment.wzkLTC), NUSD);
@@ -268,13 +256,13 @@ contract Deploy0xFi {
                 || deployment.lendingPool.supplyCapNusd() != lendingSupplyCap
                 || deployment.lendingPool.borrowCapNusd() != lendingBorrowCap
                 || deployment.lendingPool.IMPLEMENTATION_ID()
-                    != keccak256("0xfi.lending.fixed-4.5-4-0.5.80-85-90.v1")
+                    != keccak256("0xfi.lending.fixed-4.5-4-0.5.80-85-90.paused-bootstrap.v2")
+                || !deployment.lendingPool.activated() || deployment.lendingPool.bootstrapOpen()
                 || deployment.lendingPool.borrowRate() != 0.045 ether
                 || deployment.lendingPool.lenderRate() != 0.04 ether
-                || deployment.lendingPool.protocolRate() != 0.005 ether
-                || deployment.dexFactory.owner() != deployer || deployment.dexFactory.guardian() != deployer
-                || deployment.gaugeFactory.owner() != deployer || deployment.gaugeFactory.guardian() != deployer
-                || deployment.synthSafetyReserve.owner() != deployer
+                || deployment.lendingPool.protocolRate() != 0.005 ether || deployment.dexFactory.owner() != deployer
+                || deployment.dexFactory.guardian() != deployer || deployment.gaugeFactory.owner() != deployer
+                || deployment.gaugeFactory.guardian() != deployer || deployment.synthSafetyReserve.owner() != deployer
                 || deployment.synthSafetyReserve.guardian() != deployer || deployment.nbtcVault.owner() != deployer
                 || deployment.nbtcVault.guardian() != deployer || deployment.nethVault.owner() != deployer
                 || deployment.nethVault.guardian() != deployer || deployment.lendingPool.owner() != deployer

@@ -14,6 +14,7 @@ import { synthSafetyReserveAbi, synthVaultAbi } from "@fi/lib/abis/synth";
 import { formatAmount, formatTokenAmount, parseAmount } from "@fi/lib/format";
 import { useAssetBalance } from "@fi/lib/hooks/useAssetBalance";
 import { useProtocolTransaction } from "@fi/lib/hooks/useProtocolTransaction";
+import { useSynthVaultStatus } from "@fi/lib/hooks/useSynthVaultStatus";
 
 type SynthMode = "mint" | "topup" | "repay" | "withdraw";
 type Position = readonly [bigint, bigint, bigint, bigint, bigint];
@@ -34,6 +35,7 @@ export function SynthWorkspace() {
   const nusdBalance = useAssetBalance("NUSD");
   const synthBalance = useAssetBalance(synth);
   const tx = useProtocolTransaction();
+  const vaultStatus = useSynthVaultStatus(vault);
 
   const oracleState = useReadContract({
     address: oracle,
@@ -90,7 +92,7 @@ export function SynthWorkspace() {
     functionName: "quoteDepositAndMint",
     args: amount && mode === "mint" ? [address || zeroAddress, amount] : undefined,
     query: {
-      enabled: Boolean(vault && address && amount && mode === "mint" && oracleState.data),
+      enabled: Boolean(vault && address && amount && mode === "mint" && oracleState.data && vaultStatus.ready),
       refetchInterval: 12_000,
     },
   });
@@ -104,7 +106,7 @@ export function SynthWorkspace() {
     functionName: "quoteMintFee",
     args: mintAmount && mode === "mint" ? [mintAmount] : undefined,
     query: {
-      enabled: Boolean(vault && mintAmount && mode === "mint" && oracleState.data),
+      enabled: Boolean(vault && mintAmount && mode === "mint" && oracleState.data && vaultStatus.ready),
       refetchInterval: 12_000,
     },
   });
@@ -125,9 +127,10 @@ export function SynthWorkspace() {
     ? synthDebt < sourceBalance ? synthDebt : sourceBalance
     : mode === "mint" ? mintMaximum : sourceBalance;
   const configured = Boolean(vault && assets.NUSD.address && synthAddress && oracle);
+  const activationBlocked = (mode === "mint" || mode === "topup") && !vaultStatus.ready;
   const mintBlocked = mode === "mint" && oracleState.data !== true;
   const withdrawBlocked = mode === "withdraw" && synthDebt !== 0n && oracleState.data !== true;
-  const riskBlocked = mintBlocked || withdrawBlocked;
+  const riskBlocked = activationBlocked || mintBlocked || withdrawBlocked;
   const safetyProgress = useMemo(() => {
     if (totalSafetyReserve === undefined || !entryTvl) return undefined;
     const progressBps = totalSafetyReserve >= entryTvl ? 10_000n : totalSafetyReserve * 10_000n / entryTvl;
@@ -163,7 +166,7 @@ export function SynthWorkspace() {
   }, [amount, amountText, mintAmount, mintDebit, mintFeeState.isError, mintPaused, mintQuoteState.isError, mode, oracleState.data, sourceBalance, synthDebt, withdrawPaused]);
 
   async function submit() {
-    if (!amount || !address || !synthAddress) return;
+    if (!amount || !address || !synthAddress || activationBlocked) return;
     const call = mode === "topup"
       ? { functionName: "depositCollateral", args: [amount, address] as const }
       : mode === "mint"
@@ -243,6 +246,11 @@ export function SynthWorkspace() {
         <section className="fi-panel fi-sticky-panel">
           <PanelHeading title="VAULT ACTION" />
           {!configured ? <NotDeployed feature={`${synth} vault`} /> : null}
+          {configured && !vaultStatus.ready ? (
+            <div className="fi-inline-state fi-inline-warning">
+              <div><strong>{vaultStatus.title}</strong><span>{vaultStatus.message}</span></div>
+            </div>
+          ) : null}
           <AssetSelect
             id="synth-asset"
             label="Isolated vault"
@@ -296,14 +304,14 @@ export function SynthWorkspace() {
                 <div><dt>Available to withdraw</dt><dd>{formatAmount(maxWithdrawable)} NUSD</dd></div>
               </dl>
             ) : null}
-            {riskBlocked ? <div className="fi-inline-state fi-inline-warning"><div><strong>DIA price unavailable</strong></div></div> : null}
+            {(mintBlocked || withdrawBlocked) && !activationBlocked ? <div className="fi-inline-state fi-inline-warning"><div><strong>DIA price unavailable</strong></div></div> : null}
             <button
               type="button"
               className={`fi-button fi-button-block ${mode === "mint" || mode === "withdraw" ? "fi-button-danger" : "fi-button-primary"}`}
               disabled={!configured || riskBlocked || !isConnected || !amount || (mode === "mint" && (!mintAmount || mintFee === undefined)) || Boolean(error) || tx.pending}
               onClick={() => void submit()}
             >
-              {!configured ? "Not deployed" : !isConnected ? "Connect wallet" : tx.pending ? "Processing" : mode === "mint" ? `Mint ${synth}` : mode === "topup" ? "Top up" : `${mode[0].toUpperCase()}${mode.slice(1)}`}
+              {!configured ? "Not deployed" : activationBlocked ? vaultStatus.actionLabel : !isConnected ? "Connect wallet" : tx.pending ? "Processing" : mode === "mint" ? `Mint ${synth}` : mode === "topup" ? "Top up" : `${mode[0].toUpperCase()}${mode.slice(1)}`}
             </button>
             <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />
           </div>
