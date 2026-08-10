@@ -74,6 +74,13 @@ export const farmGaugeAbi = [
   },
   {
     type: "function",
+    name: "pausedRewardDuration",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
     name: "balanceOf",
     stateMutability: "view",
     inputs: [{ name: "account", type: "address" }],

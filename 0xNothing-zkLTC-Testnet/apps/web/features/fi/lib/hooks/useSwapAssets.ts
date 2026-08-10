@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { getAddress, type Address } from "viem";
 import { assetList } from "@fi/config/assets";
+import type { ImportedTokenExplorerStatus, ImportedTokenMetadataSource } from "@fi/lib/importedToken";
 import { usePools } from "@fi/lib/hooks/usePools";
 
 export interface SwapAsset {
@@ -14,6 +15,11 @@ export interface SwapAsset {
   poolAddress?: Address;
   native: boolean;
   graduated: boolean;
+  imageUrl?: string;
+  imported?: boolean;
+  trustedCore: boolean;
+  explorerStatus?: ImportedTokenExplorerStatus;
+  metadataSource?: ImportedTokenMetadataSource;
 }
 
 const CORE_ASSETS: SwapAsset[] = assetList.map((asset) => ({
@@ -25,6 +31,7 @@ const CORE_ASSETS: SwapAsset[] = assetList.map((asset) => ({
   poolAddress: asset.poolAddress,
   native: asset.native,
   graduated: false,
+  trustedCore: true,
 }));
 
 export function useSwapAssets() {
@@ -54,6 +61,8 @@ export function useSwapAssets() {
             poolAddress: address,
             native: false,
             graduated: pool.protectedBootstrap,
+            imageUrl: token.imageUrl,
+            trustedCore: false,
           });
         }
       }

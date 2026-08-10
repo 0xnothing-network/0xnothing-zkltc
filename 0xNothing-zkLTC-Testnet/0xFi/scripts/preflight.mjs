@@ -2,8 +2,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import process from "node:process";
 import { config as loadEnv } from "dotenv";
-import { createPublicClient, fallback, formatEther, formatUnits, http } from "viem";
+import { createPublicClient, fallback, formatEther, formatUnits, http, parseAbi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+
+import { pumpAdministrationTopology } from "./lib/preflight-topology.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const localEnv = resolve(root, ".env.local");
@@ -104,6 +106,14 @@ const routerAbi = [
   },
 ];
 
+const controllerAbi = parseAbi([
+  "function pump() view returns (address)",
+  "function router() view returns (address)",
+  "function adapter() view returns (address)",
+  "function governance() view returns (address)",
+  "function guardian() view returns (address)",
+]);
+
 const feedAbi = [
   {
     type: "function",
@@ -175,9 +185,35 @@ if (routerDelay !== expectedRouterDelay) {
   throw new Error(`Pump graduation delay mismatch: expected ${expectedRouterDelay}, received ${routerDelay}`);
 }
 
-if (pumpAdmin.toLowerCase() !== account.address.toLowerCase() || routerAdmin.toLowerCase() !== account.address.toLowerCase()) {
-  throw new Error("Configured deployer is not the live 0xPump and GraduationRouter admin");
+const controllerAdminActive = network.deployment?.pumpAdministrationStatus === "controller-admin-active";
+const controllerAddress = controllerAdminActive
+  ? network.deployment?.contracts?.pumpGraduationController
+  : undefined;
+let controllerState;
+if (controllerAdminActive) {
+  if (typeof controllerAddress !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(controllerAddress)) {
+    throw new Error("Recorded graduation controller is not a valid address");
+  }
+  const controllerCode = await client.getCode({ address: controllerAddress });
+  if (!controllerCode || controllerCode === "0x") throw new Error("Graduation controller has no bytecode");
+  const [pump, router, adapter, governance, guardian] = await Promise.all([
+    client.readContract({ address: controllerAddress, abi: controllerAbi, functionName: "pump" }),
+    client.readContract({ address: controllerAddress, abi: controllerAbi, functionName: "router" }),
+    client.readContract({ address: controllerAddress, abi: controllerAbi, functionName: "adapter" }),
+    client.readContract({ address: controllerAddress, abi: controllerAbi, functionName: "governance" }),
+    client.readContract({ address: controllerAddress, abi: controllerAbi, functionName: "guardian" }),
+  ]);
+  controllerState = { pump, router, adapter, governance, guardian };
 }
+const administration = pumpAdministrationTopology({
+  account: account.address,
+  pump: addresses.pump,
+  router: addresses.pumpGraduationRouter,
+  pumpAdmin,
+  routerAdmin,
+  deployment: network.deployment,
+  controllerState,
+});
 
 const now = block.timestamp;
 const feeds = {};
@@ -249,6 +285,7 @@ const report = {
     redeemPaused,
   },
   pump: { admin: pumpAdmin, paused: pumpPaused },
+  pumpAdministration: administration,
   graduationRouter: {
     admin: routerAdmin,
     enabled: routerEnabled,

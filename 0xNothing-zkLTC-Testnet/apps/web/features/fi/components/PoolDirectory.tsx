@@ -36,6 +36,21 @@ function formatCompact(value: string | undefined, prefix = ""): string {
   })}`;
 }
 
+function formatPrice(value: string | undefined): string {
+  if (value === undefined) return "--";
+  const parsed = numberValue(value);
+  if (parsed === 0) return "$0";
+  const absolute = Math.abs(parsed);
+
+  if (absolute >= 10_000) {
+    return `$${parsed.toLocaleString("en-US", { notation: "compact", maximumSignificantDigits: 3 })}`;
+  }
+  if (absolute >= 1) {
+    return `$${parsed.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+  }
+  return `$${parsed.toLocaleString("en-US", { maximumSignificantDigits: 4 })}`;
+}
+
 function hasPositiveRawAmount(value: string | undefined): boolean {
   try {
     return BigInt(value || "0") > 0n;
@@ -117,11 +132,11 @@ function MarketRow({ pool, canonical }: { pool: PoolPoint; canonical: Set<string
         </span>
         <span className="fi-market-cell">
           <small>Price</small>
-          <strong>{formatCompact(pool.priceNusd, "$")}</strong>
+          <strong>{formatPrice(pool.priceNusd)}</strong>
         </span>
         <span className="fi-market-cell" data-tone={change === undefined ? "muted" : change < 0 ? "danger" : "positive"}>
           <small>24h</small>
-          <strong>{change === undefined ? "--" : `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`}</strong>
+          <strong>{change === undefined ? "N/A" : `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`}</strong>
         </span>
         <span className="fi-market-cell">
           <small>TVL</small>
@@ -153,6 +168,7 @@ export function PoolDirectory({
     : undefined;
 
   const canonical = useMemo(canonicalPoolAddresses, []);
+  const hasPriceHistory = indexedPools.some((pool) => pool.priceChange24h !== undefined);
   const markets = useMemo(() => {
     const query = search.trim().toLowerCase();
     return indexedPools
@@ -222,11 +238,16 @@ export function PoolDirectory({
 
       <div className="fi-market-list-head">
         <span>Market</span>
-        {(["price", "change", "tvl"] as const).map((key) => (
+        {(["price", "change", "tvl"] as const).map((key) => key === "change" && !hasPriceHistory ? (
+          <span title="24-hour price history is not indexed yet" key={key}>24H N/A</span>
+        ) : (
           <button
             type="button"
             data-active={sortKey === key || undefined}
-            aria-label={`Sort by ${key}`}
+            aria-label={sortKey === key
+              ? `Sorted by ${key}, ${sortDirection === "asc" ? "ascending" : "descending"}. Change direction`
+              : `Sort by ${key}`}
+            aria-pressed={sortKey === key}
             onClick={() => chooseSort(key)}
             key={key}
           >

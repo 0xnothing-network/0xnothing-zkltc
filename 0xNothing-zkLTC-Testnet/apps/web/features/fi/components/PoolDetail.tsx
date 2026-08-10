@@ -1,20 +1,23 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
 import { formatUnits, zeroAddress } from "viem";
 import { AmountField } from "@fi/components/AmountField";
+import { ConnectWalletButton } from "@fi/components/ConnectWalletButton";
 import { SlippageControl } from "@fi/components/SlippageControl";
 import { NotDeployed, PanelHeading, TransactionStatus } from "@fi/components/UiStates";
 import { useToast } from "@fi/components/Toast";
 import { assetForPool, assets, pairSlug, type AssetSymbol } from "@fi/config/assets";
 import { deployment } from "@fi/config/deployment";
+import { fiPath } from "@fi/config/paths";
 import { dexFactoryAbi, dexPoolAbi, dexRouterAbi } from "@fi/lib/abis/dex";
 import { formatAmount, minimumAfterSlippage, parseAmount, percentageShare, transactionDeadline } from "@fi/lib/format";
 import { useAssetBalance } from "@fi/lib/hooks/useAssetBalance";
 import { useActiveDexRouter } from "@fi/lib/hooks/useActiveDexRouter";
 import { useProtocolTransaction } from "@fi/lib/hooks/useProtocolTransaction";
-import { MarketChart } from "@fi/components/MarketChart";
+import { LazyMarketChart } from "@fi/components/LazyMarketChart";
 import { RecentActivity } from "@fi/components/RecentActivity";
 
 const NATIVE_GAS_RESERVE_WEI = 10_000_000_000_000_000n;
@@ -62,12 +65,18 @@ export function PoolDetail({ pair }: { pair: readonly [AssetSymbol, AssetSymbol]
   const poolStats = useReadContracts({
     contracts: pool ? [
       { address: pool, abi: dexPoolAbi, functionName: "totalSupply" },
-      { address: pool, abi: dexPoolAbi, functionName: "balanceOf", args: address ? [address] : [zeroAddress] },
     ] as const : [],
     query: { enabled: Boolean(pool), refetchInterval: 12_000 },
   });
   const totalSupply = poolStats.data?.[0]?.result as bigint | undefined;
-  const lpBalance = poolStats.data?.[1]?.result as bigint | undefined;
+  const lpBalanceRead = useReadContract({
+    address: pool,
+    abi: dexPoolAbi,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: { enabled: Boolean(pool && address), refetchInterval: 12_000 },
+  });
+  const lpBalance = lpBalanceRead.data as bigint | undefined;
   const reserveRead = useReadContract({
     address: dexRouter,
     abi: dexRouterAbi,
@@ -147,7 +156,7 @@ export function PoolDetail({ pair }: { pair: readonly [AssetSymbol, AssetSymbol]
     if (hash) {
       toast.show("Liquidity added", `Your share joined the shared ${tokenA}/${tokenB} pool.`, "success");
       setAmountAText(""); setAmountBText("");
-      void poolStats.refetch(); void balanceA.refetch(); void balanceB.refetch();
+      void poolStats.refetch(); void lpBalanceRead.refetch(); void reserveRead.refetch(); void balanceA.refetch(); void balanceB.refetch();
     }
   }
 
@@ -177,7 +186,7 @@ export function PoolDetail({ pair }: { pair: readonly [AssetSymbol, AssetSymbol]
     });
     if (hash) {
       toast.show("Liquidity removed", "LP tokens were burned and assets returned.", "success");
-      setLpText(""); void poolStats.refetch();
+      setLpText(""); void poolStats.refetch(); void lpBalanceRead.refetch(); void reserveRead.refetch(); void balanceA.refetch(); void balanceB.refetch();
     }
   }
 
@@ -189,17 +198,17 @@ export function PoolDetail({ pair }: { pair: readonly [AssetSymbol, AssetSymbol]
         <div><dt>Total LP</dt><dd>{formatAmount(totalSupply)}</dd></div>
         <div><dt>Your share</dt><dd>{percentageShare(lpBalance, totalSupply)}</dd></div>
       </div>
-      <div className="fi-workspace-grid">
+      <div className="fi-workspace-grid fi-workspace-balance">
         <div className="fi-main-stack">
-          <MarketChart pair={pairSlug(tokenA, tokenB)} />
+          <LazyMarketChart pair={pairSlug(tokenA, tokenB)} />
           <RecentActivity pair={pairSlug(tokenA, tokenB)} />
         </div>
-        <section className="fi-panel fi-sticky-panel">
-          <PanelHeading title="LIQUIDITY" />
+        <section className="fi-panel fi-sticky-panel fi-trade-panel">
+          <PanelHeading title="Liquidity" trailing={<Link className="fi-text-link" href={`${fiPath("/swap")}?in=${tokenA}&out=${tokenB}`}>Swap pair</Link>} />
           {!configured ? <NotDeployed feature={`${tokenA}/${tokenB} liquidity`} /> : null}
-          <div className="fi-segmented" aria-label="Liquidity action">
-            <button type="button" className={mode === "add" ? "active positive" : ""} onClick={() => { setMode("add"); tx.reset(); }}>Add</button>
-            <button type="button" className={mode === "remove" ? "active danger" : ""} onClick={() => { setMode("remove"); tx.reset(); }}>Remove</button>
+          <div className="fi-segmented" role="group" aria-label="Liquidity action">
+            <button type="button" className={mode === "add" ? "active positive" : ""} aria-pressed={mode === "add"} onClick={() => { setMode("add"); tx.reset(); }}>Add</button>
+            <button type="button" className={mode === "remove" ? "active" : ""} aria-pressed={mode === "remove"} onClick={() => { setMode("remove"); tx.reset(); }}>Remove</button>
           </div>
           <div className="fi-form">
             {mode === "add" ? <>
@@ -212,10 +221,15 @@ export function PoolDetail({ pair }: { pair: readonly [AssetSymbol, AssetSymbol]
                 <div><dt>Expected {tokenB}</dt><dd>{formatAmount(removeAmountB)}</dd></div>
               </dl>
             </>}
-            <SlippageControl value={slippageBps} onChange={setSlippageBps} />
-            <button type="button" className={`fi-button fi-button-block ${mode === "add" ? "fi-button-primary" : "fi-button-danger"}`} disabled={!configured || !isConnected || Boolean(error) || tx.pending || (mode === "add" ? !amountA || !amountB || !expectedLiquidity : !liquidity || removeAmountA === undefined || removeAmountB === undefined)} onClick={() => void (mode === "add" ? submitAdd() : submitRemove())}>
-              {!configured ? "Not deployed" : !isConnected ? "Connect wallet" : tx.pending ? "Processing" : mode === "add" ? "Add liquidity" : "Remove liquidity"}
-            </button>
+            <details className="fi-settings-details">
+              <summary><span>Transaction settings</span><strong>{Number(slippageBps) / 100}% slippage</strong></summary>
+              <SlippageControl value={slippageBps} onChange={setSlippageBps} />
+            </details>
+            {!isConnected ? <ConnectWalletButton /> : (
+              <button type="button" className={`fi-button fi-button-block ${mode === "add" ? "fi-button-primary" : "fi-button-muted"}`} disabled={!configured || Boolean(error) || tx.pending || (mode === "add" ? !amountA || !amountB || !expectedLiquidity : !liquidity || removeAmountA === undefined || removeAmountB === undefined)} onClick={() => void (mode === "add" ? submitAdd() : submitRemove())}>
+                {!configured ? "Not deployed" : tx.pending ? "Processing" : mode === "add" ? "Add liquidity" : "Remove liquidity"}
+              </button>
+            )}
             <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />
           </div>
         </section>

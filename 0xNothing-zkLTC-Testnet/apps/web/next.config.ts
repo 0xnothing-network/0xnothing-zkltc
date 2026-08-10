@@ -29,7 +29,14 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Escape the legacy /_next dev-chunk cache that was previously marked
+  // immutable; future responses under this namespace are explicitly no-store.
+  assetPrefix: process.env.NODE_ENV === "development" ? "/_0xfi-dev" : undefined,
   compress: true,
+  // Keep development HMR artifacts isolated from production builds. Running
+  // `next build` while the local dev server is open must never mix server HTML
+  // from one compilation with client chunks from another.
+  distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
   outputFileTracingRoot: __dirname,
@@ -79,12 +86,6 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: securityHeaders,
-      },
-      {
-        source: "/_next/static/:path*",
-        headers: [
-          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
-        ],
       },
       {
         source: "/fonts/:path*",

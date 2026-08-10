@@ -7,6 +7,9 @@ export interface AssetSelectOption<T extends string = string> {
   symbol: string;
   name: string;
   badge?: string;
+  detail?: string;
+  imageUrl?: string;
+  trustedCore?: boolean;
 }
 
 export function AssetSelect<T extends string = AssetSymbol>({

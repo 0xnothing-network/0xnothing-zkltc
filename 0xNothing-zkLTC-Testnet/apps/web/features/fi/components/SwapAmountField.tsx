@@ -1,36 +1,45 @@
 "use client";
 
-import type { AssetSymbol } from "@fi/config/assets";
 import { TokenLogo } from "@fi/components/TokenLogo";
+import type { AssetSelectOption } from "@fi/components/AssetSelect";
 
-export function AmountField({
+export function SwapAmountField({
   id,
+  assetSelectId,
   label,
+  assetLabel,
   asset,
-  imageUrl,
+  assetValue,
+  assets,
   value,
   balance,
   helper,
   error,
-  onChange,
+  onAmountChange,
+  onAssetChange,
   onMax,
   readOnly = false,
 }: {
   id: string;
+  assetSelectId: string;
   label: string;
-  asset: AssetSymbol | string;
-  imageUrl?: string;
+  assetLabel: string;
+  asset: string;
+  assetValue: string;
+  assets: readonly AssetSelectOption<string>[];
   value: string;
   balance?: string;
   helper?: string;
   error?: string;
-  onChange?: (value: string) => void;
+  onAmountChange?: (value: string) => void;
+  onAssetChange: (value: string) => void;
   onMax?: () => void;
   readOnly?: boolean;
 }) {
   const helperId = helper ? `${id}-helper` : undefined;
   const errorId = error ? `${id}-error` : undefined;
   const describedBy = [helperId, errorId].filter(Boolean).join(" ") || undefined;
+  const selectedAsset = assets.find((entry) => entry.value === assetValue);
 
   return (
     <div className="fi-field">
@@ -49,12 +58,29 @@ export function AmountField({
           readOnly={readOnly}
           aria-invalid={Boolean(error) || undefined}
           aria-describedby={describedBy}
-          onChange={onChange ? (event) => onChange(event.target.value) : undefined}
+          onChange={onAmountChange ? (event) => onAmountChange(event.target.value) : undefined}
           placeholder="0.0"
         />
         <span className="fi-amount-asset">
-          {asset !== "LP" ? <TokenLogo symbol={asset} imageUrl={imageUrl} size="sm" /> : null}
-          <strong>{asset}</strong>
+          <TokenLogo
+            symbol={asset}
+            imageUrl={selectedAsset?.imageUrl}
+            size="sm"
+            trustedCore={selectedAsset?.trustedCore !== false}
+          />
+          <label className="sr-only" htmlFor={assetSelectId}>{assetLabel}</label>
+          <select
+            id={assetSelectId}
+            className="fi-compact-select"
+            value={assetValue}
+            onChange={(event) => onAssetChange(event.target.value)}
+          >
+            {assets.map((entry) => (
+              <option value={entry.value} title={entry.name} key={entry.value}>
+                {entry.symbol}{entry.detail ? ` · ${entry.detail}` : ""}{entry.badge ? ` · ${entry.badge}` : ""}
+              </option>
+            ))}
+          </select>
         </span>
         {onMax ? (
           <button type="button" onClick={onMax} aria-label={`Use maximum ${asset} balance`}>

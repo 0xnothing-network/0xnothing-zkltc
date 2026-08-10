@@ -1709,7 +1709,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .pump-stats-metric-skeleton small { width: 85%; height: 8px; }
 .pump-stats-loading .pump-stats-detail-grid > div { min-height: 230px; }
 
-.pump-shell :where(a, button, input, select, textarea):focus-visible {
+.pump-shell :where(a, button, input:not(.fi-root input), select:not(.fi-root select), textarea):focus-visible {
   outline: 1px solid var(--pump-green) !important;
   outline-offset: 2px;
 }
@@ -2740,9 +2740,9 @@ a:hover .nothing-brand {
   color: var(--muted-dark) !important;
 }
 
-input,
-textarea,
-select {
+input:not(.fi-root input),
+textarea:not(.fi-root textarea),
+select:not(.fi-root select) {
   border-radius: 0 !important;
 }
 
@@ -3696,18 +3696,18 @@ a[class*="pixel-btn"]:hover {
   color: rgba(244,244,244,0.68) !important;
 }
 
-input,
-select,
-textarea {
+input:not(.fi-root input),
+select:not(.fi-root select),
+textarea:not(.fi-root textarea) {
   border-color: var(--pixel-line-soft) !important;
   background-color: rgba(5,5,5,0.78) !important;
   color: #f4f4f4 !important;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02) !important;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:not(.fi-root input):focus,
+select:not(.fi-root select):focus,
+textarea:not(.fi-root textarea):focus {
   border-color: rgba(223,255,238,0.48) !important;
   box-shadow:
     inset 0 0 0 1px rgba(223,255,238,0.14),
@@ -4023,9 +4023,9 @@ a[class*="pixel-btn"]:hover {
   border-color: var(--px-line) !important;
 }
 
-input,
-select,
-textarea {
+input:not(.fi-root input),
+select:not(.fi-root select),
+textarea:not(.fi-root textarea) {
   border-radius: 0 !important;
   border-color: var(--px-line-hi) !important;
   background: #101010 !important;
@@ -4039,14 +4039,14 @@ textarea {
   ) !important;
 }
 
-input::placeholder,
-textarea::placeholder {
+input:not(.fi-root input)::placeholder,
+textarea:not(.fi-root textarea)::placeholder {
   color: #6f6f6f !important;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:not(.fi-root input):focus,
+select:not(.fi-root select):focus,
+textarea:not(.fi-root textarea):focus {
   border-color: var(--px-ink) !important;
   outline: none !important;
   box-shadow: 4px 4px 0 var(--px-shadow), 0 0 0 2px rgba(242,242,242,0.14) !important;
@@ -4349,16 +4349,16 @@ a[class*="pixel-btn"]:hover {
   border-color: #ffffff !important;
 }
 
-input,
-select,
-textarea {
+input:not(.fi-root input),
+select:not(.fi-root select),
+textarea:not(.fi-root textarea) {
   background: #0c0c0c !important;
   border-color: #4f4f4f !important;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:not(.fi-root input):focus,
+select:not(.fi-root select):focus,
+textarea:not(.fi-root textarea):focus {
   border-color: var(--px-cyan) !important;
   box-shadow:
     4px 4px 0 #000,
@@ -4465,11 +4465,11 @@ textarea:focus {
 
 /* EOF readability pass: crisper pixel text, less washed-out UI copy. */
 
-p,
-label,
-span,
-li,
-small,
+p:not(.fi-root p),
+label:not(.fi-root label),
+span:not(.fi-root span),
+li:not(.fi-root li),
+small:not(.fi-root small),
 .pixel-loader-label,
 [class*="text-[#64748B]"],
 [class*="text-[#94A3B8]"],
@@ -4491,8 +4491,8 @@ small,
   opacity: 1 !important;
 }
 
-input::placeholder,
-textarea::placeholder,
+input:not(.fi-root input)::placeholder,
+textarea:not(.fi-root textarea)::placeholder,
 [class*="placeholder:text-"],
 [class*="placeholder-[#"]::placeholder {
   color: var(--px-faint) !important;
@@ -4748,22 +4748,22 @@ a[class*="pixel-btn"]:hover {
   border-color: rgba(201, 203, 255, 0.34) !important;
 }
 
-input,
-select,
-textarea {
+input:not(.fi-root input),
+select:not(.fi-root select),
+textarea:not(.fi-root textarea) {
   background: #0b0b0b !important;
   border-color: rgba(255, 255, 255, 0.20) !important;
   color: var(--px-ink) !important;
 }
 
-input::placeholder,
-textarea::placeholder {
+input:not(.fi-root input)::placeholder,
+textarea:not(.fi-root textarea)::placeholder {
   color: rgba(154, 154, 154, 0.72) !important;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:not(.fi-root input):focus,
+select:not(.fi-root select):focus,
+textarea:not(.fi-root textarea):focus {
   border-color: var(--px-cyan) !important;
   box-shadow:
     4px 4px 0 #000,
@@ -5005,22 +5005,22 @@ a[class*="pixel-btn"]:hover {
   border-color: rgba(255, 209, 220, 0.30) !important;
 }
 
-input,
-select,
-textarea {
+input:not(.fi-root input),
+select:not(.fi-root select),
+textarea:not(.fi-root textarea) {
   background: #0b0b0b !important;
   border-color: rgba(245, 245, 245, 0.20) !important;
   color: var(--px-ink) !important;
 }
 
-input::placeholder,
-textarea::placeholder {
+input:not(.fi-root input)::placeholder,
+textarea:not(.fi-root textarea)::placeholder {
   color: rgba(143, 143, 143, 0.74) !important;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:not(.fi-root input):focus,
+select:not(.fi-root select):focus,
+textarea:not(.fi-root textarea):focus {
   border-color: var(--px-cyan) !important;
   box-shadow:
     4px 4px 0 #000,
@@ -5361,23 +5361,23 @@ a[class*="bg-[#8888ff]"]:hover {
   transform: translate(-1px, -1px);
 }
 
-button:disabled,
+button:not(.fi-root button):disabled,
 .pixel-btn:disabled,
 .pixel-btn-soft:disabled {
   filter: grayscale(0.12) saturate(0.86) brightness(0.88) !important;
 }
 
-input,
-select,
-textarea {
+input:not(.fi-root input),
+select:not(.fi-root select),
+textarea:not(.fi-root textarea) {
   background: #08101a !important;
   border-color: rgba(216, 225, 223, 0.24) !important;
   color: var(--px-ink) !important;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:not(.fi-root input):focus,
+select:not(.fi-root select):focus,
+textarea:not(.fi-root textarea):focus {
   border-color: var(--px-cyan) !important;
   box-shadow:
     4px 4px 0 #000,
@@ -5710,17 +5710,17 @@ a[class*="pixel-btn"]:hover {
   filter: saturate(1.22) brightness(1.12) !important;
 }
 
-input,
-select,
-textarea {
+input:not(.fi-root input),
+select:not(.fi-root select),
+textarea:not(.fi-root textarea) {
   background: #09162a !important;
   border-color: rgba(79, 239, 255, 0.34) !important;
   color: var(--px-ink) !important;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:not(.fi-root input):focus,
+select:not(.fi-root select):focus,
+textarea:not(.fi-root textarea):focus {
   border-color: var(--px-cyan) !important;
   box-shadow:
     4px 4px 0 #000,
@@ -5964,22 +5964,22 @@ a[class*="pixel-btn"]:hover {
   transform: translate(-1px, -1px) !important;
 }
 
-input,
-select,
-textarea {
+input:not(.fi-root input),
+select:not(.fi-root select),
+textarea:not(.fi-root textarea) {
   background: #11285f !important;
   border-color: rgba(0, 234, 255, 0.58) !important;
   color: var(--px-ink) !important;
 }
 
-input::placeholder,
-textarea::placeholder {
+input:not(.fi-root input)::placeholder,
+textarea:not(.fi-root textarea)::placeholder {
   color: rgba(196, 221, 255, 0.62) !important;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:not(.fi-root input):focus,
+select:not(.fi-root select):focus,
+textarea:not(.fi-root textarea):focus {
   border-color: var(--px-amber) !important;
   box-shadow:
     4px 4px 0 #000,
@@ -6188,9 +6188,9 @@ a[class*="bg-[#8888ff]"]:hover {
   box-shadow: 4px 4px 0 #000 !important;
 }
 
-input,
-select,
-textarea,
+input:not(.fi-root input),
+select:not(.fi-root select),
+textarea:not(.fi-root textarea),
 [class*="bg-[#1A1A2E]/50"],
 [class*="bg-[#13131F]/50"] {
   background-color: var(--px-bg-3) !important;
@@ -6199,14 +6199,14 @@ textarea,
   color: var(--px-ink) !important;
 }
 
-input::placeholder,
-textarea::placeholder {
+input:not(.fi-root input)::placeholder,
+textarea:not(.fi-root textarea)::placeholder {
   color: rgba(246, 246, 246, 0.44) !important;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:not(.fi-root input):focus,
+select:not(.fi-root select):focus,
+textarea:not(.fi-root textarea):focus {
   border-color: var(--px-line-hi) !important;
   box-shadow:
     3px 3px 0 #000,
@@ -6260,10 +6260,10 @@ textarea {
   -moz-osx-font-smoothing: unset;
 }
 
-h1,
-h2,
-h3,
-h4,
+h1:not(.fi-root h1),
+h2:not(.fi-root h2),
+h3:not(.fi-root h3),
+h4:not(.fi-root h4),
 .nothing-brand,
 .pixel-loader-logo,
 [class*="font-bold"],
@@ -6273,10 +6273,10 @@ h4,
   opacity: 1 !important;
 }
 
-p,
-label,
-li,
-small,
+p:not(.fi-root p),
+label:not(.fi-root label),
+li:not(.fi-root li),
+small:not(.fi-root small),
 .pixel-loader-label,
 [class*="text-[#64748B]"],
 [class*="text-[#94A3B8]"],
@@ -6306,17 +6306,17 @@ small,
     0 1px 0 rgba(255, 255, 255, 0.10) !important;
 }
 
-input,
-select,
-textarea {
+input:not(.fi-root input),
+select:not(.fi-root select),
+textarea:not(.fi-root textarea) {
   color: #ffffff !important;
   caret-color: #ffffff !important;
 }
 
-button:disabled,
+button:not(.fi-root button):disabled,
 .pixel-btn:disabled,
 .pixel-btn-soft:disabled,
-[disabled] {
+:not(.fi-root *)[disabled] {
   color: #a8a8a8 !important;
   opacity: 0.72 !important;
 }
@@ -6401,9 +6401,9 @@ body {
 
 body,
 button,
-input,
-select,
-textarea {
+input:not(.fi-root input),
+select:not(.fi-root select),
+textarea:not(.fi-root textarea) {
   -webkit-font-smoothing: antialiased !important;
   -moz-osx-font-smoothing: grayscale !important;
 }
@@ -6471,10 +6471,10 @@ main,
     6px 6px 0 var(--px-shadow) !important;
 }
 
-h1,
-h2,
-h3,
-h4,
+h1:not(.fi-root h1),
+h2:not(.fi-root h2),
+h3:not(.fi-root h3),
+h4:not(.fi-root h4),
 .nothing-title span:first-child,
 .nothing-brand,
 .pixel-loader-logo,
@@ -6489,10 +6489,10 @@ h4,
 }
 
 .nothing-title span:last-child,
-p,
-label,
-li,
-small,
+p:not(.fi-root p),
+label:not(.fi-root label),
+li:not(.fi-root li),
+small:not(.fi-root small),
 .pixel-loader-label,
 [class*="text-[#64748B]"],
 [class*="text-[#94A3B8]"],
@@ -6643,36 +6643,36 @@ a.pixel-btn-soft-indigo,
   border-color: var(--px-line-hi) !important;
 }
 
-input,
-select,
-textarea {
+input:not(.fi-root input),
+select:not(.fi-root select),
+textarea:not(.fi-root textarea) {
   background: var(--px-bg-3) !important;
   color: var(--px-ink) !important;
   border-color: var(--px-line) !important;
   caret-color: var(--px-cream) !important;
 }
 
-input::placeholder,
-textarea::placeholder,
+input:not(.fi-root input)::placeholder,
+textarea:not(.fi-root textarea)::placeholder,
 [class*="placeholder:text-"]::placeholder,
 [class*="placeholder-[#"]::placeholder {
   color: var(--px-faint) !important;
   opacity: 1 !important;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:not(.fi-root input):focus,
+select:not(.fi-root select):focus,
+textarea:not(.fi-root textarea):focus {
   border-color: var(--px-yellow-hi) !important;
   box-shadow:
     3px 3px 0 var(--px-shadow),
     0 0 0 1px rgba(255, 228, 92, 0.28) !important;
 }
 
-button:disabled,
+button:not(.fi-root button):disabled,
 .pixel-btn:disabled,
 .pixel-btn-soft:disabled,
-[disabled] {
+:not(.fi-root *)[disabled] {
   color: #bdb8aa !important;
   opacity: 0.68 !important;
 }
@@ -6763,10 +6763,10 @@ body::after {
     8px 8px 0 #000000 !important;
 }
 
-h1,
-h2,
-h3,
-h4,
+h1:not(.fi-root h1),
+h2:not(.fi-root h2),
+h3:not(.fi-root h3),
+h4:not(.fi-root h4),
 .pixel-panel h2,
 .pixel-panel h3,
 [class*="font-bold"],
@@ -6777,10 +6777,10 @@ h4,
   text-shadow: 1px 1px 0 #000000 !important;
 }
 
-p,
-label,
-li,
-small,
+p:not(.fi-root p),
+label:not(.fi-root label),
+li:not(.fi-root li),
+small:not(.fi-root small),
 .pixel-loader-label,
 [class*="text-[#64748B]"],
 [class*="text-[#94A3B8]"],
@@ -6802,26 +6802,26 @@ small,
   opacity: 1 !important;
 }
 
-input,
-select,
-textarea {
+input:not(.fi-root input),
+select:not(.fi-root select),
+textarea:not(.fi-root textarea) {
   background: #030303 !important;
   color: var(--px-ink) !important;
   border-color: var(--px-line) !important;
   box-shadow: inset 0 -2px 0 #000000 !important;
 }
 
-input::placeholder,
-textarea::placeholder,
+input:not(.fi-root input)::placeholder,
+textarea:not(.fi-root textarea)::placeholder,
 [class*="placeholder:text-"]::placeholder,
 [class*="placeholder-[#"]::placeholder {
   color: #8f8777 !important;
   opacity: 1 !important;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:not(.fi-root input):focus,
+select:not(.fi-root select):focus,
+textarea:not(.fi-root textarea):focus {
   border-color: var(--px-cyan) !important;
   box-shadow:
     inset 0 -2px 0 #000000,
@@ -7117,10 +7117,10 @@ a.pixel-btn-soft-indigo,
     0 0 28px var(--nothing-link-glow) !important;
 }
 
-button:disabled,
+button:not(.fi-root button):disabled,
 .pixel-btn:disabled,
 .pixel-btn-soft:disabled,
-[disabled] {
+:not(.fi-root *)[disabled] {
   color: #8e8878 !important;
   opacity: 0.55 !important;
   filter: grayscale(0.35) !important;
@@ -7197,10 +7197,10 @@ section,
     6px 6px 0 #000000 !important;
 }
 
-h1,
-h2,
-h3,
-h4,
+h1:not(.fi-root h1),
+h2:not(.fi-root h2),
+h3:not(.fi-root h3),
+h4:not(.fi-root h4),
 .pixel-panel h2,
 .pixel-panel h3,
 [class*="font-bold"],
@@ -7211,10 +7211,10 @@ h4,
   text-shadow: 1px 1px 0 #000000 !important;
 }
 
-p,
-label,
-li,
-small,
+p:not(.fi-root p),
+label:not(.fi-root label),
+li:not(.fi-root li),
+small:not(.fi-root small),
 .pixel-loader-label,
 [class*="text-[#64748B]"],
 [class*="text-[#94A3B8]"],
@@ -7236,9 +7236,9 @@ small,
   opacity: 1 !important;
 }
 
-input,
-select,
-textarea {
+input:not(.fi-root input),
+select:not(.fi-root select),
+textarea:not(.fi-root textarea) {
   background: #020202 !important;
   color: #ffffff !important;
   border-color: rgba(255, 255, 255, 0.24) !important;
@@ -7246,17 +7246,17 @@ textarea {
   box-shadow: inset 0 -2px 0 #000000 !important;
 }
 
-input::placeholder,
-textarea::placeholder,
+input:not(.fi-root input)::placeholder,
+textarea:not(.fi-root textarea)::placeholder,
 [class*="placeholder:text-"]::placeholder,
 [class*="placeholder-[#"]::placeholder {
   color: #7c7c7c !important;
   opacity: 1 !important;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:not(.fi-root input):focus,
+select:not(.fi-root select):focus,
+textarea:not(.fi-root textarea):focus {
   border-color: #ffffff !important;
   box-shadow:
     inset 0 -2px 0 #000000,
@@ -7485,9 +7485,9 @@ body::after,
 
 body,
 button,
-input,
-select,
-textarea {
+input:not(.fi-root input),
+select:not(.fi-root select),
+textarea:not(.fi-root textarea) {
   -webkit-font-smoothing: antialiased !important;
   -moz-osx-font-smoothing: grayscale !important;
   text-rendering: geometricPrecision;
@@ -7541,10 +7541,10 @@ section,
     6px 6px 0 #000000 !important;
 }
 
-h1,
-h2,
-h3,
-h4,
+h1:not(.fi-root h1),
+h2:not(.fi-root h2),
+h3:not(.fi-root h3),
+h4:not(.fi-root h4),
 .pixel-panel h2,
 .pixel-panel h3,
 [class*="font-bold"],
@@ -7555,10 +7555,10 @@ h4,
   text-shadow: 1px 1px 0 #000000 !important;
 }
 
-p,
-label,
-li,
-small,
+p:not(.fi-root p),
+label:not(.fi-root label),
+li:not(.fi-root li),
+small:not(.fi-root small),
 .pixel-loader-label,
 [class*="text-[#374151]"],
 [class*="text-[#64748B]"],
@@ -7581,9 +7581,9 @@ small,
   opacity: 1 !important;
 }
 
-input,
-select,
-textarea {
+input:not(.fi-root input),
+select:not(.fi-root select),
+textarea:not(.fi-root textarea) {
   background: #020202 !important;
   color: var(--ui-text) !important;
   border-color: var(--ui-line) !important;
@@ -7591,17 +7591,17 @@ textarea {
   box-shadow: inset 0 -2px 0 #000000 !important;
 }
 
-input::placeholder,
-textarea::placeholder,
+input:not(.fi-root input)::placeholder,
+textarea:not(.fi-root textarea)::placeholder,
 [class*="placeholder:text-"]::placeholder,
 [class*="placeholder-[#"]::placeholder {
   color: var(--ui-faint) !important;
   opacity: 1 !important;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:not(.fi-root input):focus,
+select:not(.fi-root select):focus,
+textarea:not(.fi-root textarea):focus {
   border-color: var(--ui-cyan) !important;
   box-shadow:
     inset 0 -2px 0 #000000,
@@ -7868,12 +7868,12 @@ body > * {
 
 body,
 button,
-input,
-select,
-textarea,
+input:not(.fi-root input),
+select:not(.fi-root select),
+textarea:not(.fi-root textarea),
 a,
-p,
-span,
+p:not(.fi-root p),
+span:not(.fi-root span),
 div {
   text-shadow: none !important;
 }
@@ -7902,7 +7902,7 @@ div {
 .nothing-footer,
 .pixel-app-header,
 header.sticky,
-nav {
+nav:not(.fi-root nav) {
   background: rgba(0, 0, 0, 0.94) !important;
   border-color: var(--nothing-line-soft) !important;
   backdrop-filter: none !important;
@@ -7912,7 +7912,7 @@ nav {
 .nothing-footer span,
 .pixel-app-header *,
 header.sticky *,
-nav * {
+nav:not(.fi-root nav) * {
   color: var(--nothing-text) !important;
   opacity: 1 !important;
 }
@@ -8009,9 +8009,9 @@ nav * {
     6px 6px 0 #000000 !important;
 }
 
-input,
-select,
-textarea,
+input:not(.fi-root input),
+select:not(.fi-root select),
+textarea:not(.fi-root textarea),
 [class*="bg-[#13131F]"] input,
 [class*="bg-[#13131F]"] select,
 [class*="bg-[#13131F]"] textarea {
@@ -8022,15 +8022,15 @@ textarea,
   box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.08) !important;
 }
 
-input::placeholder,
-textarea::placeholder {
+input:not(.fi-root input)::placeholder,
+textarea:not(.fi-root textarea)::placeholder {
   color: rgba(255, 255, 255, 0.44) !important;
   opacity: 1 !important;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:not(.fi-root input):focus,
+select:not(.fi-root select):focus,
+textarea:not(.fi-root textarea):focus {
   border-color: #ffffff !important;
   outline: 2px solid rgba(255, 255, 255, 0.24) !important;
   outline-offset: 2px;
@@ -8117,7 +8117,7 @@ a.pixel-btn-soft-secondary {
 
 .pixel-btn-soft:disabled,
 .pixel-btn:disabled,
-button:disabled {
+button:not(.fi-root button):disabled {
   background: #1a1a1a !important;
   color: rgba(255, 255, 255, 0.46) !important;
   border-color: rgba(255, 255, 255, 0.14) !important;
@@ -8700,9 +8700,9 @@ img[src^="data:image/svg+xml"],
 }
 
 @media (max-width: 768px) {
-  input,
-  select,
-  textarea {
+  input:not(.fi-root input),
+  select:not(.fi-root select),
+  textarea:not(.fi-root textarea) {
     font-size: max(16px, 0.9rem) !important;
   }
 

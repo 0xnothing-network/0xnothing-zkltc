@@ -4,10 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowSquareOut,
+  ArrowsLeftRight,
   CaretDown,
+  ChartLineUp,
+  Coins,
   Copy,
+  HandCoins,
   List,
+  PiggyBank,
   SignOut,
+  Vault,
   Wallet,
   X,
 } from "@phosphor-icons/react";
@@ -30,22 +36,23 @@ import { deployment, explorerAddressUrl } from "@fi/config/deployment";
 import { FI_BASE_PATH, fiPath } from "@fi/config/paths";
 import { formatAmount, shortAddress } from "@fi/lib/format";
 import { useToast } from "@fi/components/Toast";
+import { friendlyWalletError, hasInjectedWallet } from "@fi/components/ConnectWalletButton";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Trade" },
-  { href: "/pools", label: "Pools" },
-  { href: "/farm", label: "Farm" },
-  { href: "/lend", label: "Lend" },
-  { href: "/borrow", label: "Borrow" },
-  { href: "/synth", label: "Synth" },
+  { href: "/", label: "Swap", icon: ArrowsLeftRight },
+  { href: "/pools", label: "Pools", icon: Coins },
+  { href: "/farm", label: "Earn", icon: ChartLineUp },
+  { href: "/lend", label: "Lend", icon: PiggyBank },
+  { href: "/borrow", label: "Borrow", icon: HandCoins },
+  { href: "/synth", label: "Synth", icon: Vault },
 ] as const;
 
 function activePath(pathname: string, href: string): boolean {
   const localPath = pathname === FI_BASE_PATH
     ? "/"
     : pathname.startsWith(`${FI_BASE_PATH}/`) ? pathname.slice(FI_BASE_PATH.length) : pathname;
-  if (href === "/") return localPath === "/" || localPath === "/swap" || localPath.startsWith("/pools/");
-  if (href === "/pools") return localPath === "/pools";
+  if (href === "/") return localPath === "/" || localPath === "/swap";
+  if (href === "/pools") return localPath === "/pools" || localPath.startsWith("/pools/");
   return localPath === href || localPath.startsWith(`${href}/`);
 }
 
@@ -123,13 +130,15 @@ export function FiHeader() {
   }, [mobileOpen]);
 
   useEffect(() => {
-    if (connectError) toast.show("Wallet connection failed", connectError.message, "error");
+    if (!connectError) return;
+    const friendlyError = friendlyWalletError(connectError);
+    toast.show(friendlyError.title, friendlyError.message, "error");
   }, [connectError, toast]);
 
   const connectWallet = () => {
-    const connector = connectors[0];
-    if (!connector) {
-      toast.show("No wallet detected", "Install an injected wallet and refresh the page.", "warning");
+    const connector = connectors.find((candidate) => candidate.type === "injected") ?? connectors[0];
+    if (!connector || (connector.type === "injected" && !hasInjectedWallet())) {
+      toast.show("Wallet not found", "Install or enable an EVM wallet in this browser, then try again.", "warning");
       return;
     }
     connect({ connector });
@@ -154,16 +163,21 @@ export function FiHeader() {
           </Link>
 
           <nav className="fi-nav fi-nav-desktop" aria-label="0xFi navigation">
-            {NAV_ITEMS.map((item) => (
-              <Link
-                href={fiPath(item.href)}
-                key={item.href}
-                className={activePath(pathname, item.href) ? "active" : undefined}
-                aria-current={activePath(pathname, item.href) ? "page" : undefined}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {NAV_ITEMS.map((item) => {
+              const active = activePath(pathname, item.href);
+              const Icon = item.icon;
+              return (
+                <Link
+                  href={fiPath(item.href)}
+                  key={item.href}
+                  className={active ? "active" : undefined}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <Icon size={16} weight="regular" aria-hidden="true" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
           </nav>
 
           {mounted && address && !wrongChain ? (
@@ -189,8 +203,8 @@ export function FiHeader() {
                   ref={walletButtonRef}
                   type="button"
                   className="fi-button fi-button-muted fi-wallet-button"
-                  aria-haspopup="menu"
                   aria-expanded={walletOpen}
+                  aria-controls="fi-wallet-options"
                   onClick={() => setWalletOpen((open) => !open)}
                   title={address}
                 >
@@ -199,18 +213,18 @@ export function FiHeader() {
                   <CaretDown size={12} aria-hidden="true" />
                 </button>
                 {walletOpen ? (
-                  <div ref={walletMenuRef} className="fi-wallet-menu" role="menu">
+                  <div id="fi-wallet-options" ref={walletMenuRef} className="fi-wallet-menu" aria-label="Wallet options">
                     <div className="fi-wallet-menu-summary">
                       <span>Connected wallet</span>
                       <strong>{shortAddress(address, 7, 6)}</strong>
                     </div>
-                    <button type="button" role="menuitem" onClick={() => void copyAddress()}>
+                    <button type="button" onClick={() => void copyAddress()}>
                       <Copy size={15} aria-hidden="true" /> Copy address
                     </button>
-                    <a role="menuitem" href={explorerAddressUrl(address)} target="_blank" rel="noreferrer">
+                    <a href={explorerAddressUrl(address)} target="_blank" rel="noreferrer">
                       <ArrowSquareOut size={15} aria-hidden="true" /> View on explorer
                     </a>
-                    <button type="button" role="menuitem" className="danger" onClick={() => disconnect()}>
+                    <button type="button" className="danger" onClick={() => disconnect()}>
                       <SignOut size={15} aria-hidden="true" /> Disconnect
                     </button>
                   </div>
@@ -218,7 +232,7 @@ export function FiHeader() {
               </div>
             ) : mounted ? (
               <button type="button" className="fi-button fi-button-primary" disabled={connecting} onClick={connectWallet}>
-                <Wallet size={15} weight="bold" aria-hidden="true" />
+                <Wallet size={15} weight="regular" aria-hidden="true" />
                 {connecting ? "Connecting" : "Connect"}
               </button>
             ) : (
@@ -241,16 +255,21 @@ export function FiHeader() {
 
         {mobileOpen ? (
           <nav id="fi-mobile-navigation" className="fi-nav-mobile" aria-label="Mobile 0xFi navigation">
-            {NAV_ITEMS.map((item) => (
-              <Link
-                href={fiPath(item.href)}
-                key={item.href}
-                className={activePath(pathname, item.href) ? "active" : undefined}
-                aria-current={activePath(pathname, item.href) ? "page" : undefined}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {NAV_ITEMS.map((item) => {
+              const active = activePath(pathname, item.href);
+              const Icon = item.icon;
+              return (
+                <Link
+                  href={fiPath(item.href)}
+                  key={item.href}
+                  className={active ? "active" : undefined}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <Icon size={17} weight="regular" aria-hidden="true" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
           </nav>
         ) : null}
       </header>
@@ -261,6 +280,25 @@ export function FiHeader() {
           <button type="button" onClick={() => switchChain({ chainId: deployment.chain.id })}>Switch now</button>
         </div>
       ) : null}
+
+      <nav className="fi-mobile-dock" aria-label="Primary mobile navigation">
+        {NAV_ITEMS.map((item) => {
+          const active = activePath(pathname, item.href);
+          const Icon = item.icon;
+          return (
+            <Link
+              href={fiPath(item.href)}
+              key={item.href}
+              className={active ? "active" : undefined}
+              aria-current={active ? "page" : undefined}
+              aria-label={item.label}
+            >
+              <Icon size={20} weight="regular" aria-hidden="true" />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </>
   );
 }

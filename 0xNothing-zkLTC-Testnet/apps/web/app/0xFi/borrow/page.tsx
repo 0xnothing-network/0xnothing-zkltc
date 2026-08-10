@@ -3,5 +3,11 @@ import { OracleFeedTable } from "@fi/components/OracleFeedTable";
 import { PageHeading } from "@fi/components/UiStates";
 
 export default function BorrowPage() {
-  return <div className="fi-page"><PageHeading title="BORROW" /><BorrowWorkspace /><OracleFeedTable /></div>;
+  return (
+    <div className="fi-page">
+      <PageHeading title="Borrow" />
+      <BorrowWorkspace />
+      <OracleFeedTable />
+    </div>
+  );
 }

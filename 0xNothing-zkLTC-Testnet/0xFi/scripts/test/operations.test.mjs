@@ -16,8 +16,10 @@ import {
   lendingImplementationState,
   lendingRiskActionsManifestEnabled,
   lendingRuntimeState,
+  synthActivationLendingSafety,
 } from "../lib/lending-implementation.mjs";
 import { projectMainPumpGraduation } from "../lib/main-pump-publication.mjs";
+import { pumpAdministrationTopology } from "../lib/preflight-topology.mjs";
 import {
   mergeEnvironment,
   publicEnvironmentTargets,
@@ -58,6 +60,73 @@ test("governance transition uses the effective deployer without claiming complet
   };
   assert.equal(governanceMode(deployment), "transition");
   assert.equal(governanceAddress(deployment), addresses[0]);
+});
+
+test("preflight accepts only a fully bound controller-admin topology", () => {
+  const deployment = {
+    pumpAdministrationStatus: "controller-admin-active",
+    governance: addresses[0],
+    guardian: addresses[1],
+    contracts: {
+      pumpGraduationController: addresses[2],
+      pumpGraduationAdapter: addresses[3],
+    },
+  };
+  const input = {
+    account: addresses[0],
+    pump: addresses[4],
+    router: addresses[5],
+    pumpAdmin: addresses[2],
+    routerAdmin: addresses[2],
+    deployment,
+    controllerState: {
+      pump: addresses[4],
+      router: addresses[5],
+      adapter: addresses[3],
+      governance: addresses[0],
+      guardian: addresses[1],
+    },
+  };
+  assert.deepEqual(pumpAdministrationTopology(input), {
+    mode: "controller",
+    status: "controller-admin-active",
+    expectedAdmin: addresses[2],
+  });
+
+  assert.throws(
+    () => pumpAdministrationTopology({ ...input, routerAdmin: addresses[0] }),
+    /manifest does not match the live Pump and GraduationRouter admins/,
+  );
+  assert.throws(
+    () => pumpAdministrationTopology({
+      ...input,
+      controllerState: { ...input.controllerState, router: addresses[6] },
+    }),
+    /controller graduation router binding mismatch/i,
+  );
+  assert.throws(
+    () => pumpAdministrationTopology({ ...input, account: addresses[7] }),
+    /configured deployer is not the active graduation controller governance/i,
+  );
+});
+
+test("preflight preserves direct-admin support and rejects unknown manifest states", () => {
+  assert.equal(pumpAdministrationTopology({
+    account: addresses[0],
+    pump: addresses[1],
+    router: addresses[2],
+    pumpAdmin: addresses[0],
+    routerAdmin: addresses[0],
+  }).mode, "direct-eoa");
+
+  assert.throws(() => pumpAdministrationTopology({
+    account: addresses[0],
+    pump: addresses[1],
+    router: addresses[2],
+    pumpAdmin: addresses[0],
+    routerAdmin: addresses[0],
+    deployment: { pumpAdministrationStatus: "transitioning" },
+  }), /unsupported Pump administration status/i);
 });
 
 test("environment merge preserves unmanaged lines and removes stale aliases", () => {
@@ -267,7 +336,77 @@ test("synth activation rechecks empty pair and gauge accounting before opening m
   assert.match(activator, /pair\/gauge changed after staged finalization/);
   assert.match(activator, /gaugeRewardAccumulator/);
   assert.match(activator, /gaugeNusdBalance/);
+  assert.match(activator, /lendingSafety\.requiresEmptyAccounting && deposited !== 0n/);
   assert.match(activator, /receipt-backed event evidence/);
+});
+
+test("synth activation lending safety permits healthy debt only after both markets and lending are active", () => {
+  const staged = synthActivationLendingSafety({
+    allSynthActive: false,
+    activated: false,
+    bootstrapOpen: false,
+    supplyPaused: true,
+    borrowPaused: true,
+    collateralWithdrawalPaused: true,
+    totalBorrowed: 0n,
+    totalBadDebt: 0n,
+    collateralAssetCount: 5n,
+  });
+  assert.equal(staged.runtimeModeSafe, true);
+  assert.equal(staged.requiresEmptyAccounting, true);
+  assert.equal(staged.debtSafe, true);
+
+  const stagedWithDebt = synthActivationLendingSafety({
+    allSynthActive: false,
+    activated: false,
+    bootstrapOpen: false,
+    supplyPaused: true,
+    borrowPaused: true,
+    collateralWithdrawalPaused: true,
+    totalBorrowed: 1n,
+    totalBadDebt: 0n,
+    collateralAssetCount: 5n,
+  });
+  assert.equal(stagedWithDebt.debtSafe, false);
+
+  const active = synthActivationLendingSafety({
+    allSynthActive: true,
+    activated: true,
+    bootstrapOpen: false,
+    supplyPaused: false,
+    borrowPaused: false,
+    collateralWithdrawalPaused: false,
+    totalBorrowed: 123n,
+    totalBadDebt: 0n,
+    collateralAssetCount: 5n,
+  });
+  assert.equal(active.runtimeModeSafe, true);
+  assert.equal(active.requiresEmptyAccounting, false);
+  assert.equal(active.debtSafe, true);
+  assert.equal(active.badDebtSafe, true);
+
+  assert.equal(synthActivationLendingSafety({
+    allSynthActive: true,
+    activated: true,
+    bootstrapOpen: false,
+    supplyPaused: false,
+    borrowPaused: false,
+    collateralWithdrawalPaused: false,
+    totalBorrowed: 123n,
+    totalBadDebt: 1n,
+    collateralAssetCount: 5n,
+  }).badDebtSafe, false);
+  assert.equal(synthActivationLendingSafety({
+    allSynthActive: true,
+    activated: true,
+    bootstrapOpen: false,
+    supplyPaused: false,
+    borrowPaused: false,
+    collateralWithdrawalPaused: false,
+    totalBorrowed: 123n,
+    totalBadDebt: 0n,
+    collateralAssetCount: 4n,
+  }).collateralCountSafe, false);
 });
 
 test("deployment finalizers bind journal transactions to receipt senders and targets", () => {

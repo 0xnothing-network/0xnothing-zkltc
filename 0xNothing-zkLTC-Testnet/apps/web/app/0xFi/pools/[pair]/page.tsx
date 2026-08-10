@@ -14,7 +14,7 @@ export default async function PoolPage({ params }: { params: Promise<{ pair: str
     <div className="fi-page fi-trade-page">
       {pair ? (
         <>
-          <PageHeading title={`${pair[0]}/${pair[1]}`} action={<RouteLink href="/">Markets</RouteLink>} />
+          <PageHeading title={`${pair[0]}/${pair[1]}`} action={<RouteLink href="/pools">Back to pools</RouteLink>} />
           <PoolDetail pair={pair} />
         </>
       ) : <DynamicPoolDetail pool={pool!} />}

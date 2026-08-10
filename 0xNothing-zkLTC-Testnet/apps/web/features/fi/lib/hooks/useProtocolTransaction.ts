@@ -88,7 +88,7 @@ export function useProtocolTransaction() {
         if (!wallet) throw new Error("Wallet client is not ready");
 
         const approvals = approval ? (Array.isArray(approval) ? approval : [approval]) : [];
-        for (const item of approvals) {
+        for (const [approvalIndex, item] of approvals.entries()) {
           if (item.token && item.spender && item.amount > 0n) {
             const allowance = await publicClient.readContract({
               address: item.token,
@@ -98,7 +98,10 @@ export function useProtocolTransaction() {
             });
 
             if (allowance < item.amount) {
-              setState({ phase: "approving", message: "Confirm token approval in your wallet" });
+              setState({
+                phase: "approving",
+                message: `Step ${approvalIndex + 1}/${approvals.length + 1} · Approve token`,
+              });
               const approvalSimulation = await publicClient.simulateContract({
                 account: address,
                 address: item.token,
@@ -113,7 +116,7 @@ export function useProtocolTransaction() {
           }
         }
 
-        setState({ phase: "simulating", message: "Checking the transaction against current chain state" });
+        setState({ phase: "simulating", message: "Checking latest on-chain state" });
         const simulation = await publicClient.simulateContract({
           account: address,
           address: call.address,
@@ -123,9 +126,12 @@ export function useProtocolTransaction() {
           value: call.value,
         });
 
-        setState({ phase: "confirming", message: "Confirm the transaction in your wallet" });
+        setState({
+          phase: "confirming",
+          message: `Step ${approvals.length + 1}/${approvals.length + 1} · Confirm transaction`,
+        });
         const hash = await wallet.writeContract(simulation.request);
-        setState({ phase: "confirming", message: "Waiting for on-chain confirmation", hash });
+        setState({ phase: "confirming", message: "Submitted · Confirming on-chain", hash });
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
         if (receipt.status !== "success") throw new Error("Transaction reverted");
 

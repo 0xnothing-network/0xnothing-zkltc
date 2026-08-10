@@ -1,27 +1,9 @@
-"use client";
-
-import { zeroAddress, type Address } from "viem";
-import { useReadContract } from "wagmi";
+import type { Address } from "viem";
 import { deployment } from "@fi/config/deployment";
-import { dexFactoryAbi } from "@fi/lib/abis/dex";
 
 export function useActiveDexRouter(): Address | undefined {
-  const activeRouter = useReadContract({
-    address: deployment.contracts.dexFactory,
-    abi: dexFactoryAbi,
-    functionName: "router",
-    query: {
-      enabled: Boolean(deployment.contracts.dexFactory),
-      refetchInterval: 10_000,
-      retry: false,
-    },
-  });
-
-  if (deployment.contracts.dexFactory && activeRouter.isPending) {
-    return undefined;
-  }
-
-  return activeRouter.data && activeRouter.data !== zeroAddress
-    ? activeRouter.data
-    : deployment.contracts.dexRouter;
+  // The published testnet factory predates router(), so probing it produces a
+  // permanent revert and briefly destabilizes every DEX screen. Deployment
+  // metadata is the fail-closed source of truth for this release.
+  return deployment.contracts.dexRouter;
 }

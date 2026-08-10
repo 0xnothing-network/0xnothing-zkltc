@@ -5,6 +5,7 @@ import { formatUnits, zeroAddress, type Address } from "viem";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
 import { AmountField } from "@fi/components/AmountField";
 import { AssetSelect } from "@fi/components/AssetSelect";
+import { ConnectWalletButton } from "@fi/components/ConnectWalletButton";
 import { MetricStrip, NotDeployed, PanelHeading, TransactionStatus } from "@fi/components/UiStates";
 import { useToast } from "@fi/components/Toast";
 import { assets, type AssetSymbol } from "@fi/config/assets";
@@ -21,6 +22,24 @@ type Position = readonly [bigint, bigint, bigint, bigint, bigint];
 type MintQuote = readonly [bigint, bigint, boolean];
 
 const SYNTHS = ["nBTC", "nETH"] as const;
+const BPS_DENOMINATOR = 10_000n;
+const MINT_OUTPUT_HAIRCUT_BPS = 50n;
+const MINT_FEE_TOLERANCE_BPS = 100n;
+// The vault fee is 10 bps. Eleven bps safely covers the bounded fee ceiling
+// used by the MAX shortcut without ever approving the full wallet balance.
+const MAX_MINT_FEE_RATE_BPS = 11n;
+
+function amountAfterHaircut(value: bigint | undefined): bigint | undefined {
+  return value === undefined
+    ? undefined
+    : value * (BPS_DENOMINATOR - MINT_OUTPUT_HAIRCUT_BPS) / BPS_DENOMINATOR;
+}
+
+function amountWithTolerance(value: bigint | undefined): bigint | undefined {
+  return value === undefined
+    ? undefined
+    : (value * (BPS_DENOMINATOR + MINT_FEE_TOLERANCE_BPS) + BPS_DENOMINATOR - 1n) / BPS_DENOMINATOR;
+}
 
 export function SynthWorkspace() {
   const { address, isConnected } = useAccount();
@@ -55,13 +74,18 @@ export function SynthWorkspace() {
 
   const reads = useReadContracts({
     contracts: vault ? [
-      { address: vault, abi: synthVaultAbi, functionName: "position", args: [address || zeroAddress] },
-      { address: vault, abi: synthVaultAbi, functionName: "maxMintableSynthetic", args: [address || zeroAddress] },
-      { address: vault, abi: synthVaultAbi, functionName: "maxUserCollateralWithdrawable", args: [address || zeroAddress] },
       { address: vault, abi: synthVaultAbi, functionName: "mintPaused" },
       { address: vault, abi: synthVaultAbi, functionName: "withdrawPaused" },
     ] as const : [],
     query: { enabled: Boolean(vault), refetchInterval: 12_000 },
+  });
+  const walletReads = useReadContracts({
+    contracts: vault && address ? [
+      { address: vault, abi: synthVaultAbi, functionName: "position", args: [address] },
+      { address: vault, abi: synthVaultAbi, functionName: "maxMintableSynthetic", args: [address] },
+      { address: vault, abi: synthVaultAbi, functionName: "maxUserCollateralWithdrawable", args: [address] },
+    ] as const : [],
+    query: { enabled: Boolean(vault && address), refetchInterval: 12_000 },
   });
   const reserveReads = useReadContracts({
     contracts: safetyReserve ? [
@@ -74,11 +98,11 @@ export function SynthWorkspace() {
     query: { enabled: Boolean(safetyReserve), refetchInterval: 12_000 },
   });
 
-  const position = reads.data?.[0]?.result as Position | undefined;
-  const maxMintable = reads.data?.[1]?.result as bigint | undefined;
-  const maxWithdrawable = (reads.data?.[2]?.result as bigint | undefined) ?? position?.[4];
-  const mintPaused = reads.data?.[3]?.result as boolean | undefined;
-  const withdrawPaused = reads.data?.[4]?.result as boolean | undefined;
+  const position = walletReads.data?.[0]?.result as Position | undefined;
+  const maxMintable = walletReads.data?.[1]?.result as bigint | undefined;
+  const maxWithdrawable = (walletReads.data?.[2]?.result as bigint | undefined) ?? position?.[4];
+  const mintPaused = reads.data?.[0]?.result as boolean | undefined;
+  const withdrawPaused = reads.data?.[1]?.result as boolean | undefined;
 
   const totalSafetyReserve = reserveReads.data?.[0]?.result as bigint | undefined;
   const freeSafetyReserve = reserveReads.data?.[1]?.result as bigint | undefined;
@@ -90,28 +114,30 @@ export function SynthWorkspace() {
     address: vault,
     abi: synthVaultAbi,
     functionName: "quoteDepositAndMint",
-    args: amount && mode === "mint" ? [address || zeroAddress, amount] : undefined,
+    args: amount && mode === "mint" && address ? [address, amount] : undefined,
     query: {
       enabled: Boolean(vault && address && amount && mode === "mint" && oracleState.data && vaultStatus.ready),
       refetchInterval: 12_000,
     },
   });
   const mintQuote = mintQuoteState.data as MintQuote | undefined;
-  const mintAmount = mintQuote?.[0];
+  const quotedMintAmount = mintQuote?.[0];
+  const minimumMintAmount = amountAfterHaircut(quotedMintAmount);
   const reserveRequired = mintQuote?.[1];
   const quoteUsesSponsorship = mintQuote?.[2] === true;
   const mintFeeState = useReadContract({
     address: vault,
     abi: synthVaultAbi,
     functionName: "quoteMintFee",
-    args: mintAmount && mode === "mint" ? [mintAmount] : undefined,
+    args: minimumMintAmount && mode === "mint" ? [minimumMintAmount] : undefined,
     query: {
-      enabled: Boolean(vault && mintAmount && mode === "mint" && oracleState.data && vaultStatus.ready),
+      enabled: Boolean(vault && minimumMintAmount && mode === "mint" && oracleState.data && vaultStatus.ready),
       refetchInterval: 12_000,
     },
   });
-  const mintFee = mintFeeState.data as bigint | undefined;
-  const mintDebit = amount && mintFee !== undefined ? amount + mintFee : undefined;
+  const quotedMintFee = mintFeeState.data as bigint | undefined;
+  const maximumMintFee = amountWithTolerance(quotedMintFee);
+  const maximumMintDebit = amount && maximumMintFee !== undefined ? amount + maximumMintFee : undefined;
 
   const userCollateral = position?.[0];
   const reserveCollateral = position?.[1];
@@ -122,7 +148,9 @@ export function SynthWorkspace() {
     : mode === "repay"
       ? synthBalance.data
       : maxWithdrawable;
-  const mintMaximum = nusdBalance.data === undefined ? undefined : nusdBalance.data * 10_000n / 10_010n;
+  const mintMaximum = nusdBalance.data === undefined
+    ? undefined
+    : nusdBalance.data * BPS_DENOMINATOR / (BPS_DENOMINATOR + MAX_MINT_FEE_RATE_BPS);
   const maximumAmount = mode === "repay" && sourceBalance !== undefined && synthDebt !== undefined
     ? synthDebt < sourceBalance ? synthDebt : sourceBalance
     : mode === "mint" ? mintMaximum : sourceBalance;
@@ -139,16 +167,24 @@ export function SynthWorkspace() {
   const healthNumber = positionHealth === undefined || positionHealth > 10n ** 30n
     ? undefined
     : Number(positionHealth) / 1e18;
+  const healthDisplay = synthDebt === 0n
+    ? "No debt"
+    : healthNumber === undefined
+      ? "--"
+      : `${healthNumber.toFixed(2)} ${healthNumber < 1 ? "Liquidatable" : "Safe"}`;
+  const healthTone: "default" | "positive" | "danger" = synthDebt === undefined || healthNumber === undefined
+    ? "default"
+    : synthDebt === 0n || healthNumber >= 1 ? "positive" : "danger";
 
   const error = useMemo(() => {
     if (!amountText) return undefined;
     if (!amount) return "Enter a valid positive amount.";
-    const requiredBalance = mode === "mint" ? mintDebit : amount;
+    const requiredBalance = mode === "mint" ? maximumMintDebit : amount;
     if (sourceBalance !== undefined && requiredBalance !== undefined && requiredBalance > sourceBalance) {
       return mode === "withdraw"
         ? "Amount exceeds your withdrawable NUSD. Reserve backing cannot be withdrawn."
         : mode === "mint"
-          ? "NUSD balance does not cover collateral and the 0.1% mint fee."
+          ? "NUSD balance does not cover the maximum mint debit."
           : "Amount exceeds the available balance.";
     }
     if (mode === "repay" && synthDebt !== undefined && amount > synthDebt) {
@@ -156,29 +192,35 @@ export function SynthWorkspace() {
     }
     if (mode === "mint" && mintPaused) return "Minting is paused by governance.";
     if (mode === "mint" && mintQuoteState.isError) return "Unable to quote this mint from the DIA price.";
-    if (mode === "mint" && mintFeeState.isError) return "Unable to quote the 0.1% mint fee.";
-    if (mode === "mint" && mintAmount === 0n) return "This NUSD amount cannot safely mint more synth.";
+    if (mode === "mint" && mintFeeState.isError) return "Unable to quote the bounded mint fee.";
+    if (mode === "mint" && minimumMintAmount === 0n) return "This NUSD amount cannot safely mint more synth.";
     if (mode === "withdraw" && withdrawPaused) return "Collateral withdrawals are paused by governance.";
     if ((mode === "mint" || (mode === "withdraw" && synthDebt !== 0n)) && oracleState.data !== true) {
       return "DIA price is unavailable.";
     }
     return undefined;
-  }, [amount, amountText, mintAmount, mintDebit, mintFeeState.isError, mintPaused, mintQuoteState.isError, mode, oracleState.data, sourceBalance, synthDebt, withdrawPaused]);
+  }, [amount, amountText, maximumMintDebit, minimumMintAmount, mintFeeState.isError, mintPaused, mintQuoteState.isError, mode, oracleState.data, sourceBalance, synthDebt, withdrawPaused]);
+
+  function changeMode(nextMode: SynthMode) {
+    setMode(nextMode);
+    setAmountText("");
+    tx.reset();
+  }
 
   async function submit() {
     if (!amount || !address || !synthAddress || activationBlocked) return;
     const call = mode === "topup"
       ? { functionName: "depositCollateral", args: [amount, address] as const }
       : mode === "mint"
-        ? mintAmount && mintFee !== undefined
-          ? { functionName: "depositAndMint", args: [amount, mintAmount, mintFee, address] as const }
+        ? minimumMintAmount && maximumMintFee !== undefined
+          ? { functionName: "depositAndMint", args: [amount, minimumMintAmount, maximumMintFee, address] as const }
           : undefined
         : mode === "repay"
           ? { functionName: "repay", args: [amount, address] as const }
           : { functionName: "withdrawCollateral", args: [amount, address] as const };
     if (!call) return;
     const approval = mode === "topup" || mode === "mint"
-      ? { token: assets.NUSD.address, spender: vault, amount: mode === "mint" ? amount + (mintFee ?? 0n) : amount }
+      ? { token: assets.NUSD.address, spender: vault, amount: mode === "mint" ? maximumMintDebit ?? amount : amount }
       : mode === "repay"
         ? { token: synthAddress, spender: vault, amount }
         : undefined;
@@ -193,12 +235,13 @@ export function SynthWorkspace() {
         repay: `${synth} debt repaid`,
         withdraw: "NUSD collateral withdrawn",
       };
-      const detail = mode === "mint" && mintAmount
-        ? `${formatAmount(amount)} NUSD was locked, ${formatAmount(mintFee)} NUSD funded LP rewards, and ${formatTokenAmount(mintAmount)} ${synth} was received.`
-        : "The isolated synth vault position was updated.";
+      const detail = mode === "mint" && minimumMintAmount
+        ? `${formatTokenAmount(minimumMintAmount)} ${synth} received with a ${formatAmount(maximumMintDebit)} NUSD maximum debit.`
+        : "Vault position updated.";
       toast.show(labels[mode], detail, "success");
       setAmountText("");
       void reads.refetch();
+      void walletReads.refetch();
       void reserveReads.refetch();
       void safetyReserveState.refetch();
       void nusdBalance.refetch();
@@ -209,8 +252,8 @@ export function SynthWorkspace() {
   const modeLabel = sponsorshipActive === undefined
     ? "--"
     : sponsorshipActive
-      ? "1:1 sponsored"
-      : "150% safety";
+      ? "1:1 reserve-backed"
+      : "150% collateral";
   const modeTone = sponsorshipActive ? "positive" : "warning";
   const safetyTvlDetail = totalSafetyReserve === undefined || entryTvl === undefined
     ? "--"
@@ -219,32 +262,34 @@ export function SynthWorkspace() {
   return (
     <>
       <MetricStrip metrics={[
-        { label: "Mode", value: modeLabel, tone: modeTone },
-        { label: "Safety TVL", value: safetyProgress === undefined ? "--" : `${safetyProgress.toFixed(safetyProgress < 1 ? 2 : 0)}%` },
-        { label: "User locked", value: `${formatAmount(userCollateral)} NUSD` },
-        { label: "Reserve backing", value: `${formatAmount(reserveCollateral)} NUSD` },
-        { label: "Withdrawable", value: `${formatAmount(maxWithdrawable)} NUSD` },
+        { label: "Vault mode", value: modeLabel, tone: modeTone },
+        { label: "Reserve funded", value: safetyProgress === undefined ? "--" : `${safetyProgress.toFixed(safetyProgress < 1 ? 2 : 0)}%` },
+        { label: "Your mint capacity", value: `${formatTokenAmount(maxMintable)} ${synth}` },
+        { label: "Health factor", value: healthDisplay, tone: healthTone },
       ]} />
       <div className="fi-workspace-grid fi-workspace-balance">
         <section className="fi-panel">
-          <PanelHeading title="SYNTH VAULT" />
+          <PanelHeading title={`${synth} position`} />
           <div className="fi-preview-value">
             <span>Synth debt</span>
             <strong>{formatTokenAmount(synthDebt)} {synth}</strong>
           </div>
           <dl className="fi-position-list">
-            <div className="fi-position-row"><span>Safety TVL</span><strong>{safetyTvlDetail}</strong></div>
-            <div className="fi-position-row"><span>Free reserve</span><strong>{formatAmount(freeSafetyReserve)} NUSD</strong></div>
-            <div className="fi-position-row"><span>Reserve allocation</span><strong>{allocationsPaused === undefined ? "--" : allocationsPaused ? "Paused" : "Open"}</strong></div>
-            <div className="fi-position-row"><span>Mint headroom</span><strong>{formatTokenAmount(maxMintable)} {synth}</strong></div>
-            <div className="fi-position-row"><span>Health</span><strong>{synthDebt === 0n ? "No debt" : healthNumber === undefined ? "--" : healthNumber.toFixed(2)}</strong></div>
-            <div className="fi-position-row"><span>Wallet NUSD</span><strong>{formatAmount(nusdBalance.data)}</strong></div>
-            <div className="fi-position-row"><span>Wallet {synth}</span><strong>{formatTokenAmount(synthBalance.data)}</strong></div>
-            <div className="fi-position-row"><span>Price</span><strong>DIA {assets[synth].oracleKey}</strong></div>
+            <div className="fi-position-row"><span>Locked collateral</span><strong>{formatAmount(userCollateral)} NUSD</strong></div>
+            <div className="fi-position-row"><span>Withdrawable</span><strong>{formatAmount(maxWithdrawable)} NUSD</strong></div>
           </dl>
+          <details className="fi-pool-details">
+            <summary>Reserve details</summary>
+            <dl>
+              <div><dt>Safety reserve</dt><dd>{safetyTvlDetail}</dd></div>
+              <div><dt>Position backing</dt><dd>{formatAmount(reserveCollateral)} NUSD</dd></div>
+              <div><dt>Free reserve</dt><dd>{formatAmount(freeSafetyReserve)} NUSD</dd></div>
+              <div><dt>Allocations</dt><dd>{allocationsPaused === undefined ? "--" : allocationsPaused ? "Paused" : "Open"}</dd></div>
+            </dl>
+          </details>
         </section>
         <section className="fi-panel fi-sticky-panel">
-          <PanelHeading title="VAULT ACTION" />
+          <PanelHeading title={`${synth} vault`} />
           {!configured ? <NotDeployed feature={`${synth} vault`} /> : null}
           {configured && !vaultStatus.ready ? (
             <div className="fi-inline-state fi-inline-warning">
@@ -262,42 +307,52 @@ export function SynthWorkspace() {
               tx.reset();
             }}
           />
-          <div className="fi-segmented fi-segmented-four" aria-label="Synthetic vault action">
-            {(["mint", "topup", "repay", "withdraw"] as const).map((item) => (
-              <button
-                type="button"
-                className={mode === item ? `active ${item === "topup" || item === "repay" ? "positive" : item === "withdraw" ? "danger" : ""}` : ""}
-                onClick={() => {
-                  setMode(item);
-                  setAmountText("");
-                  tx.reset();
-                }}
-                key={item}
-              >
-                {item === "topup" ? "Top up" : item[0].toUpperCase() + item.slice(1)}
-              </button>
-            ))}
+          <div className="fi-segmented" role="group" aria-label="Synthetic debt action">
+            <button type="button" className={mode === "mint" ? "active" : ""} aria-pressed={mode === "mint"} onClick={() => changeMode("mint")}>Mint</button>
+            <button type="button" className={mode === "repay" ? "active" : ""} aria-pressed={mode === "repay"} onClick={() => changeMode("repay")}>Repay</button>
           </div>
-          <div className="fi-form">
+          <details className="fi-settings-details">
+            <summary>
+              <span>Manage collateral</span>
+              <strong>{mode === "topup" ? "Top up" : mode === "withdraw" ? "Withdraw" : `${formatAmount(userCollateral)} NUSD`}</strong>
+            </summary>
+            <div className="fi-section-stack fi-slippage-control fi-disclosure-body">
+              <div className="fi-segmented" role="group" aria-label="Synthetic collateral action">
+                <button type="button" className={mode === "topup" ? "active" : ""} aria-pressed={mode === "topup"} onClick={() => changeMode("topup")}>Top up</button>
+                <button type="button" className={mode === "withdraw" ? "active" : ""} aria-pressed={mode === "withdraw"} onClick={() => changeMode("withdraw")}>Withdraw</button>
+              </div>
+            </div>
+          </details>
+          <form className="fi-form" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
             <AmountField
               id="synth-input"
-              label={mode === "mint" ? "NUSD" : mode === "topup" ? "Top up" : mode === "repay" ? "Repay" : "Withdraw"}
+              label={mode === "mint" ? "You deposit" : mode === "topup" ? "Top up" : mode === "repay" ? "Repay" : "Withdraw"}
               asset={mode === "repay" ? synth : "NUSD"}
               value={amountText}
               balance={mode === "withdraw" ? formatAmount(maxWithdrawable) : mode === "repay" ? formatTokenAmount(sourceBalance) : formatAmount(sourceBalance)}
+              helper={mode === "mint" ? `NUSD is locked as collateral while ${synth} is minted.` : undefined}
               onChange={setAmountText}
               onMax={maximumAmount && maximumAmount > 0n ? () => setAmountText(formatUnits(maximumAmount, 18)) : undefined}
               error={error}
             />
             {mode === "mint" ? (
-              <dl className="fi-form-details">
-                <div><dt>Receive</dt><dd>{formatTokenAmount(mintAmount)} {synth}</dd></div>
-                <div><dt>User locked</dt><dd>{formatAmount(amount)} NUSD</dd></div>
-                <div><dt>LP fee (0.1%)</dt><dd>{formatAmount(mintFee)} NUSD</dd></div>
-                <div><dt>Wallet debit</dt><dd>{formatAmount(mintDebit)} NUSD</dd></div>
-                <div><dt>Reserve backing</dt><dd>{formatAmount(reserveRequired)} NUSD</dd></div>
-                <div><dt>Funding</dt><dd>{mintQuote ? quoteUsesSponsorship ? "1:1 + reserve" : "150% safety" : "--"}</dd></div>
-              </dl>
+              <>
+                <dl className="fi-form-details" aria-label="Mint preview">
+                  <div><dt>You receive at least</dt><dd>{formatTokenAmount(minimumMintAmount)} {synth}</dd></div>
+                  <div><dt>You spend at most</dt><dd>{formatAmount(maximumMintDebit)} NUSD</dd></div>
+                </dl>
+                {amount ? (
+                  <details className="fi-pool-details">
+                    <summary>Mint details</summary>
+                    <dl>
+                      <div><dt>Collateral locked</dt><dd>{formatAmount(amount)} NUSD</dd></div>
+                      <div><dt>Maximum fee</dt><dd>{formatAmount(maximumMintFee)} NUSD</dd></div>
+                      <div><dt>Reserve added</dt><dd>{formatAmount(reserveRequired)} NUSD</dd></div>
+                      <div><dt>Backing</dt><dd>{mintQuote ? quoteUsesSponsorship ? "1:1 + reserve" : "150% safety" : "--"}</dd></div>
+                    </dl>
+                  </details>
+                ) : null}
+              </>
             ) : mode === "withdraw" ? (
               <dl className="fi-form-details">
                 <div><dt>Your locked NUSD</dt><dd>{formatAmount(userCollateral)} NUSD</dd></div>
@@ -305,16 +360,17 @@ export function SynthWorkspace() {
               </dl>
             ) : null}
             {(mintBlocked || withdrawBlocked) && !activationBlocked ? <div className="fi-inline-state fi-inline-warning"><div><strong>DIA price unavailable</strong></div></div> : null}
-            <button
-              type="button"
-              className={`fi-button fi-button-block ${mode === "mint" || mode === "withdraw" ? "fi-button-danger" : "fi-button-primary"}`}
-              disabled={!configured || riskBlocked || !isConnected || !amount || (mode === "mint" && (!mintAmount || mintFee === undefined)) || Boolean(error) || tx.pending}
-              onClick={() => void submit()}
-            >
-              {!configured ? "Not deployed" : activationBlocked ? vaultStatus.actionLabel : !isConnected ? "Connect wallet" : tx.pending ? "Processing" : mode === "mint" ? `Mint ${synth}` : mode === "topup" ? "Top up" : `${mode[0].toUpperCase()}${mode.slice(1)}`}
-            </button>
+            {!isConnected ? <ConnectWalletButton /> : (
+              <button
+                type="submit"
+                className={`fi-button fi-button-block ${mode === "withdraw" ? "fi-button-muted" : "fi-button-primary"}`}
+                disabled={!configured || riskBlocked || !amount || (mode === "mint" && (!minimumMintAmount || maximumMintFee === undefined)) || Boolean(error) || tx.pending}
+              >
+                {!configured ? "Not deployed" : activationBlocked ? vaultStatus.actionLabel : tx.pending ? "Processing" : mode === "mint" ? `Mint ${synth}` : mode === "topup" ? "Top up" : `${mode[0].toUpperCase()}${mode.slice(1)}`}
+              </button>
+            )}
             <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />
-          </div>
+          </form>
         </section>
       </div>
     </>

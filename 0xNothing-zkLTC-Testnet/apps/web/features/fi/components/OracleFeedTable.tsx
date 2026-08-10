@@ -28,8 +28,8 @@ export function OracleFeedTable({ compact = false }: { compact?: boolean }) {
   const now = Math.floor(Date.now() / 1000);
   return (
     <section className={compact ? "fi-panel fi-panel-flush" : "fi-panel"}>
-      <div className={compact ? "fi-panel-heading fi-table-panel-heading" : ""}>
-        <PanelHeading title="DIA ORACLES" />
+      <div className={compact ? "fi-table-panel-heading" : ""}>
+        <PanelHeading title="Oracle prices" label="Powered by DIA" />
       </div>
       <div className="fi-table-wrap" tabIndex={0} aria-label="DIA oracle feed table">
         <table className="fi-table fi-oracle-table">
@@ -47,11 +47,11 @@ export function OracleFeedTable({ compact = false }: { compact?: boolean }) {
               const fresh = complete && timestamp > 0 && timestamp <= now && now - timestamp <= 5_400;
               return (
                 <tr key={feed.key}>
-                  <td>{feed.asset}</td>
-                  <td>{feed.key}</td>
-                  <td>{value !== undefined && value > 0n ? `$${formatAmount(value, decimals, 4)}` : "--"}</td>
-                  <td>{timestamp ? formatRelativeTimestamp(timestamp) : "--"}</td>
-                  <td><span className="fi-status" data-state={fresh ? "live" : "offline"}>{fresh ? "Fresh" : "Unavailable"}</span></td>
+                  <td data-label="Asset">{feed.asset}</td>
+                  <td className="fi-oracle-key-cell" data-label="Feed">{feed.key}</td>
+                  <td data-label="Price">{value !== undefined && value > 0n ? `$${formatAmount(value, decimals, 4)}` : "--"}</td>
+                  <td className="fi-oracle-updated-cell" data-label="Updated">{timestamp ? formatRelativeTimestamp(timestamp) : "--"}</td>
+                  <td data-label="Status"><span className="fi-status" data-state={fresh ? "live" : "offline"}>{fresh ? "Fresh" : "Unavailable"}</span></td>
                 </tr>
               );
             })}

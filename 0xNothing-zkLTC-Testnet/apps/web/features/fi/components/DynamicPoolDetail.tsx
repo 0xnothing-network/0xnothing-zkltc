@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowClockwise, ArrowLeft, ArrowsDownUp, HourglassSimple, Warning } from "@phosphor-icons/react";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
-import { formatUnits, zeroAddress, type Address } from "viem";
+import { formatUnits, type Address } from "viem";
 import { AmountField } from "@fi/components/AmountField";
-import { MarketChart } from "@fi/components/MarketChart";
+import { ConnectWalletButton } from "@fi/components/ConnectWalletButton";
+import { LazyMarketChart } from "@fi/components/LazyMarketChart";
 import { RecentActivity } from "@fi/components/RecentActivity";
 import { SlippageControl } from "@fi/components/SlippageControl";
 import { TokenPairLogos, tokenImageUrl } from "@fi/components/TokenLogo";
@@ -71,53 +72,64 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
     args: [pool],
     query: { enabled: Boolean(deployment.contracts.dexFactory), staleTime: 60_000 },
   });
-  const pairData = useReadContracts({
+  const pairMetadata = useReadContracts({
     contracts: [
       { address: pool, abi: dexPoolAbi, functionName: "token0" },
       { address: pool, abi: dexPoolAbi, functionName: "token1" },
+    ] as const,
+    query: { enabled: validation.data === true, staleTime: 5 * 60_000 },
+  });
+  const poolToken0 = pairMetadata.data?.[0]?.result as Address | undefined;
+  const poolToken1 = pairMetadata.data?.[1]?.result as Address | undefined;
+  const pairData = useReadContracts({
+    contracts: [
       { address: pool, abi: dexPoolAbi, functionName: "getReserves" },
       { address: pool, abi: dexPoolAbi, functionName: "totalSupply" },
-      { address: pool, abi: dexPoolAbi, functionName: "balanceOf", args: [address ?? zeroAddress] },
     ] as const,
     query: { enabled: validation.data === true, refetchInterval: 12_000 },
   });
-  const poolToken0 = pairData.data?.[0]?.result as Address | undefined;
-  const poolToken1 = pairData.data?.[1]?.result as Address | undefined;
-  const rawReserves = pairData.data?.[2]?.result as readonly [bigint, bigint, number] | undefined;
-  const totalSupply = pairData.data?.[3]?.result as bigint | undefined;
-  const lpBalance = pairData.data?.[4]?.result as bigint | undefined;
-  const pairReadFailed = pairData.data?.slice(0, 4).some((result) => result.status === "failure") ?? false;
+  const rawReserves = pairData.data?.[0]?.result as readonly [bigint, bigint, number] | undefined;
+  const totalSupply = pairData.data?.[1]?.result as bigint | undefined;
+  const pairMetadataReadFailed = pairMetadata.data?.some((result) => result.status === "failure") ?? false;
+  const pairReadFailed = pairData.data?.some((result) => result.status === "failure") ?? false;
   const nusdAddress = deployment.contracts.nusd?.toLowerCase();
   const quoteFirst = Boolean(poolToken0 && nusdAddress && poolToken0.toLowerCase() === nusdAddress);
   const tokenA = quoteFirst ? poolToken1 : poolToken0;
   const tokenB = quoteFirst ? poolToken0 : poolToken1;
   const rawReserveA = quoteFirst ? rawReserves?.[1] : rawReserves?.[0];
   const rawReserveB = quoteFirst ? rawReserves?.[0] : rawReserves?.[1];
-  const tokenData = useReadContracts({
+  const tokenMetadata = useReadContracts({
     contracts: tokenA && tokenB ? [
       { address: tokenA, abi: erc20Abi, functionName: "symbol" },
       { address: tokenB, abi: erc20Abi, functionName: "symbol" },
       { address: tokenA, abi: erc20Abi, functionName: "decimals" },
       { address: tokenB, abi: erc20Abi, functionName: "decimals" },
-      { address: tokenA, abi: erc20Abi, functionName: "balanceOf", args: [address ?? zeroAddress] },
-      { address: tokenB, abi: erc20Abi, functionName: "balanceOf", args: [address ?? zeroAddress] },
       { address: tokenA, abi: tokenImageAbi, functionName: "imageURI" },
       { address: tokenB, abi: tokenImageAbi, functionName: "imageURI" },
     ] as const : [],
-    query: { enabled: Boolean(tokenA && tokenB), refetchInterval: 12_000 },
+    query: { enabled: Boolean(tokenA && tokenB), staleTime: 5 * 60_000 },
   });
-  const symbolA = displaySymbol(tokenData.data?.[0]?.result as string | undefined);
-  const symbolB = displaySymbol(tokenData.data?.[1]?.result as string | undefined);
-  const decimalsA = (tokenData.data?.[2]?.result as number | undefined) ?? 18;
-  const decimalsB = (tokenData.data?.[3]?.result as number | undefined) ?? 18;
+  const symbolA = displaySymbol(tokenMetadata.data?.[0]?.result as string | undefined);
+  const symbolB = displaySymbol(tokenMetadata.data?.[1]?.result as string | undefined);
+  const decimalsA = (tokenMetadata.data?.[2]?.result as number | undefined) ?? 18;
+  const decimalsB = (tokenMetadata.data?.[3]?.result as number | undefined) ?? 18;
   const amountA = parseAmount(amountAText, decimalsA);
   const amountB = parseAmount(amountBText, decimalsB);
   const liquidity = parseAmount(lpText);
-  const balanceA = tokenData.data?.[4]?.result as bigint | undefined;
-  const balanceB = tokenData.data?.[5]?.result as bigint | undefined;
-  const tokenReadFailed = tokenData.data?.slice(0, 4).some((result) => result.status === "failure") ?? false;
-  const imageA = tokenImageUrl(tokenData.data?.[6]?.result as string | undefined);
-  const imageB = tokenImageUrl(tokenData.data?.[7]?.result as string | undefined);
+  const imageA = tokenImageUrl(tokenMetadata.data?.[4]?.result as string | undefined);
+  const imageB = tokenImageUrl(tokenMetadata.data?.[5]?.result as string | undefined);
+  const tokenReadFailed = tokenMetadata.data?.slice(0, 4).some((result) => result.status === "failure") ?? false;
+  const walletBalances = useReadContracts({
+    contracts: address && tokenA && tokenB ? [
+      { address: pool, abi: dexPoolAbi, functionName: "balanceOf", args: [address] },
+      { address: tokenA, abi: erc20Abi, functionName: "balanceOf", args: [address] },
+      { address: tokenB, abi: erc20Abi, functionName: "balanceOf", args: [address] },
+    ] as const : [],
+    query: { enabled: Boolean(address && tokenA && tokenB), refetchInterval: 12_000 },
+  });
+  const lpBalance = walletBalances.data?.[0]?.result as bigint | undefined;
+  const balanceA = walletBalances.data?.[1]?.result as bigint | undefined;
+  const balanceB = walletBalances.data?.[2]?.result as bigint | undefined;
   const swapTokenIn = swapInputIndex === 0 ? tokenA : tokenB;
   const swapTokenOut = swapInputIndex === 0 ? tokenB : tokenA;
   const swapSymbolIn = swapInputIndex === 0 ? symbolA : symbolB;
@@ -194,16 +206,33 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
     : undefined;
   const pairCoreReady = Boolean(tokenA && tokenB && rawReserves && totalSupply !== undefined);
   const tokenMetadataReady = Boolean(
-    tokenData.data?.[0]?.result
-    && tokenData.data?.[1]?.result
-    && tokenData.data?.[2]?.result !== undefined
-    && tokenData.data?.[3]?.result !== undefined,
+    tokenMetadata.data?.[0]?.result
+    && tokenMetadata.data?.[1]?.result
+    && tokenMetadata.data?.[2]?.result !== undefined
+    && tokenMetadata.data?.[3]?.result !== undefined,
   );
-  const poolReadError = Boolean(validation.error || pairData.error || pairReadFailed || tokenData.error || tokenReadFailed);
+  const poolReadError = Boolean(
+    validation.error
+    || pairMetadata.error
+    || pairMetadataReadFailed
+    || pairData.error
+    || pairReadFailed
+    || tokenMetadata.error
+    || tokenReadFailed,
+  );
   const poolLoading = !poolReadError && (
     validation.isPending
     || validation.data === undefined
-    || (validation.data === true && (pairData.isPending || !pairCoreReady || tokenData.isPending || !tokenMetadataReady))
+    || (
+      validation.data === true
+      && (
+        pairMetadata.isPending
+        || pairData.isPending
+        || !pairCoreReady
+        || tokenMetadata.isPending
+        || !tokenMetadataReady
+      )
+    )
   );
   const poolReady = Boolean(
     validation.data === true
@@ -241,8 +270,10 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   function retryPoolReads() {
     void validation.refetch();
     if (validation.data === true) {
+      void pairMetadata.refetch();
       void pairData.refetch();
-      void tokenData.refetch();
+      void tokenMetadata.refetch();
+      if (address) void walletBalances.refetch();
       void reserveRead.refetch();
       void swapsPaused.refetch();
       void oraclePriceRead.refetch();
@@ -286,7 +317,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
     if (hash) {
       toast.show("Swap confirmed", `${swapSymbolIn}/${swapSymbolOut} settled.`, "success");
       setSwapAmountText("");
-      void pairData.refetch(); void tokenData.refetch(); void reserveRead.refetch(); void swapQuote.refetch();
+      void pairData.refetch(); void reserveRead.refetch(); void walletBalances.refetch(); void swapQuote.refetch();
     }
   }
 
@@ -317,7 +348,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
     if (hash) {
       toast.show("Liquidity added", `${symbolA}/${symbolB} pool updated.`, "success");
       setAmountAText(""); setAmountBText("");
-      void pairData.refetch(); void tokenData.refetch();
+      void pairData.refetch(); void reserveRead.refetch(); void walletBalances.refetch();
     }
   }
 
@@ -342,7 +373,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
     });
     if (hash) {
       toast.show("Liquidity removed", `${symbolA}/${symbolB} assets returned.`, "success");
-      setLpText(""); void pairData.refetch();
+      setLpText(""); void pairData.refetch(); void reserveRead.refetch(); void walletBalances.refetch();
     }
   }
 
@@ -351,7 +382,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   return (
     <>
       <header className="fi-trade-header">
-        <Link className="fi-icon-button fi-trade-back" href={fiPath("/")} aria-label="Back to markets" title="Back to markets">
+        <Link className="fi-icon-button fi-trade-back" href={fiPath("/pools")} aria-label="Back to pools" title="Back to pools">
           <ArrowLeft size={19} weight="bold" aria-hidden="true" />
         </Link>
         <div className="fi-trade-identity">
@@ -369,7 +400,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
       </header>
       <div className="fi-workspace-grid fi-trade-workspace">
         <div className="fi-main-stack">
-          <MarketChart
+          <LazyMarketChart
             pair={pool.toLowerCase()}
             label={`${symbolA}/${symbolB}`}
             token0={{ symbol: symbolA, imageUrl: imageA }}
@@ -386,7 +417,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
             </dl>
           </details>
         </div>
-        <aside className="fi-panel fi-sticky-panel fi-trade-panel">
+        <aside className="fi-panel fi-sticky-panel fi-trade-panel fi-primary-action">
           {poolLoading ? (
             <div className="fi-inline-state" role="status">
               <HourglassSimple size={17} weight="bold" aria-hidden="true" />
@@ -415,10 +446,10 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
             </div>
           ) : null}
           {swapsPaused.data ? <div className="fi-inline-state fi-inline-danger" role="alert"><div><strong>Swaps paused</strong></div></div> : null}
-          <div className="fi-segmented" aria-label="Pool action">
-            <button type="button" className={mode === "swap" ? "active positive" : ""} onClick={() => { setMode("swap"); tx.reset(); }}>Swap</button>
-            <button type="button" className={mode === "add" ? "active positive" : ""} onClick={() => { setMode("add"); tx.reset(); }}>Add</button>
-            <button type="button" className={mode === "remove" ? "active danger" : ""} onClick={() => { setMode("remove"); tx.reset(); }}>Remove</button>
+          <div className="fi-segmented" role="group" aria-label="Pool action">
+            <button type="button" className={mode === "swap" ? "active positive" : ""} aria-pressed={mode === "swap"} onClick={() => { setMode("swap"); tx.reset(); }}>Swap</button>
+            <button type="button" className={mode === "add" ? "active positive" : ""} aria-pressed={mode === "add"} onClick={() => { setMode("add"); tx.reset(); }}>Add</button>
+            <button type="button" className={mode === "remove" ? "active" : ""} aria-pressed={mode === "remove"} onClick={() => { setMode("remove"); tx.reset(); }}>Remove</button>
           </div>
           <div className="fi-form">
             {mode === "swap" ? <>
@@ -459,15 +490,20 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
                 <div><dt>Expected {symbolB}</dt><dd>{formatAmount(removeAmountB, decimalsB)}</dd></div>
               </dl>
             </>}
-            <SlippageControl value={slippageBps} onChange={setSlippageBps} />
-            <button
-              type="button"
-              className={`fi-button fi-button-block ${mode === "remove" ? "fi-button-danger" : "fi-button-primary"}`}
-              disabled={!poolReady || !isConnected || Boolean(error) || tx.pending || (mode === "swap" ? !poolHasLiquidity || !swapStateReady || Boolean(swapsPaused.data) || swapQuote.isFetching || !swapAmountIn || !swapAmountOut : mode === "add" ? !amountA || !amountB || !expectedLiquidity : !poolHasLiquidity || !liquidity || removeAmountA === undefined || removeAmountB === undefined)}
-              onClick={() => void (mode === "swap" ? submitSwap() : mode === "add" ? submitAdd() : submitRemove())}
-            >
-              {!poolReady ? poolLoading ? "Loading pool" : "Pool unavailable" : !isConnected ? "Connect wallet" : tx.pending ? "Processing" : mode === "swap" ? !poolHasLiquidity ? "No liquidity" : routeReadError ? "Route unavailable" : !swapStateReady ? "Checking route" : swapsPaused.data ? "Swaps paused" : "Swap" : mode === "add" ? "Add liquidity" : !poolHasLiquidity ? "No liquidity" : "Remove liquidity"}
-            </button>
+            <details className="fi-settings-details">
+              <summary><span>Transaction settings</span><strong>{Number(slippageBps) / 100}% slippage</strong></summary>
+              <SlippageControl value={slippageBps} onChange={setSlippageBps} />
+            </details>
+            {!isConnected ? <ConnectWalletButton /> : (
+              <button
+                type="button"
+                className={`fi-button fi-button-block ${mode === "remove" ? "fi-button-muted" : "fi-button-primary"}`}
+                disabled={!poolReady || Boolean(error) || tx.pending || (mode === "swap" ? !poolHasLiquidity || !swapStateReady || Boolean(swapsPaused.data) || swapQuote.isFetching || !swapAmountIn || !swapAmountOut : mode === "add" ? !amountA || !amountB || !expectedLiquidity : !poolHasLiquidity || !liquidity || removeAmountA === undefined || removeAmountB === undefined)}
+                onClick={() => void (mode === "swap" ? submitSwap() : mode === "add" ? submitAdd() : submitRemove())}
+              >
+                {!poolReady ? poolLoading ? "Loading pool" : "Pool unavailable" : tx.pending ? "Processing" : mode === "swap" ? !poolHasLiquidity ? "No liquidity" : routeReadError ? "Route unavailable" : !swapStateReady ? "Checking route" : swapsPaused.data ? "Swaps paused" : "Swap" : mode === "add" ? "Add liquidity" : !poolHasLiquidity ? "No liquidity" : "Remove liquidity"}
+              </button>
+            )}
             <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />
           </div>
         </aside>

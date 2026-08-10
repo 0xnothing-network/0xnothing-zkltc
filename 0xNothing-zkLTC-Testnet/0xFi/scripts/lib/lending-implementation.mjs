@@ -140,3 +140,39 @@ export function lendingActivationState(
     ready: runtimeReadable && liveEnabled && manifestEnabled,
   };
 }
+
+export function synthActivationLendingSafety({
+  allSynthActive,
+  activated,
+  bootstrapOpen,
+  supplyPaused,
+  borrowPaused,
+  collateralWithdrawalPaused,
+  totalBorrowed,
+  totalBadDebt,
+  collateralAssetCount,
+  expectedCollateralAssetCount = 5n,
+}) {
+  const staged = !activated
+    && !bootstrapOpen
+    && supplyPaused
+    && borrowPaused
+    && collateralWithdrawalPaused;
+  const active = activated
+    && !bootstrapOpen
+    && !supplyPaused
+    && !borrowPaused
+    && !collateralWithdrawalPaused;
+  const runtimeModeSafe = allSynthActive ? staged || active : staged;
+  const requiresEmptyAccounting = !allSynthActive || !active;
+
+  return {
+    staged,
+    active,
+    runtimeModeSafe,
+    requiresEmptyAccounting,
+    collateralCountSafe: collateralAssetCount === expectedCollateralAssetCount,
+    debtSafe: !requiresEmptyAccounting || totalBorrowed === 0n,
+    badDebtSafe: totalBadDebt === 0n,
+  };
+}

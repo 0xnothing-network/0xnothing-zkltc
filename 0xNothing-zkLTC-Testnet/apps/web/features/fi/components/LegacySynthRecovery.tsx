@@ -1,6 +1,6 @@
 "use client";
 
-import { zeroAddress, type Address } from "viem";
+import { type Address } from "viem";
 import { useAccount, useReadContracts } from "wagmi";
 import { useToast } from "@fi/components/Toast";
 import { PanelHeading, TransactionStatus } from "@fi/components/UiStates";
@@ -11,25 +11,36 @@ import { useProtocolTransaction } from "@fi/lib/hooks/useProtocolTransaction";
 
 type LegacyPosition = readonly [bigint, bigint];
 
-function LegacyVaultRow({ symbol, vault }: { symbol: "nBTC" | "nETH"; vault: Address }) {
-  const { address, isConnected } = useAccount();
+function LegacyVaultRow({
+  address,
+  onRefresh,
+  position,
+  positionReadFailed,
+  symbol,
+  vault,
+}: {
+  address: Address;
+  onRefresh: () => void;
+  position?: LegacyPosition;
+  positionReadFailed: boolean;
+  symbol: "nBTC" | "nETH";
+  vault: Address;
+}) {
   const toast = useToast();
   const tx = useProtocolTransaction();
   const reads = useReadContracts({
     contracts: [
-      { address: vault, abi: legacySynthVaultAbi, functionName: "positions", args: [address || zeroAddress] },
       { address: vault, abi: legacySynthVaultAbi, functionName: "mintPaused" },
       { address: vault, abi: legacySynthVaultAbi, functionName: "withdrawPaused" },
     ] as const,
     query: { enabled: Boolean(vault), refetchInterval: 15_000 },
   });
-  const position = reads.data?.[0]?.result as LegacyPosition | undefined;
   const collateral = position?.[0];
   const debt = position?.[1];
-  const mintPaused = reads.data?.[1]?.result as boolean | undefined;
-  const withdrawPaused = reads.data?.[2]?.result as boolean | undefined;
+  const mintPaused = reads.data?.[0]?.result as boolean | undefined;
+  const withdrawPaused = reads.data?.[1]?.result as boolean | undefined;
   const canWithdraw = Boolean(
-    isConnected
+    !positionReadFailed
       && address
       && collateral
       && collateral > 0n
@@ -54,6 +65,7 @@ function LegacyVaultRow({ symbol, vault }: { symbol: "nBTC" | "nETH"; vault: Add
       "success",
     );
     void reads.refetch();
+    onRefresh();
   }
 
   return (
@@ -77,8 +89,8 @@ function LegacyVaultRow({ symbol, vault }: { symbol: "nBTC" | "nETH"; vault: Add
           disabled={!canWithdraw || tx.pending}
           onClick={() => void withdrawLegacyCollateral()}
         >
-          {!isConnected
-            ? "Connect wallet"
+          {positionReadFailed
+            ? "Position unavailable"
             : withdrawPaused
               ? "Withdrawal paused"
               : debt && debt > 0n
@@ -92,26 +104,60 @@ function LegacyVaultRow({ symbol, vault }: { symbol: "nBTC" | "nETH"; vault: Add
       {mintPaused === false ? (
         <small className="fi-inline-warning">Legacy minting has not been retired.</small>
       ) : null}
+      {positionReadFailed ? (
+        <small className="fi-inline-warning">Position data could not be checked. Try again later.</small>
+      ) : null}
     </article>
   );
 }
 
 export function LegacySynthRecovery() {
+  const { address, isConnected } = useAccount();
   const vaults = [
     ["nBTC", deployment.contracts.legacyNbtcVault],
     ["nETH", deployment.contracts.legacyNethVault],
   ] as const;
   const configured = vaults.filter((entry): entry is readonly ["nBTC" | "nETH", Address] => Boolean(entry[1]));
-  if (configured.length === 0) return null;
+  const walletReads = useReadContracts({
+    contracts: address ? configured.map(([, vault]) => ({
+      address: vault,
+      abi: legacySynthVaultAbi,
+      functionName: "positions" as const,
+      args: [address] as const,
+    })) : [],
+    query: { enabled: Boolean(address && configured.length > 0), refetchInterval: 15_000 },
+  });
+  const rows = configured.map(([symbol, vault], index) => {
+    const result = walletReads.data?.[index];
+    const positionReadFailed = Boolean(walletReads.isError || !result || result.status === "failure");
+    const position = result?.status === "success" ? result.result as LegacyPosition : undefined;
+    return { position, positionReadFailed, symbol, vault };
+  });
+  const visibleRows = rows.filter(({ position, positionReadFailed }) => (
+    positionReadFailed || Boolean(position && (position[0] > 0n || position[1] > 0n))
+  ));
+
+  if (configured.length === 0 || !isConnected || !address || walletReads.isPending) return null;
+  if (visibleRows.length === 0) return null;
 
   return (
     <section className="fi-panel fi-legacy-recovery" aria-label="Legacy synth collateral recovery">
-      <PanelHeading title="LEGACY COLLATERAL RECOVERY" />
+      <PanelHeading title="Legacy recovery" />
       <p className="fi-panel-copy">
-        Old synth markets are retired, but their debt-free NUSD collateral remains fully withdrawable.
+        Recover NUSD collateral left in retired synth vaults.
       </p>
       <div className="fi-position-list">
-        {configured.map(([symbol, vault]) => <LegacyVaultRow symbol={symbol} vault={vault} key={vault} />)}
+        {visibleRows.map(({ position, positionReadFailed, symbol, vault }) => (
+          <LegacyVaultRow
+            address={address}
+            onRefresh={() => { void walletReads.refetch(); }}
+            position={position}
+            positionReadFailed={positionReadFailed}
+            symbol={symbol}
+            vault={vault}
+            key={vault}
+          />
+        ))}
       </div>
     </section>
   );

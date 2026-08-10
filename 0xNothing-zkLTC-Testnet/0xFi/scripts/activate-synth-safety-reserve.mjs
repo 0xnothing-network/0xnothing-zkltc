@@ -14,6 +14,7 @@ import {
 import {
   CURRENT_LENDING_IMPLEMENTATION_ID,
   lendingCollateralConfigurationMatches,
+  synthActivationLendingSafety,
 } from "./lib/lending-implementation.mjs";
 import { writePublicEnvironment } from "./lib/public-environment.mjs";
 
@@ -390,21 +391,27 @@ const lendingState = await Promise.all([
 if (String(lendingState[0]).toLowerCase() !== CURRENT_LENDING_IMPLEMENTATION_ID) {
   throw new Error("Synth activation requires the reviewed fixed-rate lending implementation");
 }
-const lendingStaged = !lendingState[1]
-  && !lendingState[2]
-  && lendingState[3]
-  && lendingState[4]
-  && lendingState[5];
-const lendingActive = lendingState[1]
-  && !lendingState[2]
-  && !lendingState[3]
-  && !lendingState[4]
-  && !lendingState[5];
-if ((!allSynthActive && !lendingStaged) || (allSynthActive && !lendingStaged && !lendingActive)) {
+const lendingSafety = synthActivationLendingSafety({
+  allSynthActive,
+  activated: lendingState[1],
+  bootstrapOpen: lendingState[2],
+  supplyPaused: lendingState[3],
+  borrowPaused: lendingState[4],
+  collateralWithdrawalPaused: lendingState[5],
+  totalBorrowed: lendingState[6],
+  totalBadDebt: lendingState[7],
+  collateralAssetCount: lendingState[8],
+});
+const lendingStaged = lendingSafety.staged;
+const lendingActive = lendingSafety.active;
+if (!lendingSafety.runtimeModeSafe) {
   throw new Error("Lending must remain safely staged until synth activation completes");
 }
-if (lendingState[6] !== 0n || lendingState[7] !== 0n || lendingState[8] !== 5n) {
-  throw new Error("Lending debt, bad debt, or collateral count is not synth-activation safe");
+if (!lendingSafety.collateralCountSafe) {
+  throw new Error("Lending collateral count is not synth-activation safe");
+}
+if (!lendingSafety.debtSafe || !lendingSafety.badDebtSafe) {
+  throw new Error("Lending debt or bad debt is not synth-activation safe");
 }
 for (const [index, expected] of [
   [9, addresses.wzkLTC],
@@ -426,7 +433,10 @@ for (const [asset, oracle, cap, enabled] of collateralDefinitions) {
     read(addresses.lending, lendingAbi, "collateralConfigs", [asset]),
     read(addresses.lending, lendingAbi, "totalCollateralByAsset", [asset]),
   ]);
-  if (!lendingCollateralConfigurationMatches(config, { oracle, cap, enabled }) || deposited !== 0n) {
+  if (
+    !lendingCollateralConfigurationMatches(config, { oracle, cap, enabled })
+      || (lendingSafety.requiresEmptyAccounting && deposited !== 0n)
+  ) {
     throw new Error(`Lending collateral ${asset} is not synth-activation safe`);
   }
 }

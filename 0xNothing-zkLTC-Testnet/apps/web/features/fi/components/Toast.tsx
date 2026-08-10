@@ -47,6 +47,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [dismiss],
   );
 
+  const pauseDismiss = useCallback((id: string) => {
+    const timer = timers.current.get(id);
+    if (timer) clearTimeout(timer);
+    timers.current.delete(id);
+  }, []);
+
+  const resumeDismiss = useCallback((id: string) => {
+    pauseDismiss(id);
+    timers.current.set(id, setTimeout(() => dismiss(id), 5_000));
+  }, [dismiss, pauseDismiss]);
+
   useEffect(() => {
     const activeTimers = timers.current;
     return () => activeTimers.forEach((timer) => clearTimeout(timer));
@@ -57,9 +68,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="fi-toast-viewport" aria-live="polite" aria-atomic="true">
+      <div className="fi-toast-viewport">
         {items.map((item) => (
-          <div className="fi-toast" data-kind={item.kind} role="status" key={item.id}>
+          <div
+            className="fi-toast"
+            data-kind={item.kind}
+            role={item.kind === "error" ? "alert" : "status"}
+            aria-live={item.kind === "error" ? "assertive" : "polite"}
+            aria-atomic="true"
+            onMouseEnter={() => pauseDismiss(item.id)}
+            onMouseLeave={() => resumeDismiss(item.id)}
+            onFocus={() => pauseDismiss(item.id)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) resumeDismiss(item.id);
+            }}
+            key={item.id}
+          >
             <div>
               <strong>{item.title}</strong>
               {item.description ? <p>{item.description}</p> : null}
