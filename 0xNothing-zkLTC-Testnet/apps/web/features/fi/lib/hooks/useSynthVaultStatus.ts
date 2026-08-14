@@ -24,10 +24,7 @@ export function useSynthVaultStatus(vault: Address | undefined) {
     address: vault,
     abi: synthVaultAbi,
     functionName: "activated",
-    query: {
-      enabled: Boolean(vault && reserveAware && deployment.synthRiskActionsEnabled),
-      refetchInterval: 15_000,
-    },
+    query: { enabled: Boolean(vault && reserveAware && deployment.synthRiskActionsEnabled) },
   });
 
   let status: SynthVaultStatus;

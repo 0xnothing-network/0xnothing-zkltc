@@ -61,7 +61,7 @@ interface ActivityResponse {
 const PAGE_SIZE = 20;
 const ACTIVITY_PAGE_SIZE = 24;
 const LISTINGS_CACHE_KEY = "0xpixel-marketplace-listings-v1";
-const LISTINGS_FRESH_FOR_MS = 15_000;
+const LISTINGS_FRESH_FOR_MS = 5_000;
 const LISTINGS_SESSION_MAX_AGE_MS = 5 * 60_000;
 
 interface ListingsCacheEntry {
@@ -119,13 +119,15 @@ function MarketplaceBody({ userAddress }: BodyProps) {
   // Cache for API responses (persists across renders)
   const cacheRef = useRef<{ data: ListingsResponse | null; timestamp: number }>({ data: null, timestamp: 0 });
 
-  const fetchListings = useCallback(async (force = false) => {
+  const fetchListings = useCallback(async (force = false, background = false) => {
     if (!force && requestRef.current && !requestRef.current.controller.signal.aborted) return;
     requestRef.current?.controller.abort();
     const ctrl = new AbortController();
     requestRef.current = { controller: ctrl, force };
-    setLoading(true);
-    setError(null);
+    if (!background) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       // Check cache first
       const now = Date.now();
@@ -147,6 +149,7 @@ function MarketplaceBody({ userAddress }: BodyProps) {
       const entry = { data: body, timestamp: Date.now() };
       cacheRef.current = entry;
       writeListingsSessionCache(entry);
+      setError(null);
       setData(body);
     } catch (err) {
       if ((err as { name?: string }).name === "AbortError") return;
@@ -183,12 +186,21 @@ function MarketplaceBody({ userAddress }: BodyProps) {
 
   useEffect(() => {
     const refreshStaleListings = () => {
-      if (Date.now() - cacheRef.current.timestamp >= LISTINGS_FRESH_FOR_MS) {
-        void fetchListings(false);
+      if (
+        document.visibilityState === "visible"
+        && Date.now() - cacheRef.current.timestamp >= LISTINGS_FRESH_FOR_MS
+      ) {
+        void fetchListings(false, true);
       }
     };
+    const timer = window.setInterval(refreshStaleListings, LISTINGS_FRESH_FOR_MS);
     window.addEventListener("focus", refreshStaleListings);
-    return () => window.removeEventListener("focus", refreshStaleListings);
+    document.addEventListener("visibilitychange", refreshStaleListings);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshStaleListings);
+      document.removeEventListener("visibilitychange", refreshStaleListings);
+    };
   }, [fetchListings]);
 
   const listings: RawListing[] = useMemo(() => {
@@ -415,8 +427,9 @@ function MarketplaceActivity({ refreshKey = 0 }: { refreshKey?: number }) {
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const loadedCountRef = useRef(0);
 
-  const fetchActivity = useCallback(async (skip = 0, force = false) => {
+  const fetchActivity = useCallback(async (skip = 0, force = false, background = false) => {
     if (skip === 0) {
       abortRef.current?.abort();
     }
@@ -425,8 +438,10 @@ function MarketplaceActivity({ refreshKey = 0 }: { refreshKey?: number }) {
     abortRef.current = ctrl;
 
     if (skip === 0) {
-      setLoading(true);
-      setError(null);
+      if (!background) {
+        setLoading(true);
+        setError(null);
+      }
     } else {
       setLoadingMore(true);
     }
@@ -446,16 +461,21 @@ function MarketplaceActivity({ refreshKey = 0 }: { refreshKey?: number }) {
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const body = (await r.json()) as ActivityResponse;
+      setError(null);
 
-      setEvents((prev) =>
-        skip > 0 ? appendUniqueEvents(prev, body.events) : body.events
-      );
-      setHasMore(body.events.length === ACTIVITY_PAGE_SIZE);
+      setEvents((prev) => {
+        if (skip > 0) return appendUniqueEvents(prev, body.events);
+        return background ? appendUniqueEvents(body.events, prev) : body.events;
+      });
+      if (skip > 0) loadedCountRef.current += body.events.length;
+      else if (!background) loadedCountRef.current = body.events.length;
+      if (!background) setHasMore(body.events.length === ACTIVITY_PAGE_SIZE);
     } catch (err) {
       if ((err as { name?: string }).name === "AbortError") return;
       console.error("[marketplace] activity load failed:", err);
-      setError("Couldn't load marketplace history.");
+      if (!background) setError("Couldn't load marketplace history.");
     } finally {
+      if (abortRef.current === ctrl) abortRef.current = null;
       if (ctrl.signal.aborted) return;
       if (skip === 0) setLoading(false);
       else setLoadingMore(false);
@@ -463,16 +483,31 @@ function MarketplaceActivity({ refreshKey = 0 }: { refreshKey?: number }) {
   }, [filter]);
 
   useEffect(() => {
+    loadedCountRef.current = 0;
     setEvents([]);
     setHasMore(false);
     void fetchActivity(0, refreshKey > 0);
     return () => abortRef.current?.abort();
   }, [fetchActivity, refreshKey]);
 
+  useEffect(() => {
+    const refreshVisibleActivity = () => {
+      if (document.visibilityState === "visible" && !abortRef.current) {
+        void fetchActivity(0, false, true);
+      }
+    };
+    const timer = window.setInterval(refreshVisibleActivity, 5_000);
+    document.addEventListener("visibilitychange", refreshVisibleActivity);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshVisibleActivity);
+    };
+  }, [fetchActivity]);
+
   const handleLoadMore = useCallback(() => {
     if (loading || loadingMore) return;
-    void fetchActivity(events.length);
-  }, [events.length, fetchActivity, loading, loadingMore]);
+    void fetchActivity(loadedCountRef.current);
+  }, [fetchActivity, loading, loadingMore]);
 
   return (
     <section className="overflow-hidden rounded-xl sm:rounded-2xl border border-[#2D2D44] bg-[#101026]/90 shadow-2xl shadow-black/10">

@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAccount, usePublicClient } from "wagmi";
 import type { Address } from "viem";
 import { pumpTokenAbi } from "@/features/pump/abis";
+import { LIVE_MS, STEADY_LIVE_MS } from "@/lib/liveData";
 import {
   DEFAULT_PUMP_CANDLE_PERIOD,
   PUMP_CANDLE_LIMITS,
@@ -121,8 +122,8 @@ export function usePumpMarkets(options?: {
     queryKey: ["pump-markets", limit, sort],
     queryFn: ({ signal }) =>
       apiJson<PumpListResponse>(`/api/pump/markets?limit=${limit}&sort=${sort}`, signal),
-    staleTime: 8_000,
-    refetchInterval: 15_000,
+    staleTime: 4_000,
+    refetchInterval: LIVE_MS,
   });
 
   const markets = useMemo(() => {
@@ -144,8 +145,8 @@ export function usePumpStats() {
   return useQuery({
     queryKey: ["pump-stats"],
     queryFn: ({ signal }) => apiJson<PumpStatsResponse>("/api/pump/stats", signal),
-    staleTime: 8_000,
-    refetchInterval: 15_000,
+    staleTime: 4_000,
+    refetchInterval: LIVE_MS,
   });
 }
 
@@ -155,8 +156,9 @@ export function usePumpMarket(token: Address | undefined) {
     queryFn: ({ signal }) =>
       apiJson<PumpMarketResponse>(`/api/pump/markets/${token}`, signal),
     enabled: Boolean(token),
-    staleTime: 5_000,
-    refetchInterval: 10_000,
+    staleTime: 4_000,
+    refetchInterval: LIVE_MS,
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -183,8 +185,8 @@ export function usePumpHolders(token: Address | undefined, limit = 10) {
     queryFn: ({ signal }) =>
       apiJson<PumpHoldersResponse>(`/api/pump/holders?${params.toString()}`, signal),
     enabled: Boolean(token),
-    staleTime: 10_000,
-    refetchInterval: 15_000,
+    staleTime: 6_000,
+    refetchInterval: 8_000,
   });
 }
 
@@ -202,7 +204,7 @@ export function usePumpCandles(
     ),
     enabled: Boolean(token),
     staleTime: 0,
-    refetchInterval: (query) => query.state.data?.source === "rpc" ? 10_000 : 3_000,
+    refetchInterval: (query) => query.state.data?.source === "rpc" ? 6_000 : 3_000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
@@ -215,13 +217,15 @@ export function usePumpPortfolio() {
     queryKey: ["pump-portfolio-markets"],
     queryFn: ({ signal }) => fetchAllMarkets(undefined, signal),
     enabled: Boolean(address),
-    staleTime: 15_000,
+    staleTime: 8_000,
+    refetchInterval: STEADY_LIVE_MS,
   });
   const createdQuery = useQuery({
     queryKey: ["pump-portfolio-created", address],
     queryFn: ({ signal }) => fetchAllMarkets(address, signal),
     enabled: Boolean(address),
-    staleTime: 15_000,
+    staleTime: 8_000,
+    refetchInterval: STEADY_LIVE_MS,
   });
   const markets = marketsQuery.data?.markets ?? EMPTY_MARKETS;
   const tokensKey = useMemo(
@@ -272,7 +276,8 @@ export function usePumpPortfolio() {
       }
       return { balances, failed };
     },
-    staleTime: 8_000,
+    staleTime: 4_000,
+    refetchInterval: LIVE_MS,
   });
 
   const created = createdQuery.data?.markets ?? [];

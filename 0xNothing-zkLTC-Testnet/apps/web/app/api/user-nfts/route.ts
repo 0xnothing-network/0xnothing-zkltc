@@ -15,14 +15,14 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const revalidate = 30;
+export const revalidate = 0;
 
 interface CacheEntry<T> {
   value: T;
   ts: number;
 }
 const CACHE = new Map<string, CacheEntry<NativeNft[]>>();
-const CACHE_TTL = 30_000;
+const CACHE_TTL = 3_000;
 const CACHE_MAX_ENTRIES = 1024;
 const MAX_SUBGRAPH_BLOCK_LAG = 20_000n;
 
@@ -137,9 +137,7 @@ export async function GET(request: Request) {
   const address = searchParams.get("address");
   const force = searchParams.get("force") === "1";
   const responseHeaders = {
-    "Cache-Control": force
-      ? "no-store"
-      : "public, s-maxage=30, stale-while-revalidate=30",
+    "Cache-Control": "private, no-store, max-age=0, must-revalidate",
   };
   if (!address || !/^0x[0-9a-fA-F]{40}$/.test(address)) {
     return NextResponse.json({ error: "Invalid address" }, { status: 400 });

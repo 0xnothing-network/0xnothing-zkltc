@@ -93,7 +93,7 @@ export function BorrowWorkspace() {
     contracts: pool ? [
       { address: pool, abi: lendingPoolAbi, functionName: "availableLiquidity" },
     ] as const : [],
-    query: { enabled: Boolean(pool), refetchInterval: 12_000 },
+    query: { enabled: Boolean(pool) },
   });
   const walletReads = useReadContracts({
     contracts: pool && address ? [
@@ -101,14 +101,14 @@ export function BorrowWorkspace() {
       { address: pool, abi: lendingPoolAbi, functionName: "accountRisk", args: [address] },
       { address: pool, abi: lendingPoolAbi, functionName: "maxBorrow", args: [address] },
     ] as const : [],
-    query: { enabled: Boolean(pool && address), refetchInterval: 12_000 },
+    query: { enabled: Boolean(pool && address) },
   });
   const collateralReads = useReadContracts({
     contracts: pool && address && collateralAddress ? [
       { address: pool, abi: lendingPoolAbi, functionName: "collateralBalance", args: [address, collateralAddress] },
       { address: pool, abi: lendingPoolAbi, functionName: "maxWithdrawCollateral", args: [address, collateralAddress] },
     ] as const : [],
-    query: { enabled: Boolean(pool && address && collateralAddress), refetchInterval: 12_000 },
+    query: { enabled: Boolean(pool && address && collateralAddress) },
   });
   const available = reads.data?.[0]?.result as bigint | undefined;
   const availableIsDust = available !== undefined && available <= NUSD_USABLE_LIQUIDITY_FLOOR;
@@ -133,10 +133,11 @@ export function BorrowWorkspace() {
         : mode === "withdrawCollateral" ? maxWithdrawCollateral
           : mode === "borrow" ? maxBorrow : walletNusd.data;
   const maximumAmount = mode === "repay" ? repayMaximum : sourceBalance;
-  const lendingMode = mode === "deposit" || mode === "withdrawCollateral" || mode === "borrow";
-  const migrationBlocked = lendingMode && !lending.ready;
+  const migrationBlocked = mode === "deposit"
+    ? !lending.collateralDepositReady
+    : mode === "borrow" ? !lending.borrowReady : false;
   const quoteRequired = mode === "borrow" || mode === "withdrawCollateral";
-  const quoteBlocked = Boolean(address && lending.ready && quoteRequired && sourceBalance === undefined);
+  const quoteBlocked = Boolean(address && quoteRequired && sourceBalance === undefined);
   const quoteLoading = mode === "borrow" ? walletReads.isPending : collateralReads.isPending;
   const priceUnavailable = quoteBlocked && !quoteLoading;
   const configured = mode === "wrap" || mode === "unwrap"

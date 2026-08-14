@@ -59,8 +59,8 @@ export function SwapWorkspace() {
   const swapAssets = useSwapAssets();
   const activeDexRouter = useActiveDexRouter();
   const feeSchedule = useDexFeeSchedule(activeDexRouter);
-  const [tokenIn, setTokenIn] = useState("zkLTC");
-  const [tokenOut, setTokenOut] = useState("NUSD");
+  const [tokenIn, setTokenIn] = useState("NUSD");
+  const [tokenOut, setTokenOut] = useState("zkLTC");
   const [amountText, setAmountText] = useState("");
   const [payContract, setPayContract] = useState("");
   const [receiveContract, setReceiveContract] = useState("");
@@ -136,12 +136,12 @@ export function SwapWorkspace() {
     ? availableAssets.find((asset) => asset.poolAddress?.toLowerCase() === receiveCandidate.toLowerCase())
       ?? importedReceive.asset
     : undefined;
-  const assetIn = assetMap.get(tokenIn) ?? assetMap.get("zkLTC");
-  const assetOut = assetMap.get(tokenOut) ?? assetMap.get("NUSD");
+  const assetIn = assetMap.get(tokenIn);
+  const assetOut = assetMap.get(tokenOut);
   const selectorEntries = useMemo<AssetSelectOption<string>[]>(() => availableAssets.map((asset) => ({
     value: asset.id,
     symbol: asset.symbol,
-    name: asset.imported && asset.poolAddress ? `${asset.name} · ${shortAddress(asset.poolAddress)}` : asset.name,
+    name: asset.name,
     badge: asset.imported ? "Imported" : asset.graduated ? "Graduated" : undefined,
     detail: !asset.trustedCore && asset.poolAddress ? shortAddress(asset.poolAddress) : undefined,
     imageUrl: asset.imageUrl,
@@ -152,6 +152,33 @@ export function SwapWorkspace() {
     if (right.value === "NUSD") return 1;
     return 0;
   }), [selectorEntries]);
+
+  useEffect(() => {
+    if (assetIn && assetOut && assetIn.id !== assetOut.id) return;
+
+    const nextAssetIn = assetIn
+      ?? assetMap.get("NUSD")
+      ?? availableAssets[0];
+    const nextAssetOut = assetOut && assetOut.id !== nextAssetIn?.id
+      ? assetOut
+      : assetMap.get("zkLTC")?.id !== nextAssetIn?.id
+        ? assetMap.get("zkLTC")
+        : assetMap.get("NUSD")?.id !== nextAssetIn?.id
+          ? assetMap.get("NUSD")
+          : availableAssets.find((asset) => asset.id !== nextAssetIn?.id);
+
+    if (!nextAssetIn || !nextAssetOut) return;
+    if (nextAssetIn.id !== tokenIn) {
+      setTokenIn(nextAssetIn.id);
+      setPayContract("");
+    }
+    if (nextAssetOut.id !== tokenOut) {
+      setTokenOut(nextAssetOut.id);
+      setReceiveContract("");
+    }
+    setAmountText("");
+    resetTransaction();
+  }, [assetIn, assetMap, assetOut, availableAssets, resetTransaction, tokenIn, tokenOut]);
 
   useEffect(() => {
     const detectedPay = resolvedPayAsset;
@@ -206,14 +233,14 @@ export function SwapWorkspace() {
 
   const nativeBalance = useBalance({
     address,
-    query: { enabled: Boolean(address && assetIn?.native), refetchInterval: 12_000 },
+    query: { enabled: Boolean(address && assetIn?.native) },
   });
   const tokenBalance = useReadContract({
     address: assetIn?.native ? undefined : assetIn?.poolAddress,
     abi: erc20Abi,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    query: { enabled: Boolean(address && assetIn && !assetIn.native && assetIn.poolAddress), refetchInterval: 12_000 },
+    query: { enabled: Boolean(address && assetIn && !assetIn.native && assetIn.poolAddress) },
   });
   const balance = assetIn?.native ? nativeBalance.data?.value : tokenBalance.data;
   const spendableBalance = assetIn?.native && balance !== undefined
@@ -266,50 +293,50 @@ export function SwapWorkspace() {
     abi: nusdOracleAbi,
     functionName: "quoteMint",
     args: isMintRoute && amountIn ? [amountIn] : undefined,
-    query: { enabled: Boolean(isMintRoute && routeConfigured && amountIn), refetchInterval: 12_000 },
+    query: { enabled: Boolean(isMintRoute && routeConfigured && amountIn) },
   });
   const redeemQuote = useReadContract({
     address: deployment.contracts.nusd,
     abi: nusdOracleAbi,
     functionName: "quoteRedeem",
     args: isOracleNusdRoute && !isMintRoute && amountIn ? [amountIn] : undefined,
-    query: { enabled: Boolean(isOracleNusdRoute && !isMintRoute && routeConfigured && amountIn), refetchInterval: 12_000 },
+    query: { enabled: Boolean(isOracleNusdRoute && !isMintRoute && routeConfigured && amountIn) },
   });
   const dexPauseState = useReadContract({
     address: deployment.contracts.dexFactory,
     abi: dexFactoryAbi,
     functionName: "swapsPaused",
-    query: { enabled: Boolean(!isOracleNusdRoute && deployment.contracts.dexFactory), refetchInterval: 10_000 },
+    query: { enabled: Boolean(!isOracleNusdRoute && deployment.contracts.dexFactory) },
   });
   const mintPauseState = useReadContract({
     address: deployment.contracts.nusd,
     abi: nusdOracleAbi,
     functionName: "mintPaused",
-    query: { enabled: Boolean(isMintRoute && deployment.contracts.nusd), refetchInterval: 10_000 },
+    query: { enabled: Boolean(isMintRoute && deployment.contracts.nusd) },
   });
   const redeemPauseState = useReadContract({
     address: deployment.contracts.nusd,
     abi: nusdOracleAbi,
     functionName: "redeemPaused",
-    query: { enabled: Boolean(isOracleNusdRoute && !isMintRoute && deployment.contracts.nusd), refetchInterval: 10_000 },
+    query: { enabled: Boolean(isOracleNusdRoute && !isMintRoute && deployment.contracts.nusd) },
   });
   const supplyCeilingState = useReadContract({
     address: deployment.contracts.nusd,
     abi: nusdOracleAbi,
     functionName: "supplyCeilingNusd",
-    query: { enabled: Boolean(isMintRoute && deployment.contracts.nusd), refetchInterval: 10_000 },
+    query: { enabled: Boolean(isMintRoute && deployment.contracts.nusd) },
   });
   const totalSupplyState = useReadContract({
     address: deployment.contracts.nusd,
     abi: nusdOracleAbi,
     functionName: "totalSupply",
-    query: { enabled: Boolean(isMintRoute && deployment.contracts.nusd), refetchInterval: 10_000 },
+    query: { enabled: Boolean(isMintRoute && deployment.contracts.nusd) },
   });
   const collateralReserveState = useReadContract({
     address: deployment.contracts.nusd,
     abi: nusdOracleAbi,
     functionName: "totalCollateralWei",
-    query: { enabled: Boolean(isOracleNusdRoute && !isMintRoute && deployment.contracts.nusd), refetchInterval: 10_000 },
+    query: { enabled: Boolean(isOracleNusdRoute && !isMintRoute && deployment.contracts.nusd) },
   });
 
   const amountOut = amountIn
@@ -563,7 +590,7 @@ export function SwapWorkspace() {
             <div className="fi-field-label-row">
               <label htmlFor="swap-token-contract">{importSide === "pay" ? "Pay" : "Receive"} token address</label>
               {activeDetectedAsset?.poolAddress ? (
-                <a href={explorerAddressUrl(activeDetectedAsset.poolAddress)} target="_blank" rel="noreferrer">
+                <a href={explorerAddressUrl(activeDetectedAsset.poolAddress)} target="_blank" rel="noopener noreferrer">
                   Explorer
                 </a>
               ) : <span>Paste CA</span>}

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Address } from "viem";
@@ -10,6 +9,7 @@ import { pumpGraduationControllerAbi, pumpGraduationRouterAbi, zeroXPumpAbi } fr
 import { usePumpMarket } from "@/features/pump/hooks/usePumpData";
 import {
   ipfsToGatewayUrl,
+  normalizePumpExternalUrl,
   PUMP_CHAIN_ID,
   PUMP_FACTORY_ADDRESS,
   PUMP_GRADUATION_ADAPTER_ADDRESS,
@@ -20,6 +20,7 @@ import { formatDecimal, formatRelativeTime, formatWad, shortAddress } from "@/fe
 import type { PumpMarket } from "@/features/pump/types";
 import { getAddressExplorerUrl } from "@/lib/explorer";
 import { PumpChart } from "@/features/pump/components/PumpChart";
+import { PumpTokenLogo } from "@/features/pump/components/PumpTokenLogo";
 import { TradePanel } from "@/features/pump/components/TradePanel";
 import { TradeHistory } from "@/features/pump/components/TradeHistory";
 import { TokenHolders } from "@/features/pump/components/TokenHolders";
@@ -43,7 +44,7 @@ function GraduationAction({ market, onComplete }: { market: PumpMarket; onComple
     address: PUMP_FACTORY_ADDRESS,
     abi: zeroXPumpAbi,
     functionName: "admin",
-    query: { enabled: market.status === "READY", refetchInterval: 10_000 },
+    query: { enabled: market.status === "READY" },
   });
   const pumpRouter = useReadContract({
     address: PUMP_FACTORY_ADDRESS,
@@ -57,7 +58,7 @@ function GraduationAction({ market, onComplete }: { market: PumpMarket; onComple
     address: controllerAddress,
     abi: pumpGraduationControllerAbi,
     functionName: "graduationsPaused",
-    query: { enabled: controllerReadEnabled, refetchInterval: 10_000 },
+    query: { enabled: controllerReadEnabled },
   });
   const controllerPump = useReadContract({
     address: controllerAddress,
@@ -81,20 +82,20 @@ function GraduationAction({ market, onComplete }: { market: PumpMarket; onComple
     address: PUMP_GRADUATION_ROUTER_ADDRESS,
     abi: pumpGraduationRouterAbi,
     functionName: "admin",
-    query: { enabled: market.status === "READY", refetchInterval: 10_000 },
+    query: { enabled: market.status === "READY" },
   });
   const routerEnabled = useReadContract({
     address: PUMP_GRADUATION_ROUTER_ADDRESS,
     abi: pumpGraduationRouterAbi,
     functionName: "enabled",
-    query: { enabled: market.status === "READY", refetchInterval: 10_000 },
+    query: { enabled: market.status === "READY" },
   });
   const adapterAllowed = useReadContract({
     address: PUMP_GRADUATION_ROUTER_ADDRESS,
     abi: pumpGraduationRouterAbi,
     functionName: "isAdapterAllowed",
     args: [PUMP_GRADUATION_ADAPTER_ADDRESS],
-    query: { enabled: market.status === "READY", refetchInterval: 10_000 },
+    query: { enabled: market.status === "READY" },
   });
   const operational = Boolean(controllerAddress)
     && controllerPump.data?.toLowerCase() === PUMP_FACTORY_ADDRESS.toLowerCase()
@@ -191,16 +192,17 @@ export function TokenDetail({ token }: { token: Address }) {
     );
   }
 
-  const imageUrl = ipfsToGatewayUrl(market.imageURI);
-  const optimizeImage = market.imageURI.startsWith("ipfs://");
-  const website = metadata.data?.external_url || metadata.data?.properties?.website;
-  const social = metadata.data?.properties?.twitter;
+  const website = normalizePumpExternalUrl(
+    metadata.data?.external_url || metadata.data?.properties?.website || "",
+  );
+  const social = normalizePumpExternalUrl(metadata.data?.properties?.twitter || "");
+  // On-chain metadata may predate the HTTPS-only upload validation, so
+  // normalize every link before exposing it.
   const links = [
     { label: "Website", href: website },
     { label: "Social", href: social },
   ].filter(
-    (item, index, items): item is { label: string; href: string } =>
-      Boolean(item.href && /^https?:\/\//i.test(item.href)) &&
+    (item, index, items) => item.href &&
       items.findIndex((candidate) => candidate.href === item.href) === index,
   );
 
@@ -212,19 +214,14 @@ export function TokenDetail({ token }: { token: Address }) {
 
       <section className="pump-token-identity">
         <div className="pump-detail-logo">
-          {imageUrl && optimizeImage ? (
-            <Image
-              src={imageUrl}
-              alt={`${market.name} logo`}
-              width={96}
-              height={96}
-              sizes="(max-width: 640px) 60px, (max-width: 900px) 72px, 96px"
-              priority
-            />
-          ) : imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={imageUrl} alt={`${market.name} logo`} decoding="async" fetchPriority="high" />
-          ) : <span>{market.symbol.slice(0, 2)}</span>}
+          <PumpTokenLogo
+            imageUri={market.imageURI}
+            name={market.name}
+            symbol={market.symbol}
+            size={96}
+            sizes="(max-width: 640px) 60px, (max-width: 900px) 72px, 96px"
+            priority
+          />
         </div>
         <div className="pump-token-identity-copy">
           <div className="pump-token-heading-line"><h1>{market.name}</h1><span className={`pump-status pump-status-${market.status.toLowerCase()}`}>{market.status}</span></div>

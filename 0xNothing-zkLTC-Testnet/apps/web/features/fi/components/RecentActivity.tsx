@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { ActivityPoint, DataEnvelope } from "@fi/lib/data";
 import { deployment } from "@fi/config/deployment";
 import { EmptyState, ErrorState, PanelHeading, SkeletonRows } from "@fi/components/UiStates";
 import { formatRelativeTimestamp } from "@fi/lib/format";
 import { fiPath } from "@fi/config/paths";
+import { FI_LIVE_MS } from "@/lib/liveData";
 
 function shortValue(value: string): string {
   return value.length > 12 ? `${value.slice(0, 7)}...${value.slice(-4)}` : value;
@@ -32,35 +33,31 @@ function formatActivityAmount(value: string): string {
   });
 }
 
+async function fetchActivity(pair: string, signal: AbortSignal): Promise<ActivityPoint[]> {
+  const response = await fetch(fiPath(`/api/data/activity?pair=${encodeURIComponent(pair)}`), {
+    signal,
+  });
+  const payload = (await response.json()) as DataEnvelope<ActivityPoint[]> & { error?: string };
+  if (!response.ok) throw new Error(payload.error || "Activity request failed");
+  return payload.data;
+}
+
 export function RecentActivity({ pair }: { pair: string }) {
-  const [activity, setActivity] = useState<ActivityPoint[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>();
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(undefined);
-    try {
-      const response = await fetch(fiPath(`/api/data/activity?pair=${encodeURIComponent(pair)}`), { cache: "no-store" });
-      const payload = (await response.json()) as DataEnvelope<ActivityPoint[]> & { error?: string };
-      if (!response.ok) throw new Error(payload.error || "Activity request failed");
-      setActivity(payload.data);
-    } catch (reason) {
-      setActivity([]);
-      setError(reason instanceof Error ? reason.message : "Activity request failed");
-    } finally {
-      setLoading(false);
-    }
-  }, [pair]);
-
-  useEffect(() => { void load(); }, [load]);
+  const query = useQuery({
+    queryKey: ["fi-activity", pair],
+    queryFn: ({ signal }) => fetchActivity(pair, signal),
+    staleTime: 12_000,
+    refetchInterval: FI_LIVE_MS,
+    refetchIntervalInBackground: false,
+  });
+  const activity = query.data ?? [];
 
   return (
     <section className="fi-panel fi-panel-flush">
       <PanelHeading title="Activity" />
-      {loading ? <SkeletonRows count={5} label="Loading recent activity" /> : null}
-      {!loading && error ? <ErrorState message={error} onRetry={() => void load()} /> : null}
-      {!loading && !error && activity.length === 0 ? (
+      {query.isLoading ? <SkeletonRows count={5} label="Loading recent activity" /> : null}
+      {!query.isLoading && query.error ? <ErrorState message={query.error.message} onRetry={() => void query.refetch()} /> : null}
+      {!query.isLoading && !query.error && activity.length === 0 ? (
         <EmptyState title="No activity yet" />
       ) : null}
       {activity.length ? (
@@ -76,7 +73,7 @@ export function RecentActivity({ pair }: { pair: string }) {
                     {formatActivityAmount(event.amount0)} / {formatActivityAmount(event.amount1)}
                   </td>
                   <td>{formatRelativeTimestamp(event.timestamp)}</td>
-                  <td>{isTransactionHash(event.transactionHash) ? <a className="fi-text-link" href={`${deployment.chain.explorerUrl}/tx/${event.transactionHash}`} target="_blank" rel="noreferrer">{shortValue(event.transactionHash)}</a> : "Invalid hash"}</td>
+                  <td>{isTransactionHash(event.transactionHash) ? <a className="fi-text-link" href={`${deployment.chain.explorerUrl}/tx/${event.transactionHash}`} target="_blank" rel="noopener noreferrer">{shortValue(event.transactionHash)}</a> : "Invalid hash"}</td>
                 </tr>
               ))}
             </tbody>

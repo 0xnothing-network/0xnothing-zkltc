@@ -978,11 +978,12 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 /* 0xPump is namespaced to keep the existing 0xPixel visual/runtime surface unchanged. */
 .pump-shell {
-  --pump-bg: #070809;
-  --pump-panel: #0c0e10;
-  --pump-panel-2: #111418;
-  --pump-line: rgba(255, 255, 255, 0.1);
-  --pump-line-strong: rgba(255, 255, 255, 0.2);
+  --pump-bg: #050806;
+  --pump-panel: #0b100d;
+  --pump-panel-2: #111914;
+  --pump-input: #080c09;
+  --pump-line: rgba(205, 255, 226, 0.1);
+  --pump-line-strong: rgba(205, 255, 226, 0.2);
   --pump-text: #f5f7f8;
   --pump-muted: #858d96;
   --pump-green: #77ffb1;
@@ -1009,7 +1010,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   z-index: 40;
   top: 0;
   border-bottom: 1px solid var(--pump-line);
-  background: rgba(7, 8, 9, 0.96);
+  background: rgba(5, 8, 6, 0.98);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
@@ -1197,7 +1198,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 .pump-stat-strip > div,
 .pump-detail-stats > div,
-.pump-vault-metrics > div { min-width: 0; padding: 16px 18px; border: 0; background: var(--pump-bg); }
+.pump-vault-metrics > div { min-width: 0; padding: 16px 18px; border: 0; background: var(--pump-panel); }
 .pump-stat-strip > div:first-child,
 .pump-detail-stats > div:first-child,
 .pump-vault-metrics > div:first-child { border-left: 0; padding-left: 18px; }
@@ -1232,7 +1233,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   gap: 10px;
   border: 1px solid var(--pump-line);
   padding: 0 13px;
-  background: var(--pump-panel);
+  background: var(--pump-input);
 }
 .pump-search svg { width: 16px; flex: none; fill: none; stroke: var(--pump-muted); stroke-width: 1.5; }
 .pump-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--pump-text); font: inherit; font-size: 11px; }
@@ -1249,7 +1250,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   border-radius: 0;
   padding: 0 10px;
   outline: 0;
-  background: var(--pump-panel);
+  background: var(--pump-input);
   color: var(--pump-text);
   color-scheme: dark;
   font: inherit;
@@ -1257,7 +1258,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 .pump-sort-select select:focus-visible { border-color: rgba(119,255,177,0.55); }
 
-.pump-segmented { display: flex; width: fit-content; margin: 18px 0; border: 1px solid var(--pump-line); padding: 3px; background: var(--pump-panel); }
+.pump-segmented { display: flex; width: fit-content; margin: 18px 0; border: 1px solid var(--pump-line); padding: 3px; background: var(--pump-input); }
 .pump-market-controls .pump-segmented { flex: none; margin: 0; }
 .pump-segmented button { min-height: 36px; border: 0; padding: 0 13px; color: var(--pump-muted); font: inherit; font-size: 10px; }
 .pump-segmented button:hover { color: var(--pump-text); }
@@ -1324,7 +1325,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .pump-field-wide { grid-column: 1 / -1; }
 .pump-field em { color: #555c63; font-style: normal; }
 .pump-field input,
-.pump-field textarea { width: 100%; min-width: 0; border: 1px solid var(--pump-line); border-radius: 0; outline: 0; padding: 12px; background: #080a0b; color: var(--pump-text); font: inherit; font-size: 11px; text-transform: none; resize: vertical; }
+.pump-field textarea { width: 100%; min-width: 0; border: 1px solid var(--pump-line); border-radius: 0; outline: 0; padding: 12px; background: var(--pump-input); color: var(--pump-text); font: inherit; font-size: 11px; text-transform: none; resize: vertical; }
 .pump-field input { min-height: 46px; }
 .pump-field input:focus,
 .pump-field textarea:focus { border-color: rgba(119,255,177,0.55); }
@@ -1748,7 +1749,17 @@ input[type="range"]::-webkit-slider-thumb:hover {
   .pump-header-balances { grid-template-columns: repeat(2, minmax(76px, 1fr)); }
   .pump-header-balance { gap: 6px; padding-inline: 8px; }
   .pump-token-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .pump-token-grid.pump-trending-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pump-token-grid.pump-trending-grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(250px, 82vw);
+    justify-content: start;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: inline mandatory;
+    scrollbar-width: none;
+  }
+  .pump-token-grid.pump-trending-grid::-webkit-scrollbar { display: none; }
   .pump-detail-grid { grid-template-columns: 1fr; }
   .pump-trade-panel { position: static; }
   .pump-detail-stats { grid-template-columns: repeat(3, minmax(0,1fr)); }
@@ -1795,7 +1806,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   .pump-market-controls .pump-segmented { grid-column: 1 / -1; width: 100%; max-width: 100%; overflow-x: auto; }
   .pump-market-controls .pump-segmented button { flex: 1; }
   .pump-token-grid { grid-template-columns: 1fr; }
-  .pump-token-grid.pump-trending-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pump-token-grid.pump-trending-grid { grid-template-columns: none; }
   .pump-trending-section { padding-bottom: 18px; }
   .pump-trending-heading { gap: 12px; }
   .pump-trending-heading h1 { font-size: 18px; }
@@ -1804,47 +1815,50 @@ input[type="range"]::-webkit-slider-thumb:hover {
   .pump-trending-grid .pump-token-card {
     width: 100%;
     max-width: none;
-    padding: 8px;
+    padding: 14px;
+    scroll-snap-align: start;
   }
-  .pump-trending-grid .pump-token-card-head { gap: 4px; }
-  .pump-trending-grid .pump-token-logo { width: 30px; height: 30px; font-size: 9px; }
+  .pump-trending-grid .pump-token-card-head { gap: 8px; }
+  .pump-trending-grid .pump-token-logo { width: 44px; height: 44px; font-size: 11px; }
   .pump-trending-grid .pump-status {
-    max-width: calc(100% - 34px);
-    min-height: 18px;
+    max-width: calc(100% - 52px);
+    min-height: 24px;
     overflow: hidden;
-    padding-inline: 4px;
-    font-size: 6px;
+    padding-inline: 7px;
+    font-size: 8px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .pump-trending-grid .pump-token-title-row { margin-top: 8px; }
-  .pump-trending-grid .pump-token-title-row h3 { font-size: 11px; }
-  .pump-trending-grid .pump-token-title-row p { margin-top: 3px; font-size: 7px; }
-  .pump-trending-grid .pump-token-age { display: none; }
-  .pump-trending-grid .pump-token-metrics { grid-template-columns: 1fr; gap: 6px; margin: 8px 0; }
+  .pump-trending-grid .pump-token-title-row { margin-top: 12px; }
+  .pump-trending-grid .pump-token-title-row h3 { font-size: 14px; }
+  .pump-trending-grid .pump-token-title-row p { margin-top: 4px; font-size: 9px; }
+  .pump-trending-grid .pump-token-age { display: inline; font-size: 8px; }
+  .pump-trending-grid .pump-token-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; margin: 16px 0; }
   .pump-trending-grid .pump-token-metrics > div:first-child,
-  .pump-trending-grid .pump-token-metrics > div:last-child { display: none; }
-  .pump-trending-grid .pump-token-metrics dt { margin-bottom: 2px; font-size: 6px; }
+  .pump-trending-grid .pump-token-metrics > div:last-child { display: block; }
+  .pump-trending-grid .pump-token-metrics dt { margin-bottom: 4px; font-size: 8px; }
   .pump-trending-grid .pump-token-metrics dd {
     overflow: hidden;
-    font-size: 8px;
+    font-size: 10px;
     overflow-wrap: normal;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .pump-trending-grid .pump-progress-label { margin-bottom: 4px; gap: 3px; font-size: 6px; }
-  .pump-trending-grid .pump-progress-label span:first-child { display: none; }
-  .pump-trending-grid .pump-progress-label::before { content: "READY"; }
-  .pump-trending-grid .pump-progress { height: 2px; }
+  .pump-trending-grid .pump-progress-label { margin-bottom: 6px; gap: 6px; font-size: 8px; }
+  .pump-trending-grid .pump-progress-label span:first-child { display: inline; }
+  .pump-trending-grid .pump-progress-label::before { content: none; }
+  .pump-trending-grid .pump-progress { height: 4px; }
   .pump-trending-section .pump-loading-state .pump-token-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(250px, 82vw);
     gap: 6px;
   }
   .pump-trending-section .pump-loading-state .pump-token-card {
     width: 100%;
     max-width: none;
-    min-height: 150px;
-    padding: 8px;
+    min-height: 230px;
+    padding: 14px;
   }
   .pump-form-grid { grid-template-columns: 1fr; }
   .pump-field-wide { grid-column: auto; }
@@ -4537,7 +4551,7 @@ textarea:not(.fi-root textarea)::placeholder,
 html,
 body,
 body > div,
-main,
+main:not(.fi-root main):not(.pump-shell main):not(.nothing-home main),
 .min-h-screen,
 .pixel-shell,
 .pixel-app-shell,
@@ -4844,7 +4858,7 @@ body::before,
   opacity: 0.46 !important;
 }
 
-header,
+header:not(.fi-root header):not(.pump-shell header):not(.nothing-home header),
 .pixel-app-header,
 [class*="bg-[#1A1A2E]/90"] {
   background: rgba(7, 7, 7, 0.94) !important;
@@ -6051,7 +6065,7 @@ textarea:not(.fi-root textarea):focus {
 html,
 body,
 body > div,
-main,
+main:not(.fi-root main):not(.pump-shell main):not(.nothing-home main),
 .min-h-screen,
 .pixel-shell,
 .pixel-app-shell,
@@ -6425,7 +6439,7 @@ body::before,
 .nothing-home,
 .pixel-shell,
 .pixel-app-shell,
-main,
+main:not(.fi-root main):not(.pump-shell main):not(.nothing-home main),
 .min-h-screen {
   background-color: var(--px-bg) !important;
   color: var(--px-ink) !important;
@@ -7162,8 +7176,8 @@ button:not(.fi-root button):disabled,
 
 html,
 body,
-main,
-section,
+main:not(.fi-root main):not(.pump-shell main):not(.nothing-home main),
+section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section),
 [class*="min-h-screen"],
 [class*="min-h-[100dvh]"],
 [class*="bg-[#080808]"],
@@ -7493,8 +7507,8 @@ textarea:not(.fi-root textarea) {
   text-rendering: geometricPrecision;
 }
 
-main,
-section,
+main:not(.fi-root main):not(.pump-shell main):not(.nothing-home main),
+section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section),
 [class*="min-h-screen"],
 [class*="min-h-[100dvh]"],
 [class*="bg-[#080808]"],
@@ -8193,9 +8207,9 @@ button:not(.fi-root button):disabled {
 
 /* Home page final pass: Nothing-style black/white with crisp pixel UI. */
 .nothing-home {
-  --home-bg: #000000;
-  --home-panel: #050505;
-  --home-panel-hi: #0b0b0b;
+  --home-bg: #030403;
+  --home-panel: #080a08;
+  --home-panel-hi: #0d100e;
   --home-line: rgba(255, 255, 255, 0.18);
   --home-line-strong: rgba(255, 255, 255, 0.46);
   --home-text: #ffffff;
@@ -8205,8 +8219,8 @@ button:not(.fi-root button):disabled {
   isolation: isolate;
   min-height: 100dvh;
   background:
-    radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.065), transparent 23rem),
-    linear-gradient(180deg, #000000 0%, #050505 50%, #000000 100%) !important;
+    radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.045), transparent 30rem),
+    linear-gradient(180deg, #030403 0%, #080a08 50%, #030403 100%) !important;
   color: var(--home-text) !important;
   font-family: var(--font-departure), var(--font-mono), ui-monospace, monospace !important;
 }
@@ -8245,7 +8259,7 @@ button:not(.fi-root button):disabled {
 
 .nothing-header,
 .nothing-footer {
-  background: rgba(0, 0, 0, 0.96) !important;
+  background: rgba(3, 4, 3, 0.96) !important;
   border-color: rgba(255, 255, 255, 0.14) !important;
   backdrop-filter: none !important;
 }
@@ -8306,7 +8320,8 @@ button:not(.fi-root button):disabled {
   padding: clamp(24px, 5vw, 56px) 0;
   background: transparent !important;
   background-color: transparent !important;
-  contain: layout;
+  contain: none;
+  transform: none;
 }
 
 .nothing-home main,
@@ -8772,8 +8787,11 @@ img[src^="data:image/svg+xml"],
 
 /* Keep legacy 0xPixel finish rules from clipping or flattening 0xPump surfaces. */
 .pump-shell {
-  background: var(--pump-bg) !important;
-  background-image: none !important;
+  background-color: var(--pump-bg) !important;
+  background-image:
+    linear-gradient(rgba(119, 255, 177, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(119, 255, 177, 0.022) 1px, transparent 1px) !important;
+  background-size: 32px 32px !important;
   color: var(--pump-text) !important;
 }
 
@@ -8834,7 +8852,7 @@ img[src^="data:image/svg+xml"],
 .pump-shell .pump-field input,
 .pump-shell .pump-field textarea {
   border-color: var(--pump-line) !important;
-  background: #080a0b !important;
+  background: var(--pump-input) !important;
 }
 
 .pump-shell .pump-field textarea {

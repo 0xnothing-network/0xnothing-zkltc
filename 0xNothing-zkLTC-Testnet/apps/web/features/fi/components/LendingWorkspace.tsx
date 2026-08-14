@@ -27,21 +27,21 @@ export function LendingWorkspace() {
   const tx = useProtocolTransaction();
   const pool = deployment.contracts.lendingPool;
   const lending = useLendingPoolStatus();
-  const riskActionBlocked = mode === "supply" && !lending.ready;
+  const riskActionBlocked = mode === "supply" && !lending.supplyReady;
   const stats = useReadContracts({
     contracts: pool ? [
       { address: pool, abi: lendingPoolAbi, functionName: "totalSupplied" },
       { address: pool, abi: lendingPoolAbi, functionName: "totalBorrowed" },
       { address: pool, abi: lendingPoolAbi, functionName: "availableLiquidity" },
     ] as const : [],
-    query: { enabled: Boolean(pool), refetchInterval: 12_000 },
+    query: { enabled: Boolean(pool) },
   });
   const walletStats = useReadContracts({
     contracts: pool && address ? [
       { address: pool, abi: lendingPoolAbi, functionName: "supplyBalance", args: [address] },
       { address: pool, abi: lendingPoolAbi, functionName: "maxWithdraw", args: [address] },
     ] as const : [],
-    query: { enabled: Boolean(pool && address), refetchInterval: 12_000 },
+    query: { enabled: Boolean(pool && address) },
   });
   const totalSupplied = stats.data?.[0]?.result as bigint | undefined;
   const totalBorrowed = stats.data?.[1]?.result as bigint | undefined;

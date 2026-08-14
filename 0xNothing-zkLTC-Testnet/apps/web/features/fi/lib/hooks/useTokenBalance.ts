@@ -11,7 +11,7 @@ export function useTokenBalance(token?: Address) {
     abi: erc20Abi,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    query: { enabled: Boolean(token && address), refetchInterval: 12_000 },
+    query: { enabled: Boolean(token && address) },
   });
   return { data: query.data, refetch: query.refetch, isLoading: query.isLoading };
 }

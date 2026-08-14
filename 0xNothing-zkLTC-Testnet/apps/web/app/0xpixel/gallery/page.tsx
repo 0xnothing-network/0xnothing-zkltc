@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useAccount, useReadContract } from "wagmi";
@@ -240,19 +240,24 @@ function ErrorState({
 }
 
 function useUserNfts(address: `0x${string}` | undefined, refreshKey: number) {
+  const forcedRefreshRef = useRef(0);
   return useQuery<OwnedNft[], Error>({
     queryKey: ["pixel-user-nfts", address, refreshKey],
     enabled: Boolean(address),
-    staleTime: 15_000,
+    staleTime: 3_000,
+    refetchInterval: 5_000,
+    refetchOnWindowFocus: true,
     placeholderData: (previousData, previousQuery) =>
       previousQuery?.queryKey[1] === address ? previousData : undefined,
     queryFn: async ({ signal }) => {
       if (!address) return [];
+      const force = refreshKey > forcedRefreshRef.current;
+      if (force) forcedRefreshRef.current = refreshKey;
       const params = new URLSearchParams({ address });
-      if (refreshKey > 0) params.set("force", "1");
+      if (force) params.set("force", "1");
       const response = await fetch(`/api/user-nfts?${params.toString()}`, {
         signal,
-        cache: refreshKey > 0 ? "no-store" : "default",
+        cache: force ? "no-store" : "default",
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => ({}))) as { error?: string };

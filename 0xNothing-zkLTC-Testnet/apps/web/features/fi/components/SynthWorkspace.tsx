@@ -8,7 +8,7 @@ import { AssetSelect } from "@fi/components/AssetSelect";
 import { ConnectWalletButton } from "@fi/components/ConnectWalletButton";
 import { MetricStrip, NotDeployed, PanelHeading, TransactionStatus } from "@fi/components/UiStates";
 import { useToast } from "@fi/components/Toast";
-import { assets, type AssetSymbol } from "@fi/config/assets";
+import { assets } from "@fi/config/assets";
 import { deployment } from "@fi/config/deployment";
 import { diaOracleAdapterAbi } from "@fi/lib/abis/dia";
 import { synthSafetyReserveAbi, synthVaultAbi } from "@fi/lib/abis/synth";
@@ -22,6 +22,7 @@ type Position = readonly [bigint, bigint, bigint, bigint, bigint];
 type MintQuote = readonly [bigint, bigint, boolean];
 
 const SYNTHS = ["nBTC", "nETH"] as const;
+type SynthAsset = (typeof SYNTHS)[number];
 const BPS_DENOMINATOR = 10_000n;
 const MINT_OUTPUT_HAIRCUT_BPS = 50n;
 const MINT_FEE_TOLERANCE_BPS = 100n;
@@ -41,10 +42,10 @@ function amountWithTolerance(value: bigint | undefined): bigint | undefined {
     : (value * (BPS_DENOMINATOR + MINT_FEE_TOLERANCE_BPS) + BPS_DENOMINATOR - 1n) / BPS_DENOMINATOR;
 }
 
-export function SynthWorkspace() {
+export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: SynthAsset } = {}) {
   const { address, isConnected } = useAccount();
   const toast = useToast();
-  const [synth, setSynth] = useState<AssetSymbol>("nBTC");
+  const [synth, setSynth] = useState<SynthAsset>(initialSynth);
   const [mode, setMode] = useState<SynthMode>("mint");
   const [amountText, setAmountText] = useState("");
   const amount = parseAmount(amountText);
@@ -60,13 +61,13 @@ export function SynthWorkspace() {
     address: oracle,
     abi: diaOracleAdapterAbi,
     functionName: "isFresh",
-    query: { enabled: Boolean(oracle), refetchInterval: 15_000 },
+    query: { enabled: Boolean(oracle) },
   });
   const safetyReserveState = useReadContract({
     address: vault,
     abi: synthVaultAbi,
     functionName: "safetyReserve",
-    query: { enabled: Boolean(vault), refetchInterval: 30_000 },
+    query: { enabled: Boolean(vault) },
   });
   const safetyReserve = safetyReserveState.data && safetyReserveState.data !== zeroAddress
     ? safetyReserveState.data as Address
@@ -77,7 +78,7 @@ export function SynthWorkspace() {
       { address: vault, abi: synthVaultAbi, functionName: "mintPaused" },
       { address: vault, abi: synthVaultAbi, functionName: "withdrawPaused" },
     ] as const : [],
-    query: { enabled: Boolean(vault), refetchInterval: 12_000 },
+    query: { enabled: Boolean(vault) },
   });
   const walletReads = useReadContracts({
     contracts: vault && address ? [
@@ -85,7 +86,7 @@ export function SynthWorkspace() {
       { address: vault, abi: synthVaultAbi, functionName: "maxMintableSynthetic", args: [address] },
       { address: vault, abi: synthVaultAbi, functionName: "maxUserCollateralWithdrawable", args: [address] },
     ] as const : [],
-    query: { enabled: Boolean(vault && address), refetchInterval: 12_000 },
+    query: { enabled: Boolean(vault && address) },
   });
   const reserveReads = useReadContracts({
     contracts: safetyReserve ? [
@@ -95,7 +96,7 @@ export function SynthWorkspace() {
       { address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "sponsorshipActive" },
       { address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "allocationsPaused" },
     ] as const : [],
-    query: { enabled: Boolean(safetyReserve), refetchInterval: 12_000 },
+    query: { enabled: Boolean(safetyReserve) },
   });
 
   const position = walletReads.data?.[0]?.result as Position | undefined;
@@ -117,7 +118,6 @@ export function SynthWorkspace() {
     args: amount && mode === "mint" && address ? [address, amount] : undefined,
     query: {
       enabled: Boolean(vault && address && amount && mode === "mint" && oracleState.data && vaultStatus.ready),
-      refetchInterval: 12_000,
     },
   });
   const mintQuote = mintQuoteState.data as MintQuote | undefined;
@@ -132,7 +132,6 @@ export function SynthWorkspace() {
     args: minimumMintAmount && mode === "mint" ? [minimumMintAmount] : undefined,
     query: {
       enabled: Boolean(vault && minimumMintAmount && mode === "mint" && oracleState.data && vaultStatus.ready),
-      refetchInterval: 12_000,
     },
   });
   const quotedMintFee = mintFeeState.data as bigint | undefined;

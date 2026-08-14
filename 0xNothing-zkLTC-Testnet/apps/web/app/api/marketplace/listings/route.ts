@@ -17,7 +17,7 @@ import { fetchValidatedErc721Metadata } from "@/lib/erc721Metadata.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const revalidate = 15;
+export const revalidate = 0;
 
 interface ListingDTO {
   listingId: string;
@@ -47,7 +47,7 @@ interface CacheEntry<T> {
 }
 
 const TOKEN_TTL = 60_000;
-const LISTING_TTL = 15_000;
+const LISTING_TTL = 3_000;
 const MARKETPLACE_MULTICALL_BATCH_SIZE = 16_384;
 const payloadCache = new Map<string, CacheEntry<ListingsPayload>>();
 const pixelTokenCache = new Map<string, CacheEntry<TokenDTO | null>>();
@@ -56,9 +56,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const force = searchParams.get("force") === "1";
   const responseHeaders = {
-    "Cache-Control": force
-      ? "no-store"
-      : "public, s-maxage=15, stale-while-revalidate=15",
+    "Cache-Control": "private, no-store, max-age=0, must-revalidate",
   };
   const cacheKey = "listings:all-metadata-valid";
   const cached = payloadCache.get(cacheKey);

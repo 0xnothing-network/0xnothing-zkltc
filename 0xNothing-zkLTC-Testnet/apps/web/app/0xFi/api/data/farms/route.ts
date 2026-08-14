@@ -18,7 +18,7 @@ type FarmRow = {
 type Result = { gauges?: FarmRow[] };
 
 const MAX_GAUGES = 1_000;
-const CACHE_TTL_MS = 15_000;
+const CACHE_TTL_MS = 12_000;
 const QUERY = `query Farms {
   _meta { block { number } }
   gauges(first: 1000) {
@@ -124,7 +124,7 @@ function farmsResponse(
 ) {
   return NextResponse.json(envelope, {
     headers: {
-      "Cache-Control": "public, s-maxage=15, stale-while-revalidate=60",
+      "Cache-Control": "public, s-maxage=10, stale-while-revalidate=30",
       "X-0xFi-Cache": cacheStatus,
     },
   });

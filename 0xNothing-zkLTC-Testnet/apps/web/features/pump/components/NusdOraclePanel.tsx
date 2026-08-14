@@ -75,7 +75,7 @@ export function NusdOraclePanel() {
   const nativeBalance = useBalance({
     address,
     chainId: PUMP_CHAIN_ID,
-    query: { enabled: Boolean(address), refetchInterval: 15_000 },
+    query: { enabled: Boolean(address) },
   });
   const nusdBalance = useReadContract({
     address: PUMP_NUSD_ADDRESS,
@@ -83,56 +83,56 @@ export function NusdOraclePanel() {
     functionName: "balanceOf",
     args: address ? [address] : undefined,
     chainId: PUMP_CHAIN_ID,
-    query: { enabled: Boolean(configured && address), refetchInterval: 15_000 },
+    query: { enabled: Boolean(configured && address) },
   });
   const totalSupply = useReadContract({
     address: PUMP_NUSD_ADDRESS,
     abi: nusdAbi,
     functionName: "totalSupply",
     chainId: PUMP_CHAIN_ID,
-    query: { enabled: configured, refetchInterval: 15_000 },
+    query: { enabled: configured },
   });
   const reserve = useReadContract({
     address: PUMP_NUSD_ADDRESS,
     abi: nusdAbi,
     functionName: "totalCollateralWei",
     chainId: PUMP_CHAIN_ID,
-    query: { enabled: configured, refetchInterval: 15_000 },
+    query: { enabled: configured },
   });
   const reserveValue = useReadContract({
     address: PUMP_NUSD_ADDRESS,
     abi: nusdAbi,
     functionName: "reserveValueNusd",
     chainId: PUMP_CHAIN_ID,
-    query: { enabled: configured, refetchInterval: 15_000 },
+    query: { enabled: configured },
   });
   const supplyCeiling = useReadContract({
     address: PUMP_NUSD_ADDRESS,
     abi: nusdAbi,
     functionName: "supplyCeilingNusd",
     chainId: PUMP_CHAIN_ID,
-    query: { enabled: configured, refetchInterval: 15_000 },
+    query: { enabled: configured },
   });
   const mintPaused = useReadContract({
     address: PUMP_NUSD_ADDRESS,
     abi: nusdAbi,
     functionName: "mintPaused",
     chainId: PUMP_CHAIN_ID,
-    query: { enabled: configured, refetchInterval: 15_000 },
+    query: { enabled: configured },
   });
   const redeemPaused = useReadContract({
     address: PUMP_NUSD_ADDRESS,
     abi: nusdAbi,
     functionName: "redeemPaused",
     chainId: PUMP_CHAIN_ID,
-    query: { enabled: configured, refetchInterval: 15_000 },
+    query: { enabled: configured },
   });
   const oracle = useReadContract({
     address: PUMP_NUSD_ADDRESS,
     abi: nusdAbi,
     functionName: "oracle",
     chainId: PUMP_CHAIN_ID,
-    query: { enabled: configured, refetchInterval: 15_000 },
+    query: { enabled: configured },
   });
   const oracleAddress = oracle.data ?? ZERO_ADDRESS;
   const oraclePrice = useReadContract({
@@ -142,7 +142,6 @@ export function NusdOraclePanel() {
     chainId: PUMP_CHAIN_ID,
     query: {
       enabled: configured && oracleAddress !== ZERO_ADDRESS,
-      refetchInterval: 15_000,
     },
   });
   const oracleFresh = useReadContract({
@@ -152,7 +151,6 @@ export function NusdOraclePanel() {
     chainId: PUMP_CHAIN_ID,
     query: {
       enabled: configured && oracleAddress !== ZERO_ADDRESS,
-      refetchInterval: 15_000,
     },
   });
   const mintQuote = useReadContract({

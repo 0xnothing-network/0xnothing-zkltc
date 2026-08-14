@@ -20,7 +20,7 @@ export function OracleFeedTable({ compact = false }: { compact?: boolean }) {
       { address: feed.address ?? zeroAddress, abi: diaAggregatorAbi, functionName: "decimals" as const, chainId: deployment.chain.id },
       { address: feed.address ?? zeroAddress, abi: diaAggregatorAbi, functionName: "latestRoundData" as const, chainId: deployment.chain.id },
     ]),
-    query: { enabled: configured, refetchInterval: 15_000 },
+    query: { enabled: configured },
   });
 
   if (!configured) return <NotDeployed feature="DIA feed monitoring" />;

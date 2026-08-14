@@ -8,6 +8,7 @@ export const wagmiConfig = createConfig({
   ssr: true,
   chains: [litvm],
   connectors,
+  pollingInterval: 4_000,
   transports: {
     [litvm.id]: http(LITVM_RPC_URL, {
       batch: { batchSize: 100, wait: 10 },

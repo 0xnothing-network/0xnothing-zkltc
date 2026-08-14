@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { parseUnits } from "viem";
 import { usePumpPortfolio } from "@/features/pump/hooks/usePumpData";
 import { formatRelativeTime, formatTokenAmount, formatWad } from "@/features/pump/format";
-import { ipfsToGatewayUrl } from "@/features/pump/config";
 import type { PumpMarket } from "@/features/pump/types";
 import { PumpConfigNotice, PumpErrorState, PumpLoadingRows } from "@/features/pump/components/PumpStates";
+import { PumpTokenLogo } from "@/features/pump/components/PumpTokenLogo";
 
 export function PumpPortfolio() {
   const portfolio = usePumpPortfolio();
@@ -79,17 +78,17 @@ function PortfolioRow({
   value: string;
   currentValue?: bigint;
 }) {
-  const image = ipfsToGatewayUrl(market.imageURI);
-  const optimizeImage = market.imageURI.startsWith("ipfs://");
   return (
     <Link href={`/0xPump/token/${market.tokenAddress}`} className="pump-portfolio-row">
       <span className="pump-portfolio-logo">
-        {image && optimizeImage ? (
-          <Image src={image} alt="" width={42} height={42} sizes="42px" />
-        ) : image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" loading="lazy" decoding="async" />
-        ) : <span>{market.symbol.slice(0, 2)}</span>}
+        <PumpTokenLogo
+          imageUri={market.imageURI}
+          name={market.name}
+          symbol={market.symbol}
+          size={42}
+          sizes="42px"
+          decorative
+        />
       </span>
       <span className="pump-portfolio-identity">
         <strong>{market.name}</strong>

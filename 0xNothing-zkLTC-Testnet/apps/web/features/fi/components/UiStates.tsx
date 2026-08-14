@@ -134,7 +134,7 @@ export function SkeletonRows({ count = 4, label = "Loading data" }: { count?: nu
 
 export function AddressLink({ address }: { address: Address }) {
   return (
-    <a className="fi-address-link" href={explorerAddressUrl(address)} target="_blank" rel="noreferrer">
+    <a className="fi-address-link" href={explorerAddressUrl(address)} target="_blank" rel="noopener noreferrer">
       {shortAddress(address)}
       <ArrowSquareOut size={13} aria-hidden="true" />
     </a>
@@ -160,7 +160,7 @@ export function TransactionStatus({
     >
       <span>{message}</span>
       {hash ? (
-        <a href={explorerTransactionUrl(hash)} target="_blank" rel="noreferrer">
+        <a href={explorerTransactionUrl(hash)} target="_blank" rel="noopener noreferrer">
           View transaction <ArrowSquareOut size={13} aria-hidden="true" />
         </a>
       ) : null}

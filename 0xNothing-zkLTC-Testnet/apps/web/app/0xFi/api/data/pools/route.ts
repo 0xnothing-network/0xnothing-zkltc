@@ -26,8 +26,11 @@ type Result = { pools?: PoolRow[] };
 
 const MAX_RPC_TAIL_BLOCKS = 5_000n;
 const MAX_FACTORY_PAIRS = 1_000;
-const POOLS_CACHE_TTL_MS = 15_000;
-const POOLS_CACHE_CONTROL = "public, max-age=5, s-maxage=15, stale-while-revalidate=45";
+const POOLS_CACHE_TTL_MS = 12_000;
+const POOLS_CACHE_CONTROL = "public, s-maxage=10, stale-while-revalidate=30";
+const RPC_READ_CONCURRENCY = 24;
+const TOKEN_POINT_TTL_MS = 5 * 60_000;
+const MAX_TOKEN_POINT_CACHE_ENTRIES = 2_048;
 const lifecycleAbi = [{
   type: "function", name: "status", stateMutability: "view",
   inputs: [{ name: "token", type: "address" }],
@@ -41,6 +44,24 @@ const pairCreatedEvent = parseAbiItem(
   "event PairCreated(address indexed token0, address indexed token1, address pair, bytes32 indexed pairId, bool protectedBootstrap, uint256 pairCount)",
 );
 const client = createPublicClient({ transport: http(deployment.chain.rpcUrl) });
+
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  limit: number,
+  mapper: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await mapper(items[index], index);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
 
 const QUERY = `query Pools {
   _meta { block { number } }
@@ -162,7 +183,7 @@ async function visibleDeploymentPools(pools: PoolPoint[]): Promise<{
   }
 
   if (pump) {
-    const statuses = await Promise.all([...pumpCandidates.entries()].map(async ([key, token]) => {
+    const statuses = await mapWithConcurrency([...pumpCandidates.entries()], RPC_READ_CONCURRENCY, async ([key, token]) => {
       const status = await client.readContract({
         address: pump,
         abi: lifecycleAbi,
@@ -170,7 +191,7 @@ async function visibleDeploymentPools(pools: PoolPoint[]): Promise<{
         args: [token],
       }).catch(() => 0);
       return [key, Number(status)] as const;
-    }));
+    });
     const graduatedTokens = new Set(statuses.filter(([, status]) => status === 3).map(([key]) => key));
     for (const pool of pools) {
       const token0 = pool.token0.id.toLowerCase();
@@ -186,7 +207,10 @@ async function visibleDeploymentPools(pools: PoolPoint[]): Promise<{
   return { pools: visible, excluded: pools.length - visible.length };
 }
 
-async function tokenPoint(address: Address): Promise<PoolTokenPoint> {
+const tokenPointCache = new Map<string, { point: PoolTokenPoint; expiresAt: number }>();
+const tokenPointInFlight = new Map<string, Promise<PoolTokenPoint>>();
+
+async function loadTokenPoint(address: Address): Promise<PoolTokenPoint> {
   const fallback = `${address.slice(0, 6)}...${address.slice(-4)}`;
   const [symbol, name, decimals, imageURI] = await Promise.all([
     client.readContract({ address, abi: erc20Abi, functionName: "symbol" }).catch(() => fallback),
@@ -195,6 +219,32 @@ async function tokenPoint(address: Address): Promise<PoolTokenPoint> {
     client.readContract({ address, abi: tokenImageAbi, functionName: "imageURI" }).catch(() => ""),
   ]);
   return { id: address, symbol, name, decimals, imageUrl: tokenImageUrl(imageURI) };
+}
+
+async function tokenPoint(address: Address): Promise<PoolTokenPoint> {
+  const key = address.toLowerCase();
+  const now = Date.now();
+  const cached = tokenPointCache.get(key);
+  if (cached && cached.expiresAt > now) return cached.point;
+
+  let pending = tokenPointInFlight.get(key);
+  if (!pending) {
+    pending = loadTokenPoint(address).then((point) => {
+      if (!tokenPointCache.has(key) && tokenPointCache.size >= MAX_TOKEN_POINT_CACHE_ENTRIES) {
+        const oldest = tokenPointCache.keys().next().value;
+        if (oldest) tokenPointCache.delete(oldest);
+      }
+      tokenPointCache.set(key, { point, expiresAt: Date.now() + TOKEN_POINT_TTL_MS });
+      return point;
+    });
+    tokenPointInFlight.set(key, pending);
+  }
+
+  try {
+    return await pending;
+  } finally {
+    if (tokenPointInFlight.get(key) === pending) tokenPointInFlight.delete(key);
+  }
 }
 
 async function enrichPumpTokenImages(pools: PoolPoint[]): Promise<void> {
@@ -207,14 +257,11 @@ async function enrichPumpTokenImages(pools: PoolPoint[]): Promise<void> {
       if (token.id.toLowerCase() !== nusd) candidates.set(token.id.toLowerCase(), getAddress(token.id));
     }
   }
-  const images = new Map(await Promise.all([...candidates.entries()].map(async ([key, token]) => {
-    const imageURI = await client.readContract({
-      address: token,
-      abi: tokenImageAbi,
-      functionName: "imageURI",
-    }).catch(() => "");
-    return [key, tokenImageUrl(imageURI)] as const;
-  })));
+  const images = new Map(await mapWithConcurrency(
+    [...candidates.entries()],
+    RPC_READ_CONCURRENCY,
+    async ([key, token]) => [key, (await tokenPoint(token)).imageUrl] as const,
+  ));
   for (const pool of pools) {
     const image0 = images.get(pool.token0.id.toLowerCase());
     const image1 = images.get(pool.token1.id.toLowerCase());
@@ -246,7 +293,7 @@ async function loadRpcTail(indexedBlock: number | null): Promise<{
     toBlock: latest,
   });
 
-  const pools = await Promise.all(logs.map(async (log): Promise<PoolPoint | undefined> => {
+  const pools = await mapWithConcurrency(logs, 12, async (log): Promise<PoolPoint | undefined> => {
     const { pair, protectedBootstrap, token0, token1 } = log.args;
     if (!pair || protectedBootstrap === undefined || !token0 || !token1) return undefined;
     const [reserves, totalSupply, token0Point, token1Point] = await Promise.all([
@@ -267,12 +314,12 @@ async function loadRpcTail(indexedBlock: number | null): Promise<{
       token0: token0Point,
       token1: token1Point,
     };
-  }));
+  });
   return { pools: pools.filter((pool): pool is PoolPoint => Boolean(pool)), fromBlock, toBlock: latest, capped };
 }
 
 async function refreshPools(pools: PoolPoint[]): Promise<{ failedPools: number; totalPools: number }> {
-  const outcomes = await Promise.all(pools.map(async (pool) => {
+  const outcomes = await mapWithConcurrency(pools, RPC_READ_CONCURRENCY, async (pool) => {
     const [reserves, totalSupply] = await Promise.allSettled([
       client.readContract({ address: pool.id, abi: dexPoolAbi, functionName: "getReserves" }),
       client.readContract({ address: pool.id, abi: dexPoolAbi, functionName: "totalSupply" }),
@@ -286,7 +333,7 @@ async function refreshPools(pools: PoolPoint[]): Promise<{ failedPools: number; 
       pool.bootstrapped = totalSupply.value > 0n;
     }
     return reserves.status === "rejected" || totalSupply.status === "rejected";
-  }));
+  });
   return {
     failedPools: outcomes.filter(Boolean).length,
     totalPools: pools.length,
@@ -300,13 +347,14 @@ async function loadFactoryPools(): Promise<PoolPoint[]> {
   if (!factory || !pump || !nusd) throw new Error("Factory discovery is not configured");
   const length = await client.readContract({ address: factory, abi: dexFactoryAbi, functionName: "allPairsLength" });
   if (length > BigInt(MAX_FACTORY_PAIRS)) throw new Error("Factory pair count exceeds the discovery limit");
-  const pairs = await Promise.all(Array.from({ length: Number(length) }, (_, index) => client.readContract({
+  const pairIndexes = Array.from({ length: Number(length) }, (_, index) => index);
+  const pairs = await mapWithConcurrency(pairIndexes, RPC_READ_CONCURRENCY, (index) => client.readContract({
     address: factory,
     abi: dexFactoryAbi,
     functionName: "allPairs",
     args: [BigInt(index)],
-  })));
-  const rows = await Promise.all(pairs.map(async (pair): Promise<PoolPoint | undefined> => {
+  }));
+  const rows = await mapWithConcurrency(pairs, 12, async (pair): Promise<PoolPoint | undefined> => {
     const [token0, token1, reserves, totalSupply] = await Promise.all([
       client.readContract({ address: pair, abi: dexPoolAbi, functionName: "token0" }),
       client.readContract({ address: pair, abi: dexPoolAbi, functionName: "token1" }),
@@ -336,7 +384,7 @@ async function loadFactoryPools(): Promise<PoolPoint[]> {
       token0: token0Point,
       token1: token1Point,
     };
-  }));
+  });
   return rows.filter((pool): pool is PoolPoint => Boolean(pool));
 }
 
@@ -401,9 +449,6 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
 
     const visible = await visibleDeploymentPools(envelope.data);
     envelope.data = visible.pools;
-    if (visible.excluded > 0) {
-      envelope.warning = `${envelope.warning ? `${envelope.warning} ` : ""}Excluded ${visible.excluded} pool${visible.excluded === 1 ? "" : "s"} from superseded deployments.`;
-    }
     await enrichPumpTokenImages(envelope.data).catch(() => { /* fallback logos remain available */ });
 
     // Canonical markets are priced by DIA. Reserves remain the source of TVL.
@@ -483,7 +528,7 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
       );
       if (poolsNeedingTailVol.length > 0 && nusd) {
         let incompleteTailVolume = false;
-        await Promise.all(poolsNeedingTailVol.map(async (pool) => {
+        await mapWithConcurrency(poolsNeedingTailVol, 6, async (pool) => {
           try {
             const tail = await loadPairTail(pool.id, envelope.meta.indexedBlock);
             if (tail.capped) {
@@ -503,7 +548,7 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
             }
             pool.volume24hNusd = vol.toString();
           } catch { /* non-fatal */ }
-        }));
+        });
         if (incompleteTailVolume) {
           envelope.warning = `${envelope.warning ? `${envelope.warning} ` : ""}24h volume is unavailable while the RPC tail is capped.`;
         }

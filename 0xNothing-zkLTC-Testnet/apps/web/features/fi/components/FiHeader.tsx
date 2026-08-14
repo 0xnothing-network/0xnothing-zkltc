@@ -75,7 +75,7 @@ export function FiHeader() {
   const nativeBalance = useBalance({
     address,
     chainId: deployment.chain.id,
-    query: { enabled: readsEnabled, refetchInterval: 15_000 },
+    query: { enabled: readsEnabled },
   });
   const nusdBalance = useReadContract({
     address: deployment.contracts.nusd,
@@ -83,7 +83,7 @@ export function FiHeader() {
     functionName: "balanceOf",
     args: address ? [address] : undefined,
     chainId: deployment.chain.id,
-    query: { enabled: Boolean(readsEnabled && deployment.contracts.nusd), refetchInterval: 15_000 },
+    query: { enabled: Boolean(readsEnabled && deployment.contracts.nusd) },
   });
 
   useEffect(() => setMounted(true), []);
@@ -221,7 +221,7 @@ export function FiHeader() {
                     <button type="button" onClick={() => void copyAddress()}>
                       <Copy size={15} aria-hidden="true" /> Copy address
                     </button>
-                    <a href={explorerAddressUrl(address)} target="_blank" rel="noreferrer">
+                    <a href={explorerAddressUrl(address)} target="_blank" rel="noopener noreferrer">
                       <ArrowSquareOut size={15} aria-hidden="true" /> View on explorer
                     </a>
                     <button type="button" className="danger" onClick={() => disconnect()}>

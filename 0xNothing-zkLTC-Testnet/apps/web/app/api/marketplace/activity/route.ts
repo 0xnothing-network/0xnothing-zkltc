@@ -9,14 +9,14 @@ import { fetchMarketplaceActivityFromOnchain } from "@/lib/onchainMarketplace";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const revalidate = 15;
+export const revalidate = 0;
 
 interface CacheEntry {
   value: { events: SubgraphMarketEventDTO[] };
   ts: number;
 }
 
-const ACTIVITY_TTL = 15_000;
+const ACTIVITY_TTL = 3_000;
 const ACTIVITY_CACHE_MAX_ENTRIES = 256;
 const activityCache = new Map<string, CacheEntry>();
 
@@ -27,9 +27,7 @@ export async function GET(request: Request) {
   const eventTypes = parseEventTypes(searchParams.get("type"));
   const force = searchParams.get("force") === "1";
   const responseHeaders = {
-    "Cache-Control": force
-      ? "no-store"
-      : "public, s-maxage=15, stale-while-revalidate=15",
+    "Cache-Control": "private, no-store, max-age=0, must-revalidate",
   };
   const cacheKey = `${limit}:${skip}:${eventTypes.join(",") || "all"}`;
   const cached = activityCache.get(cacheKey);

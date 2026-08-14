@@ -5,7 +5,7 @@ import { tokenImageUrl } from "@fi/lib/tokenImage";
 
 export { tokenImageUrl } from "@fi/lib/tokenImage";
 
-export type TokenLogoSize = "sm" | "md" | "lg";
+type TokenLogoSize = "sm" | "md" | "lg";
 
 function fallbackLabel(symbol: string): string {
   const clean = symbol.replace(/[^a-z0-9]/gi, "").toUpperCase();

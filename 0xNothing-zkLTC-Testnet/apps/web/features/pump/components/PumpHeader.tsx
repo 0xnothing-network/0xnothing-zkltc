@@ -61,7 +61,6 @@ export function PumpHeader() {
     chainId: PUMP_CHAIN_ID,
     query: {
       enabled: balanceEnabled,
-      refetchInterval: 15_000,
     },
   });
   const nusdBalance = useReadContract({
@@ -72,7 +71,6 @@ export function PumpHeader() {
     chainId: PUMP_CHAIN_ID,
     query: {
       enabled: balanceEnabled && NUSD_CONFIGURED,
-      refetchInterval: 15_000,
     },
   });
 

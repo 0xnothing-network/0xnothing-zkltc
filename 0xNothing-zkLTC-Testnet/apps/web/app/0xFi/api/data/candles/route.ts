@@ -10,9 +10,9 @@ import { decimal, isFactoryPair, loadPairTail, pairForTokens, pairTokenMetadata 
 
 const PERIODS = { "5m": 300, "1h": 3_600, "4h": 14_400, "1d": 86_400 } as const;
 type CandlePeriod = keyof typeof PERIODS;
-const CANDLES_CACHE_TTL_MS = 15_000;
+const CANDLES_CACHE_TTL_MS = 12_000;
 const CANDLES_STALE_TTL_MS = 5 * 60_000;
-const CANDLES_CACHE_CONTROL = "public, max-age=5, s-maxage=15, stale-while-revalidate=60";
+const CANDLES_CACHE_CONTROL = "public, s-maxage=10, stale-while-revalidate=30";
 const client = createPublicClient({ transport: http(deployment.chain.rpcUrl) });
 const QUERY = `
   query Candles($pool: Bytes!, $period: Int!, $first: Int!) {

@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       limit: Number(params.get("limit") || 10),
     });
     return NextResponse.json(payload, {
-      headers: { "Cache-Control": "public, s-maxage=10, stale-while-revalidate=20" },
+      headers: { "Cache-Control": "private, no-store, max-age=0, must-revalidate" },
     });
   } catch (error) {
     console.error("[pump/holders] holder load failed:", error);

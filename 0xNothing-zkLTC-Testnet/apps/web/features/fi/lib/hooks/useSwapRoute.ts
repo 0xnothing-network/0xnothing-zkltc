@@ -75,7 +75,7 @@ export function useSwapRoute({
     query: {
       enabled: canProbe,
       staleTime: Infinity,
-      refetchInterval: (query) => validPair(query.state.data as Address | undefined) ? false : 30_000,
+      refetchInterval: (query) => validPair(query.state.data as Address | undefined) ? false : 5_000,
     },
   });
   const bridgeInputPairQuery = useReadContract({
@@ -86,7 +86,7 @@ export function useSwapRoute({
     query: {
       enabled: canBridge,
       staleTime: Infinity,
-      refetchInterval: (query) => validPair(query.state.data as Address | undefined) ? false : 30_000,
+      refetchInterval: (query) => validPair(query.state.data as Address | undefined) ? false : 5_000,
     },
   });
   const bridgeOutputPairQuery = useReadContract({
@@ -97,7 +97,7 @@ export function useSwapRoute({
     query: {
       enabled: canBridge,
       staleTime: Infinity,
-      refetchInterval: (query) => validPair(query.state.data as Address | undefined) ? false : 30_000,
+      refetchInterval: (query) => validPair(query.state.data as Address | undefined) ? false : 5_000,
     },
   });
 
@@ -109,21 +109,21 @@ export function useSwapRoute({
       { address: directPair, abi: dexPoolAbi, functionName: "getReserves" },
       { address: directPair, abi: dexPoolAbi, functionName: "totalSupply" },
     ] as const : [],
-    query: { enabled: Boolean(directPair), staleTime: 20_000, refetchInterval: 30_000 },
+    query: { enabled: Boolean(directPair) },
   });
   const bridgeInputLiquidity = useReadContracts({
     contracts: bridgeInputPair ? [
       { address: bridgeInputPair, abi: dexPoolAbi, functionName: "getReserves" },
       { address: bridgeInputPair, abi: dexPoolAbi, functionName: "totalSupply" },
     ] as const : [],
-    query: { enabled: Boolean(bridgeInputPair), staleTime: 20_000, refetchInterval: 30_000 },
+    query: { enabled: Boolean(bridgeInputPair) },
   });
   const bridgeOutputLiquidity = useReadContracts({
     contracts: bridgeOutputPair ? [
       { address: bridgeOutputPair, abi: dexPoolAbi, functionName: "getReserves" },
       { address: bridgeOutputPair, abi: dexPoolAbi, functionName: "totalSupply" },
     ] as const : [],
-    query: { enabled: Boolean(bridgeOutputPair), staleTime: 20_000, refetchInterval: 30_000 },
+    query: { enabled: Boolean(bridgeOutputPair) },
   });
 
   const pairDiscoveryPending = unresolved(canProbe, directPairQuery)
@@ -147,14 +147,14 @@ export function useSwapRoute({
     abi: dexRouterAbi,
     functionName: "getAmountsOut",
     args: directPath && amountIn ? [amountIn, [...directPath]] : undefined,
-    query: { enabled: Boolean(router && directPath && amountIn), refetchInterval: 12_000 },
+    query: { enabled: Boolean(router && directPath && amountIn) },
   });
   const bridgeQuote = useReadContract({
     address: router,
     abi: dexRouterAbi,
     functionName: "getAmountsOut",
     args: bridgePath && amountIn ? [amountIn, [...bridgePath]] : undefined,
-    query: { enabled: Boolean(router && bridgePath && amountIn), refetchInterval: 12_000 },
+    query: { enabled: Boolean(router && bridgePath && amountIn) },
   });
 
   const directQuotePending = unresolved(Boolean(directPath && amountIn), directQuote);
@@ -206,7 +206,7 @@ export function useSwapRoute({
       bridgeLive,
       directLive,
       discoverySettled: true,
-      error: discoveryError,
+      error: defaultPath ? undefined : discoveryError,
       isFetching: false,
       kind: defaultKind,
       path: defaultPath,
@@ -259,7 +259,7 @@ export function useSwapRoute({
     bridgeLive,
     directLive,
     discoverySettled: true,
-    error: quoteError ?? discoveryError,
+    error: quoteError ?? (amountOut === undefined ? discoveryError : undefined),
     isFetching: false,
     kind,
     path,

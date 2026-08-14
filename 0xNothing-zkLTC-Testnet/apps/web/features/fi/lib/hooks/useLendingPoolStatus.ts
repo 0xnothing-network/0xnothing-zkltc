@@ -82,7 +82,7 @@ export function useLendingPoolStatus() {
       { address: pool ?? zeroAddress, abi: lendingPoolAbi, functionName: "borrowPaused" },
       { address: pool ?? zeroAddress, abi: lendingPoolAbi, functionName: "collateralWithdrawalPaused" },
     ] as const : [],
-    query: { enabled, refetchInterval: 30_000 },
+    query: { enabled },
   });
   const results = query.data as readonly { status: string; result?: unknown }[] | undefined;
   const implementationId = successfulResult(results?.[0]) as Hex | undefined;
@@ -168,7 +168,7 @@ export function useLendingPoolStatus() {
     },
     paused: {
       title: "Lending risk actions paused",
-      message: "A guardian pause is active on supply, borrowing, or collateral withdrawals. Exit actions that remain available on-chain can still be used.",
+      message: "A guardian pause is active. Verified collateral top-ups and exit actions that remain available on-chain can still be used.",
       actionLabel: "Guardian pause",
     },
     ready: {
@@ -178,17 +178,23 @@ export function useLendingPoolStatus() {
     },
   };
   const ready = status === "ready";
+  const verified = status === "ready" || status === "paused";
   const checking = status === "checking";
 
   return {
     status,
     ...statusCopy[status],
     ready,
+    verified,
+    supplyReady: verified && supplyPaused === false,
+    borrowReady: verified && borrowPaused === false,
+    collateralDepositReady: verified,
+    collateralWithdrawalReady: verified && collateralWithdrawalPaused === false,
     checking,
     configured,
-    lenderRate: ready ? lenderRate : undefined,
-    borrowRate: ready ? borrowRate : undefined,
-    protocolRate: ready ? protocolRate : undefined,
+    lenderRate: verified ? lenderRate : undefined,
+    borrowRate: verified ? borrowRate : undefined,
+    protocolRate: verified ? protocolRate : undefined,
     collateralConfigs,
     activated,
     bootstrapOpen,

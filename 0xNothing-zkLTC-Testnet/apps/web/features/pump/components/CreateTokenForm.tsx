@@ -19,6 +19,7 @@ import {
 } from "wagmi";
 import { zeroXPumpAbi, nusdAbi } from "@/features/pump/abis";
 import {
+  isValidPumpExternalUrl,
   NUSD_CONFIGURED,
   PUMP_CHAIN_ID,
   PUMP_CONFIGURED,
@@ -81,8 +82,8 @@ export function CreateTokenForm() {
     if (!/^[A-Z0-9]{2,12}$/.test(symbol.trim().toUpperCase())) return "Use 2 to 12 letters or numbers for the ticker";
     if (!description.trim()) return "Describe the token";
     if (description.length > 500) return "Description is too long";
-    if (!validOptionalUrl(website)) return "Website must be an HTTPS URL up to 256 characters";
-    if (!validOptionalUrl(twitter)) return "Social link must be an HTTPS URL up to 256 characters";
+    if (website.trim() && !isValidPumpExternalUrl(website, 256)) return "Website must be an HTTPS URL up to 256 characters";
+    if (twitter.trim() && !isValidPumpExternalUrl(twitter, 256)) return "Social link must be an HTTPS URL up to 256 characters";
     if (!file) return "Choose a PNG, JPEG, or WebP logo";
     if (!IMAGE_TYPES.has(file.type)) return "Logo must be PNG, JPEG, or WebP";
     if (file.size <= 0 || file.size > PUMP_MAX_IMAGE_BYTES) return "Logo must be non-empty and 2 MB or smaller";
@@ -384,15 +385,4 @@ export function CreateTokenForm() {
 
     </div>
   );
-}
-
-function validOptionalUrl(value: string): boolean {
-  const trimmed = value.trim();
-  if (!trimmed) return true;
-  try {
-    const parsed = new URL(trimmed);
-    return parsed.protocol === "https:" && trimmed.length <= 256;
-  } catch {
-    return false;
-  }
 }

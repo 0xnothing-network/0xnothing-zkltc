@@ -4,6 +4,7 @@ import { zeroXPumpAbi } from "@/features/pump/abis";
 import { computePumpContentHash } from "@/features/pump/contentHash";
 import { validatePumpImage } from "@/features/pump/imageValidation";
 import {
+  isValidPumpExternalUrl,
   PUMP_CHAIN_ID,
   PUMP_CONFIGURED,
   PUMP_FACTORY_ADDRESS,
@@ -104,8 +105,8 @@ export async function POST(request: Request) {
     return jsonError("Token symbol must contain 2 to 12 letters or numbers", 400);
   }
   if (description.length > 500) return jsonError("Description is too long", 400);
-  if (!validOptionalUrl(website)) return jsonError("Invalid website URL", 400);
-  if (!validOptionalUrl(twitter)) return jsonError("Invalid social URL", 400);
+  if (website && !isValidPumpExternalUrl(website, 256)) return jsonError("Invalid website URL", 400);
+  if (twitter && !isValidPumpExternalUrl(twitter, 256)) return jsonError("Invalid social URL", 400);
 
   const fields = parsePumpUploadMessage(message);
   if (!fields || fields.address.toLowerCase() !== submittedAddress) {
@@ -340,16 +341,6 @@ async function pinataCid(response: Response): Promise<string> {
 function safeFileName(original: string, fallback: string): string {
   const extension = original.toLowerCase().match(/\.(png|jpe?g|webp|json)$/)?.[0] ?? "";
   return `${fallback.replace(/[^a-zA-Z0-9_-]/g, "-")}${extension}`;
-}
-
-function validOptionalUrl(value: string): boolean {
-  if (!value) return true;
-  try {
-    const parsed = new URL(value);
-    return parsed.protocol === "https:" && value.length <= 256;
-  } catch {
-    return false;
-  }
 }
 
 function jsonError(error: string, status: number) {

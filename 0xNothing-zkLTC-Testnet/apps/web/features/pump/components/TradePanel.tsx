@@ -22,6 +22,7 @@ import {
 import { formatCompactNumber } from "@/features/pump/format";
 import type { PumpMarket } from "@/features/pump/types";
 import { useToast } from "@/components/Toast";
+import { invalidateAfterPumpTrade } from "@/lib/liveData";
 
 type TradeMode = "buy" | "sell";
 
@@ -111,8 +112,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
       nusdAllowance.refetch(),
       tokenAllowance.refetch(),
       mode === "buy" ? buyQuote.refetch() : sellQuote.refetch(),
-      queryClient.invalidateQueries({ queryKey: ["pump-candles", market.tokenAddress] }),
-      queryClient.invalidateQueries({ queryKey: ["pump-trades", market.tokenAddress] }),
+      invalidateAfterPumpTrade(queryClient, market.tokenAddress),
     ]);
     onComplete?.();
   };

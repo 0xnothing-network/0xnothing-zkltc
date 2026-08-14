@@ -34,7 +34,7 @@ type ChartDataState = {
 
 const MIN_VISIBLE_LOGICAL_BARS = 32;
 const RIGHT_PADDING_BARS = 4;
-const CHART_REFRESH_INTERVAL_MS = 12_000;
+const CHART_REFRESH_INTERVAL_MS = 15_000;
 
 function price(value: number): string {
   return value.toLocaleString(undefined, {

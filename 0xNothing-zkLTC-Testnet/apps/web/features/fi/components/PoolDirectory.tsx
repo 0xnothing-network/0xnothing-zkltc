@@ -114,24 +114,25 @@ function MarketRow({ pool, canonical }: { pool: PoolPoint; canonical: Set<string
   const live = hasLiquidity(pool);
   const change = pool.priceChange24h;
   const nusd = deployment.contracts.nusd?.toLowerCase();
-  const quoteFirst = Boolean(nusd && pool.token0.id.toLowerCase() === nusd);
-  const baseToken = quoteFirst ? pool.token1 : pool.token0;
-  const quoteToken = quoteFirst ? pool.token0 : pool.token1;
-  const token0 = normalizedSymbol(baseToken.symbol);
-  const token1 = normalizedSymbol(quoteToken.symbol);
+  const token0IsNusd = Boolean(nusd && pool.token0.id.toLowerCase() === nusd);
+  const token1IsNusd = Boolean(nusd && pool.token1.id.toLowerCase() === nusd);
+  const firstToken = token0IsNusd ? pool.token0 : token1IsNusd ? pool.token1 : pool.token0;
+  const secondToken = token0IsNusd ? pool.token1 : token1IsNusd ? pool.token0 : pool.token1;
+  const firstSymbol = normalizedSymbol(firstToken.symbol);
+  const secondSymbol = normalizedSymbol(secondToken.symbol);
 
   return (
     <li className="fi-market-item">
       <Link className="fi-market-row" href={marketHref(pool)}>
         <span className="fi-market-pair">
-          <TokenPairLogos token0={baseToken} token1={quoteToken} size="sm" />
+          <TokenPairLogos token0={firstToken} token1={secondToken} size="sm" />
           <span>
-            <strong>{token0}<i>/</i>{token1}</strong>
+            <strong>{firstSymbol}<i>→</i>{secondSymbol}</strong>
             <small><i data-state={live ? "live" : "empty"} />{type === "graduated" ? "0xPump" : type === "canonical" ? "Core" : "DEX"}</small>
           </span>
         </span>
         <span className="fi-market-cell">
-          <small>Price</small>
+          <small>{secondSymbol} price</small>
           <strong>{formatPrice(pool.priceNusd)}</strong>
         </span>
         <span className="fi-market-cell" data-tone={change === undefined ? "muted" : change < 0 ? "danger" : "positive"}>
@@ -257,6 +258,11 @@ export function PoolDirectory({
         ))}
         <span />
       </div>
+      {poolsQuery.warning ? (
+        <div className="fi-inline-state fi-inline-warning" role="status">
+          <div><strong>Market data delayed</strong><span>Showing the latest available snapshot.</span></div>
+        </div>
+      ) : null}
       <ul className="fi-market-list">
         {markets.map((pool) => <MarketRow pool={pool} canonical={canonical} key={pool.id} />)}
       </ul>

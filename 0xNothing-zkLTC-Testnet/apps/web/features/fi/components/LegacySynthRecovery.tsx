@@ -33,7 +33,7 @@ function LegacyVaultRow({
       { address: vault, abi: legacySynthVaultAbi, functionName: "mintPaused" },
       { address: vault, abi: legacySynthVaultAbi, functionName: "withdrawPaused" },
     ] as const,
-    query: { enabled: Boolean(vault), refetchInterval: 15_000 },
+    query: { enabled: Boolean(vault) },
   });
   const collateral = position?.[0];
   const debt = position?.[1];
@@ -125,7 +125,7 @@ export function LegacySynthRecovery() {
       functionName: "positions" as const,
       args: [address] as const,
     })) : [],
-    query: { enabled: Boolean(address && configured.length > 0), refetchInterval: 15_000 },
+    query: { enabled: Boolean(address && configured.length > 0) },
   });
   const rows = configured.map(([symbol, vault], index) => {
     const result = walletReads.data?.[index];

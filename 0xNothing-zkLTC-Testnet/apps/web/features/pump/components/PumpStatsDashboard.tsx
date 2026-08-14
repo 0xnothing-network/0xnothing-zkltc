@@ -37,11 +37,7 @@ export function PumpStatsDashboard() {
     abi: zeroXPumpAbi,
     functionName: "admin",
     chainId: PUMP_CHAIN_ID,
-    query: {
-      enabled: PUMP_CONFIGURED,
-      staleTime: 30_000,
-      refetchInterval: 30_000,
-    },
+    query: { enabled: PUMP_CONFIGURED },
   });
   const isAdmin = Boolean(
     address &&
@@ -220,10 +216,6 @@ function DeveloperFeePanel({
     abi: zeroXPumpAbi,
     functionName: "accruedProtocolFeesNusd",
     chainId: PUMP_CHAIN_ID,
-    query: {
-      refetchInterval: 10_000,
-      staleTime: 5_000,
-    },
   });
   const claimable = claimableQuery.data ?? 0n;
   const actionPending = isClaiming || isSwitching;

@@ -19,6 +19,6 @@ export async function GET(
   const payload = await getPumpMarket(token);
   return NextResponse.json(payload, {
     status: payload.configured && !payload.market ? 404 : 200,
-    headers: { "Cache-Control": "public, s-maxage=8, stale-while-revalidate=15" },
+    headers: { "Cache-Control": "private, no-store, max-age=0, must-revalidate" },
   });
 }

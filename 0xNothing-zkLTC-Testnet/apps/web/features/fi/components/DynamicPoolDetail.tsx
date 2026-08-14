@@ -86,18 +86,19 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
       { address: pool, abi: dexPoolAbi, functionName: "getReserves" },
       { address: pool, abi: dexPoolAbi, functionName: "totalSupply" },
     ] as const,
-    query: { enabled: validation.data === true, refetchInterval: 12_000 },
+    query: { enabled: validation.data === true },
   });
   const rawReserves = pairData.data?.[0]?.result as readonly [bigint, bigint, number] | undefined;
   const totalSupply = pairData.data?.[1]?.result as bigint | undefined;
   const pairMetadataReadFailed = pairMetadata.data?.some((result) => result.status === "failure") ?? false;
   const pairReadFailed = pairData.data?.some((result) => result.status === "failure") ?? false;
   const nusdAddress = deployment.contracts.nusd?.toLowerCase();
-  const quoteFirst = Boolean(poolToken0 && nusdAddress && poolToken0.toLowerCase() === nusdAddress);
-  const tokenA = quoteFirst ? poolToken1 : poolToken0;
-  const tokenB = quoteFirst ? poolToken0 : poolToken1;
-  const rawReserveA = quoteFirst ? rawReserves?.[1] : rawReserves?.[0];
-  const rawReserveB = quoteFirst ? rawReserves?.[0] : rawReserves?.[1];
+  const token0IsNusd = Boolean(poolToken0 && nusdAddress && poolToken0.toLowerCase() === nusdAddress);
+  const token1IsNusd = Boolean(poolToken1 && nusdAddress && poolToken1.toLowerCase() === nusdAddress);
+  const tokenA = token0IsNusd ? poolToken0 : token1IsNusd ? poolToken1 : poolToken0;
+  const tokenB = token0IsNusd ? poolToken1 : token1IsNusd ? poolToken0 : poolToken1;
+  const rawReserveA = token1IsNusd ? rawReserves?.[1] : rawReserves?.[0];
+  const rawReserveB = token1IsNusd ? rawReserves?.[0] : rawReserves?.[1];
   const tokenMetadata = useReadContracts({
     contracts: tokenA && tokenB ? [
       { address: tokenA, abi: erc20Abi, functionName: "symbol" },
@@ -125,7 +126,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
       { address: tokenA, abi: erc20Abi, functionName: "balanceOf", args: [address] },
       { address: tokenB, abi: erc20Abi, functionName: "balanceOf", args: [address] },
     ] as const : [],
-    query: { enabled: Boolean(address && tokenA && tokenB), refetchInterval: 12_000 },
+    query: { enabled: Boolean(address && tokenA && tokenB) },
   });
   const lpBalance = walletBalances.data?.[0]?.result as bigint | undefined;
   const balanceA = walletBalances.data?.[1]?.result as bigint | undefined;
@@ -145,7 +146,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
     abi: dexRouterAbi,
     functionName: "getReserves",
     args: tokenA && tokenB ? [tokenA, tokenB] : undefined,
-    query: { enabled: Boolean(dexRouter && validation.data && tokenA && tokenB), refetchInterval: 12_000 },
+    query: { enabled: Boolean(dexRouter && validation.data && tokenA && tokenB) },
   });
   const reserveA = reserveRead.data?.[0] ?? rawReserveA;
   const reserveB = reserveRead.data?.[1] ?? rawReserveB;
@@ -163,13 +164,13 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
     address: canonicalMarket?.oracle,
     abi: diaOracleAdapterAbi,
     functionName: "readPriceWad",
-    query: { enabled: Boolean(canonicalMarket?.oracle), refetchInterval: 12_000 },
+    query: { enabled: Boolean(canonicalMarket?.oracle) },
   });
   const oracleFreshRead = useReadContract({
     address: canonicalMarket?.oracle,
     abi: diaOracleAdapterAbi,
     functionName: "isFresh",
-    query: { enabled: Boolean(canonicalMarket?.oracle), refetchInterval: 12_000 },
+    query: { enabled: Boolean(canonicalMarket?.oracle) },
   });
   const oraclePriceNusd = oracleFreshRead.data === true && oraclePriceRead.data?.[0]
     ? Number(formatUnits(oraclePriceRead.data[0], 18))
@@ -185,14 +186,13 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
       : undefined,
     query: {
       enabled: Boolean(mode === "swap" && dexRouter && validation.data && swapTokenIn && swapTokenOut && swapAmountIn),
-      refetchInterval: 12_000,
     },
   });
   const swapsPaused = useReadContract({
     address: deployment.contracts.dexFactory,
     abi: dexFactoryAbi,
     functionName: "swapsPaused",
-    query: { enabled: Boolean(deployment.contracts.dexFactory), refetchInterval: 10_000 },
+    query: { enabled: Boolean(deployment.contracts.dexFactory) },
   });
   const swapAmountOut = swapQuote.data?.at(-1);
   const swapStateReady = swapsPaused.data !== undefined && !swapsPaused.error;
@@ -402,7 +402,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
         <div className="fi-main-stack">
           <LazyMarketChart
             pair={pool.toLowerCase()}
-            label={`${symbolA}/${symbolB}`}
+            label={`${symbolB} price · ${symbolA}`}
             token0={{ symbol: symbolA, imageUrl: imageA }}
             token1={{ symbol: symbolB, imageUrl: imageB }}
           />
@@ -482,6 +482,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
               </dl>
             </> : mode === "add" ? <>
               <AmountField id="dynamic-pool-amount-a" label={symbolA} asset={symbolA} imageUrl={imageA} value={amountAText} balance={formatAmount(balanceA, decimalsA)} onChange={updateAmountA} onMax={balanceA && balanceA > 0n ? () => updateAmountA(formatUnits(balanceA, decimalsA)) : undefined} error={error?.startsWith(symbolA) ? error : undefined} />
+              <span className="fi-liquidity-plus" aria-hidden="true">+</span>
               <AmountField id="dynamic-pool-amount-b" label={symbolB} asset={symbolB} imageUrl={imageB} value={amountBText} balance={formatAmount(balanceB, decimalsB)} onChange={updateAmountB} onMax={balanceB && balanceB > 0n ? () => updateAmountB(formatUnits(balanceB, decimalsB)) : undefined} error={error?.startsWith(symbolB) || error?.startsWith("Enter") ? error : undefined} />
             </> : <>
               <AmountField id="dynamic-pool-lp-amount" label="LP amount" asset="LP" value={lpText} balance={formatAmount(lpBalance)} onChange={setLpText} onMax={lpBalance && lpBalance > 0n ? () => setLpText(formatUnits(lpBalance, 18)) : undefined} error={error} />

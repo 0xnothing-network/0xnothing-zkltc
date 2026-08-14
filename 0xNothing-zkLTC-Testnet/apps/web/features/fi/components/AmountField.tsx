@@ -36,7 +36,7 @@ export function AmountField({
     <div className="fi-field">
       <div className="fi-field-label-row">
         <label htmlFor={id}>{label}</label>
-        {balance ? <span>Balance {balance}</span> : null}
+        {balance ? <span title={`Balance ${balance}`}>Balance {balance}</span> : null}
       </div>
       <div className="fi-amount-input" data-invalid={Boolean(error) || undefined}>
         <input
@@ -52,15 +52,17 @@ export function AmountField({
           onChange={onChange ? (event) => onChange(event.target.value) : undefined}
           placeholder="0.0"
         />
-        <span className="fi-amount-asset">
-          {asset !== "LP" ? <TokenLogo symbol={asset} imageUrl={imageUrl} size="sm" /> : null}
-          <strong>{asset}</strong>
-        </span>
-        {onMax ? (
-          <button type="button" onClick={onMax} aria-label={`Use maximum ${asset} balance`}>
-            MAX
-          </button>
-        ) : null}
+        <div className="fi-amount-controls">
+          <span className="fi-amount-asset" data-asset={asset === "LP" ? "lp" : undefined}>
+            {asset !== "LP" ? <TokenLogo symbol={asset} imageUrl={imageUrl} size="sm" /> : null}
+            <strong>{asset}</strong>
+          </span>
+          {onMax ? (
+            <button className="fi-max-button" type="button" onClick={onMax} aria-label={`Use maximum ${asset} balance`}>
+              MAX
+            </button>
+          ) : null}
+        </div>
       </div>
       {helper ? <small id={helperId}>{helper}</small> : null}
       {error ? <small id={errorId} className="fi-field-error" aria-live="polite">{error}</small> : null}

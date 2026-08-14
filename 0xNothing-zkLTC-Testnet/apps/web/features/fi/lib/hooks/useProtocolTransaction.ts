@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Abi, Address, Hash } from "viem";
 import {
   useAccount,
@@ -11,6 +12,7 @@ import {
 import { erc20Abi } from "@fi/lib/abis/erc20";
 import { deployment } from "@fi/config/deployment";
 import { readableError } from "@fi/lib/errors";
+import { isBlockSyncedQueryKey } from "@/lib/liveData";
 
 export type TransactionPhase =
   | "idle"
@@ -49,6 +51,7 @@ interface TransactionState {
 const INITIAL_STATE: TransactionState = { phase: "idle", message: "" };
 
 export function useProtocolTransaction() {
+  const queryClient = useQueryClient();
   const { address, chainId, isConnected } = useAccount();
   const publicClient = usePublicClient({ chainId: deployment.chain.id });
   const {
@@ -57,11 +60,15 @@ export function useProtocolTransaction() {
   } = useWalletClient({ chainId: deployment.chain.id });
   const { switchChainAsync } = useSwitchChain();
   const [state, setState] = useState<TransactionState>(INITIAL_STATE);
+  const inFlightRef = useRef(false);
 
-  const reset = useCallback(() => setState(INITIAL_STATE), []);
+  const reset = useCallback(() => {
+    if (!inFlightRef.current) setState(INITIAL_STATE);
+  }, []);
 
   const execute = useCallback(
     async ({ call, approval }: ExecuteOptions): Promise<Hash | undefined> => {
+      if (inFlightRef.current) return undefined;
       if (!call.address) {
         setState({ phase: "error", message: "Not deployed. This transaction is disabled." });
         return undefined;
@@ -75,6 +82,8 @@ export function useProtocolTransaction() {
         return undefined;
       }
 
+      inFlightRef.current = true;
+      setState({ phase: "simulating", message: "Preparing latest on-chain state" });
       try {
         let wallet = walletClient;
         if (chainId !== deployment.chain.id) {
@@ -135,14 +144,19 @@ export function useProtocolTransaction() {
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
         if (receipt.status !== "success") throw new Error("Transaction reverted");
 
+        void queryClient.invalidateQueries({
+          predicate: (query) => isBlockSyncedQueryKey(query.queryKey),
+        });
         setState({ phase: "success", message: "Confirmed on LitVM", hash });
         return hash;
       } catch (error) {
         setState({ phase: "error", message: readableError(error) });
         return undefined;
+      } finally {
+        inFlightRef.current = false;
       }
     },
-    [address, chainId, isConnected, publicClient, refetchWalletClient, switchChainAsync, walletClient],
+    [address, chainId, isConnected, publicClient, queryClient, refetchWalletClient, switchChainAsync, walletClient],
   );
 
   return {

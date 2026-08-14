@@ -22,11 +22,11 @@ type SwapRow = { id: string; timestamp: string; sender: string; amount0In: strin
 type LiquidityRow = { id: string; timestamp: string; action: "MINT" | "BURN"; sender: string; amount0: string; amount1: string; txHash: string; logIndex: string };
 type Result = { swaps?: SwapRow[]; liquidityEvents?: LiquidityRow[] };
 
-const CACHE_TTL_MS = 15_000;
+const CACHE_TTL_MS = 12_000;
 const STALE_TTL_MS = 60_000;
 const MAX_CACHE_ENTRIES = 128;
 const CACHE_HEADERS = {
-  "Cache-Control": "public, max-age=5, s-maxage=15, stale-while-revalidate=60",
+  "Cache-Control": "public, s-maxage=10, stale-while-revalidate=30",
 };
 
 type ActivityEnvelope = DataEnvelope<ActivityPoint[]>;
