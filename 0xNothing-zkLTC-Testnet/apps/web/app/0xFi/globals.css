@@ -913,6 +913,11 @@
   color: #647169;
 }
 
+.fi-root .fi-amount-input input:focus-visible {
+  outline: none;
+  outline-offset: 0;
+}
+
 .fi-amount-input strong {
   font-size: var(--fi-text-body);
   font-weight: 400;
