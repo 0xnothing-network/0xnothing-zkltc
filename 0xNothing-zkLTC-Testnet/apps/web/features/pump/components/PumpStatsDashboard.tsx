@@ -8,11 +8,12 @@ import {
   useSwitchChain,
   useWriteContract,
 } from "wagmi";
-import { zeroXPumpAbi } from "@/features/pump/abis";
+import { pumpGraduationControllerAbi, zeroXPumpAbi } from "@/features/pump/abis";
 import {
   PUMP_CHAIN_ID,
   PUMP_CONFIGURED,
   PUMP_FACTORY_ADDRESS,
+  PUMP_GRADUATION_CONTROLLER_ADDRESS,
 } from "@/features/pump/config";
 import {
   formatRelativeTime,
@@ -39,11 +40,31 @@ export function PumpStatsDashboard() {
     chainId: PUMP_CHAIN_ID,
     query: { enabled: PUMP_CONFIGURED },
   });
-  const isAdmin = Boolean(
-    address &&
-    adminQuery.data &&
-    address.toLowerCase() === adminQuery.data.toLowerCase(),
+  const controllerOwnsFactory = Boolean(
+    adminQuery.data
+    && adminQuery.data.toLowerCase() === PUMP_GRADUATION_CONTROLLER_ADDRESS.toLowerCase(),
   );
+  const governanceQuery = useReadContract({
+    address: PUMP_GRADUATION_CONTROLLER_ADDRESS,
+    abi: pumpGraduationControllerAbi,
+    functionName: "governance",
+    chainId: PUMP_CHAIN_ID,
+    query: { enabled: PUMP_CONFIGURED && controllerOwnsFactory },
+  });
+  const isDirectAdmin = Boolean(
+    address
+    && adminQuery.data
+    && address.toLowerCase() === adminQuery.data.toLowerCase(),
+  );
+  const isControllerGovernance = Boolean(
+    address
+    && controllerOwnsFactory
+    && governanceQuery.data
+    && address.toLowerCase() === governanceQuery.data.toLowerCase(),
+  );
+  const canClaimFees = isDirectAdmin || isControllerGovernance;
+  const authorizationError = adminQuery.error
+    ?? (controllerOwnsFactory ? governanceQuery.error : null);
 
   const payload = statsQuery.data;
   const stats = payload?.stats;
@@ -174,18 +195,27 @@ export function PumpStatsDashboard() {
         </>
       )}
 
-      {isAdmin && address && adminQuery.data ? (
+      {canClaimFees && address && adminQuery.data ? (
         <DeveloperFeePanel
           address={address}
-          admin={adminQuery.data}
+          authority={isControllerGovernance ? PUMP_GRADUATION_CONTROLLER_ADDRESS : PUMP_FACTORY_ADDRESS}
+          governance={isControllerGovernance ? governanceQuery.data : undefined}
           withdrawnFeesNusd={stats?.withdrawnFeesNusd}
           indexedTotalsAvailable={Boolean(stats && hasIndexedTotals)}
           onClaimed={() => void statsQuery.refetch()}
         />
-      ) : address && adminQuery.error ? (
+      ) : address && authorizationError ? (
         <div className="pump-admin-check-error" role="alert">
-          <span>Admin authorization could not be checked.</span>
-          <button type="button" onClick={() => void adminQuery.refetch()}>Retry</button>
+          <span>Fee authorization could not be checked.</span>
+          <button
+            type="button"
+            onClick={() => {
+              void adminQuery.refetch();
+              if (controllerOwnsFactory) void governanceQuery.refetch();
+            }}
+          >
+            Retry
+          </button>
         </div>
       ) : null}
     </main>
@@ -194,13 +224,15 @@ export function PumpStatsDashboard() {
 
 function DeveloperFeePanel({
   address,
-  admin,
+  authority,
+  governance,
   withdrawnFeesNusd,
   indexedTotalsAvailable,
   onClaimed,
 }: {
   address: `0x${string}`;
-  admin: `0x${string}`;
+  authority: `0x${string}`;
+  governance?: `0x${string}`;
   withdrawnFeesNusd?: string;
   indexedTotalsAvailable: boolean;
   onClaimed: () => void;
@@ -220,6 +252,11 @@ function DeveloperFeePanel({
   const claimable = claimableQuery.data ?? 0n;
   const actionPending = isClaiming || isSwitching;
   const feeReadPending = claimableQuery.isPending || claimableQuery.isFetching;
+  const usesController = authority.toLowerCase() === PUMP_GRADUATION_CONTROLLER_ADDRESS.toLowerCase();
+  const withdrawTarget = {
+    address: authority,
+    abi: usesController ? pumpGraduationControllerAbi : zeroXPumpAbi,
+  } as const;
 
   const handleClaim = async () => {
     if (wrongChain) {
@@ -240,14 +277,14 @@ function DeveloperFeePanel({
     try {
       await publicClient.simulateContract({
         account: address,
-        address: PUMP_FACTORY_ADDRESS,
-        abi: zeroXPumpAbi,
+        address: withdrawTarget.address,
+        abi: withdrawTarget.abi,
         functionName: "withdrawProtocolFees",
         args: [address, claimable],
       });
       const hash = await writeContractAsync({
-        address: PUMP_FACTORY_ADDRESS,
-        abi: zeroXPumpAbi,
+        address: withdrawTarget.address,
+        abi: withdrawTarget.abi,
         functionName: "withdrawProtocolFees",
         args: [address, claimable],
         chainId: PUMP_CHAIN_ID,
@@ -297,9 +334,15 @@ function DeveloperFeePanel({
         </div>
         <dl className="pump-stats-list">
           <div>
-            <dt>Admin</dt>
-            <dd title={admin}>{shortAddress(admin)}</dd>
+            <dt>Authority</dt>
+            <dd title={authority}>{shortAddress(authority)}</dd>
           </div>
+          {governance ? (
+            <div>
+              <dt>Governance</dt>
+              <dd title={governance}>{shortAddress(governance)}</dd>
+            </div>
+          ) : null}
           <div>
             <dt>Claimed lifetime</dt>
             <dd>{indexedTotalsAvailable && withdrawnFeesNusd ? `${formatWad(withdrawnFeesNusd, 6)} NUSD` : "--"}</dd>

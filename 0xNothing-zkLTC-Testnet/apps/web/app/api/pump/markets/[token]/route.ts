@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAddress } from "viem";
 import { getPumpMarket } from "@/features/pump/server/data";
+import { withPumpCache } from "@/features/pump/server/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,7 +17,11 @@ export async function GET(
   } catch {
     return NextResponse.json({ error: "Invalid token address" }, { status: 400 });
   }
-  const payload = await getPumpMarket(token);
+  const payload = await withPumpCache(
+    `market:${token.toLowerCase()}`,
+    () => getPumpMarket(token),
+    { ttlMs: 2_000, staleMs: 8_000 },
+  );
   return NextResponse.json(payload, {
     status: payload.configured && !payload.market ? 404 : 200,
     headers: { "Cache-Control": "private, no-store, max-age=0, must-revalidate" },

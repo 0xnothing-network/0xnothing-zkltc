@@ -19,6 +19,7 @@ interface CacheEntry {
 const ACTIVITY_TTL = 3_000;
 const ACTIVITY_CACHE_MAX_ENTRIES = 256;
 const activityCache = new Map<string, CacheEntry>();
+const activityInFlight = new Map<string, Promise<{ events: SubgraphMarketEventDTO[] }>>();
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -36,27 +37,10 @@ export async function GET(request: Request) {
     return NextResponse.json(cached.value, { headers: responseHeaders });
   }
 
-  if (hasMarketplaceSubgraph()) {
-    try {
-      const payload = await fetchMarketplaceActivityFromSubgraph({
-        limit,
-        skip,
-        eventTypes: eventTypes.length ? eventTypes : undefined,
-      });
-      const value = { events: payload.events };
-      writeActivityCache(cacheKey, value);
-      return NextResponse.json(value, { headers: responseHeaders });
-    } catch (err) {
-      console.warn("[marketplace] activity subgraph failed; using on-chain data:", err);
-    }
-  }
-
+  const pending = activityInFlight.get(cacheKey) ?? loadMarketplaceActivity(limit, skip, eventTypes);
+  if (!activityInFlight.has(cacheKey)) activityInFlight.set(cacheKey, pending);
   try {
-    const payload = await fetchMarketplaceActivityFromOnchain({
-      limit,
-      skip,
-      eventTypes: eventTypes.length ? eventTypes : undefined,
-    });
+    const payload = await pending;
     writeActivityCache(cacheKey, payload);
     return NextResponse.json(payload, { headers: responseHeaders });
   } catch (err) {
@@ -66,7 +50,34 @@ export async function GET(request: Request) {
       { error: "Marketplace activity is unavailable" },
       { status: 503, headers: { "Cache-Control": "no-store" } }
     );
+  } finally {
+    if (activityInFlight.get(cacheKey) === pending) activityInFlight.delete(cacheKey);
   }
+}
+
+async function loadMarketplaceActivity(
+  limit: number,
+  skip: number,
+  eventTypes: SubgraphMarketEventType[],
+): Promise<{ events: SubgraphMarketEventDTO[] }> {
+  if (hasMarketplaceSubgraph()) {
+    try {
+      const payload = await fetchMarketplaceActivityFromSubgraph({
+        limit,
+        skip,
+        eventTypes: eventTypes.length ? eventTypes : undefined,
+      });
+      return { events: payload.events };
+    } catch (err) {
+      console.warn("[marketplace] activity subgraph failed; using on-chain data:", err);
+    }
+  }
+
+  return fetchMarketplaceActivityFromOnchain({
+    limit,
+    skip,
+    eventTypes: eventTypes.length ? eventTypes : undefined,
+  });
 }
 
 function writeActivityCache(key: string, value: CacheEntry["value"]) {

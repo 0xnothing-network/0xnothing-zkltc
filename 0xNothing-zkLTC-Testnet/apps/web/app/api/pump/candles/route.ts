@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAddress } from "viem";
 import { getPumpCandles } from "@/features/pump/server/data";
+import { withPumpCache } from "@/features/pump/server/cache";
 import {
   normalizePumpCandlePeriod,
   PUMP_CANDLE_LIMITS,
@@ -18,11 +19,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Invalid token address" }, { status: 400 });
   }
   const period = normalizePumpCandlePeriod(Number(params.get("period") || 3600));
-  const payload = await getPumpCandles({
-    token,
-    period,
-    limit: Number(params.get("limit") || PUMP_CANDLE_LIMITS[period]),
-  });
+  const limit = Number(params.get("limit") || PUMP_CANDLE_LIMITS[period]);
+  const payload = await withPumpCache(
+    `candles:${token.toLowerCase()}:${period}:${limit}`,
+    () => getPumpCandles({ token, period, limit }),
+    { ttlMs: 2_000, staleMs: 8_000 },
+  );
   return NextResponse.json(payload, {
     headers: { "Cache-Control": "private, no-store, max-age=0, must-revalidate" },
   });

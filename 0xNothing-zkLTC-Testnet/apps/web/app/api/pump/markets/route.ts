@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAddress, type Address } from "viem";
 import { getPumpMarkets } from "@/features/pump/server/data";
+import { withPumpCache } from "@/features/pump/server/cache";
 import type { PumpMarketSort } from "@/features/pump/types";
 
 export const runtime = "nodejs";
@@ -20,12 +21,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Invalid creator address" }, { status: 400 });
     }
   }
-  const payload = await getPumpMarkets({
-    limit: Number(params.get("limit") || 60),
-    skip: Number(params.get("skip") || 0),
-    creator,
-    sort,
-  });
+  const limit = Number(params.get("limit") || 60);
+  const skip = Number(params.get("skip") || 0);
+  const key = `markets:${creator?.toLowerCase() ?? "all"}:${limit}:${skip}:${sort}`;
+  const payload = await withPumpCache(
+    key,
+    () => getPumpMarkets({ limit, skip, creator, sort }),
+    { ttlMs: 2_000, staleMs: 8_000 },
+  );
   return NextResponse.json(payload, {
     headers: { "Cache-Control": "private, no-store, max-age=0, must-revalidate" },
   });

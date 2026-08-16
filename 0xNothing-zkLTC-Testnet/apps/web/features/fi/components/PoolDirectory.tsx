@@ -118,21 +118,24 @@ function MarketRow({ pool, canonical }: { pool: PoolPoint; canonical: Set<string
   const token1IsNusd = Boolean(nusd && pool.token1.id.toLowerCase() === nusd);
   const firstToken = token0IsNusd ? pool.token0 : token1IsNusd ? pool.token1 : pool.token0;
   const secondToken = token0IsNusd ? pool.token1 : token1IsNusd ? pool.token0 : pool.token1;
-  const firstSymbol = normalizedSymbol(firstToken.symbol);
-  const secondSymbol = normalizedSymbol(secondToken.symbol);
+  const hasNusd = token0IsNusd || token1IsNusd;
+  const displayToken0 = hasNusd ? secondToken : firstToken;
+  const displayToken1 = hasNusd ? firstToken : secondToken;
+  const firstSymbol = normalizedSymbol(displayToken0.symbol);
+  const secondSymbol = normalizedSymbol(displayToken1.symbol);
 
   return (
     <li className="fi-market-item">
       <Link className="fi-market-row" href={marketHref(pool)}>
         <span className="fi-market-pair">
-          <TokenPairLogos token0={firstToken} token1={secondToken} size="sm" />
+          <TokenPairLogos token0={displayToken0} token1={displayToken1} size="sm" />
           <span>
-            <strong>{firstSymbol}<i>→</i>{secondSymbol}</strong>
+            <strong>{firstSymbol}<i>/</i>{secondSymbol}</strong>
             <small><i data-state={live ? "live" : "empty"} />{type === "graduated" ? "0xPump" : type === "canonical" ? "Core" : "DEX"}</small>
           </span>
         </span>
         <span className="fi-market-cell">
-          <small>{secondSymbol} price</small>
+          <small>{firstSymbol} price</small>
           <strong>{formatPrice(pool.priceNusd)}</strong>
         </span>
         <span className="fi-market-cell" data-tone={change === undefined ? "muted" : change < 0 ? "danger" : "positive"}>

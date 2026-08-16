@@ -18,6 +18,8 @@ type FarmRow = {
 type Result = { gauges?: FarmRow[] };
 
 const MAX_GAUGES = 1_000;
+const GAUGE_DISCOVERY_CONCURRENCY = 24;
+const GAUGE_READ_CONCURRENCY = 12;
 const CACHE_TTL_MS = 12_000;
 const QUERY = `query Farms {
   _meta { block { number } }
@@ -43,16 +45,20 @@ async function loadRpcFarms(): Promise<{ rows: FarmRow[]; blockNumber: bigint }>
   ]);
   const totalLength = lengths.reduce((sum, length) => sum + length, 0n);
   if (totalLength > BigInt(MAX_GAUGES)) throw new Error("Gauge count exceeds the discovery limit");
-  const discovered = await Promise.all(factories.map((factory, factoryIndex) => Promise.all(
-    Array.from({ length: Number(lengths[factoryIndex]) }, (_, index) => client.readContract({
+  const discovered = await mapWithConcurrency(
+    factories.flatMap((factory, factoryIndex) =>
+      Array.from({ length: Number(lengths[factoryIndex]) }, (_, index) => ({ factory, index }))
+    ),
+    GAUGE_DISCOVERY_CONCURRENCY,
+    ({ factory, index }) => client.readContract({
       address: factory,
       abi: farmFactoryAbi,
       functionName: "allGauges",
       args: [BigInt(index)],
-    })),
-  )));
-  const gauges = [...new Set(discovered.flat().map((gauge) => gauge.toLowerCase()))] as Address[];
-  const rows = await Promise.all(gauges.map(async (gauge: Address): Promise<FarmRow> => {
+    }),
+  );
+  const gauges = [...new Set(discovered.map((gauge) => gauge.toLowerCase()))] as Address[];
+  const rows = await mapWithConcurrency(gauges, GAUGE_READ_CONCURRENCY, async (gauge: Address): Promise<FarmRow> => {
     const [pool, totalStaked, totalFunded, totalPaid, rewardRate, periodFinish, depositsPaused] = await Promise.all([
       client.readContract({ address: gauge, abi: farmGaugeAbi, functionName: "stakingToken" }),
       client.readContract({ address: gauge, abi: farmGaugeAbi, functionName: "totalSupply" }),
@@ -72,8 +78,27 @@ async function loadRpcFarms(): Promise<{ rows: FarmRow[]; blockNumber: bigint }>
       depositsPaused,
       pool: { id: pool.toLowerCase() },
     };
-  }));
+  });
   return { rows, blockNumber };
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(Math.max(1, concurrency), items.length) }, async () => {
+      while (true) {
+        const index = nextIndex++;
+        if (index >= items.length) return;
+        results[index] = await mapper(items[index]);
+      }
+    }),
+  );
+  return results;
 }
 
 function sameIds(left: FarmRow[], right: FarmRow[]): boolean {

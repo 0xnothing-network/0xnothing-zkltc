@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
+import { isIP } from "node:net";
 import { verifyMessage, type Address, type Hex } from "viem";
 import { zeroXPumpAbi } from "@/features/pump/abis";
 import { computePumpContentHash } from "@/features/pump/contentHash";
-import { validatePumpImage } from "@/features/pump/imageValidation";
+import {
+  PUMP_MAX_IMAGE_BYTES,
+  validatePumpImage,
+} from "@/features/pump/imageValidation";
 import {
   isValidPumpExternalUrl,
   PUMP_CHAIN_ID,
@@ -22,6 +26,11 @@ const SIGNATURE_TTL_MS = 5 * 60_000;
 const FUTURE_CLOCK_SKEW_MS = 30_000;
 const RATE_WINDOW_MS = 10 * 60_000;
 const RATE_MAX_ATTEMPTS = 5;
+const MAX_RATE_LIMIT_KEYS = 8_192;
+// Keep multipart parsing bounded before Request.formData() allocates the body.
+// The image limit is 2 MiB; the additional space covers form fields and
+// multipart framing without allowing arbitrarily large request bodies.
+const MAX_UPLOAD_BODY_BYTES = PUMP_MAX_IMAGE_BYTES + 512 * 1024;
 
 const requestHistory = new Map<string, number[]>();
 const consumedSignatures = new Map<string, number>();
@@ -48,6 +57,12 @@ export async function GET() {
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );
   }
+  if (process.env.NODE_ENV === "production" && !configuredUploadDomain()) {
+    return NextResponse.json(
+      { configured: false, error: "Set UPLOAD_SIGNING_DOMAIN to the public upload host." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
   return NextResponse.json(
     { configured: true },
     { headers: { "Cache-Control": "no-store" } },
@@ -69,10 +84,36 @@ export async function POST(request: Request) {
     );
   }
 
+  const expectedDomain = uploadDomain(request);
+  if (!expectedDomain) {
+    return jsonError("IPFS uploads are not configured for this deployment", 503);
+  }
+
+  const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
+  if (!contentType.startsWith("multipart/form-data;")) {
+    return jsonError("Upload requests must use multipart form data", 415);
+  }
+  const declaredLength = request.headers.get("content-length");
+  if (declaredLength) {
+    const length = Number(declaredLength);
+    if (!Number.isSafeInteger(length) || length < 0 || length > MAX_UPLOAD_BODY_BYTES) {
+      return jsonError("Upload request is too large", 413);
+    }
+  }
+
   let form: FormData;
   try {
-    form = await request.formData();
-  } catch {
+    const boundedBody = await readLimitedRequestBody(request.body, MAX_UPLOAD_BODY_BYTES);
+    const replayableRequest = new Request(request.url, {
+      method: request.method,
+      headers: request.headers,
+      body: boundedBody,
+    });
+    form = await replayableRequest.formData();
+  } catch (error) {
+    if (error instanceof UploadBodyTooLargeError) {
+      return jsonError("Upload request is too large", 413);
+    }
     return jsonError("Invalid multipart form data", 400);
   }
 
@@ -116,7 +157,6 @@ export async function POST(request: Request) {
     return jsonError("Signed upload message does not match the content hash", 401);
   }
 
-  const expectedDomain = uploadDomain(request);
   if (fields.domain.toLowerCase() !== expectedDomain.toLowerCase()) {
     return jsonError("Signed upload domain does not match this application", 401);
   }
@@ -241,18 +281,122 @@ function textField(form: FormData, name: string): string {
   return typeof value === "string" ? value : "";
 }
 
+class UploadBodyTooLargeError extends Error {}
+
+async function readLimitedRequestBody(
+  stream: ReadableStream<Uint8Array> | null,
+  limit: number,
+): Promise<Blob> {
+  if (!stream) throw new Error("Upload request has no body");
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > limit) throw new UploadBodyTooLargeError();
+      chunks.push(value);
+    }
+  } catch (error) {
+    await reader.cancel(error).catch(() => undefined);
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new Blob([body.buffer as ArrayBuffer]);
+}
+
 function uploadDomain(request: Request): string {
+  const configured = configuredUploadDomain();
+  if (configured) return configured;
+  if (process.env.NODE_ENV === "production") return "";
+  return new URL(request.url).host.toLowerCase();
+}
+
+function configuredUploadDomain(): string | null {
   const configured = process.env.UPLOAD_SIGNING_DOMAIN?.trim();
-  if (configured) return configured.toLowerCase();
-  const host = request.headers.get("host")?.trim();
-  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
-  const requestHost = host || forwardedHost;
-  return (requestHost || new URL(request.url).host).toLowerCase();
+  return configured ? normalizeUploadDomain(configured) : null;
 }
 
 function clientIp(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || request.headers.get("x-real-ip")?.trim() || "unknown";
+  // Only use forwarding headers when the deployment explicitly guarantees
+  // that its proxy overwrites the selected header. Otherwise they are
+  // attacker-controlled and would make the IP rate limit trivial to bypass.
+  const configuredHeader = process.env.UPLOAD_TRUSTED_PROXY_CLIENT_IP_HEADER?.trim().toLowerCase();
+  if (configuredHeader && /^[a-z0-9-]{1,64}$/.test(configuredHeader)) {
+    const value = request.headers.get(configuredHeader);
+    const address = configuredHeader.includes("forwarded")
+      ? rightmostForwardedIp(value)
+      : normalizedIp(value);
+    if (address) return `${configuredHeader}:${address}`;
+  }
+
+  if (process.env.VERCEL === "1") {
+    const address = rightmostForwardedIp(request.headers.get("x-vercel-forwarded-for"))
+      ?? rightmostForwardedIp(request.headers.get("x-forwarded-for"))
+      ?? normalizedIp(request.headers.get("x-real-ip"));
+    if (address) return `vercel:${address}`;
+  }
+
+  return "unidentified-client";
+}
+
+function normalizedIp(value: string | null): string | undefined {
+  if (!value) return undefined;
+  let candidate = value.trim().replace(/^"|"$/g, "");
+  if (!candidate) return undefined;
+
+  if (candidate.startsWith("[")) {
+    const closingBracket = candidate.indexOf("]");
+    if (closingBracket > 1) candidate = candidate.slice(1, closingBracket);
+  } else if (isIP(candidate) === 0) {
+    const separator = candidate.lastIndexOf(":");
+    if (separator > 0 && /^\d+$/.test(candidate.slice(separator + 1))) {
+      const withoutPort = candidate.slice(0, separator);
+      if (isIP(withoutPort) !== 0) candidate = withoutPort;
+    }
+  }
+
+  return isIP(candidate) !== 0 ? candidate.toLowerCase() : undefined;
+}
+
+function rightmostForwardedIp(value: string | null): string | undefined {
+  if (!value) return undefined;
+  const entries = value.split(",");
+  for (let index = entries.length - 1; index >= 0; index -= 1) {
+    const candidate = normalizedIp(entries[index]);
+    if (candidate) return candidate;
+  }
+  return undefined;
+}
+
+function normalizeUploadDomain(value: string): string | null {
+  const raw = value.trim();
+  if (!raw || raw.length > 255) return null;
+  try {
+    const parsed = new URL(raw.includes("://") ? raw : `https://${raw}`);
+    if (
+      (parsed.protocol !== "https:" && parsed.protocol !== "http:")
+      || parsed.username
+      || parsed.password
+      || parsed.pathname !== "/"
+      || parsed.search
+      || parsed.hash
+    ) return null;
+    return parsed.host.toLowerCase();
+  } catch {
+    return null;
+  }
 }
 
 function consumeRateLimit(key: string, now: number): boolean {
@@ -262,6 +406,10 @@ function consumeRateLimit(key: string, now: number): boolean {
   if (recent.length >= RATE_MAX_ATTEMPTS) {
     requestHistory.set(key, recent);
     return false;
+  }
+  if (!requestHistory.has(key) && requestHistory.size >= MAX_RATE_LIMIT_KEYS) {
+    const oldestKey = requestHistory.keys().next().value as string | undefined;
+    if (oldestKey) requestHistory.delete(oldestKey);
   }
   recent.push(now);
   requestHistory.set(key, recent);

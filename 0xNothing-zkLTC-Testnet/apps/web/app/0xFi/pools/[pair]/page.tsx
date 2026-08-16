@@ -19,7 +19,7 @@ export default async function PoolPage({
   const initialMode = query.action === "remove" ? "remove" : "add";
   if (!pair && !pool) notFound();
   const displayPair = pair
-    ? pair[0] === "NUSD" ? pair : pair[1] === "NUSD" ? [pair[1], pair[0]] as const : pair
+    ? pair[0] === "NUSD" ? [pair[1], pair[0]] as const : pair
     : undefined;
   return (
     <div className="fi-page fi-trade-page">

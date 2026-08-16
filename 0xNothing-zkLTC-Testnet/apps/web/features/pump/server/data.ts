@@ -43,6 +43,8 @@ const RPC_TRADE_LOOKBACK = 100_000n;
 const RPC_LOG_BLOCK_CHUNK = 16_384n;
 const MAX_RPC_HOLDER_CANDIDATES = 10_000;
 const RPC_HOLDER_LOG_CONCURRENCY = 4;
+const RPC_MARKET_HYDRATE_CONCURRENCY = 12;
+const RPC_BLOCK_TIMESTAMP_CONCURRENCY = 16;
 const GRAPH_TIMEOUT_MS = 8_000;
 const HOLDER_GRAPH_TIMEOUT_MS = 2_500;
 const ZERO_HASH = `0x${"0".repeat(64)}` as Hex;
@@ -643,7 +645,9 @@ async function getRpcMarkets(
     ? await orderRpcTokensByVolume(newestFirst)
     : newestFirst;
   const page = orderedTokens.slice(skip, skip + limit);
-  const markets = await Promise.all(page.map((token) => hydrateRpcMarket(token).catch(() => null)));
+  const markets = await mapWithConcurrency(page, RPC_MARKET_HYDRATE_CONCURRENCY, (token) =>
+    hydrateRpcMarket(token).catch(() => null),
+  );
   return markets.filter((market): market is PumpMarket => market !== null);
 }
 
@@ -1000,12 +1004,10 @@ async function getRpcTrades(
 async function hydratePumpTradeLogs(logs: PumpTradeLog[]): Promise<PumpTrade[]> {
   const blockNumbers = [...new Set(logs.map((log) => log.blockNumber.toString()))];
   const timestamps = new Map<string, number>();
-  await Promise.all(
-    blockNumbers.map(async (blockNumber) => {
-      const block = await publicClient.getBlock({ blockNumber: BigInt(blockNumber) });
-      timestamps.set(blockNumber, safeNumber(block.timestamp));
-    }),
-  );
+  await mapWithConcurrency(blockNumbers, RPC_BLOCK_TIMESTAMP_CONCURRENCY, async (blockNumber) => {
+    const block = await publicClient.getBlock({ blockNumber: BigInt(blockNumber) });
+    timestamps.set(blockNumber, safeNumber(block.timestamp));
+  });
 
   return logs.map((log) => {
     const args = log.args;
@@ -1027,6 +1029,25 @@ async function hydratePumpTradeLogs(logs: PumpTradeLog[]): Promise<PumpTrade[]> 
       txHash: log.transactionHash ?? ZERO_HASH,
     };
   });
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(Math.max(1, concurrency), items.length) }, async () => {
+      while (true) {
+        const index = nextIndex++;
+        if (index >= items.length) return;
+        results[index] = await mapper(items[index]);
+      }
+    }),
+  );
+  return results;
 }
 
 async function fetchPumpTradeLogChunk(

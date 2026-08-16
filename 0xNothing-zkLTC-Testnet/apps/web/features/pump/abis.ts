@@ -50,10 +50,12 @@ export const pumpTokenAbi = parseAbi([
 
 export const pumpGraduationControllerAbi = parseAbi([
   "function adapter() view returns (address)",
+  "function governance() view returns (address)",
   "function graduationsPaused() view returns (bool)",
   "function pump() view returns (address)",
   "function router() view returns (address)",
   "function graduateReady(address token) returns (address dex,bytes32 pairId,address pool,address lpToken,uint256 lpAmount)",
+  "function withdrawProtocolFees(address recipient,uint256 amountNusd)",
 ]);
 
 export const pumpGraduationRouterAbi = parseAbi([

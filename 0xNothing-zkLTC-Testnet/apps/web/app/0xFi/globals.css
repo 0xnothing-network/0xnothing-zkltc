@@ -25,12 +25,9 @@
   width: 100%;
   min-width: 0;
   min-height: 100dvh;
+  position: relative;
+  isolation: isolate;
   background-color: var(--fi-bg);
-  background-image:
-    linear-gradient(rgba(142, 233, 184, 0.014) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(142, 233, 184, 0.014) 1px, transparent 1px);
-  background-position: center top;
-  background-size: 40px 40px;
   color: var(--fi-text);
   color-scheme: dark;
   font-family: "Departure Mono", var(--font-mono), ui-monospace, SFMono-Regular, Consolas, monospace;
@@ -115,6 +112,8 @@
 }
 
 .fi-shell {
+  position: relative;
+  z-index: 1;
   min-height: 100dvh;
   overflow-x: clip;
   background: transparent;

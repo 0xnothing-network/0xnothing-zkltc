@@ -1,4 +1,4 @@
-# Security model and known limits
+3# Security model and known limits
 
 This code is a testnet implementation, not an audit report.
 
@@ -23,19 +23,11 @@ This code is a testnet implementation, not an audit report.
 - READY is determined by `spotPriceNusdWad * fixedTotalSupply / 1e18` reaching
   exactly `6,000 NUSD`; the contract separately derives the real-reserve target
   needed to reach that market cap.
-- The testnet router is enabled and the pinned 0xFi adapter is allowlisted. Both
-  changes passed the router's onchain delay.
-- The pinned controller must own both Pump and router administration before its
-  permissionless `graduateReady` path is operational. That handover is still
-  pending, so the web client fails closed instead of presenting graduation.
-- Adding or replacing an adapter is delayed and visible onchain.
+- The testnet router is disabled and no graduation adapter is configured.
+- Adding an adapter is delayed and visible onchain.
 - Only allowlisted adapter code may receive reserves.
-- A holder can sell from `READY`; that sell reopens the curve as `TRADING` so
-  reserves are not indefinitely trapped while controller activation is pending.
-- Once activated, anyone may call the controller, but callers cannot choose the
-  adapter, reserve amounts, price, LP recipient, or slippage. The Pump trade
-  pause blocks create, buy, and sell, while the controller pause and router or
-  adapter disable controls independently stop graduation.
+- A holder can sell from `READY`; that sell reopens the curve as `TRADING` so reserves are not indefinitely trapped while no adapter exists.
+- Graduation is admin/Safe-triggered. The Pump trade pause blocks create, buy, and sell, but the router and adapter disable controls independently stop graduation.
 - Adapter failures revert graduation and leave the market in `READY` with its reserves intact.
 - Mainnet graduation additionally requires an audited NUSD-to-official-zkLTC-
   stablecoin conversion or bridge, a real major-DEX fork test, terminal-price
@@ -45,10 +37,11 @@ This code is a testnet implementation, not an audit report.
 ## Upload controls
 
 - The Pinata JWT is server-only and scoped to the minimum public-upload permissions.
-- Uploads require a recent wallet signature, an owner-scoped paid reservation, and a content hash binding the canonical metadata and file bytes. They are rate-limited by wallet and IP on a best-effort basis.
+- Uploads require a recent wallet signature, an owner-scoped paid reservation, and a content hash binding the canonical metadata and file bytes. The multipart body is bounded before parsing, and uploads are rate-limited by wallet plus a trusted proxy IP when configured (otherwise a shared fallback prevents spoofed forwarding headers from bypassing the limit).
 - Reservations do not expire or refund. A failed attempt can retry only with the same canonical fields and logo; changing content requires another reservation.
 - Only PNG, JPEG, and WebP are accepted. SVG is rejected because it can carry active content.
 - File size and magic bytes are checked server-side. Mainnet must additionally re-encode images, strip metadata, and use durable distributed rate limiting.
+- Production deployments must set `UPLOAD_SIGNING_DOMAIN` to the public host used by wallet signatures; the request `Host` header is not trusted as a production fallback.
 
 ## Operational controls
 

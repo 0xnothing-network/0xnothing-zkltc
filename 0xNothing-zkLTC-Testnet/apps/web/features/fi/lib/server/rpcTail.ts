@@ -4,6 +4,7 @@ import { createPublicClient, formatUnits, http, parseAbiItem, type Address, type
 import { deployment } from "@fi/config/deployment";
 
 const MAX_TAIL_BLOCKS = 5_000n;
+const BLOCK_TIMESTAMP_CONCURRENCY = 16;
 const syncEvent = parseAbiItem("event Sync(uint112 reserve0, uint112 reserve1)");
 const swapEvent = parseAbiItem(
   "event Swap(address indexed sender, uint256 amount0In, uint256 amount1In, uint256 amount0Out, uint256 amount1Out, address indexed to)",
@@ -115,15 +116,32 @@ export async function loadPairTail(pool: Address, indexedBlock: number | null): 
 
   const blockNumbers = [...new Set(rawEvents.map((event) => event.blockNumber.toString()))];
   const timestamps = new Map<string, number>();
-  await Promise.all(blockNumbers.map(async (blockNumber) => {
+  await mapWithConcurrency(blockNumbers, BLOCK_TIMESTAMP_CONCURRENCY, async (blockNumber) => {
     const block = await client.getBlock({ blockNumber: BigInt(blockNumber) });
     timestamps.set(blockNumber, Number(block.timestamp));
-  }));
+  });
   const events = rawEvents.map((event) => ({
     ...event,
     timestamp: timestamps.get(event.blockNumber.toString()) || 0,
   })) as PairTailEvent[];
   return { events, requestedFromBlock, fromBlock, toBlock: latest, capped };
+}
+
+async function mapWithConcurrency<T>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<void>,
+): Promise<void> {
+  let nextIndex = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(Math.max(1, concurrency), items.length) }, async () => {
+      while (true) {
+        const index = nextIndex++;
+        if (index >= items.length) return;
+        await mapper(items[index]);
+      }
+    }),
+  );
 }
 
 export interface PairTokenMetadata {

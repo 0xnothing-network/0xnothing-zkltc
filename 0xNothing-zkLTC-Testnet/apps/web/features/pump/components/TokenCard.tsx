@@ -13,7 +13,7 @@ export function TokenCard({ market, priority = false }: { market: PumpMarket; pr
             name={market.name}
             symbol={market.symbol}
             size={56}
-            sizes="(max-width: 640px) 30px, 56px"
+            sizes="(max-width: 640px) 52px, 56px"
             priority={priority}
           />
         </div>

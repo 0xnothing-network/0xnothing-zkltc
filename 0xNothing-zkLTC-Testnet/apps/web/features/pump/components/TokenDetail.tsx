@@ -19,7 +19,7 @@ import {
 import { formatDecimal, formatRelativeTime, formatWad, shortAddress } from "@/features/pump/format";
 import type { PumpMarket } from "@/features/pump/types";
 import { getAddressExplorerUrl } from "@/lib/explorer";
-import { PumpChart } from "@/features/pump/components/PumpChart";
+import { LazyPumpChart } from "@/features/pump/components/LazyPumpChart";
 import { PumpTokenLogo } from "@/features/pump/components/PumpTokenLogo";
 import { TradePanel } from "@/features/pump/components/TradePanel";
 import { TradeHistory } from "@/features/pump/components/TradeHistory";
@@ -245,7 +245,7 @@ export function TokenDetail({ token }: { token: Address }) {
 
       <div className="pump-detail-grid">
         <div className="pump-detail-main">
-          <PumpChart token={market.tokenAddress} tokenName={market.name} />
+          <LazyPumpChart token={market.tokenAddress} tokenName={market.name} />
           {metadata.data?.description ? <section className="pump-panel pump-about"><span className="pump-eyebrow">About</span><h2>{market.name}</h2><p>{metadata.data.description}</p><small>Created by {shortAddress(market.creator, 7, 6)}</small></section> : null}
         </div>
         <TradePanel market={market} onComplete={() => void query.refetch()} />

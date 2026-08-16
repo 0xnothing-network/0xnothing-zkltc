@@ -51,6 +51,7 @@ const LISTING_TTL = 3_000;
 const MARKETPLACE_MULTICALL_BATCH_SIZE = 16_384;
 const payloadCache = new Map<string, CacheEntry<ListingsPayload>>();
 const pixelTokenCache = new Map<string, CacheEntry<TokenDTO | null>>();
+let payloadLoadInFlight: Promise<ListingsPayload> | undefined;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -65,42 +66,9 @@ export async function GET(request: Request) {
     return NextResponse.json(cached.value, { headers: responseHeaders });
   }
 
+  const pending = payloadLoadInFlight ?? (payloadLoadInFlight = loadListingsPayload());
   try {
-    const candidates = await withTimeout(
-      loadListingCandidates(),
-      15_000,
-      "Marketplace listing read timed out",
-    );
-    const [purchasable, pixelTokens] = await Promise.all([
-      withTimeout(
-        filterPurchasableListings(candidates),
-        15_000,
-        "Marketplace listing validation timed out",
-      ),
-      withTimeout(
-        fetchPixelTokensForListings(candidates),
-        30_000,
-        "Marketplace pixel metadata read timed out",
-      ),
-    ]);
-    const genericTokens = await withTimeout(
-      fetchGenericTokensForListings(purchasable),
-      30_000,
-      "Marketplace NFT metadata read timed out",
-    );
-    const tokens = { ...pixelTokens, ...genericTokens };
-
-    const listings = purchasable.filter((listing) => {
-      if (isPixelCollection(listing.collection)) return true;
-      return Boolean(tokens[marketplaceNftKey(listing.collection, listing.tokenId)]?.imageUrl);
-    });
-    const visibleKeys = new Set(
-      listings.map((listing) => marketplaceNftKey(listing.collection, listing.tokenId)),
-    );
-    const visibleTokens = Object.fromEntries(
-      Object.entries(tokens).filter(([key]) => visibleKeys.has(key)),
-    );
-    const payload = { listings, tokens: visibleTokens };
+    const payload = await pending;
     payloadCache.set(cacheKey, { value: payload, ts: Date.now() });
     return NextResponse.json(payload, { headers: responseHeaders });
   } catch (error) {
@@ -110,7 +78,47 @@ export async function GET(request: Request) {
       { error: "Marketplace data unavailable" },
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );
+  } finally {
+    if (payloadLoadInFlight === pending) payloadLoadInFlight = undefined;
   }
+}
+
+async function loadListingsPayload(): Promise<ListingsPayload> {
+  const candidates = await withTimeout(
+    loadListingCandidates(),
+    15_000,
+    "Marketplace listing read timed out",
+  );
+  const [purchasable, pixelTokens] = await Promise.all([
+    withTimeout(
+      filterPurchasableListings(candidates),
+      15_000,
+      "Marketplace listing validation timed out",
+    ),
+    withTimeout(
+      fetchPixelTokensForListings(candidates),
+      30_000,
+      "Marketplace pixel metadata read timed out",
+    ),
+  ]);
+  const genericTokens = await withTimeout(
+    fetchGenericTokensForListings(purchasable),
+    30_000,
+    "Marketplace NFT metadata read timed out",
+  );
+  const tokens = { ...pixelTokens, ...genericTokens };
+
+  const listings = purchasable.filter((listing) => {
+    if (isPixelCollection(listing.collection)) return true;
+    return Boolean(tokens[marketplaceNftKey(listing.collection, listing.tokenId)]?.imageUrl);
+  });
+  const visibleKeys = new Set(
+    listings.map((listing) => marketplaceNftKey(listing.collection, listing.tokenId)),
+  );
+  const visibleTokens = Object.fromEntries(
+    Object.entries(tokens).filter(([key]) => visibleKeys.has(key)),
+  );
+  return { listings, tokens: visibleTokens };
 }
 
 async function loadListingCandidates(): Promise<ListingDTO[]> {

@@ -43,6 +43,7 @@ export function PoolDetail({
   const tokenA = pair[0] === "NUSD" ? pair[0] : pair[1] === "NUSD" ? pair[1] : pair[0];
   const tokenB = pair[0] === tokenA ? pair[1] : pair[0];
   const marketToken = tokenA === "NUSD" ? tokenB : tokenA;
+  const pairLabel = tokenA === "NUSD" ? `${tokenB}/${tokenA}` : `${tokenA}/${tokenB}`;
   const routePairSlug = pairSlug(pair[0], pair[1]);
   const addressA = assetForPool(tokenA);
   const addressB = assetForPool(tokenB);
@@ -194,7 +195,7 @@ export function PoolDetail({
       },
     });
     if (hash) {
-      toast.show("Liquidity added", `Your share joined the shared ${tokenA}/${tokenB} pool.`, "success");
+      toast.show("Liquidity added", `Your share joined the shared ${pairLabel} pool.`, "success");
       setAmountAText(""); setAmountBText("");
       void poolStats.refetch(); void lpBalanceRead.refetch(); void stakedLpRead.refetch(); void reserveRead.refetch(); void balanceA.refetch(); void balanceB.refetch();
     }
@@ -259,8 +260,8 @@ export function PoolDetail({
           <LazyMarketChart
             pair={routePairSlug}
             label={`${tokenB} price · ${tokenA}`}
-            token0={{ symbol: tokenA }}
-            token1={{ symbol: tokenB }}
+            token0={{ symbol: tokenB }}
+            token1={{ symbol: tokenA }}
           />
           <RecentActivity pair={routePairSlug} />
         </div>
@@ -271,7 +272,7 @@ export function PoolDetail({
               ? <Link className="fi-text-link" href={farmHref}>Back to Earn</Link>
               : <Link className="fi-text-link" href={`${fiPath("/swap")}?in=${tokenA}&out=${tokenB}`}>Swap pair</Link>}
           />
-          {!configured ? <NotDeployed feature={`${tokenA}/${tokenB} liquidity`} /> : null}
+          {!configured ? <NotDeployed feature={`${pairLabel} liquidity`} /> : null}
           <div className="fi-segmented" role="group" aria-label="Liquidity action">
             <button type="button" className={mode === "add" ? "active positive" : ""} aria-pressed={mode === "add"} onClick={() => { setMode("add"); tx.reset(); }}>Add LP</button>
             <button type="button" className={mode === "remove" ? "active" : ""} aria-pressed={mode === "remove"} onClick={() => { setMode("remove"); tx.reset(); }}>Remove LP</button>

@@ -30,9 +30,14 @@ function logoTone(symbol: string): string {
 }
 
 function coreTokenImage(symbol: string): string | undefined {
-  return symbol.replace(/[^a-z0-9]/gi, "").toUpperCase() === "NUSD"
-    ? "/NUSD_LOGO.jpg"
-    : undefined;
+  const coreImages: Record<string, string> = {
+    NUSD: "/NUSD_LOGO.jpg",
+    NETH: "/eth-logo.webp",
+    NBTC: "/btc-logo.png",
+    ZKLTC: "/ltc-logo.png",
+    WZKLTC: "/ltc-logo.png",
+  };
+  return coreImages[symbol.replace(/[^a-z0-9]/gi, "").toUpperCase()];
 }
 
 export function TokenLogo({

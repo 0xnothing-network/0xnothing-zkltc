@@ -152,6 +152,10 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   const reserveB = reserveRead.data?.[1] ?? rawReserveB;
   const tokenAIsNusd = Boolean(tokenA && nusdAddress && tokenA.toLowerCase() === nusdAddress);
   const tokenBIsNusd = Boolean(tokenB && nusdAddress && tokenB.toLowerCase() === nusdAddress);
+  const displaySymbolA = tokenAIsNusd ? symbolB : symbolA;
+  const displaySymbolB = tokenAIsNusd ? symbolA : symbolB;
+  const displayImageA = tokenAIsNusd ? imageB : imageA;
+  const displayImageB = tokenAIsNusd ? imageA : imageB;
   const nusdReserve = tokenAIsNusd ? reserveA : tokenBIsNusd ? reserveB : undefined;
   const marketReserve = tokenAIsNusd ? reserveB : tokenBIsNusd ? reserveA : undefined;
   const nusdDecimals = tokenAIsNusd ? decimalsA : decimalsB;
@@ -346,7 +350,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
       },
     });
     if (hash) {
-      toast.show("Liquidity added", `${symbolA}/${symbolB} pool updated.`, "success");
+      toast.show("Liquidity added", `${displaySymbolA}/${displaySymbolB} pool updated.`, "success");
       setAmountAText(""); setAmountBText("");
       void pairData.refetch(); void reserveRead.refetch(); void walletBalances.refetch();
     }
@@ -372,7 +376,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
       },
     });
     if (hash) {
-      toast.show("Liquidity removed", `${symbolA}/${symbolB} assets returned.`, "success");
+      toast.show("Liquidity removed", `${displaySymbolA}/${displaySymbolB} assets returned.`, "success");
       setLpText(""); void pairData.refetch(); void reserveRead.refetch(); void walletBalances.refetch();
     }
   }
@@ -387,11 +391,11 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
         </Link>
         <div className="fi-trade-identity">
           <TokenPairLogos
-            token0={{ symbol: symbolA, imageUrl: imageA }}
-            token1={{ symbol: symbolB, imageUrl: imageB }}
+            token0={{ symbol: displaySymbolA, imageUrl: displayImageA }}
+            token1={{ symbol: displaySymbolB, imageUrl: displayImageB }}
             size="lg"
           />
-          <h1>{symbolA}<span>/</span>{symbolB}</h1>
+          <h1>{displaySymbolA}<span>/</span>{displaySymbolB}</h1>
         </div>
         <dl className="fi-trade-quote">
           <div><dt>Price</dt><dd>{displayMarketPrice(marketPriceNusd)}</dd></div>
@@ -402,9 +406,9 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
         <div className="fi-main-stack">
           <LazyMarketChart
             pair={pool.toLowerCase()}
-            label={`${symbolB} price · ${symbolA}`}
-            token0={{ symbol: symbolA, imageUrl: imageA }}
-            token1={{ symbol: symbolB, imageUrl: imageB }}
+            label={`${displaySymbolA} price · ${displaySymbolB}`}
+            token0={{ symbol: displaySymbolA, imageUrl: displayImageA }}
+            token1={{ symbol: displaySymbolB, imageUrl: displayImageB }}
           />
           <RecentActivity pair={pool.toLowerCase()} />
           <details className="fi-pool-details">
