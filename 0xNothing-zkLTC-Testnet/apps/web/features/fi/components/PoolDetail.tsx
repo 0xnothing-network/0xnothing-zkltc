@@ -90,7 +90,7 @@ export function PoolDetail({
     abi: dexPoolAbi,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    query: { enabled: Boolean(pool && address) },
+    query: { enabled: Boolean(pool && address), refetchInterval: 15_000 },
   });
   const lpBalance = lpBalanceRead.data as bigint | undefined;
   const gauge = marketToken === "zkLTC"
@@ -105,7 +105,7 @@ export function PoolDetail({
     abi: farmGaugeAbi,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    query: { enabled: Boolean(gauge && address) },
+    query: { enabled: Boolean(gauge && address), refetchInterval: 15_000 },
   });
   const stakedLp = stakedLpRead.data as bigint | undefined;
   const ownedLp = address && (lpBalance !== undefined || stakedLp !== undefined)
@@ -116,7 +116,7 @@ export function PoolDetail({
     abi: dexRouterAbi,
     functionName: "getReserves",
     args: addressA && addressB ? [addressA, addressB] : undefined,
-    query: { enabled: Boolean(dexRouter && pool && addressA && addressB) },
+    query: { enabled: Boolean(dexRouter && pool && addressA && addressB), refetchInterval: 15_000 },
   });
   const reserveA = reserveRead.data?.[0];
   const reserveB = reserveRead.data?.[1];

@@ -7,13 +7,13 @@ import { erc20Abi } from "@fi/lib/abis/erc20";
 export function useAssetBalance(symbol: AssetSymbol) {
   const { address } = useAccount();
   const asset = assets[symbol];
-  const native = useBalance({ address, query: { enabled: Boolean(address && asset.native) } });
+  const native = useBalance({ address, query: { enabled: Boolean(address && asset.native), refetchInterval: 15_000 } });
   const token = useReadContract({
     address: asset.address,
     abi: erc20Abi,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    query: { enabled: Boolean(address && !asset.native && asset.address) },
+    query: { enabled: Boolean(address && !asset.native && asset.address), refetchInterval: 15_000 },
   });
   return {
     data: asset.native ? native.data?.value : token.data,

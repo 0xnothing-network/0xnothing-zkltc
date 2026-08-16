@@ -7,7 +7,6 @@ import { dexRouterAbi } from "@fi/lib/abis/dex";
 export interface DexFeeSchedule {
   lpFeeBps: number;
   protocolFeeBps: number;
-  routeSurchargeBps: number;
 }
 
 export function useDexFeeSchedule(router: Address | undefined): DexFeeSchedule | undefined {
@@ -15,20 +14,17 @@ export function useDexFeeSchedule(router: Address | undefined): DexFeeSchedule |
     contracts: router ? [
       { address: router, abi: dexRouterAbi, functionName: "LP_FEE_BPS" },
       { address: router, abi: dexRouterAbi, functionName: "PROTOCOL_FEE_BPS" },
-      { address: router, abi: dexRouterAbi, functionName: "ROUTE_SURCHARGE_BPS" },
     ] as const : [],
     query: { enabled: Boolean(router), refetchInterval: 30_000, retry: false },
   });
   const lpFeeBps = reads.data?.[0]?.result as bigint | undefined;
   const protocolFeeBps = reads.data?.[1]?.result as bigint | undefined;
-  const routeSurchargeBps = reads.data?.[2]?.result as bigint | undefined;
-  if (lpFeeBps === undefined || protocolFeeBps === undefined || routeSurchargeBps === undefined) {
+  if (lpFeeBps === undefined || protocolFeeBps === undefined) {
     return undefined;
   }
   return {
     lpFeeBps: Number(lpFeeBps),
     protocolFeeBps: Number(protocolFeeBps),
-    routeSurchargeBps: Number(routeSurchargeBps),
   };
 }
 

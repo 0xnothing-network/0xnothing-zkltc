@@ -39,6 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" data-scroll-behavior="smooth">
       <body className={`${jetbrainsMono.variable} font-sans antialiased`}>
+        <link rel="preload" href="/fonts/DepartureMono-Regular.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <a href="#main-content" className="skip-link">Skip to content</a>
         <Providers>
           <div id="main-content">{children}</div>

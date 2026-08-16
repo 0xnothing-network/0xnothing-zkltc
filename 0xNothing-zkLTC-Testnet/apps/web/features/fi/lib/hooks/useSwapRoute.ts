@@ -4,8 +4,8 @@ import { zeroAddress, type Address } from "viem";
 import { useReadContract, useReadContracts } from "wagmi";
 import { dexFactoryAbi, dexPoolAbi, dexRouterAbi } from "@fi/lib/abis/dex";
 
-export type SwapRouteKind = "oracle" | "direct" | "via-nusd" | "checking" | "unavailable";
-export type SwapPath = readonly [Address, Address] | readonly [Address, Address, Address];
+export type SwapRouteKind = "oracle" | "direct" | "checking" | "unavailable";
+export type SwapPath = readonly [Address, Address];
 
 function validPair(value: Address | undefined): Address | undefined {
   return value && value.toLowerCase() !== zeroAddress ? value : undefined;
@@ -46,7 +46,6 @@ export function useSwapRoute({
   factory,
   input,
   isOracleRoute,
-  nusd,
   output,
   router,
 }: {
@@ -54,15 +53,11 @@ export function useSwapRoute({
   factory?: Address;
   input?: Address;
   isOracleRoute: boolean;
-  nusd?: Address;
   output?: Address;
   router?: Address;
 }) {
   const distinctTokens = Boolean(input && output && input.toLowerCase() !== output.toLowerCase());
-  const inputIsNusd = Boolean(input && nusd && input.toLowerCase() === nusd.toLowerCase());
-  const outputIsNusd = Boolean(output && nusd && output.toLowerCase() === nusd.toLowerCase());
   const canProbe = Boolean(factory && router && distinctTokens && !isOracleRoute);
-  const canBridge = Boolean(canProbe && nusd && !inputIsNusd && !outputIsNusd);
 
   const directPairQuery = useReadContract({
     address: factory,
@@ -78,32 +73,8 @@ export function useSwapRoute({
       refetchInterval: (query) => validPair(query.state.data as Address | undefined) ? false : 5_000,
     },
   });
-  const bridgeInputPairQuery = useReadContract({
-    address: factory,
-    abi: dexFactoryAbi,
-    functionName: "getPair",
-    args: canBridge && input && nusd ? [input, nusd] : undefined,
-    query: {
-      enabled: canBridge,
-      staleTime: Infinity,
-      refetchInterval: (query) => validPair(query.state.data as Address | undefined) ? false : 5_000,
-    },
-  });
-  const bridgeOutputPairQuery = useReadContract({
-    address: factory,
-    abi: dexFactoryAbi,
-    functionName: "getPair",
-    args: canBridge && output && nusd ? [nusd, output] : undefined,
-    query: {
-      enabled: canBridge,
-      staleTime: Infinity,
-      refetchInterval: (query) => validPair(query.state.data as Address | undefined) ? false : 5_000,
-    },
-  });
 
   const directPair = validPair(directPairQuery.data);
-  const bridgeInputPair = validPair(bridgeInputPairQuery.data);
-  const bridgeOutputPair = validPair(bridgeOutputPairQuery.data);
   const directLiquidity = useReadContracts({
     contracts: directPair ? [
       { address: directPair, abi: dexPoolAbi, functionName: "getReserves" },
@@ -111,37 +82,16 @@ export function useSwapRoute({
     ] as const : [],
     query: { enabled: Boolean(directPair) },
   });
-  const bridgeInputLiquidity = useReadContracts({
-    contracts: bridgeInputPair ? [
-      { address: bridgeInputPair, abi: dexPoolAbi, functionName: "getReserves" },
-      { address: bridgeInputPair, abi: dexPoolAbi, functionName: "totalSupply" },
-    ] as const : [],
-    query: { enabled: Boolean(bridgeInputPair) },
-  });
-  const bridgeOutputLiquidity = useReadContracts({
-    contracts: bridgeOutputPair ? [
-      { address: bridgeOutputPair, abi: dexPoolAbi, functionName: "getReserves" },
-      { address: bridgeOutputPair, abi: dexPoolAbi, functionName: "totalSupply" },
-    ] as const : [],
-    query: { enabled: Boolean(bridgeOutputPair) },
-  });
 
-  const pairDiscoveryPending = unresolved(canProbe, directPairQuery)
-    || unresolved(canBridge, bridgeInputPairQuery)
-    || unresolved(canBridge, bridgeOutputPairQuery);
-  const liquidityDiscoveryPending = unresolved(Boolean(directPair), directLiquidity)
-    || unresolved(Boolean(bridgeInputPair), bridgeInputLiquidity)
-    || unresolved(Boolean(bridgeOutputPair), bridgeOutputLiquidity);
+  const pairDiscoveryPending = unresolved(canProbe, directPairQuery);
+  const liquidityDiscoveryPending = unresolved(Boolean(directPair), directLiquidity);
   const discoveryPending = pairDiscoveryPending || liquidityDiscoveryPending;
 
   const directLive = hasLiveLiquidity(directLiquidity.data);
-  const bridgeLive = hasLiveLiquidity(bridgeInputLiquidity.data)
-    && hasLiveLiquidity(bridgeOutputLiquidity.data);
   const directPath: SwapPath | undefined = directLive && input && output ? [input, output] : undefined;
-  const bridgePath: SwapPath | undefined = bridgeLive && input && nusd && output ? [input, nusd, output] : undefined;
 
   // Quotes may begin from cached candidate data, but they are never exposed
-  // until every direct/via-NUSD discovery query above has settled.
+  // until the direct-pair discovery query above has settled.
   const directQuote = useReadContract({
     address: router,
     abi: dexRouterAbi,
@@ -149,24 +99,13 @@ export function useSwapRoute({
     args: directPath && amountIn ? [amountIn, [...directPath]] : undefined,
     query: { enabled: Boolean(router && directPath && amountIn) },
   });
-  const bridgeQuote = useReadContract({
-    address: router,
-    abi: dexRouterAbi,
-    functionName: "getAmountsOut",
-    args: bridgePath && amountIn ? [amountIn, [...bridgePath]] : undefined,
-    query: { enabled: Boolean(router && bridgePath && amountIn) },
-  });
 
   const directQuotePending = unresolved(Boolean(directPath && amountIn), directQuote);
-  const bridgeQuotePending = unresolved(Boolean(bridgePath && amountIn), bridgeQuote);
-  const quotePending = directQuotePending || bridgeQuotePending;
   const directOutput = directQuote.error || directQuotePending ? undefined : finalAmount(directQuote.data);
-  const bridgeOutput = bridgeQuote.error || bridgeQuotePending ? undefined : finalAmount(bridgeQuote.data);
 
   if (isOracleRoute) {
     return {
       amountOut: undefined,
-      bridgeLive: false,
       directLive: false,
       discoverySettled: true,
       error: undefined,
@@ -180,7 +119,6 @@ export function useSwapRoute({
   if (discoveryPending) {
     return {
       amountOut: undefined,
-      bridgeLive,
       directLive,
       discoverySettled: false,
       error: undefined,
@@ -191,33 +129,26 @@ export function useSwapRoute({
     };
   }
 
-  const defaultPath = directPath ?? bridgePath;
-  const defaultKind: SwapRouteKind = directPath ? "direct" : bridgePath ? "via-nusd" : "unavailable";
+  const defaultKind: SwapRouteKind = directPath ? "direct" : "unavailable";
   const discoveryError = currentError(canProbe, directPairQuery)
-    ?? currentError(canBridge, bridgeInputPairQuery)
-    ?? currentError(canBridge, bridgeOutputPairQuery)
-    ?? currentError(Boolean(directPair), directLiquidity)
-    ?? currentError(Boolean(bridgeInputPair), bridgeInputLiquidity)
-    ?? currentError(Boolean(bridgeOutputPair), bridgeOutputLiquidity);
+    ?? currentError(Boolean(directPair), directLiquidity);
 
   if (!amountIn) {
     return {
       amountOut: undefined,
-      bridgeLive,
       directLive,
       discoverySettled: true,
-      error: defaultPath ? undefined : discoveryError,
+      error: directPath ? undefined : discoveryError,
       isFetching: false,
       kind: defaultKind,
-      path: defaultPath,
+      path: directPath,
       quotesSettled: true,
     };
   }
 
-  if (quotePending) {
+  if (directQuotePending) {
     return {
       amountOut: undefined,
-      bridgeLive,
       directLive,
       discoverySettled: true,
       error: undefined,
@@ -228,41 +159,17 @@ export function useSwapRoute({
     };
   }
 
-  let path = defaultPath;
-  let kind = defaultKind;
-  let amountOut: bigint | undefined;
-  if (directOutput !== undefined && bridgeOutput !== undefined) {
-    if (bridgeOutput > directOutput) {
-      path = bridgePath;
-      kind = "via-nusd";
-      amountOut = bridgeOutput;
-    } else {
-      path = directPath;
-      kind = "direct";
-      amountOut = directOutput;
-    }
-  } else if (directOutput !== undefined) {
-    path = directPath;
-    kind = "direct";
-    amountOut = directOutput;
-  } else if (bridgeOutput !== undefined) {
-    path = bridgePath;
-    kind = "via-nusd";
-    amountOut = bridgeOutput;
-  }
-
-  const quoteError = amountOut === undefined && defaultPath
-    ? directQuote.error ?? bridgeQuote.error ?? new Error("No executable quote is available.")
+  const quoteError = directOutput === undefined && directPath
+    ? directQuote.error ?? new Error("No executable quote is available.")
     : undefined;
   return {
-    amountOut,
-    bridgeLive,
+    amountOut: directOutput,
     directLive,
     discoverySettled: true,
-    error: quoteError ?? (amountOut === undefined ? discoveryError : undefined),
+    error: quoteError ?? (directOutput === undefined ? discoveryError : undefined),
     isFetching: false,
-    kind,
-    path,
+    kind: directOutput === undefined ? "unavailable" : "direct",
+    path: directOutput === undefined ? undefined : directPath,
     quotesSettled: true,
   };
 }

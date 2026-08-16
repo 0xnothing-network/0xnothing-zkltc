@@ -39,10 +39,6 @@ export function formatTokenAmount(value: bigint | undefined, decimals = 18): str
   }).format(formatted);
 }
 
-export function formatUsd(value: bigint | undefined, decimals = 18): string {
-  return value === undefined ? "--" : `$${formatAmount(value, decimals, 2)}`;
-}
-
 export function formatPercentWad(value: bigint | undefined): string {
   if (value === undefined) return "--";
   return `${formatAmount(value * 100n, 18, 2)}%`;

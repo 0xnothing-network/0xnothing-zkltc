@@ -274,20 +274,16 @@ export function SwapWorkspace() {
     factory: deployment.contracts.dexFactory,
     input: tokenInAddress,
     isOracleRoute: isOracleNusdRoute,
-    nusd: canonicalNusd,
     output: tokenOutAddress,
     router: activeDexRouter,
   });
   const path = swapRoute.path;
-  const totalFeeBps = path
-    && feeSchedule
-    ? (path.length - 1) * feeSchedule.lpFeeBps
-      + feeSchedule.protocolFeeBps
-      + (path.length > 2 ? feeSchedule.routeSurchargeBps : 0)
+  const totalFeeBps = path && feeSchedule
+    ? (path.length - 1) * feeSchedule.lpFeeBps + feeSchedule.protocolFeeBps
     : undefined;
   const routeConfigured = isOracleNusdRoute
     ? Boolean(deployment.contracts.nusd)
-    : swapRoute.kind === "direct" || swapRoute.kind === "via-nusd";
+    : swapRoute.kind === "direct";
   const mintQuote = useReadContract({
     address: deployment.contracts.nusd,
     abi: nusdOracleAbi,
@@ -376,7 +372,6 @@ export function SwapWorkspace() {
     const to = assetOut?.symbol;
     if (!from || !to) return undefined;
     if (isOracleNusdRoute) return `${from} → ${to}`;
-    if (swapRoute.kind === "via-nusd") return `${from} → NUSD → ${to}`;
     if (swapRoute.kind === "direct") return `${from} → ${to}`;
     return undefined;
   })();
@@ -433,9 +428,8 @@ export function SwapWorkspace() {
     if (!payContract.trim() && !receiveContract.trim()) return undefined;
     if (!importedContractsReady || !detectedPayAsset && !detectedReceiveAsset) return undefined;
     if (isOracleNusdRoute) return "Liquidity found · 0% fee";
-    if (swapRoute.kind === "checking") return "Checking direct and NUSD liquidity…";
+    if (swapRoute.kind === "checking") return "Checking liquidity…";
     if (swapRoute.kind === "direct") return "Direct liquidity found";
-    if (swapRoute.kind === "via-nusd") return "Liquidity found via NUSD";
     if (swapRoute.error) return "Liquidity check is temporarily unavailable.";
     return "No liquidity is available for this pair.";
   })();
@@ -629,10 +623,7 @@ export function SwapWorkspace() {
             {routeLabel ? (
               <div>
                 <dt>Route</dt>
-                <dd>
-                  {routeLabel}
-                  {swapRoute.kind === "via-nusd" ? <span className="fi-status" data-state="healthy">via NUSD</span> : null}
-                </dd>
+                <dd>{routeLabel}</dd>
               </div>
             ) : null}
             <div><dt>Rate</dt><dd>{rate ? `${rate} ${assetOut?.symbol ?? ""} / ${assetIn?.symbol ?? ""}` : "--"}</dd></div>
