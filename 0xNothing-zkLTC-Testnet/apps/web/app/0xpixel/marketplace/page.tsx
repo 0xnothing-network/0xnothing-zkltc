@@ -11,7 +11,7 @@ import {
   getTokenExplorerUrl,
 } from "@/lib/contract";
 import { MarketplaceAbi, marketplaceNftKey, type RawListing } from "@/lib/marketplaceAbi";
-import { GridSkeleton } from "@/components/Skeleton";
+import { GridSkeleton } from "@/features/pixel/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { LITVM_CHAIN_ID } from "@/lib/chainSwitch";
 

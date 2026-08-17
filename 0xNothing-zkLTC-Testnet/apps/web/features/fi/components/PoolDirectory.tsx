@@ -133,6 +133,9 @@ function MarketRow({ pool, canonical }: { pool: PoolPoint; canonical: Set<string
             <strong>{firstSymbol}<i>/</i>{secondSymbol}</strong>
             <small><i data-state={live ? "live" : "empty"} />{type === "graduated" ? "0xPump" : type === "canonical" ? "Core" : "DEX"}</small>
           </span>
+          {hasPositiveRawAmount(pool.burnedLp) ? (
+            <span className="fi-badge fi-badge-burn" title="LP burned permanently">Burned</span>
+          ) : null}
         </span>
         <span className="fi-market-cell">
           <small>{firstSymbol} price</small>
@@ -172,7 +175,6 @@ export function PoolDirectory({
     : undefined;
 
   const canonical = useMemo(canonicalPoolAddresses, []);
-  const hasPriceHistory = indexedPools.some((pool) => pool.priceChange24h !== undefined);
   const markets = useMemo(() => {
     const query = search.trim().toLowerCase();
     return indexedPools
@@ -209,10 +211,14 @@ export function PoolDirectory({
   }
 
   return (
-    <section className="fi-market-explorer" aria-labelledby="fi-market-title">
+    <section
+      className="fi-market-explorer"
+      aria-label={title ? undefined : "Pool markets"}
+      aria-labelledby={title ? "fi-market-title" : undefined}
+    >
       <div className="fi-market-toolbar">
         <div className="fi-market-title">
-          <h1 id="fi-market-title">{title}</h1>
+          {title ? <h1 id="fi-market-title">{title}</h1> : null}
           <span>{markets.length} markets</span>
         </div>
         <label className="fi-market-search">
@@ -242,9 +248,7 @@ export function PoolDirectory({
 
       <div className="fi-market-list-head">
         <span>Market</span>
-        {(["price", "change", "tvl"] as const).map((key) => key === "change" && !hasPriceHistory ? (
-          <span title="24-hour price history is not indexed yet" key={key}>24H N/A</span>
-        ) : (
+        {(["price", "change", "tvl"] as const).map((key) => (
           <button
             type="button"
             data-active={sortKey === key || undefined}

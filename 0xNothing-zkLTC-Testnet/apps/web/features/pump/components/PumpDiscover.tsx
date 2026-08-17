@@ -33,9 +33,7 @@ export function PumpDiscover() {
   const trendingQuery = usePumpMarkets({ limit: 3, sort: "VOLUME" });
   const statsQuery = usePumpStats();
   const stats = statsQuery.data?.stats;
-  const trendingMarkets = trendingQuery.markets
-    .filter((market) => /^\d+$/.test(market.volumeNusd) && BigInt(market.volumeNusd) > 0n)
-    .slice(0, 3);
+  const trendingMarkets = trendingQuery.markets.slice(0, 3);
 
   return (
     <main className="pump-page">
@@ -61,7 +59,7 @@ export function PumpDiscover() {
             {trendingMarkets.map((market) => <TokenCard key={market.tokenAddress} market={market} priority />)}
           </div>
         ) : (
-          <p className="pump-empty-inline">No traded markets yet.</p>
+          <p className="pump-empty-inline">No markets yet.</p>
         )}
       </section>
 

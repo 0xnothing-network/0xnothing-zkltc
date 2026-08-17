@@ -23,7 +23,6 @@ export async function GET(
     { ttlMs: 2_000, staleMs: 8_000 },
   );
   return NextResponse.json(payload, {
-    status: payload.configured && !payload.market ? 404 : 200,
     headers: { "Cache-Control": "private, no-store, max-age=0, must-revalidate" },
   });
 }

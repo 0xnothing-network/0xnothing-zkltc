@@ -52,6 +52,20 @@ export function minimumAfterSlippage(amount: bigint, slippageBps: bigint): bigin
   return (amount * (10_000n - slippageBps)) / 10_000n;
 }
 
+// Constant-product depth impact as basis points (100 bps = 1%), excluding fees.
+// For x*y=k, impact against the post-fee spot quote is y / (reserveIn + y).
+export function priceImpactBps(
+  amountIn: bigint | undefined,
+  reserveIn: bigint | undefined,
+  feeBps = 0n,
+): bigint | undefined {
+  if (!amountIn || !reserveIn || reserveIn <= 0n) return undefined;
+  const amountInAfterFee = (amountIn * (10_000n - feeBps)) / 10_000n;
+  if (amountInAfterFee <= 0n) return undefined;
+  const denominator = reserveIn + amountInAfterFee;
+  return (amountInAfterFee * 10_000n + denominator - 1n) / denominator;
+}
+
 export function transactionDeadline(minutes = 20): bigint {
   return BigInt(Math.floor(Date.now() / 1000) + minutes * 60);
 }

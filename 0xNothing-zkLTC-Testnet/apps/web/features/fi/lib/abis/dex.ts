@@ -9,6 +9,11 @@ export const dexFactoryAbi = [
   { type: "function", name: "isPair", stateMutability: "view", inputs: [{ name: "candidate", type: "address" }], outputs: [{ name: "", type: "bool" }] },
   { type: "function", name: "router", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "address" }] },
   { type: "function", name: "swapsPaused", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "bool" }] },
+  {
+    type: "function", name: "createPair", stateMutability: "nonpayable",
+    inputs: [{ name: "tokenA", type: "address" }, { name: "tokenB", type: "address" }],
+    outputs: [{ name: "pair", type: "address" }],
+  },
 ] as const;
 
 export const dexPoolAbi = [

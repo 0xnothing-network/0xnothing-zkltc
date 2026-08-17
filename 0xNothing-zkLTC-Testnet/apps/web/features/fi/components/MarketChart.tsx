@@ -17,6 +17,7 @@ import { TokenPairLogos } from "@fi/components/TokenLogo";
 import { EmptyState, ErrorState, SkeletonRows } from "@fi/components/UiStates";
 import { fiPath } from "@fi/config/paths";
 import type { CandlePoint, DataEnvelope } from "@fi/lib/data";
+import { fetchJson } from "@/lib/http";
 
 type Period = "5m" | "1h" | "4h" | "1d";
 const PERIODS: readonly Period[] = ["5m", "1h", "4h", "1d"];
@@ -239,11 +240,11 @@ export function MarketChart({
     const requestId = ++requestIdRef.current;
     if (!background) setLoading(true);
     try {
-      const response = await fetch(fiPath(`/api/data/candles?pair=${encodeURIComponent(pair)}&period=${period}`), {
-        signal: controller.signal,
-      });
-      const payload = (await response.json()) as DataEnvelope<CandlePoint[]> & { error?: string };
-      if (!response.ok) throw new Error(payload.error || "Chart request failed");
+      const payload = await fetchJson<DataEnvelope<CandlePoint[]>>(
+        fiPath(`/api/data/candles?pair=${encodeURIComponent(pair)}&period=${period}`),
+        { signal: controller.signal },
+        "Chart request failed",
+      );
       if (requestId !== requestIdRef.current) return;
       setCandles(payload.data);
       setPriceSource(payload.meta.priceSource ?? "dex");

@@ -6,6 +6,7 @@ import { deployment } from "@fi/config/deployment";
 import { EmptyState, ErrorState, PanelHeading, SkeletonRows } from "@fi/components/UiStates";
 import { formatRelativeTimestamp } from "@fi/lib/format";
 import { fiPath } from "@fi/config/paths";
+import { fetchJson } from "@/lib/http";
 import { FI_LIVE_MS } from "@/lib/liveData";
 
 function shortValue(value: string): string {
@@ -34,11 +35,11 @@ function formatActivityAmount(value: string): string {
 }
 
 async function fetchActivity(pair: string, signal: AbortSignal): Promise<ActivityPoint[]> {
-  const response = await fetch(fiPath(`/api/data/activity?pair=${encodeURIComponent(pair)}`), {
-    signal,
-  });
-  const payload = (await response.json()) as DataEnvelope<ActivityPoint[]> & { error?: string };
-  if (!response.ok) throw new Error(payload.error || "Activity request failed");
+  const payload = await fetchJson<DataEnvelope<ActivityPoint[]>>(
+    fiPath(`/api/data/activity?pair=${encodeURIComponent(pair)}`),
+    { signal },
+    "Activity request failed",
+  );
   return payload.data;
 }
 

@@ -12,7 +12,7 @@ import {
 import { decodeEventLog, encodeFunctionData } from "viem";
 import { publicClient, PIXEL_NFT_CONTRACT_ADDRESS, getMarketplaceTxUrl } from "@/lib/contract";
 import { PixelNFTABI } from "@/lib/abi";
-import { PixelButton } from "@/components/PixelButton";
+import { PixelButton } from "@/features/pixel/components/PixelButton";
 import { pixelDataToPNG, pixelDataToPackedBytes } from "@/lib/gridParser";
 import { useToast } from "@/components/Toast";
 import { normalizeError } from "@/lib/errors";

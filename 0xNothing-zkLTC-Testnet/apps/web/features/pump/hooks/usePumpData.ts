@@ -3,8 +3,9 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAccount, usePublicClient } from "wagmi";
-import type { Address } from "viem";
+import { getAddress, isAddress, type Address } from "viem";
 import { pumpTokenAbi } from "@/features/pump/abis";
+import { fetchJson } from "@/lib/http";
 import { LIVE_MS, STEADY_LIVE_MS } from "@/lib/liveData";
 import {
   DEFAULT_PUMP_CANDLE_PERIOD,
@@ -25,10 +26,7 @@ const EMPTY_MARKETS: PumpMarket[] = [];
 const EMPTY_BALANCES = new Map<string, bigint>();
 
 async function apiJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(url, { signal, cache: "no-store" });
-  const body = (await response.json().catch(() => ({}))) as T & { error?: string };
-  if (!response.ok) throw new Error(body.error || `Request failed with HTTP ${response.status}`);
-  return body;
+  return fetchJson<T>(url, { signal, cache: "no-store" });
 }
 
 function normalizeMarketSearch(value: string) {
@@ -118,6 +116,10 @@ export function usePumpMarkets(options?: {
 }) {
   const limit = options?.limit ?? 100;
   const sort = options?.sort ?? "NEWEST";
+  const exactAddress = useMemo(() => {
+    const search = normalizeMarketSearch(options?.search ?? "");
+    return isAddress(search) ? getAddress(search) : undefined;
+  }, [options?.search]);
   const query = useQuery({
     queryKey: ["pump-markets", limit, sort],
     queryFn: ({ signal }) =>
@@ -125,20 +127,48 @@ export function usePumpMarkets(options?: {
     staleTime: 4_000,
     refetchInterval: LIVE_MS,
   });
+  const exactMarketQuery = useQuery({
+    queryKey: ["pump-market-search", exactAddress],
+    queryFn: ({ signal }) =>
+      apiJson<PumpMarketResponse>(`/api/pump/markets/${exactAddress}`, signal),
+    enabled: Boolean(exactAddress),
+    staleTime: 4_000,
+    refetchInterval: LIVE_MS,
+    refetchIntervalInBackground: false,
+  });
 
   const markets = useMemo(() => {
     const search = options?.search ?? "";
     const status = options?.status ?? "ALL";
-    return (query.data?.markets ?? [])
+    const candidates = new Map(
+      (query.data?.markets ?? []).map((market) => [market.tokenAddress.toLowerCase(), market]),
+    );
+    const exactMarket = exactMarketQuery.data?.market;
+    if (exactMarket) candidates.set(exactMarket.tokenAddress.toLowerCase(), exactMarket);
+    return [...candidates.values()]
       .map((market) => ({ market, searchRank: marketSearchRank(market, search) }))
       .filter(({ market, searchRank }) =>
         searchRank >= 0 && (status === "ALL" || market.status === status))
       .sort((left, right) =>
         left.searchRank - right.searchRank || compareMarkets(left.market, right.market, sort))
       .map(({ market }) => market);
-  }, [options?.search, options?.status, query.data?.markets, sort]);
+  }, [exactMarketQuery.data?.market, options?.search, options?.status, query.data?.markets, sort]);
 
-  return { ...query, markets };
+  return {
+    ...query,
+    error: query.error ?? (exactAddress ? exactMarketQuery.error : null),
+    isError: query.isError || Boolean(exactAddress && exactMarketQuery.isError),
+    isLoading: query.isLoading || Boolean(exactAddress && exactMarketQuery.isLoading),
+    isFetching: query.isFetching || exactMarketQuery.isFetching,
+    refetch: async () => {
+      const [result] = await Promise.all([
+        query.refetch(),
+        exactAddress ? exactMarketQuery.refetch() : Promise.resolve(undefined),
+      ]);
+      return result;
+    },
+    markets,
+  };
 }
 
 export function usePumpStats() {

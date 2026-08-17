@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowClockwise, ArrowLeft, ArrowsDownUp, HourglassSimple, Warning } from "@phosphor-icons/react";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
 import { formatUnits, type Address } from "viem";
@@ -17,9 +17,10 @@ import { deployment } from "@fi/config/deployment";
 import { fiPath } from "@fi/config/paths";
 import { diaOracleAdapterAbi } from "@fi/lib/abis/dia";
 import { dexFactoryAbi, dexPoolAbi, dexRouterAbi } from "@fi/lib/abis/dex";
+import { communityLiquidityLockerAbi } from "@fi/lib/abis/locker";
 import { erc20Abi } from "@fi/lib/abis/erc20";
 import { canonicalOracleMarketForIdentifier } from "@fi/lib/canonicalMarkets";
-import { formatAmount, minimumAfterSlippage, parseAmount, percentageShare, transactionDeadline } from "@fi/lib/format";
+import { formatAmount, minimumAfterSlippage, parseAmount, percentageShare, priceImpactBps, transactionDeadline } from "@fi/lib/format";
 import { useActiveDexRouter } from "@fi/lib/hooks/useActiveDexRouter";
 import { formatFeeBps, useDexFeeSchedule } from "@fi/lib/hooks/useDexFeeSchedule";
 import { useProtocolTransaction } from "@fi/lib/hooks/useProtocolTransaction";
@@ -46,10 +47,34 @@ function displayMarketPrice(value: number | undefined): string {
   })}`;
 }
 
+function displayPriceImpact(value: bigint | undefined): string {
+  if (value === undefined) return "--";
+  return `${(Number(value) / 100).toFixed(2)}%`;
+}
+
+function displayUnlockTime(value: bigint | undefined): string {
+  if (value === undefined) return "--";
+  return `${new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(new Date(Number(value) * 1_000))} UTC`;
+}
+
 const tokenImageAbi = [{
   type: "function", name: "imageURI", stateMutability: "view",
   inputs: [], outputs: [{ name: "", type: "string" }],
 }] as const;
+
+// LP sent here is unrecoverable; the pools directory marks such pools as Burned.
+const LP_DEAD_ADDRESS = "0x000000000000000000000000000000000000dEaD";
+
+type ActivePoolLock = {
+  id: bigint;
+  amount: bigint;
+  unlockAt: bigint;
+  permanent: boolean;
+};
 
 export function DynamicPoolDetail({ pool }: { pool: Address }) {
   const { address, isConnected } = useAccount();
@@ -64,6 +89,12 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   const [amountBText, setAmountBText] = useState("");
   const [lpText, setLpText] = useState("");
   const [slippageBps, setSlippageBps] = useState(50n);
+  const [lockAmountText, setLockAmountText] = useState("");
+  const [lockMode, setLockMode] = useState<"permanent" | "timed">("permanent");
+  const [lockUnlockAt, setLockUnlockAt] = useState<string>("");
+  const [lpActionMode, setLpActionMode] = useState<"lock" | "burn">("lock");
+  const [burnAmountText, setBurnAmountText] = useState("");
+  const [currentUnixTime, setCurrentUnixTime] = useState(() => Math.floor(Date.now() / 1_000));
 
   const validation = useReadContract({
     address: deployment.contracts.dexFactory,
@@ -131,6 +162,86 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   const lpBalance = walletBalances.data?.[0]?.result as bigint | undefined;
   const balanceA = walletBalances.data?.[1]?.result as bigint | undefined;
   const balanceB = walletBalances.data?.[2]?.result as bigint | undefined;
+  const lockedLpRead = useReadContract({
+    address: deployment.contracts.lpLocker,
+    abi: communityLiquidityLockerAbi,
+    functionName: "activeLockedByToken",
+    args: [pool],
+    query: { enabled: Boolean(deployment.contracts.lpLocker), staleTime: 60_000 },
+  });
+  const lockedLp = lockedLpRead.data as bigint | undefined;
+  const burnedLpRead = useReadContract({
+    address: pool,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: [LP_DEAD_ADDRESS],
+    query: { staleTime: 60_000 },
+  });
+  const burnedLp = burnedLpRead.data as bigint | undefined;
+  const ownerLockIdsRead = useReadContract({
+    address: deployment.contracts.lpLocker,
+    abi: communityLiquidityLockerAbi,
+    functionName: "ownerLockIds",
+    args: address ? [address] : undefined,
+    query: { enabled: Boolean(deployment.contracts.lpLocker && address && lockedLp && lockedLp > 0n), staleTime: 30_000 },
+  });
+  const lockIds = useMemo(
+    () => [...((ownerLockIdsRead.data as readonly bigint[] | undefined) ?? [])],
+    [ownerLockIdsRead.data],
+  );
+  const locksRead = useReadContracts({
+    contracts: deployment.contracts.lpLocker
+      ? lockIds.map((id) => ({
+          address: deployment.contracts.lpLocker!,
+          abi: communityLiquidityLockerAbi,
+          functionName: "getLock",
+          args: [id],
+        }) as const)
+      : [],
+    query: { enabled: Boolean(deployment.contracts.lpLocker && lockIds.length > 0), staleTime: 30_000 },
+  });
+  const activeLocks = useMemo(() => {
+    const locks: ActivePoolLock[] = [];
+    for (const [index, result] of (locksRead.data ?? []).entries()) {
+      const lock = result.result;
+      if (!lock || lock.withdrawn || lock.lpToken.toLowerCase() !== pool.toLowerCase()) continue;
+      locks.push({
+        id: lockIds[index],
+        amount: lock.amount,
+        unlockAt: lock.unlockAt,
+        permanent: lock.permanent,
+      });
+    }
+    return locks;
+  }, [lockIds, locksRead.data, pool]);
+  const permanentLockedLp = activeLocks.reduce(
+    (total, lock) => total + (lock.permanent ? lock.amount : 0n),
+    0n,
+  );
+  const timedLocks = activeLocks
+    .filter((lock) => !lock.permanent)
+    .sort((left, right) => Number(left.unlockAt - right.unlockAt));
+  const timedLockedLp = timedLocks.reduce((total, lock) => total + lock.amount, 0n);
+  const earliestUnlockAt = timedLocks[0]?.unlockAt;
+  const hasLockedLp = lockedLp !== undefined && lockedLp > 0n;
+  const hasBurnedLp = burnedLp !== undefined && burnedLp > 0n;
+  const walletLocks = address ? timedLocks : [];
+  const nextWalletUnlockAt = walletLocks.find(
+    (lock) => lock.unlockAt > BigInt(currentUnixTime),
+  )?.unlockAt;
+  useEffect(() => {
+    if (nextWalletUnlockAt === undefined) return;
+    const remainingMs = Number(nextWalletUnlockAt) * 1_000 - Date.now();
+    const delayMs = Math.min(Math.max(remainingMs + 250, 250), 2_147_000_000);
+    const timer = window.setTimeout(
+      () => setCurrentUnixTime(Math.floor(Date.now() / 1_000)),
+      delayMs,
+    );
+    return () => window.clearTimeout(timer);
+  }, [currentUnixTime, nextWalletUnlockAt]);
+  const withdrawableLocks = walletLocks.filter(
+    (lock) => lock.unlockAt <= BigInt(currentUnixTime),
+  );
   const swapTokenIn = swapInputIndex === 0 ? tokenA : tokenB;
   const swapTokenOut = swapInputIndex === 0 ? tokenB : tokenA;
   const swapSymbolIn = swapInputIndex === 0 ? symbolA : symbolB;
@@ -199,6 +310,14 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
     query: { enabled: Boolean(deployment.contracts.dexFactory) },
   });
   const swapAmountOut = swapQuote.data?.at(-1);
+  // Direct-path depth impact is determined only by post-fee input versus input reserve.
+  const reserveIn = swapInputIndex === 0 ? reserveA : reserveB;
+  const swapFeeBps = feeSchedule
+    ? BigInt(feeSchedule.lpFeeBps + feeSchedule.protocolFeeBps)
+    : undefined;
+  const impactBps = swapFeeBps === undefined
+    ? undefined
+    : priceImpactBps(swapAmountIn, reserveIn, swapFeeBps);
   const swapStateReady = swapsPaused.data !== undefined && !swapsPaused.error;
   const routeReadError = Boolean(swapsPaused.error);
   const removeAmountA = liquidity && reserveA !== undefined && totalSupply ? liquidity * reserveA / totalSupply : undefined;
@@ -282,6 +401,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
       void swapsPaused.refetch();
       void oraclePriceRead.refetch();
       void oracleFreshRead.refetch();
+      void burnedLpRead.refetch();
     }
   }
 
@@ -381,6 +501,99 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
     }
   }
 
+  const lpLocker = deployment.contracts.lpLocker;
+  const lockAmount = parseAmount(lockAmountText);
+  const lockError = useMemo(() => {
+    if (lpActionMode !== "lock") return undefined;
+    if (!lockAmountText) return undefined;
+    if (!lockAmount) return "Enter a valid positive amount.";
+    if (lpBalance !== undefined && lockAmount > lpBalance) return "Amount exceeds your LP balance.";
+    if (lockMode === "timed" && !lockUnlockAt) return "Select an unlock date.";
+    if (lockMode === "timed") {
+      const unlockTs = Math.floor(new Date(lockUnlockAt).getTime() / 1000);
+      if (!Number.isFinite(unlockTs)) return "Select a valid unlock date.";
+      if (unlockTs <= currentUnixTime) return "Unlock date must be in the future.";
+    }
+    return undefined;
+  }, [currentUnixTime, lockAmount, lockAmountText, lockMode, lockUnlockAt, lpActionMode, lpBalance]);
+
+  async function submitLock() {
+    if (lpActionMode !== "lock" || !lockAmount || !address || !lpLocker) return;
+    let unlockAt: bigint | undefined;
+    if (lockMode === "timed") {
+      const unlockTs = Math.floor(new Date(lockUnlockAt).getTime() / 1000);
+      if (!Number.isFinite(unlockTs)) return;
+      unlockAt = BigInt(unlockTs);
+    }
+    const hash = await tx.execute({
+      approval: { token: pool, spender: lpLocker, amount: lockAmount },
+      call: lockMode === "permanent" ? {
+        address: lpLocker,
+        abi: communityLiquidityLockerAbi,
+        functionName: "lockPermanent",
+        args: [pool, lockAmount],
+      } : {
+        address: lpLocker,
+        abi: communityLiquidityLockerAbi,
+        functionName: "lockUntil",
+        args: [pool, lockAmount, unlockAt!],
+      },
+    });
+    if (hash) {
+      toast.show("LP locked", `Your liquidity has been ${lockMode === "permanent" ? "permanently" : "temporarily"} locked.`, "success");
+      setLockAmountText(""); setLockUnlockAt("");
+      void walletBalances.refetch();
+      void lockedLpRead.refetch();
+      void ownerLockIdsRead.refetch();
+      void locksRead.refetch();
+    }
+  }
+
+  const burnAmount = parseAmount(burnAmountText);
+  const burnError = useMemo(() => {
+    if (lpActionMode !== "burn") return undefined;
+    if (!burnAmountText) return undefined;
+    if (!burnAmount) return "Enter a valid positive amount.";
+    if (lpBalance !== undefined && burnAmount > lpBalance) return "Amount exceeds your LP balance.";
+    return undefined;
+  }, [burnAmount, burnAmountText, lpActionMode, lpBalance]);
+
+  async function submitBurn() {
+    if (lpActionMode !== "burn" || !burnAmount || !address) return;
+    const hash = await tx.execute({
+      call: {
+        address: pool,
+        abi: erc20Abi,
+        functionName: "transfer",
+        args: [LP_DEAD_ADDRESS, burnAmount],
+      },
+    });
+    if (hash) {
+      toast.show("LP burned", "Liquidity sent to the dead address permanently.", "success");
+      setBurnAmountText("");
+      void walletBalances.refetch();
+      void burnedLpRead.refetch();
+    }
+  }
+
+  async function submitWithdraw(lockId: bigint) {
+    if (!address || !deployment.contracts.lpLocker) return;
+    const hash = await tx.execute({
+      call: {
+        address: deployment.contracts.lpLocker,
+        abi: communityLiquidityLockerAbi,
+        functionName: "withdraw",
+        args: [lockId],
+      },
+    });
+    if (hash) {
+      toast.show("LP withdrawn", "Your locked liquidity has been returned.", "success");
+      void walletBalances.refetch();
+      void lockedLpRead.refetch();
+      void locksRead.refetch();
+    }
+  }
+
   if (!deployment.contracts.dexFactory || !dexRouter) return <NotDeployed feature="DEX" />;
   if (validation.data === false) return <NotDeployed feature="Unknown DEX pool" />;
   return (
@@ -418,6 +631,15 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
               <div><dt>{symbolB} reserve</dt><dd>{formatAmount(reserveB ?? rawReserveB, decimalsB)}</dd></div>
               <div><dt>Total LP</dt><dd>{formatAmount(totalSupply)}</dd></div>
               <div><dt>Your share</dt><dd>{percentageShare(lpBalance, totalSupply)}</dd></div>
+              {lpBalance !== undefined && lpBalance > 0n ? (
+                <div><dt>Your LP</dt><dd>{formatAmount(lpBalance)}</dd></div>
+              ) : null}
+              {lockedLp !== undefined && lockedLp > 0n ? (
+                <div><dt>Locked LP</dt><dd>{formatAmount(lockedLp)}</dd></div>
+              ) : null}
+              {burnedLp !== undefined && burnedLp > 0n ? (
+                <div><dt>Burned LP</dt><dd>{formatAmount(burnedLp)}</dd></div>
+              ) : null}
             </dl>
           </details>
         </div>
@@ -481,6 +703,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
                 readOnly
               />
               <dl className="fi-form-details">
+                <div><dt>Price impact</dt><dd data-tone={impactBps === undefined ? undefined : impactBps >= 500n ? "danger" : impactBps >= 100n ? "warning" : "positive"}>{displayPriceImpact(impactBps)}</dd></div>
                 <div><dt>Min received</dt><dd>{formatAmount(swapAmountOut ? minimumAfterSlippage(swapAmountOut, slippageBps) : undefined, swapDecimalsOut)} {swapSymbolOut}</dd></div>
                 <div><dt>Fee</dt><dd>{formatFeeBps(feeSchedule ? feeSchedule.lpFeeBps + feeSchedule.protocolFeeBps : undefined)}</dd></div>
               </dl>
@@ -511,6 +734,104 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
             )}
             <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />
           </div>
+          {poolReady && (lpBalance !== undefined && lpBalance > 0n || hasLockedLp || hasBurnedLp) ? (
+            <details className="fi-settings-details fi-lock-lp-details">
+              <summary>
+                <span>LP security</span>
+                <strong>{hasLockedLp ? "Locked" : hasBurnedLp ? "Burned" : "Manage"}</strong>
+              </summary>
+              <div className="fi-disclosure-body">
+                {hasLockedLp || hasBurnedLp ? (
+                  <dl className="fi-form-details fi-lp-security-summary">
+                    {hasLockedLp ? <div><dt>Locked LP</dt><dd>{formatAmount(lockedLp)}</dd></div> : null}
+                    {permanentLockedLp > 0n ? <div><dt>Your permanent LP</dt><dd>{formatAmount(permanentLockedLp)}</dd></div> : null}
+                    {timedLockedLp > 0n ? <div><dt>Your timed LP</dt><dd>{formatAmount(timedLockedLp)}</dd></div> : null}
+                    {earliestUnlockAt !== undefined ? <div><dt>Your next unlock</dt><dd>{displayUnlockTime(earliestUnlockAt)}</dd></div> : null}
+                    {hasBurnedLp ? <div><dt>Burned LP</dt><dd>{formatAmount(burnedLp)}</dd></div> : null}
+                  </dl>
+                ) : null}
+                {(ownerLockIdsRead.isPending || locksRead.isPending) && hasLockedLp && address ? <p className="fi-hint">Loading your lock schedule...</p> : null}
+                {ownerLockIdsRead.isError || locksRead.isError ? <p className="fi-hint">Lock amount is verified on-chain, but your unlock schedule is temporarily unavailable.</p> : null}
+                {withdrawableLocks.map((lock) => (
+                  <button
+                    type="button"
+                    className="fi-button fi-button-block fi-button-primary"
+                    disabled={tx.pending}
+                    onClick={() => void submitWithdraw(lock.id)}
+                    key={lock.id.toString()}
+                  >
+                    {tx.pending ? "Processing" : `Withdraw ${formatAmount(lock.amount)} LP`}
+                  </button>
+                ))}
+                {lpBalance !== undefined && lpBalance > 0n ? <>
+                  <div className="fi-segmented" role="group" aria-label="LP action">
+                    <button type="button" className={lpActionMode === "lock" ? "active positive" : ""} aria-pressed={lpActionMode === "lock"} onClick={() => { setLpActionMode("lock"); tx.reset(); }}>Lock</button>
+                    <button type="button" className={lpActionMode === "burn" ? "active" : ""} aria-pressed={lpActionMode === "burn"} onClick={() => { setLpActionMode("burn"); tx.reset(); }}>Burn</button>
+                  </div>
+                  {lpActionMode === "lock" ? <>
+                    <AmountField
+                      id="dynamic-lock-lp-amount"
+                      label="LP amount"
+                      asset="LP"
+                      value={lockAmountText}
+                      balance={formatAmount(lpBalance)}
+                      onChange={setLockAmountText}
+                      onMax={() => setLockAmountText(formatUnits(lpBalance, 18))}
+                      error={lockError}
+                    />
+                    <div className="fi-segmented" role="group" aria-label="Lock type">
+                      <button type="button" className={lockMode === "permanent" ? "active positive" : ""} aria-pressed={lockMode === "permanent"} onClick={() => setLockMode("permanent")}>Permanent</button>
+                      <button type="button" className={lockMode === "timed" ? "active" : ""} aria-pressed={lockMode === "timed"} onClick={() => setLockMode("timed")}>Timed</button>
+                    </div>
+                    {lockMode === "timed" ? (
+                      <label className="fi-field">
+                        <span className="fi-field-label">Unlock date</span>
+                        <input
+                          type="datetime-local"
+                          value={lockUnlockAt}
+                          onChange={(event) => setLockUnlockAt(event.target.value)}
+                          className="fi-input"
+                        />
+                      </label>
+                    ) : null}
+                    {!isConnected ? <ConnectWalletButton /> : (
+                      <button
+                        type="button"
+                        className="fi-button fi-button-block fi-button-primary"
+                        disabled={Boolean(lockError) || tx.pending || !lockAmount}
+                        onClick={() => void submitLock()}
+                      >
+                        {tx.pending ? "Processing" : lockMode === "permanent" ? "Lock permanently" : "Lock until date"}
+                      </button>
+                    )}
+                  </> : <>
+                    <AmountField
+                      id="dynamic-burn-lp-amount"
+                      label="LP amount"
+                      asset="LP"
+                      value={burnAmountText}
+                      balance={formatAmount(lpBalance)}
+                      onChange={setBurnAmountText}
+                      onMax={() => setBurnAmountText(formatUnits(lpBalance, 18))}
+                      error={burnError}
+                    />
+                    <p className="fi-hint">Burning sends LP to the dead address permanently.</p>
+                    {!isConnected ? <ConnectWalletButton /> : (
+                      <button
+                        type="button"
+                        className="fi-button fi-button-block fi-button-muted"
+                        disabled={Boolean(burnError) || tx.pending || !burnAmount}
+                        onClick={() => void submitBurn()}
+                      >
+                        {tx.pending ? "Processing" : "Burn to dead address"}
+                      </button>
+                    )}
+                  </>}
+                </> : null}
+                <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />
+              </div>
+            </details>
+          ) : null}
         </aside>
       </div>
     </>

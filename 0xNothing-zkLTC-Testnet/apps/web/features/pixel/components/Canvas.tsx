@@ -3,33 +3,6 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { downloadAsPNG, downloadAsJSON, pixelDataToJSON } from "@/lib/gridParser";
 
-// Throttle utility for smooth performance
-function throttle<T extends (...args: never[]) => void>(
-  fn: T,
-  limit: number
-): (...args: Parameters<T>) => void {
-  let lastCall = 0;
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  return (...args: Parameters<T>) => {
-    const now = Date.now();
-    const remaining = limit - (now - lastCall);
-    if (remaining <= 0) {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
-      lastCall = now;
-      fn(...args);
-    } else if (!timeoutId) {
-      timeoutId = setTimeout(() => {
-        lastCall = Date.now();
-        timeoutId = null;
-        fn(...args);
-      }, remaining);
-    }
-  };
-}
-
 interface CanvasProps {
   gridSize: number;
   pixelData: string[][];
@@ -43,9 +16,36 @@ interface CanvasProps {
 
 type Tool = "pencil" | "eraser" | "fill" | "picker";
 type Symmetry = "none" | "horizontal" | "vertical" | "both";
+type GridPoint = { x: number; y: number };
 
 const BRUSH_SIZES = [1, 2, 3, 4];
 const SUBDIVISION_OPTIONS = [0, 2, 4, 8];
+
+function rasterizeGridLine(start: GridPoint, end: GridPoint): GridPoint[] {
+  const points: GridPoint[] = [];
+  let x = start.x;
+  let y = start.y;
+  const dx = Math.abs(end.x - start.x);
+  const dy = Math.abs(end.y - start.y);
+  const stepX = start.x < end.x ? 1 : -1;
+  const stepY = start.y < end.y ? 1 : -1;
+  let error = dx - dy;
+
+  while (true) {
+    points.push({ x, y });
+    if (x === end.x && y === end.y) break;
+    const doubledError = error * 2;
+    if (doubledError > -dy) {
+      error -= dy;
+      x += stepX;
+    }
+    if (doubledError < dx) {
+      error += dx;
+      y += stepY;
+    }
+  }
+  return points;
+}
 
 export function Canvas({
   gridSize,
@@ -61,8 +61,12 @@ export function Canvas({
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
+  const previewRafRef = useRef<number | null>(null);
+  const pendingPreviewRef = useRef<GridPoint | null>(null);
   const isDrawingRef = useRef(false);
   const isPanningRef = useRef(false);
+  const lastPaintPointRef = useRef<GridPoint | null>(null);
+  const strokeHistoryCapturedRef = useRef(false);
   const panStartRef = useRef({ x: 0, y: 0 });
   const activePointerRef = useRef<number | null>(null);
   const currentToolRef = useRef<Tool>("pencil");
@@ -277,6 +281,29 @@ export function Canvas({
     }
   }, [gridSize, zoom, pan]);
 
+  const clearPreview = useCallback(() => {
+    pendingPreviewRef.current = null;
+    if (previewRafRef.current !== null) {
+      cancelAnimationFrame(previewRafRef.current);
+      previewRafRef.current = null;
+    }
+    const previewCanvas = previewCanvasRef.current;
+    if (!previewCanvas) return;
+    const context = previewCanvas.getContext("2d");
+    context?.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+  }, []);
+
+  const schedulePreview = useCallback((x: number, y: number) => {
+    pendingPreviewRef.current = { x, y };
+    if (previewRafRef.current !== null) return;
+    previewRafRef.current = requestAnimationFrame(() => {
+      previewRafRef.current = null;
+      const point = pendingPreviewRef.current;
+      pendingPreviewRef.current = null;
+      if (point) drawPreview(point.x, point.y);
+    });
+  }, [drawPreview]);
+
   useEffect(() => {
     pixelDataRef.current = pixelData;
     drawGrid();
@@ -291,19 +318,33 @@ export function Canvas({
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
+      if (previewRafRef.current !== null) {
+        cancelAnimationFrame(previewRafRef.current);
+        previewRafRef.current = null;
+      }
+      pendingPreviewRef.current = null;
     };
   }, [drawGrid]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+      const target = e.target;
+      const editingText = target instanceof HTMLElement
+        && (target.isContentEditable || target.matches("input, textarea, select"));
+      if (!editingText && canUndo && onUndo && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
         e.preventDefault();
-        onUndo?.();
+        onUndo();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onUndo]);
+  }, [canUndo, onUndo]);
+
+  const captureStrokeHistory = useCallback(() => {
+    if (strokeHistoryCapturedRef.current) return;
+    onStrokeStart?.(pixelDataRef.current);
+    strokeHistoryCapturedRef.current = true;
+  }, [onStrokeStart]);
 
   const floodFill = useCallback((startX: number, startY: number, fillColor: string) => {
     const source = pixelDataRef.current;
@@ -334,7 +375,12 @@ export function Canvas({
     setPixelData(newData);
   }, [gridSize, setPixelData]);
 
-  const paintPixels = useCallback((gridX: number, gridY: number, tool: Tool, color: string) => {
+  const paintPixels = useCallback((
+    points: readonly GridPoint[],
+    tool: Tool,
+    color: string,
+    beforeChange?: () => void,
+  ) => {
     const fillColor = tool === "eraser" ? "transparent" : color;
     const activeBrushSize = brushSizeRef.current;
     const activeSymmetry = symmetryRef.current;
@@ -347,29 +393,32 @@ export function Canvas({
       coordinates.add(py * gridSize + px);
     };
 
-    for (let dy = -half; dy < activeBrushSize - half; dy++) {
-      for (let dx = -half; dx < activeBrushSize - half; dx++) {
-        const cx = gridX + dx;
-        const cy = gridY + dy;
-        collectPixel(cx, cy);
+    for (const point of points) {
+      for (let dy = -half; dy < activeBrushSize - half; dy++) {
+        for (let dx = -half; dx < activeBrushSize - half; dx++) {
+          const cx = point.x + dx;
+          const cy = point.y + dy;
+          collectPixel(cx, cy);
 
-        if (activeSymmetry !== "none") {
-          const mirrorH = gridSize - 1 - cx;
-          const mirrorV = gridSize - 1 - cy;
-          if (activeSymmetry === "horizontal" || activeSymmetry === "both") {
-            collectPixel(mirrorH, cy);
-          }
-          if (activeSymmetry === "vertical" || activeSymmetry === "both") {
-            collectPixel(cx, mirrorV);
-          }
-          if (activeSymmetry === "both") {
-            collectPixel(mirrorH, mirrorV);
+          if (activeSymmetry !== "none") {
+            const mirrorH = gridSize - 1 - cx;
+            const mirrorV = gridSize - 1 - cy;
+            if (activeSymmetry === "horizontal" || activeSymmetry === "both") {
+              collectPixel(mirrorH, cy);
+            }
+            if (activeSymmetry === "vertical" || activeSymmetry === "both") {
+              collectPixel(cx, mirrorV);
+            }
+            if (activeSymmetry === "both") {
+              collectPixel(mirrorH, mirrorV);
+            }
           }
         }
       }
     }
 
     if (coordinates.size === 0) return;
+    beforeChange?.();
     setPixelData(prev => {
       const next = [...prev];
       const clonedRows = new Set<number>();
@@ -391,12 +440,15 @@ export function Canvas({
   }, [gridSize, setPixelData]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (activePointerRef.current !== null && activePointerRef.current !== e.pointerId) return;
     activePointerRef.current = e.pointerId;
+    strokeHistoryCapturedRef.current = false;
     e.currentTarget.setPointerCapture?.(e.pointerId);
 
     if (e.pointerType === "mouse" && (e.button === 1 || e.button === 2)) {
       e.preventDefault();
       isPanningRef.current = true;
+      lastPaintPointRef.current = null;
       panStartRef.current = { x: e.clientX, y: e.clientY };
       return;
     }
@@ -409,13 +461,17 @@ export function Canvas({
 
     if (tool === "fill") {
       isDrawingRef.current = false;
-      onStrokeStart?.(pixelDataRef.current);
+      lastPaintPointRef.current = null;
+      const targetColor = pixelDataRef.current[coords.y]?.[coords.x] || "transparent";
+      if (targetColor === selectedColorRef.current) return;
+      captureStrokeHistory();
       floodFill(coords.x, coords.y, selectedColorRef.current);
       return;
     }
 
     if (tool === "picker") {
       isDrawingRef.current = false;
+      lastPaintPointRef.current = null;
       const pickedColor = pixelDataRef.current[coords.y]?.[coords.x];
       if (pickedColor && pickedColor !== "transparent" && onColorPick) {
         onColorPick(pickedColor);
@@ -423,16 +479,10 @@ export function Canvas({
       return;
     }
 
-    /* eslint-disable react-hooks/exhaustive-deps */
-    onStrokeStart?.(pixelDataRef.current);
-    paintPixels(coords.x, coords.y, tool, selectedColorRef.current);
-  }, [getGridCoords, gridSize, floodFill, paintPixels, onStrokeStart, onColorPick]);
-
-  // Throttled drawPreview for smooth hover preview (60fps cap)
-  const throttledDrawPreview = useCallback(
-    throttle((x: number, y: number) => drawPreview(x, y), 16),
-    [drawPreview]
-  );
+    const point = { x: coords.x, y: coords.y };
+    lastPaintPointRef.current = point;
+    paintPixels([point], tool, selectedColorRef.current, captureStrokeHistory);
+  }, [captureStrokeHistory, getGridCoords, gridSize, floodFill, paintPixels, onColorPick]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (activePointerRef.current !== null && activePointerRef.current !== e.pointerId) return;
@@ -450,43 +500,57 @@ export function Canvas({
     if (!isDrawingRef.current) {
       if (coords) {
         if (coords.x >= 0 && coords.x < gridSize && coords.y >= 0 && coords.y < gridSize) {
-          throttledDrawPreview(coords.x, coords.y);
+          schedulePreview(coords.x, coords.y);
         } else {
-          const previewCanvas = previewCanvasRef.current;
-          if (previewCanvas) {
-            const pctx = previewCanvas.getContext("2d");
-            if (pctx) pctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
-          }
+          clearPreview();
         }
       }
       return;
     }
 
-    if (!coords || coords.x < 0 || coords.x >= gridSize || coords.y < 0 || coords.y >= gridSize) return;
+    if (!coords || coords.x < 0 || coords.x >= gridSize || coords.y < 0 || coords.y >= gridSize) {
+      lastPaintPointRef.current = null;
+      return;
+    }
 
     const tool = currentToolRef.current;
     if (tool === "pencil" || tool === "eraser") {
-      paintPixels(coords.x, coords.y, tool, selectedColorRef.current);
+      const currentPoint = { x: coords.x, y: coords.y };
+      const previousPoint = lastPaintPointRef.current ?? currentPoint;
+      paintPixels(
+        rasterizeGridLine(previousPoint, currentPoint),
+        tool,
+        selectedColorRef.current,
+        captureStrokeHistory,
+      );
+      lastPaintPointRef.current = currentPoint;
     }
-  }, [getGridCoords, zoom, gridSize, paintPixels, throttledDrawPreview]);
+  }, [captureStrokeHistory, clearPreview, getGridCoords, zoom, gridSize, paintPixels, schedulePreview]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (activePointerRef.current !== e.pointerId) return;
     isDrawingRef.current = false;
     isPanningRef.current = false;
+    lastPaintPointRef.current = null;
+    strokeHistoryCapturedRef.current = false;
     activePointerRef.current = null;
-    e.currentTarget.releasePointerCapture?.(e.pointerId);
-  }, []);
-
-  const handlePointerLeave = useCallback(() => {
-    isDrawingRef.current = false;
-    isPanningRef.current = false;
-    activePointerRef.current = null;
-    const previewCanvas = previewCanvasRef.current;
-    if (previewCanvas) {
-      const pctx = previewCanvas.getContext("2d");
-      if (pctx) pctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+    if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
     }
   }, []);
+
+  const handlePointerLeave = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (activePointerRef.current !== null && activePointerRef.current !== e.pointerId) return;
+    if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    isDrawingRef.current = false;
+    isPanningRef.current = false;
+    lastPaintPointRef.current = null;
+    strokeHistoryCapturedRef.current = false;
+    activePointerRef.current = null;
+    clearPreview();
+  }, [clearPreview]);
 
   return (
     <div className="flex w-full flex-col items-center gap-3">

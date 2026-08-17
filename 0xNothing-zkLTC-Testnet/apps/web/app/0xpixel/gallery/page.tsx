@@ -4,23 +4,23 @@ import { useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useAccount, useReadContract } from "wagmi";
-import { OwnedNftCard, type OwnedNft } from "@/components/OwnedNftCard";
-import { GridSkeleton } from "@/components/Skeleton";
+import { OwnedNftCard, type OwnedNft } from "@/features/pixel/components/OwnedNftCard";
+import { GridSkeleton } from "@/features/pixel/components/Skeleton";
 import { PIXEL_MARKETPLACE_ADDRESS } from "@/lib/contract";
+import { fetchJson } from "@/lib/http";
 import { MarketplaceAbi } from "@/lib/marketplaceAbi";
 
 type SortKey = "newest" | "oldest" | "name";
 
 export default function GalleryPage() {
   const { address, isConnected } = useAccount();
-  const [refreshKey, setRefreshKey] = useState(0);
   const [sort, setSort] = useState<SortKey>("newest");
 
+  const { query, forceRefresh } = useUserNfts(address);
+  const { data, isLoading, error } = query;
   const refresh = useCallback(() => {
-    setRefreshKey((k) => k + 1);
-  }, []);
-
-  const { data, isLoading, error } = useUserNfts(address, refreshKey);
+    void forceRefresh();
+  }, [forceRefresh]);
   const { data: paused } = useReadContract({
     address: PIXEL_MARKETPLACE_ADDRESS,
     abi: MarketplaceAbi,
@@ -239,31 +239,27 @@ function ErrorState({
   );
 }
 
-function useUserNfts(address: `0x${string}` | undefined, refreshKey: number) {
-  const forcedRefreshRef = useRef(0);
-  return useQuery<OwnedNft[], Error>({
-    queryKey: ["pixel-user-nfts", address, refreshKey],
+function useUserNfts(address: `0x${string}` | undefined) {
+  const forceRefreshRef = useRef(false);
+  const query = useQuery<OwnedNft[], Error>({
+    queryKey: ["pixel-user-nfts", address],
     enabled: Boolean(address),
-    staleTime: 3_000,
-    refetchInterval: 5_000,
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     placeholderData: (previousData, previousQuery) =>
       previousQuery?.queryKey[1] === address ? previousData : undefined,
     queryFn: async ({ signal }) => {
       if (!address) return [];
-      const force = refreshKey > forcedRefreshRef.current;
-      if (force) forcedRefreshRef.current = refreshKey;
+      const force = forceRefreshRef.current;
+      forceRefreshRef.current = false;
       const params = new URLSearchParams({ address });
       if (force) params.set("force", "1");
-      const response = await fetch(`/api/user-nfts?${params.toString()}`, {
+      const body = await fetchJson<{ tokens: OwnedNftApiShape[] }>(`/api/user-nfts?${params.toString()}`, {
         signal,
         cache: force ? "no-store" : "default",
-      });
-      if (!response.ok) {
-        const body = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error || `HTTP ${response.status}`);
-      }
-      const body = (await response.json()) as { tokens: OwnedNftApiShape[] };
+      }, "Gallery request failed");
       return body.tokens.map<OwnedNft>((token) => ({
         tokenId: BigInt(token.tokenId),
         name: token.name,
@@ -277,6 +273,14 @@ function useUserNfts(address: `0x${string}` | undefined, refreshKey: number) {
       }));
     },
   });
+
+  const refetch = query.refetch;
+  const forceRefresh = useCallback(() => {
+    forceRefreshRef.current = true;
+    return refetch();
+  }, [refetch]);
+
+  return { query, forceRefresh };
 }
 
 interface OwnedNftApiShape {

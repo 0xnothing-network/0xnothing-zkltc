@@ -50,6 +50,12 @@ export interface PoolPoint {
   volume24hNusd?: string;
   /** Percentage price change over the last 24 hours */
   priceChange24h?: number;
+  /** LP locked in CommunityLiquidityLocker */
+  lockedLp?: string;
+  /** LP burned (sent to dead address) */
+  burnedLp?: string;
+  /** Whether this is a community-created pair (not canonical/pump) */
+  communityPair?: boolean;
 }
 
 export interface DataMeta {

@@ -61,6 +61,10 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24 * 30,
+    localPatterns: [
+      { pathname: "/0xNothing.jpg", search: "" },
+      { pathname: "/api/pump/image" },
+    ],
     remotePatterns: [
       { protocol: "https", hostname: "**.mypinata.cloud" },
       { protocol: "https", hostname: "gateway.pinata.cloud" },

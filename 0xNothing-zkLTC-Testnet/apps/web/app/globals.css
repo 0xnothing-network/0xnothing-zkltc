@@ -1314,7 +1314,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .pump-token-card-head,
 .pump-token-title-row,
 .pump-progress-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.pump-token-logo { display: grid; width: 56px; height: 56px; flex: none; place-items: center; overflow: hidden; border: 1px solid var(--pump-line); background: #15191c; color: var(--pump-green); font-size: 13px; }
+.pump-token-logo { position: relative; display: grid; width: 56px; height: 56px; flex: none; place-items: center; overflow: hidden; border: 1px solid var(--pump-line); background: #15191c; color: var(--pump-green); font-size: 13px; }
 .pump-token-logo img { width: 100%; height: 100%; object-fit: cover; }
 .pump-status { display: inline-flex; min-height: 24px; align-items: center; border: 1px solid currentColor; padding: 0 8px; font-size: 8px; font-weight: 700; }
 .pump-status-trading { color: var(--pump-green); }
@@ -1469,7 +1469,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .pump-back-link { display: inline-block; min-height: 36px; margin-bottom: 16px; text-decoration: none; }
 .pump-token-identity { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 20px; padding: 8px 0 22px; border-bottom: 1px solid var(--pump-line); }
-.pump-detail-logo { display: grid; width: 96px; height: 96px; place-items: center; overflow: hidden; border: 1px solid var(--pump-line-strong); background: var(--pump-panel-2); color: var(--pump-green); font-size: 20px; }
+.pump-detail-logo { position: relative; display: grid; width: 96px; height: 96px; place-items: center; overflow: hidden; border: 1px solid var(--pump-line-strong); background: var(--pump-panel-2); color: var(--pump-green); font-size: 20px; }
 .pump-detail-logo img { width: 100%; height: 100%; object-fit: cover; }
 .pump-token-heading-line { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
 .pump-token-identity h1 { max-width: 18ch; font-size: 36px; overflow-wrap: anywhere; }
@@ -8993,6 +8993,7 @@ img[src^="data:image/svg+xml"],
 }
 
 .pump-portfolio-logo {
+  position: relative;
   display: grid;
   width: 42px;
   height: 42px;
@@ -9590,7 +9591,7 @@ img[src^="data:image/svg+xml"],
     max-width: calc(100% - 38px);
     overflow: hidden;
     padding: 0 4px;
-    font-size: 6px;
+    font-size: 8px;
     line-height: 1;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -9627,8 +9628,17 @@ img[src^="data:image/svg+xml"],
     gap: 4px;
     margin-top: auto;
     margin-bottom: 5px;
-    font-size: 6px;
+    font-size: 8px;
     line-height: 1.1;
+  }
+
+  .pump-trending-grid .pump-progress-label > span:first-child {
+    font-size: 0;
+  }
+
+  .pump-trending-grid .pump-progress-label > span:first-child::after {
+    content: "READY";
+    font-size: 8px;
   }
 
   .pump-trending-grid .pump-progress {

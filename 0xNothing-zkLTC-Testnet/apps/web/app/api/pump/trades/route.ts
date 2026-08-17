@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAddress, type Address } from "viem";
 import { getPumpTrades } from "@/features/pump/server/data";
 import { withPumpCache } from "@/features/pump/server/cache";
+import { boundedIntegerParam } from "@/features/pump/server/request";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,8 +27,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Invalid trader address" }, { status: 400 });
     }
   }
-  const limit = Number(params.get("limit") || 40);
-  const skip = Number(params.get("skip") || 0);
+  const limit = boundedIntegerParam(params, "limit", 40, 1, 200);
+  const skip = boundedIntegerParam(params, "skip", 0, 0, 10_000);
+  if (limit === undefined || skip === undefined) {
+    return NextResponse.json({ error: "Invalid pagination parameters" }, { status: 400 });
+  }
   const key = `trades:${token?.toLowerCase() ?? "all"}:${trader?.toLowerCase() ?? "all"}:${limit}:${skip}`;
   const payload = await withPumpCache(
     key,

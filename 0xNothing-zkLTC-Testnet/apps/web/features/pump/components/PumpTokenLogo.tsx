@@ -55,14 +55,14 @@ export function PumpTokenLogo({
         key={source}
         src={source}
         alt={alt}
-        width={size}
-        height={size}
+        fill
         sizes={sizes}
         priority={priority}
         fetchPriority={priority ? "high" : "auto"}
         loading={priority ? "eager" : "lazy"}
         placeholder="blur"
         blurDataURL={LOGO_PLACEHOLDER}
+        style={{ objectFit: "cover" }}
         onError={handleError}
       />
     );

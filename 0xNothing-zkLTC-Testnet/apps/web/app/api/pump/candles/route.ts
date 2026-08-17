@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { getAddress } from "viem";
 import { getPumpCandles } from "@/features/pump/server/data";
 import { withPumpCache } from "@/features/pump/server/cache";
+import { boundedIntegerParam } from "@/features/pump/server/request";
 import {
+  MAX_PUMP_CANDLE_LIMIT,
   normalizePumpCandlePeriod,
   PUMP_CANDLE_LIMITS,
 } from "@/features/pump/types";
@@ -19,7 +21,16 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Invalid token address" }, { status: 400 });
   }
   const period = normalizePumpCandlePeriod(Number(params.get("period") || 3600));
-  const limit = Number(params.get("limit") || PUMP_CANDLE_LIMITS[period]);
+  const limit = boundedIntegerParam(
+    params,
+    "limit",
+    PUMP_CANDLE_LIMITS[period],
+    1,
+    MAX_PUMP_CANDLE_LIMIT,
+  );
+  if (limit === undefined) {
+    return NextResponse.json({ error: "Invalid limit parameter" }, { status: 400 });
+  }
   const payload = await withPumpCache(
     `candles:${token.toLowerCase()}:${period}:${limit}`,
     () => getPumpCandles({ token, period, limit }),

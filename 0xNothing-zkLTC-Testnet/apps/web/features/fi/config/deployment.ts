@@ -114,6 +114,8 @@ export const deployment = {
       TESTNET.pumpGraduationController,
     ),
     pump: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_PUMP_ADDRESS), TESTNET.pump),
+    lpLocker: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_LP_LOCKER_ADDRESS), TESTNET.lpLocker || undefined),
+    tokenMetadataRegistry: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_TOKEN_METADATA_REGISTRY_ADDRESS), TESTNET.tokenMetadataRegistry || undefined),
   },
 } as const;
 

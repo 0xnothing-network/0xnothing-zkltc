@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
-import { Providers } from "./providers";
 import { PUBLIC_APP_URL } from "@/lib/publicConfig";
 
 const jetbrainsMono = JetBrains_Mono({
@@ -38,12 +37,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" data-scroll-behavior="smooth">
+      <head>
+        <link
+          rel="preload"
+          href="/fonts/DepartureMono-Regular.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body className={`${jetbrainsMono.variable} font-sans antialiased`}>
-        <link rel="preload" href="/fonts/DepartureMono-Regular.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <a href="#main-content" className="skip-link">Skip to content</a>
-        <Providers>
-          <div id="main-content">{children}</div>
-        </Providers>
+        <div id="main-content">{children}</div>
         {vercelAnalyticsEnabled ? <Analytics /> : null}
       </body>
     </html>

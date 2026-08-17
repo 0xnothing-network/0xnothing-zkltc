@@ -1,4 +1,5 @@
-import { PixelHeader } from "@/components/PixelHeader";
+import { PixelHeader } from "@/features/pixel/components/PixelHeader";
+import { Providers } from "@/app/providers";
 
 export default function PixelLayout({
   children,
@@ -6,9 +7,9 @@ export default function PixelLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <Providers>
       <PixelHeader />
       {children}
-    </>
+    </Providers>
   );
 }

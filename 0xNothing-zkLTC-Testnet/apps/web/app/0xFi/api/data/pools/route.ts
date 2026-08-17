@@ -8,6 +8,8 @@ import {
   type Address,
 } from "viem";
 import { deployment } from "@fi/config/deployment";
+import { communityLiquidityLockerAbi } from "@fi/lib/abis/locker";
+import { tokenMetadataRegistryAbi } from "@fi/lib/abis/metadata";
 import { diaOracleAdapterAbi } from "@fi/lib/abis/dia";
 import { dexFactoryAbi, dexPoolAbi } from "@fi/lib/abis/dex";
 import { erc20Abi } from "@fi/lib/abis/erc20";
@@ -29,6 +31,7 @@ const MAX_FACTORY_PAIRS = 1_000;
 const POOLS_CACHE_TTL_MS = 12_000;
 const POOLS_CACHE_CONTROL = "public, s-maxage=10, stale-while-revalidate=30";
 const RPC_READ_CONCURRENCY = 24;
+const DEAD_ADDRESS: Address = "0x000000000000000000000000000000000000dEaD";
 const TOKEN_POINT_TTL_MS = 5 * 60_000;
 const MAX_TOKEN_POINT_CACHE_ENTRIES = 2_048;
 const lifecycleAbi = [{
@@ -149,6 +152,7 @@ function activeAssetPool(pool: PoolPoint, nusd: string): boolean {
 async function visibleDeploymentPools(pools: PoolPoint[]): Promise<{
   pools: PoolPoint[];
   excluded: number;
+  communityPoolIds: Set<string>;
 }> {
   const nusd = deployment.contracts.nusd?.toLowerCase();
   const pump = deployment.contracts.pump;
@@ -203,8 +207,36 @@ async function visibleDeploymentPools(pools: PoolPoint[]): Promise<{
     }
   }
 
+  // Include bootstrapped community NUSD pairs
+  for (const pool of pools) {
+    const poolId = pool.id.toLowerCase();
+    if (visibleIds.has(poolId)) continue;
+    if (!nusd) continue;
+    const token0 = pool.token0.id.toLowerCase();
+    const token1 = pool.token1.id.toLowerCase();
+    const isNusdPair = token0 === nusd || token1 === nusd;
+    const hasLiquidityEvidence = BigInt(pool.totalSupply || "0") > 0n
+      || BigInt(pool.reserve0 || "0") > 0n
+      || BigInt(pool.reserve1 || "0") > 0n;
+    if (isNusdPair && hasLiquidityEvidence) {
+      visibleIds.add(poolId);
+    }
+  }
+
   const visible = pools.filter((pool) => visibleIds.has(pool.id.toLowerCase()));
-  return { pools: visible, excluded: pools.length - visible.length };
+  // Determine which visible pools are community pairs (not canonical/pump-graduated)
+  const canonicalIds = new Set<string>([
+    ...configuredPairs,
+    ...(nusd ? pools.filter((p) => activeAssetPool(p, nusd)).map((p) => p.id.toLowerCase()) : []),
+  ]);
+  const communityPoolIds = new Set<string>();
+  for (const pool of visible) {
+    const poolId = pool.id.toLowerCase();
+    if (!canonicalIds.has(poolId) && !(pool.protectedBootstrap && pool.bootstrapped)) {
+      communityPoolIds.add(poolId);
+    }
+  }
+  return { pools: visible, excluded: pools.length - visible.length, communityPoolIds };
 }
 
 const tokenPointCache = new Map<string, { point: PoolTokenPoint; expiresAt: number }>();
@@ -267,6 +299,82 @@ async function enrichPumpTokenImages(pools: PoolPoint[]): Promise<void> {
     const image1 = images.get(pool.token1.id.toLowerCase());
     if (image0) pool.token0 = { ...pool.token0, imageUrl: image0 };
     if (image1) pool.token1 = { ...pool.token1, imageUrl: image1 };
+  }
+}
+
+async function enrichRegistryImages(pools: PoolPoint[]): Promise<void> {
+  const registry = deployment.contracts.tokenMetadataRegistry;
+  if (!registry) return;
+  const nusd = deployment.contracts.nusd?.toLowerCase();
+  const candidates = new Map<string, Address>();
+  for (const pool of pools) {
+    for (const token of [pool.token0, pool.token1]) {
+      const tokenId = token.id.toLowerCase();
+      if (tokenId === nusd) continue;
+      if (token.imageUrl) continue;
+      candidates.set(tokenId, getAddress(token.id));
+    }
+  }
+  const images = new Map(await mapWithConcurrency(
+    [...candidates.entries()],
+    RPC_READ_CONCURRENCY,
+    async ([key, token]) => {
+      const imageURI = await client.readContract({
+        address: registry,
+        abi: tokenMetadataRegistryAbi,
+        functionName: "imageURI",
+        args: [token],
+      }).catch(() => "");
+      return [key, tokenImageUrl(imageURI)] as const;
+    },
+  ));
+  for (const pool of pools) {
+    const image0 = images.get(pool.token0.id.toLowerCase());
+    const image1 = images.get(pool.token1.id.toLowerCase());
+    if (image0 && !pool.token0.imageUrl) pool.token0 = { ...pool.token0, imageUrl: image0 };
+    if (image1 && !pool.token1.imageUrl) pool.token1 = { ...pool.token1, imageUrl: image1 };
+  }
+}
+
+async function enrichLockBurnBadges(pools: PoolPoint[]): Promise<void> {
+  const lpLocker = deployment.contracts.lpLocker;
+  // Lock enrichment
+  if (lpLocker) {
+    const lockedAmounts = new Map(await mapWithConcurrency(
+      pools,
+      RPC_READ_CONCURRENCY,
+      async (pool) => {
+        const locked = await client.readContract({
+          address: lpLocker,
+          abi: communityLiquidityLockerAbi,
+          functionName: "activeLockedByToken",
+          args: [pool.id],
+        }).catch(() => 0n);
+        return [pool.id.toLowerCase(), locked.toString()] as const;
+      },
+    ));
+    for (const pool of pools) {
+      const locked = lockedAmounts.get(pool.id.toLowerCase());
+      if (locked && locked !== "0") pool.lockedLp = locked;
+    }
+  }
+  // Burn enrichment
+  const burnedAmounts = new Map(await mapWithConcurrency(
+    pools,
+    RPC_READ_CONCURRENCY,
+    async (pool) => {
+      const burned = await client.readContract({
+        address: pool.id,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [DEAD_ADDRESS],
+      }).catch(() => 0n);
+      return [pool.id.toLowerCase(), burned.toString()] as const;
+    },
+  ));
+  for (const pool of pools) {
+    const burned = burnedAmounts.get(pool.id.toLowerCase());
+    if (burned && burned !== "0") pool.burnedLp = burned;
   }
 }
 
@@ -449,7 +557,14 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
 
     const visible = await visibleDeploymentPools(envelope.data);
     envelope.data = visible.pools;
+    // Mark community pairs
+    for (const pool of envelope.data) {
+      if (visible.communityPoolIds.has(pool.id.toLowerCase())) {
+        pool.communityPair = true;
+      }
+    }
     await enrichPumpTokenImages(envelope.data).catch(() => { /* fallback logos remain available */ });
+    await enrichRegistryImages(envelope.data).catch(() => { /* registry images are additive */ });
 
     // Canonical markets are priced by DIA. Reserves remain the source of TVL.
     const oracleState = await loadCanonicalOracleSnapshots();
@@ -491,6 +606,9 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
       } catch { return pool; }
     });
 
+    // Enrich with LP lock/burn badges
+    await enrichLockBurnBadges(envelope.data).catch(() => { /* lock/burn badges are additive */ });
+
     const since24h = Math.floor(Date.now() / 1000) - 86_400;
 
     // 24h metrics from Goldsky 1h candles
@@ -512,11 +630,17 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
       }
       envelope.data = envelope.data.map((pool) => {
         const stats = byPool.get(pool.id.toLowerCase());
-        if (!stats) return pool;
+        // Candle prices are already the non-NUSD token price in NUSD. No swaps in the
+        // rolling window means the pool price did not move, so report 0% instead of N/A.
+        if (!stats) return { ...pool, priceChange24h: pool.priceNusd === undefined ? undefined : 0 };
         const volume24hNusd = stats.volNusd.toString();
-        const priceChange24h = pool.priceSource !== "oracle" && stats.firstOpen && stats.firstOpen > 0 && stats.lastClose !== undefined
+        const priceChange24h = stats.firstOpen !== undefined
+          && Number.isFinite(stats.firstOpen)
+          && stats.firstOpen > 0
+          && stats.lastClose !== undefined
+          && Number.isFinite(stats.lastClose)
           ? ((stats.lastClose - stats.firstOpen) / stats.firstOpen) * 100
-          : undefined;
+          : 0;
         return { ...pool, volume24hNusd, priceChange24h };
       });
     } catch { /* 24h metrics are additive; failure is non-fatal */ }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PixelMist } from "@/components/PixelMist";
+import { Providers } from "@/app/providers";
 import { FiHeader } from "@fi/components/FiHeader";
 import { ToastProvider } from "@fi/components/Toast";
 import "./globals.css";
@@ -11,14 +12,16 @@ export const metadata: Metadata = {
 
 export default function FiLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <div className="fi-root">
-      <PixelMist product="fi" />
-      <ToastProvider>
-        <div className="fi-shell">
-          <FiHeader />
-          <main id="fi-main" tabIndex={-1}>{children}</main>
-        </div>
-      </ToastProvider>
-    </div>
+    <Providers>
+      <div className="fi-root">
+        <PixelMist product="fi" />
+        <ToastProvider>
+          <div className="fi-shell">
+            <FiHeader />
+            <main id="fi-main" tabIndex={-1}>{children}</main>
+          </div>
+        </ToastProvider>
+      </div>
+    </Providers>
   );
 }

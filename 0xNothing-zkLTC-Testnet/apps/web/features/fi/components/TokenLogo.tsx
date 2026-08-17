@@ -52,9 +52,12 @@ export function TokenLogo({
   trustedCore?: boolean;
 }) {
   const normalizedImage = tokenImageUrl(imageUrl) ?? (trustedCore ? coreTokenImage(symbol) : undefined);
-  const [failed, setFailed] = useState(false);
+  const [failedSource, setFailedSource] = useState("");
+  const failed = Boolean(normalizedImage && failedSource === normalizedImage);
 
-  useEffect(() => setFailed(false), [normalizedImage]);
+  useEffect(() => {
+    if (failedSource && failedSource !== normalizedImage) setFailedSource("");
+  }, [failedSource, normalizedImage]);
 
   return (
     <span className="fi-token-logo" data-size={size} data-tone={trustedCore ? logoTone(symbol) : "pump"}>
@@ -67,7 +70,7 @@ export function TokenLogo({
           decoding="async"
           loading="lazy"
           referrerPolicy="no-referrer"
-          onError={() => setFailed(true)}
+          onError={() => setFailedSource(normalizedImage)}
         />
       ) : (
         <span aria-hidden="true">{fallbackLabel(symbol)}</span>

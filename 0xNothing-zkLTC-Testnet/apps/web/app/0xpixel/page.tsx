@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useDeferredValue, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { Toolbar } from "@/components/Toolbar";
-import { AIPromptGenerator } from "@/components/AIPromptGenerator";
+import { Toolbar } from "@/features/pixel/components/Toolbar";
+import { AIPromptGenerator } from "@/features/pixel/components/AIPromptGenerator";
 import { PixelLoadingIndicator } from "@/components/PageLoader";
 
 const MAX_HISTORY = 50;
@@ -17,11 +17,11 @@ function makeEmptyGrid(gridSize: number): string[][] {
 }
 
 const Canvas = dynamic(
-  () => import("@/components/Canvas").then((m) => m.Canvas),
+  () => import("@/features/pixel/components/Canvas").then((m) => m.Canvas),
   { ssr: false, loading: () => <CanvasSkeleton /> }
 );
 const MintPanel = dynamic(
-  () => import("@/components/MintPanel").then((m) => m.MintPanel),
+  () => import("@/features/pixel/components/MintPanel").then((m) => m.MintPanel),
   { ssr: false, loading: () => <PanelSkeleton label="Mint" /> }
 );
 function PanelSkeleton({ label }: { label: string }) {

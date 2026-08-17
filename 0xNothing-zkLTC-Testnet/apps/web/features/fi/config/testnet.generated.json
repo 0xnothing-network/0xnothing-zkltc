@@ -32,5 +32,7 @@
   "nethNusdGauge": "0x618be8aF1D3EBa92E54eeDbd0b9C1E0606df29C2",
   "pumpGraduationAdapter": "0x935e05f60a05110c29eFA7e3a632dfe38123963e",
   "pumpGraduationController": "0x2112Cea76b76817626cA58B205b3dC5560F05857",
-  "pump": "0x4a0Eaf310e3659aA9B360fD44e90208c31Dbe0e2"
+  "pump": "0x4a0Eaf310e3659aA9B360fD44e90208c31Dbe0e2",
+  "lpLocker": "0x7d105ecfc67cb288f2dbdf94f7aa2057d3b3fd9a",
+  "tokenMetadataRegistry": "0xd1087b62922263c10a251ffca6ee27c2b1368089"
 }

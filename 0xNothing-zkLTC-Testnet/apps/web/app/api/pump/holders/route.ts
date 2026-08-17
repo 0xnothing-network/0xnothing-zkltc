@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAddress, type Address } from "viem";
 import { getPumpHolders } from "@/features/pump/server/data";
 import { withPumpCache } from "@/features/pump/server/cache";
+import { boundedIntegerParam } from "@/features/pump/server/request";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,7 +22,10 @@ export async function GET(request: Request) {
   }
 
   try {
-    const limit = Number(params.get("limit") || 10);
+    const limit = boundedIntegerParam(params, "limit", 10, 1, 50);
+    if (limit === undefined) {
+      return NextResponse.json({ error: "Invalid limit parameter" }, { status: 400 });
+    }
     const payload = await withPumpCache(
       `holders:${token.toLowerCase()}:${limit}`,
       () => getPumpHolders({ token, limit }),
