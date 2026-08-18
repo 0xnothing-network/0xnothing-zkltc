@@ -5,6 +5,7 @@ import { fiPath } from "@fi/config/paths";
 import type { DataEnvelope, PoolPoint } from "@fi/lib/data";
 import { fetchJson } from "@/lib/http";
 import { FI_LIVE_MS } from "@/lib/liveData";
+import { fiPollInterval, useFiVisibilityRefresh } from "@fi/lib/hooks/useFiPolling";
 
 export const FI_POOLS_QUERY_KEY = ["fi-pools"] as const;
 
@@ -22,8 +23,16 @@ export function usePools() {
     queryKey: FI_POOLS_QUERY_KEY,
     queryFn: ({ signal }) => fetchPools(signal),
     staleTime: 12_000,
-    refetchInterval: FI_LIVE_MS,
+    refetchInterval: fiPollInterval("pools"),
     refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
+  });
+  useFiVisibilityRefresh({
+    key: "pools",
+    dataUpdatedAt: query.dataUpdatedAt,
+    isFetching: query.isFetching,
+    refetch: query.refetch,
+    maxAgeMs: FI_LIVE_MS,
   });
   return {
     ...query,

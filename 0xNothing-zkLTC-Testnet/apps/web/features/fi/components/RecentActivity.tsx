@@ -8,6 +8,7 @@ import { formatRelativeTimestamp } from "@fi/lib/format";
 import { fiPath } from "@fi/config/paths";
 import { fetchJson } from "@/lib/http";
 import { FI_LIVE_MS } from "@/lib/liveData";
+import { fiPollInterval, useFiVisibilityRefresh } from "@fi/lib/hooks/useFiPolling";
 
 function shortValue(value: string): string {
   return value.length > 12 ? `${value.slice(0, 7)}...${value.slice(-4)}` : value;
@@ -44,12 +45,21 @@ async function fetchActivity(pair: string, signal: AbortSignal): Promise<Activit
 }
 
 export function RecentActivity({ pair }: { pair: string }) {
+  const pollKey = `activity:${pair.toLowerCase()}`;
   const query = useQuery({
     queryKey: ["fi-activity", pair],
     queryFn: ({ signal }) => fetchActivity(pair, signal),
     staleTime: 12_000,
-    refetchInterval: FI_LIVE_MS,
+    refetchInterval: fiPollInterval(pollKey),
     refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
+  });
+  useFiVisibilityRefresh({
+    key: pollKey,
+    dataUpdatedAt: query.dataUpdatedAt,
+    isFetching: query.isFetching,
+    refetch: query.refetch,
+    maxAgeMs: FI_LIVE_MS,
   });
   const activity = query.data ?? [];
 

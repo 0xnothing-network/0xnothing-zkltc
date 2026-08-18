@@ -5,6 +5,14 @@ import { deployment } from "@fi/config/deployment";
 
 const MAX_TAIL_BLOCKS = 5_000n;
 const BLOCK_TIMESTAMP_CONCURRENCY = 16;
+const PAIR_TAIL_CACHE_TTL_MS = 4_000;
+const STATIC_RPC_CACHE_TTL_MS = 10 * 60_000;
+const NEGATIVE_FACTORY_PAIR_CACHE_TTL_MS = 5_000;
+const MAX_PAIR_TAIL_CACHE_ENTRIES = 64;
+const MAX_BLOCK_TIMESTAMP_CACHE_ENTRIES = 2_048;
+const MAX_PAIR_METADATA_CACHE_ENTRIES = 128;
+const MAX_FACTORY_PAIR_CACHE_ENTRIES = 256;
+const MAX_IN_FLIGHT_REQUESTS = 128;
 const syncEvent = parseAbiItem("event Sync(uint112 reserve0, uint112 reserve1)");
 const swapEvent = parseAbiItem(
   "event Swap(address indexed sender, uint256 amount0In, uint256 amount1In, uint256 amount0Out, uint256 amount1Out, address indexed to)",
@@ -23,7 +31,28 @@ const tokenDecimalsAbi = [
   { type: "function", name: "decimals", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
 ] as const;
 
-const client = createPublicClient({ transport: http(deployment.chain.rpcUrl) });
+const client = createPublicClient({
+  transport: http(deployment.chain.rpcUrl, {
+    batch: { batchSize: 100, wait: 10 },
+    retryCount: 2,
+    retryDelay: 300,
+    timeout: 15_000,
+  }),
+});
+
+interface CacheEntry<T> {
+  value: T;
+  expiresAt: number;
+}
+
+const pairTailCache = new Map<string, CacheEntry<PairTail>>();
+const pairTailInFlight = new Map<string, Promise<PairTail>>();
+const blockTimestampCache = new Map<string, CacheEntry<number>>();
+const blockTimestampInFlight = new Map<string, Promise<number>>();
+const pairMetadataCache = new Map<string, CacheEntry<PairTokenMetadata>>();
+const pairMetadataInFlight = new Map<string, Promise<PairTokenMetadata>>();
+const factoryPairCache = new Map<string, CacheEntry<boolean>>();
+const factoryPairInFlight = new Map<string, Promise<boolean>>();
 
 interface TailBase {
   blockNumber: bigint;
@@ -47,12 +76,54 @@ export interface PairTail {
   capped: boolean;
 }
 
+function readCached<T>(cache: Map<string, CacheEntry<T>>, key: string): T | undefined {
+  const entry = cache.get(key);
+  if (!entry) return undefined;
+  if (entry.expiresAt <= Date.now()) {
+    cache.delete(key);
+    return undefined;
+  }
+  // Refresh insertion order so the entry cap removes the least recently used value.
+  cache.delete(key);
+  cache.set(key, entry);
+  return entry.value;
+}
+
+function writeCached<T>(cache: Map<string, CacheEntry<T>>, key: string, value: T, ttlMs: number, maxEntries: number): void {
+  cache.delete(key);
+  cache.set(key, { value, expiresAt: Date.now() + ttlMs });
+  while (cache.size > maxEntries) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey === undefined) return;
+    cache.delete(oldestKey);
+  }
+}
+
 function required<T>(value: T | null | undefined, label: string): T {
   if (value === null || value === undefined) throw new Error(`RPC log is missing ${label}`);
   return value;
 }
 
 export async function loadPairTail(pool: Address, indexedBlock: number | null): Promise<PairTail> {
+  const key = `${pool.toLowerCase()}:${indexedBlock === null ? "null" : indexedBlock}`;
+  const cached = readCached(pairTailCache, key);
+  if (cached) return cached;
+
+  const pending = pairTailInFlight.get(key);
+  if (pending) return pending;
+
+  const request = loadPairTailFromRpc(pool, indexedBlock);
+  if (pairTailInFlight.size < MAX_IN_FLIGHT_REQUESTS) {
+    pairTailInFlight.set(key, request);
+    void request.then(
+      (tail) => writeCached(pairTailCache, key, tail, PAIR_TAIL_CACHE_TTL_MS, MAX_PAIR_TAIL_CACHE_ENTRIES),
+      () => undefined,
+    ).finally(() => pairTailInFlight.delete(key));
+  }
+  return request;
+}
+
+async function loadPairTailFromRpc(pool: Address, indexedBlock: number | null): Promise<PairTail> {
   const latest = await client.getBlockNumber();
   const deploymentBlock = BigInt(deployment.indexer.deploymentBlock || "0");
   const requestedFromBlock = indexedBlock === null ? deploymentBlock : BigInt(indexedBlock + 1);
@@ -117,14 +188,31 @@ export async function loadPairTail(pool: Address, indexedBlock: number | null): 
   const blockNumbers = [...new Set(rawEvents.map((event) => event.blockNumber.toString()))];
   const timestamps = new Map<string, number>();
   await mapWithConcurrency(blockNumbers, BLOCK_TIMESTAMP_CONCURRENCY, async (blockNumber) => {
-    const block = await client.getBlock({ blockNumber: BigInt(blockNumber) });
-    timestamps.set(blockNumber, Number(block.timestamp));
+    timestamps.set(blockNumber, await loadBlockTimestamp(blockNumber));
   });
   const events = rawEvents.map((event) => ({
     ...event,
     timestamp: timestamps.get(event.blockNumber.toString()) || 0,
   })) as PairTailEvent[];
   return { events, requestedFromBlock, fromBlock, toBlock: latest, capped };
+}
+
+async function loadBlockTimestamp(blockNumber: string): Promise<number> {
+  const cached = readCached(blockTimestampCache, blockNumber);
+  if (cached !== undefined) return cached;
+
+  const pending = blockTimestampInFlight.get(blockNumber);
+  if (pending) return pending;
+
+  const request = client.getBlock({ blockNumber: BigInt(blockNumber) }).then((block) => Number(block.timestamp));
+  if (blockTimestampInFlight.size < MAX_IN_FLIGHT_REQUESTS) {
+    blockTimestampInFlight.set(blockNumber, request);
+    void request.then(
+      (timestamp) => writeCached(blockTimestampCache, blockNumber, timestamp, STATIC_RPC_CACHE_TTL_MS, MAX_BLOCK_TIMESTAMP_CACHE_ENTRIES),
+      () => undefined,
+    ).finally(() => blockTimestampInFlight.delete(blockNumber));
+  }
+  return request;
 }
 
 async function mapWithConcurrency<T>(
@@ -152,6 +240,25 @@ export interface PairTokenMetadata {
 }
 
 export async function pairTokenMetadata(pool: Address): Promise<PairTokenMetadata> {
+  const key = pool.toLowerCase();
+  const cached = readCached(pairMetadataCache, key);
+  if (cached) return cached;
+
+  const pending = pairMetadataInFlight.get(key);
+  if (pending) return pending;
+
+  const request = loadPairTokenMetadata(pool);
+  if (pairMetadataInFlight.size < MAX_IN_FLIGHT_REQUESTS) {
+    pairMetadataInFlight.set(key, request);
+    void request.then(
+      (metadata) => writeCached(pairMetadataCache, key, metadata, STATIC_RPC_CACHE_TTL_MS, MAX_PAIR_METADATA_CACHE_ENTRIES),
+      () => undefined,
+    ).finally(() => pairMetadataInFlight.delete(key));
+  }
+  return request;
+}
+
+async function loadPairTokenMetadata(pool: Address): Promise<PairTokenMetadata> {
   const [token0, token1] = await Promise.all([
     client.readContract({ address: pool, abi: pairTokensAbi, functionName: "token0" }),
     client.readContract({ address: pool, abi: pairTokensAbi, functionName: "token1" }),
@@ -180,7 +287,14 @@ export async function pairForTokens(factory?: Address, tokenA?: Address, tokenB?
 
 export async function isFactoryPair(factory: Address | undefined, candidate: Address): Promise<boolean> {
   if (!factory) return false;
-  return client.readContract({
+  const key = `${factory.toLowerCase()}:${candidate.toLowerCase()}`;
+  const cached = readCached(factoryPairCache, key);
+  if (cached !== undefined) return cached;
+
+  const pending = factoryPairInFlight.get(key);
+  if (pending) return pending;
+
+  const request = client.readContract({
     address: factory,
     abi: [{
       type: "function", name: "isPair", stateMutability: "view",
@@ -190,6 +304,20 @@ export async function isFactoryPair(factory: Address | undefined, candidate: Add
     functionName: "isPair",
     args: [candidate],
   });
+  if (factoryPairInFlight.size < MAX_IN_FLIGHT_REQUESTS) {
+    factoryPairInFlight.set(key, request);
+    void request.then(
+      (isPair) => writeCached(
+        factoryPairCache,
+        key,
+        isPair,
+        isPair ? STATIC_RPC_CACHE_TTL_MS : NEGATIVE_FACTORY_PAIR_CACHE_TTL_MS,
+        MAX_FACTORY_PAIR_CACHE_ENTRIES,
+      ),
+      () => undefined,
+    ).finally(() => factoryPairInFlight.delete(key));
+  }
+  return request;
 }
 
 export function decimal(value: bigint, decimals = 18): number {

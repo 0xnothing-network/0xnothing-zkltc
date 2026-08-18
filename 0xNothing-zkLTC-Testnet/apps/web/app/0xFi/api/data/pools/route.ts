@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import {
   createPublicClient,
   formatUnits,
@@ -29,11 +29,14 @@ type Result = { pools?: PoolRow[] };
 const MAX_RPC_TAIL_BLOCKS = 5_000n;
 const MAX_FACTORY_PAIRS = 1_000;
 const POOLS_CACHE_TTL_MS = 12_000;
+const POOLS_STALE_WHILE_REVALIDATE_MS = 30_000;
 const POOLS_CACHE_CONTROL = "public, s-maxage=10, stale-while-revalidate=30";
 const RPC_READ_CONCURRENCY = 24;
 const DEAD_ADDRESS: Address = "0x000000000000000000000000000000000000dEaD";
 const TOKEN_POINT_TTL_MS = 5 * 60_000;
 const MAX_TOKEN_POINT_CACHE_ENTRIES = 2_048;
+const REGISTRY_IMAGE_TTL_MS = 5 * 60_000;
+const MAX_REGISTRY_IMAGE_CACHE_ENTRIES = 2_048;
 const lifecycleAbi = [{
   type: "function", name: "status", stateMutability: "view",
   inputs: [{ name: "token", type: "address" }],
@@ -46,7 +49,14 @@ const tokenImageAbi = [{
 const pairCreatedEvent = parseAbiItem(
   "event PairCreated(address indexed token0, address indexed token1, address pair, bytes32 indexed pairId, bool protectedBootstrap, uint256 pairCount)",
 );
-const client = createPublicClient({ transport: http(deployment.chain.rpcUrl) });
+const client = createPublicClient({
+  transport: http(deployment.chain.rpcUrl, {
+    batch: { batchSize: 100, wait: 10 },
+    retryCount: 2,
+    retryDelay: 300,
+    timeout: 15_000,
+  }),
+});
 
 async function mapWithConcurrency<T, R>(
   items: readonly T[],
@@ -241,6 +251,8 @@ async function visibleDeploymentPools(pools: PoolPoint[]): Promise<{
 
 const tokenPointCache = new Map<string, { point: PoolTokenPoint; expiresAt: number }>();
 const tokenPointInFlight = new Map<string, Promise<PoolTokenPoint>>();
+const registryImageCache = new Map<string, { imageUrl: string; expiresAt: number }>();
+const registryImageInFlight = new Map<string, Promise<string>>();
 
 async function loadTokenPoint(address: Address): Promise<PoolTokenPoint> {
   const fallback = `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -318,21 +330,44 @@ async function enrichRegistryImages(pools: PoolPoint[]): Promise<void> {
   const images = new Map(await mapWithConcurrency(
     [...candidates.entries()],
     RPC_READ_CONCURRENCY,
-    async ([key, token]) => {
-      const imageURI = await client.readContract({
-        address: registry,
-        abi: tokenMetadataRegistryAbi,
-        functionName: "imageURI",
-        args: [token],
-      }).catch(() => "");
-      return [key, tokenImageUrl(imageURI)] as const;
-    },
+    async ([key, token]) => [key, await registryImage(registry, token)] as const,
   ));
   for (const pool of pools) {
     const image0 = images.get(pool.token0.id.toLowerCase());
     const image1 = images.get(pool.token1.id.toLowerCase());
     if (image0 && !pool.token0.imageUrl) pool.token0 = { ...pool.token0, imageUrl: image0 };
     if (image1 && !pool.token1.imageUrl) pool.token1 = { ...pool.token1, imageUrl: image1 };
+  }
+}
+
+async function registryImage(registry: Address, token: Address): Promise<string> {
+  const key = token.toLowerCase();
+  const cached = registryImageCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.imageUrl;
+
+  let pending = registryImageInFlight.get(key);
+  if (!pending) {
+    pending = client.readContract({
+      address: registry,
+      abi: tokenMetadataRegistryAbi,
+      functionName: "imageURI",
+      args: [token],
+    }).catch(() => "").then((imageURI) => {
+      const imageUrl = tokenImageUrl(imageURI) ?? "";
+      if (!registryImageCache.has(key) && registryImageCache.size >= MAX_REGISTRY_IMAGE_CACHE_ENTRIES) {
+        const oldest = registryImageCache.keys().next().value;
+        if (oldest) registryImageCache.delete(oldest);
+      }
+      registryImageCache.set(key, { imageUrl, expiresAt: Date.now() + REGISTRY_IMAGE_TTL_MS });
+      return imageUrl;
+    });
+    registryImageInFlight.set(key, pending);
+  }
+
+  try {
+    return await pending;
+  } finally {
+    if (registryImageInFlight.get(key) === pending) registryImageInFlight.delete(key);
   }
 }
 
@@ -685,8 +720,30 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
   }
 }
 
-let cachedPools: { envelope: DataEnvelope<PoolPoint[]>; expiresAt: number } | undefined;
+let cachedPools: {
+  envelope: DataEnvelope<PoolPoint[]>;
+  expiresAt: number;
+  staleWhileRevalidateExpiresAt: number;
+} | undefined;
 let poolsLoadInFlight: Promise<DataEnvelope<PoolPoint[]>> | undefined;
+
+function loadPoolsOnce(): Promise<DataEnvelope<PoolPoint[]>> {
+  if (!poolsLoadInFlight) {
+    poolsLoadInFlight = loadPoolsEnvelope().then((envelope) => {
+      const cachedAt = Date.now();
+      cachedPools = {
+        envelope,
+        expiresAt: cachedAt + POOLS_CACHE_TTL_MS,
+        staleWhileRevalidateExpiresAt: cachedAt + POOLS_CACHE_TTL_MS + POOLS_STALE_WHILE_REVALIDATE_MS,
+      };
+      return envelope;
+    });
+    void poolsLoadInFlight.finally(() => {
+      poolsLoadInFlight = undefined;
+    }).catch(() => { /* callers and stale fallback handle refresh failures */ });
+  }
+  return poolsLoadInFlight;
+}
 
 function poolsResponse(envelope: DataEnvelope<PoolPoint[]>, cacheStatus: "HIT" | "MISS" | "COALESCED" | "STALE") {
   return NextResponse.json(envelope, {
@@ -703,14 +760,14 @@ export async function GET() {
     return poolsResponse(cachedPools.envelope, "HIT");
   }
 
-  const joinedExistingRequest = Boolean(poolsLoadInFlight);
-  if (!poolsLoadInFlight) {
-    poolsLoadInFlight = loadPoolsEnvelope().then((envelope) => {
-      cachedPools = { envelope, expiresAt: Date.now() + POOLS_CACHE_TTL_MS };
-      return envelope;
-    });
+  if (cachedPools && cachedPools.staleWhileRevalidateExpiresAt > now) {
+    // Keep the serverless invocation alive until the shared background refresh settles.
+    after(() => loadPoolsOnce().catch(() => { /* retain the last successful response during the stale window */ }));
+    return poolsResponse(cachedPools.envelope, "STALE");
   }
-  const request = poolsLoadInFlight;
+
+  const joinedExistingRequest = Boolean(poolsLoadInFlight);
+  const request = loadPoolsOnce();
 
   try {
     const envelope = await request;
@@ -726,7 +783,5 @@ export async function GET() {
       { error: error instanceof Error ? error.message : "Indexer query failed" },
       { status: 502, headers: { "Cache-Control": "no-store" } },
     );
-  } finally {
-    if (poolsLoadInFlight === request) poolsLoadInFlight = undefined;
   }
 }

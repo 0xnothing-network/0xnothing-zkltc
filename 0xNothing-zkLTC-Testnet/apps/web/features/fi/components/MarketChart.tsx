@@ -17,6 +17,7 @@ import { TokenPairLogos } from "@fi/components/TokenLogo";
 import { EmptyState, ErrorState, SkeletonRows } from "@fi/components/UiStates";
 import { fiPath } from "@fi/config/paths";
 import type { CandlePoint, DataEnvelope } from "@fi/lib/data";
+import { fiPollInterval } from "@fi/lib/hooks/useFiPolling";
 import { fetchJson } from "@/lib/http";
 
 type Period = "5m" | "1h" | "4h" | "1d";
@@ -35,7 +36,7 @@ type ChartDataState = {
 
 const MIN_VISIBLE_LOGICAL_BARS = 32;
 const RIGHT_PADDING_BARS = 4;
-const CHART_REFRESH_INTERVAL_MS = 15_000;
+const CHART_FRESH_MS = 12_000;
 
 function price(value: number): string {
   return value.toLocaleString(undefined, {
@@ -223,6 +224,7 @@ export function MarketChart({
   const fitFrameRef = useRef<number | null>(null);
   const requestIdRef = useRef(0);
   const requestAbortRef = useRef<AbortController | null>(null);
+  const lastUpdatedAtRef = useRef(0);
   const [period, setPeriod] = useState<Period>("1h");
   const [candles, setCandles] = useState<CandlePoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -249,6 +251,7 @@ export function MarketChart({
       setCandles(payload.data);
       setPriceSource(payload.meta.priceSource ?? "dex");
       setOracleUpdatedAt(payload.meta.oracle?.updatedAt);
+      lastUpdatedAtRef.current = Date.now();
       setError(undefined);
     } catch (reason) {
       if (controller.signal.aborted) return;
@@ -264,10 +267,11 @@ export function MarketChart({
     let disposed = false;
     let generation = 0;
     let timer: number | undefined;
+    const pollInterval = fiPollInterval(`chart:${pair.toLowerCase()}:${period}`);
 
-    const schedule = () => {
+    const schedule = (delay = pollInterval) => {
       if (disposed || document.visibilityState === "hidden") return;
-      timer = window.setTimeout(() => void refresh(true), CHART_REFRESH_INTERVAL_MS);
+      timer = window.setTimeout(() => void refresh(true), delay);
     };
     const refresh = async (background: boolean) => {
       const currentGeneration = ++generation;
@@ -283,7 +287,12 @@ export function MarketChart({
         requestAbortRef.current?.abort();
         return;
       }
-      void refresh(true);
+      const age = Date.now() - lastUpdatedAtRef.current;
+      if (age >= CHART_FRESH_MS) {
+        void refresh(true);
+      } else {
+        schedule(Math.max(500, pollInterval - age));
+      }
     };
 
     document.addEventListener("visibilitychange", onVisibilityChange);
@@ -296,7 +305,7 @@ export function MarketChart({
       requestAbortRef.current?.abort();
       requestIdRef.current += 1;
     };
-  }, [load]);
+  }, [load, pair, period]);
 
   useEffect(() => {
     const host = hostRef.current;

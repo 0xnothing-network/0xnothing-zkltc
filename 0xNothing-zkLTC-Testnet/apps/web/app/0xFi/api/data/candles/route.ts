@@ -12,6 +12,7 @@ const PERIODS = { "5m": 300, "1h": 3_600, "4h": 14_400, "1d": 86_400 } as const;
 type CandlePeriod = keyof typeof PERIODS;
 const CANDLES_CACHE_TTL_MS = 12_000;
 const CANDLES_STALE_TTL_MS = 5 * 60_000;
+const MAX_CANDLES_CACHE_ENTRIES = 256;
 const CANDLES_CACHE_CONTROL = "public, s-maxage=10, stale-while-revalidate=30";
 const client = createPublicClient({ transport: http(deployment.chain.rpcUrl) });
 const QUERY = `
@@ -34,6 +35,16 @@ type CachedCandles = {
 
 const candlesCache = new Map<string, CachedCandles>();
 const candlesLoadInFlight = new Map<string, Promise<DataEnvelope<CandlePoint[]>>>();
+
+function rememberCandles(cacheKey: string, envelope: DataEnvelope<CandlePoint[]>): void {
+  candlesCache.delete(cacheKey);
+  candlesCache.set(cacheKey, { envelope, cachedAt: Date.now() });
+  while (candlesCache.size > MAX_CANDLES_CACHE_ENTRIES) {
+    const oldestKey = candlesCache.keys().next().value;
+    if (oldestKey === undefined) return;
+    candlesCache.delete(oldestKey);
+  }
+}
 
 class CandleRouteError extends Error {
   constructor(readonly status: number, message: string) {
@@ -290,7 +301,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const envelope = await pending;
-    candlesCache.set(cacheKey, { envelope, cachedAt: Date.now() });
+    rememberCandles(cacheKey, envelope);
     return candlesResponse(envelope, coalesced ? "COALESCED" : "MISS");
   } catch (error) {
     if (
