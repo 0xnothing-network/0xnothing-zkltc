@@ -133,9 +133,6 @@ function MarketRow({ pool, canonical }: { pool: PoolPoint; canonical: Set<string
             <strong>{firstSymbol}<i>/</i>{secondSymbol}</strong>
             <small><i data-state={live ? "live" : "empty"} />{type === "graduated" ? "0xPump" : type === "canonical" ? "Core" : "DEX"}</small>
           </span>
-          {hasPositiveRawAmount(pool.burnedLp) ? (
-            <span className="fi-badge fi-badge-burn" title="LP burned permanently">Burned</span>
-          ) : null}
         </span>
         <span className="fi-market-cell">
           <small>{firstSymbol} price</small>

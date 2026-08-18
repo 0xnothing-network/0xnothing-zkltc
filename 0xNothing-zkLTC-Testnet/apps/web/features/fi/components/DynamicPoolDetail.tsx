@@ -61,6 +61,23 @@ function displayUnlockTime(value: bigint | undefined): string {
   }).format(new Date(Number(value) * 1_000))} UTC`;
 }
 
+function formatLpDetailAmount(value: bigint): string {
+  const whole = value / 10n ** 18n;
+  const fraction = value % 10n ** 18n;
+  const fractionText = fraction.toString().padStart(18, "0").slice(0, 4).replace(/0+$/, "");
+  const wholeText = whole.toLocaleString("en-US");
+  return fractionText ? `${wholeText}.${fractionText}` : wholeText;
+}
+
+function lpDetailPercent(amount: bigint, total: bigint): number {
+  if (amount <= 0n || total <= 0n) return 0;
+  return Number((amount * 1_000_000n) / total) / 10_000;
+}
+
+function formatLpDetailPercent(amount: bigint, total: bigint): string {
+  return `${lpDetailPercent(amount, total).toLocaleString("en-US", { maximumFractionDigits: 2 })}%`;
+}
+
 const tokenImageAbi = [{
   type: "function", name: "imageURI", stateMutability: "view",
   inputs: [], outputs: [{ name: "", type: "string" }],
@@ -94,6 +111,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   const [lockUnlockAt, setLockUnlockAt] = useState<string>("");
   const [lpActionMode, setLpActionMode] = useState<"lock" | "burn">("lock");
   const [burnAmountText, setBurnAmountText] = useState("");
+  const [lpSecurityOpen, setLpSecurityOpen] = useState(false);
   const [currentUnixTime, setCurrentUnixTime] = useState(() => Math.floor(Date.now() / 1_000));
 
   const validation = useReadContract({
@@ -225,6 +243,18 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   const earliestUnlockAt = timedLocks[0]?.unlockAt;
   const hasLockedLp = lockedLp !== undefined && lockedLp > 0n;
   const hasBurnedLp = burnedLp !== undefined && burnedLp > 0n;
+  const lpSecurityTotal = totalSupply ?? 0n;
+  const lpSecurityLockedRaw = lockedLp ?? 0n;
+  const lpSecurityLocked = lpSecurityLockedRaw > lpSecurityTotal ? lpSecurityTotal : lpSecurityLockedRaw;
+  const lpSecurityBurnedLimit = lpSecurityTotal - lpSecurityLocked;
+  const lpSecurityBurnedRaw = burnedLp ?? 0n;
+  const lpSecurityBurned = lpSecurityBurnedRaw > lpSecurityBurnedLimit ? lpSecurityBurnedLimit : lpSecurityBurnedRaw;
+  const lpSecuritySecured = lpSecurityLocked + lpSecurityBurned;
+  const lpSecurityUnlocked = lpSecurityTotal - lpSecuritySecured;
+  const lpSecurityLockedPercent = lpDetailPercent(lpSecurityLocked, lpSecurityTotal);
+  const lpSecurityBurnedPercent = lpDetailPercent(lpSecurityBurned, lpSecurityTotal);
+  const lpSecurityUnlockedPercent = Math.max(0, 100 - lpSecurityLockedPercent - lpSecurityBurnedPercent);
+  const lpSecurityTooltipId = `lp-security-detail-${pool.slice(2)}`;
   const walletLocks = address ? timedLocks : [];
   const nextWalletUnlockAt = walletLocks.find(
     (lock) => lock.unlockAt > BigInt(currentUnixTime),
@@ -738,16 +768,48 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
             <details className="fi-settings-details fi-lock-lp-details">
               <summary>
                 <span>LP security</span>
-                <strong>{hasLockedLp ? "Locked" : hasBurnedLp ? "Burned" : "Manage"}</strong>
+                <strong>{lpSecurityTotal > 0n ? `${formatLpDetailAmount(lpSecuritySecured)} / ${formatLpDetailAmount(lpSecurityTotal)}` : "--"}</strong>
               </summary>
               <div className="fi-disclosure-body">
-                {hasLockedLp || hasBurnedLp ? (
+                {lpSecurityTotal > 0n ? (
+                  <span
+                    className="fi-lp-security"
+                    data-open={lpSecurityOpen || undefined}
+                    tabIndex={0}
+                    role="img"
+                    aria-describedby={lpSecurityTooltipId}
+                    aria-label={`LP security: ${formatLpDetailPercent(lpSecurityLocked, lpSecurityTotal)} locked, ${formatLpDetailPercent(lpSecurityBurned, lpSecurityTotal)} burned, ${formatLpDetailPercent(lpSecurityUnlocked, lpSecurityTotal)} unlocked`}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      setLpSecurityOpen((open) => !open);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter" && event.key !== " ") return;
+                      event.preventDefault();
+                      setLpSecurityOpen((open) => !open);
+                    }}
+                    onBlur={() => setLpSecurityOpen(false)}
+                  >
+                    <span className="fi-lp-security-track" aria-hidden="true">
+                      {lpSecurityLocked > 0n ? <i data-state="locked" style={{ width: `${lpSecurityLockedPercent}%` }} /> : null}
+                      {lpSecurityBurned > 0n ? <i data-state="burned" style={{ width: `${lpSecurityBurnedPercent}%` }} /> : null}
+                      {lpSecurityUnlocked > 0n ? <i data-state="unlocked" style={{ width: `${lpSecurityUnlockedPercent}%` }} /> : null}
+                    </span>
+                    <span className="fi-lp-security-tooltip" id={lpSecurityTooltipId} role="tooltip">
+                      <span><i data-state="locked" /><em>Locked</em><strong>{formatLpDetailAmount(lpSecurityLocked)} LP · {formatLpDetailPercent(lpSecurityLocked, lpSecurityTotal)}</strong></span>
+                      <span><i data-state="burned" /><em>Burned</em><strong>{formatLpDetailAmount(lpSecurityBurned)} LP · {formatLpDetailPercent(lpSecurityBurned, lpSecurityTotal)}</strong></span>
+                      <span><i data-state="unlocked" /><em>Unlocked</em><strong>{formatLpDetailAmount(lpSecurityUnlocked)} LP · {formatLpDetailPercent(lpSecurityUnlocked, lpSecurityTotal)}</strong></span>
+                      <span className="fi-lp-security-total"><em>Total</em><strong>{formatLpDetailAmount(lpSecurityTotal)} LP</strong></span>
+                    </span>
+                  </span>
+                ) : (
+                  <p className="fi-hint">LP supply is not yet indexed.</p>
+                )}
+                {permanentLockedLp > 0n || timedLockedLp > 0n || earliestUnlockAt !== undefined ? (
                   <dl className="fi-form-details fi-lp-security-summary">
-                    {hasLockedLp ? <div><dt>Locked LP</dt><dd>{formatAmount(lockedLp)}</dd></div> : null}
                     {permanentLockedLp > 0n ? <div><dt>Your permanent LP</dt><dd>{formatAmount(permanentLockedLp)}</dd></div> : null}
                     {timedLockedLp > 0n ? <div><dt>Your timed LP</dt><dd>{formatAmount(timedLockedLp)}</dd></div> : null}
                     {earliestUnlockAt !== undefined ? <div><dt>Your next unlock</dt><dd>{displayUnlockTime(earliestUnlockAt)}</dd></div> : null}
-                    {hasBurnedLp ? <div><dt>Burned LP</dt><dd>{formatAmount(burnedLp)}</dd></div> : null}
                   </dl>
                 ) : null}
                 {(ownerLockIdsRead.isPending || locksRead.isPending) && hasLockedLp && address ? <p className="fi-hint">Loading your lock schedule...</p> : null}
