@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePumpMarkets, usePumpStats } from "@/features/pump/hooks/usePumpData";
 import { formatWad } from "@/features/pump/format";
@@ -35,11 +35,56 @@ export function PumpDiscover() {
   const stats = statsQuery.data?.stats;
   const trendingMarkets = trendingQuery.markets.slice(0, 3);
 
+  const refetchMarkets = query.refetch;
+  const refetchTrending = trendingQuery.refetch;
+  const handleStatus = useCallback((value: PumpStatus | "ALL") => setStatus(value), []);
+  const handleSort = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSort(event.target.value as PumpMarketSort);
+  }, []);
+  const handleSearch = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(event.target.value);
+  }, []);
+  const handleRetry = useCallback(() => void refetchMarkets(), [refetchMarkets]);
+  const handleTrendingRetry = useCallback(() => void refetchTrending(), [refetchTrending]);
+
+  const trendingContent = useMemo(() => {
+    if (trendingQuery.isLoading && !trendingQuery.data) return <PumpLoadingGrid count={3} />;
+    if (trendingQuery.error && !trendingMarkets.length) {
+      return <PumpErrorState message={trendingQuery.error.message} onRetry={handleTrendingRetry} />;
+    }
+    if (!trendingMarkets.length) return <p className="pump-empty-inline">No markets yet.</p>;
+    return (
+      <div className="pump-token-grid pump-trending-grid">
+        {trendingMarkets.map((market) => <TokenCard key={market.tokenAddress} market={market} priority />)}
+      </div>
+    );
+  }, [handleTrendingRetry, trendingMarkets, trendingQuery.data, trendingQuery.error, trendingQuery.isLoading]);
+
+  const feedContent = useMemo(() => {
+    if (query.isLoading && !query.data) return <PumpLoadingGrid />;
+    if (query.error && !query.markets.length) {
+      return <PumpErrorState message={query.error.message} onRetry={handleRetry} />;
+    }
+    if (!query.markets.length) {
+      return (
+        <div className="pump-empty-state">
+          <span className="pump-eyebrow">No matches</span>
+          <h2>No token markets in this view</h2>
+          <p>Clear the filter or create the first market.</p>
+        </div>
+      );
+    }
+    return (
+      <div className="pump-token-grid">
+        {query.markets.map((market) => <TokenCard key={market.tokenAddress} market={market} />)}
+      </div>
+    );
+  }, [handleRetry, query.data, query.error, query.isLoading, query.markets]);
+
   return (
     <main className="pump-page">
       {query.data?.configured === false ? <PumpConfigNotice /> : null}
       {query.data?.warning ? <p className="pump-source-note">{query.data.warning}</p> : null}
-      {trendingQuery.data?.warning && trendingQuery.data.warning !== query.data?.warning ? <p className="pump-source-note">{trendingQuery.data.warning}</p> : null}
       {statsQuery.data?.warning && statsQuery.data.warning !== query.data?.warning ? <p className="pump-source-note">{statsQuery.data.warning}</p> : null}
       {statsQuery.error ? <p className="pump-source-note">Protocol totals are temporarily unavailable.</p> : null}
 
@@ -50,17 +95,7 @@ export function PumpDiscover() {
             Create token
           </Link>
         </div>
-        {trendingQuery.isLoading ? (
-          <PumpLoadingGrid count={3} />
-        ) : trendingQuery.error ? (
-          <PumpErrorState message={trendingQuery.error.message} onRetry={() => void trendingQuery.refetch()} />
-        ) : trendingMarkets.length ? (
-          <div className="pump-token-grid pump-trending-grid">
-            {trendingMarkets.map((market) => <TokenCard key={market.tokenAddress} market={market} priority />)}
-          </div>
-        ) : (
-          <p className="pump-empty-inline">No markets yet.</p>
-        )}
+        {trendingContent}
       </section>
 
       <section className="pump-stat-strip" aria-label="Protocol statistics">
@@ -84,7 +119,7 @@ export function PumpDiscover() {
                   type="button"
                   className={status === filter.value ? "active" : ""}
                   aria-pressed={status === filter.value}
-                  onClick={() => setStatus(filter.value)}
+                  onClick={() => handleStatus(filter.value)}
                 >
                   {filter.label}
                 </button>
@@ -92,10 +127,7 @@ export function PumpDiscover() {
             </div>
             <label className="pump-sort-select">
               <span className="sr-only">Sort token markets</span>
-              <select
-                value={sort}
-                onChange={(event) => setSort(event.target.value as PumpMarketSort)}
-              >
+              <select value={sort} onChange={handleSort}>
                 {SORTS.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
@@ -107,7 +139,7 @@ export function PumpDiscover() {
               <input
                 type="search"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={handleSearch}
                 placeholder="Search token"
                 autoComplete="off"
                 spellCheck={false}
@@ -117,21 +149,7 @@ export function PumpDiscover() {
           </div>
         </div>
 
-        {query.isLoading ? (
-          <PumpLoadingGrid />
-        ) : query.error ? (
-          <PumpErrorState message={query.error.message} onRetry={() => void query.refetch()} />
-        ) : query.markets.length ? (
-          <div className="pump-token-grid">
-            {query.markets.map((market) => <TokenCard key={market.tokenAddress} market={market} />)}
-          </div>
-        ) : (
-          <div className="pump-empty-state">
-            <span className="pump-eyebrow">No matches</span>
-            <h2>No token markets in this view</h2>
-            <p>Clear the filter or create the first market.</p>
-          </div>
-        )}
+        {feedContent}
       </section>
     </main>
   );

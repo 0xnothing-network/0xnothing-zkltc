@@ -39,6 +39,6 @@ export async function GET(request: Request) {
     { ttlMs: 1_000, staleMs: 5_000 },
   );
   return NextResponse.json(payload, {
-    headers: { "Cache-Control": "no-store" },
+    headers: { "Cache-Control": "public, s-maxage=1, stale-while-revalidate=4" },
   });
 }

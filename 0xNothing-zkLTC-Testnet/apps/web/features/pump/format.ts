@@ -1,5 +1,34 @@
 import { formatUnits } from "viem";
 
+const compactNumberFormatters = new Map<string, Intl.NumberFormat>();
+const relativeDateFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
+
+function getCompactFormatter(maximumFractionDigits: number): Intl.NumberFormat {
+  const key = `${maximumFractionDigits}`;
+  let formatter = compactNumberFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat("en-US", {
+      notation: "compact",
+      maximumFractionDigits,
+    });
+    compactNumberFormatters.set(key, formatter);
+  }
+  return formatter;
+}
+
+function getStandardFormatter(maximumFractionDigits: number): Intl.NumberFormat {
+  const key = `std:${maximumFractionDigits}`;
+  let formatter = compactNumberFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat("en-US", {
+      notation: "standard",
+      maximumFractionDigits,
+    });
+    compactNumberFormatters.set(key, formatter);
+  }
+  return formatter;
+}
+
 export function formatWad(value: string | bigint, maximumFractionDigits = 2): string {
   try {
     return formatCompactNumber(Number(formatUnits(BigInt(value), 18)), maximumFractionDigits);
@@ -17,10 +46,9 @@ export function formatDecimal(value: string, maximumFractionDigits = 8): string 
 
 export function formatCompactNumber(value: number, maximumFractionDigits = 2): string {
   if (!Number.isFinite(value)) return "0";
-  return new Intl.NumberFormat("en-US", {
-    notation: Math.abs(value) >= 1_000 ? "compact" : "standard",
-    maximumFractionDigits,
-  }).format(value);
+  const abs = Math.abs(value);
+  if (abs >= 1_000) return getCompactFormatter(maximumFractionDigits).format(value);
+  return getStandardFormatter(maximumFractionDigits).format(value);
 }
 
 export function formatTokenAmount(value: bigint, maximumFractionDigits = 6): string {
@@ -64,16 +92,27 @@ export function formatSupplyPercentage(
   }
 }
 
+const relativeTimeCache = new Map<number, { value: string; expiresAt: number }>();
+const RELATIVE_TIME_TTL_MS = 30_000;
+
 export function formatRelativeTime(timestamp: number): string {
   if (!timestamp) return "No activity";
-  const seconds = Math.max(0, Math.floor(Date.now() / 1000) - timestamp);
+  const nowSec = Math.floor(Date.now() / 1000);
+  const seconds = Math.max(0, nowSec - timestamp);
   if (seconds < 60) return "Just now";
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
   if (seconds < 86_400) return `${Math.floor(seconds / 3600)}h ago`;
   if (seconds < 2_592_000) return `${Math.floor(seconds / 86_400)}d ago`;
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(
-    new Date(timestamp * 1000),
-  );
+  const cached = relativeTimeCache.get(timestamp);
+  const now = Date.now();
+  if (cached && cached.expiresAt > now) return cached.value;
+  const value = relativeDateFormatter.format(new Date(timestamp * 1000));
+  relativeTimeCache.set(timestamp, { value, expiresAt: now + RELATIVE_TIME_TTL_MS });
+  if (relativeTimeCache.size > 512) {
+    const oldest = relativeTimeCache.keys().next().value as number | undefined;
+    if (oldest !== undefined) relativeTimeCache.delete(oldest);
+  }
+  return value;
 }
 
 export function shortAddress(value: string, head = 5, tail = 4): string {

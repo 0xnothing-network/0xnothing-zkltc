@@ -1,5 +1,7 @@
 import "server-only";
 
+import { after } from "next/server";
+
 interface CacheEntry<T> {
   value: T;
   expiresAt: number;
@@ -16,9 +18,9 @@ const values = new Map<string, CacheEntry<unknown>>();
 const inFlight = new Map<string, Promise<unknown>>();
 
 /**
- * Coalesce identical realtime reads and serve a very short stale snapshot when
- * an upstream indexer/RPC refresh briefly fails. This is process-local by
- * design, so it never changes the source of truth or on-chain semantics.
+ * Coalesce identical reads and serve a short stale snapshot while the next
+ * indexer/RPC refresh runs after the response. This cache is process-local;
+ * public route headers provide the shared CDN layer.
  */
 export async function withPumpCache<T>(
   key: string,
@@ -29,28 +31,38 @@ export async function withPumpCache<T>(
   const cached = values.get(key) as CacheEntry<T> | undefined;
   if (cached && cached.expiresAt > now) return cached.value;
 
-  let pending = inFlight.get(key) as Promise<T> | undefined;
-  if (!pending) {
-    pending = loader();
-    inFlight.set(key, pending);
+  if (cached && cached.staleAt > now) {
+    after(() => refreshCache(key, loader, policy).then(() => undefined).catch(() => undefined));
+    return cached.value;
   }
 
-  try {
-    const value = await pending;
+  return refreshCache(key, loader, policy);
+}
+
+function refreshCache<T>(
+  key: string,
+  loader: () => Promise<T>,
+  policy: CachePolicy,
+): Promise<T> {
+  const existing = inFlight.get(key) as Promise<T> | undefined;
+  if (existing) return existing;
+
+  const pending = loader().then((value) => {
+    const cachedAt = Date.now();
     values.delete(key);
     values.set(key, {
       value,
-      expiresAt: Date.now() + policy.ttlMs,
-      staleAt: Date.now() + policy.ttlMs + (policy.staleMs ?? policy.ttlMs * 4),
+      expiresAt: cachedAt + policy.ttlMs,
+      staleAt: cachedAt + policy.ttlMs + (policy.staleMs ?? policy.ttlMs * 4),
     });
     trimCache();
     return value;
-  } catch (error) {
-    if (cached && cached.staleAt > Date.now()) return cached.value;
-    throw error;
-  } finally {
+  });
+  inFlight.set(key, pending);
+  void pending.finally(() => {
     if (inFlight.get(key) === pending) inFlight.delete(key);
-  }
+  }).catch(() => undefined);
+  return pending;
 }
 
 function trimCache(): void {

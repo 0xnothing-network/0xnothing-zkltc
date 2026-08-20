@@ -12,6 +12,6 @@ export async function GET() {
     { ttlMs: 3_000, staleMs: 12_000 },
   );
   return NextResponse.json(payload, {
-    headers: { "Cache-Control": "private, no-store, max-age=0, must-revalidate" },
+    headers: { "Cache-Control": "public, s-maxage=3, stale-while-revalidate=12" },
   });
 }

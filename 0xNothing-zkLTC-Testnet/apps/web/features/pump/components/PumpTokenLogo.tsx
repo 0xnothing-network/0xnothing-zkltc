@@ -1,11 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { getPumpImageUrl } from "@/features/pump/config";
 
 const LOGO_PLACEHOLDER =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%2315191c' d='M0 0h16v16H0z'/%3E%3Cpath fill='%23242b2f' d='M0 0h8v8H0zm8 8h8v8H8z'/%3E%3C/svg%3E";
+
+const COVER_STYLE = { objectFit: "cover" } as const;
 
 interface PumpTokenLogoProps {
   imageUri: string;
@@ -17,7 +19,7 @@ interface PumpTokenLogoProps {
   decorative?: boolean;
 }
 
-export function PumpTokenLogo({
+function PumpTokenLogoInner({
   imageUri,
   name,
   symbol,
@@ -29,7 +31,10 @@ export function PumpTokenLogo({
   const source = useMemo(() => getPumpImageUrl(imageUri), [imageUri]);
   const [failedSource, setFailedSource] = useState("");
   const failed = !source || failedSource === source;
-  const initials = symbol.trim().replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase() || "?";
+  const initials = useMemo(
+    () => symbol.trim().replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase() || "?",
+    [symbol],
+  );
   const alt = decorative ? "" : `${name} logo`;
 
   useEffect(() => {
@@ -62,7 +67,7 @@ export function PumpTokenLogo({
         loading={priority ? "eager" : "lazy"}
         placeholder="blur"
         blurDataURL={LOGO_PLACEHOLDER}
-        style={{ objectFit: "cover" }}
+        style={COVER_STYLE}
         onError={handleError}
       />
     );
@@ -85,3 +90,5 @@ export function PumpTokenLogo({
     />
   );
 }
+
+export const PumpTokenLogo = memo(PumpTokenLogoInner);
