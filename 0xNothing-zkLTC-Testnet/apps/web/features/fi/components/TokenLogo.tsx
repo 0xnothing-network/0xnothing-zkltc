@@ -51,7 +51,7 @@ export function TokenLogo({
   size?: TokenLogoSize;
   trustedCore?: boolean;
 }) {
-  const normalizedImage = tokenImageUrl(imageUrl) ?? (trustedCore ? coreTokenImage(symbol) : undefined);
+  const normalizedImage = tokenImageUrl(imageUrl, symbol) ?? (trustedCore ? coreTokenImage(symbol) : undefined);
   const [failedSource, setFailedSource] = useState("");
   const failed = Boolean(normalizedImage && failedSource === normalizedImage);
 
@@ -62,7 +62,7 @@ export function TokenLogo({
   return (
     <span className="fi-token-logo" data-size={size} data-tone={trustedCore ? logoTone(symbol) : "pump"}>
       {normalizedImage && !failed ? (
-        // Token images are user-provided immutable metadata served only by allow-listed gateways.
+        // User-provided immutable images are served through the same-origin proxy.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={normalizedImage}
