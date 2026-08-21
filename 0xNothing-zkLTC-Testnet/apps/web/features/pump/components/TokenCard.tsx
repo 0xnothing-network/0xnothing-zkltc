@@ -41,7 +41,6 @@ function TokenCardInner({ market, priority = false }: { market: PumpMarket; prio
             name={market.name}
             symbol={market.symbol}
             size={56}
-            sizes="(max-width: 640px) 52px, 56px"
             priority={priority}
           />
         </div>

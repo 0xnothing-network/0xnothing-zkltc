@@ -106,10 +106,13 @@ export function isValidPumpExternalUrl(value: string, maxLength = MAX_EXTERNAL_U
 }
 
 /** Same-origin, content-addressed image URL used by 0xPump logo components. */
-export function getPumpImageUrl(uri: string): string {
+export function getPumpImageUrl(uri: string, symbol = ""): string {
   const cidPath = normalizePumpIpfsPath(uri);
   if (uri.trim().toLowerCase().startsWith("ipfs://") && cidPath) {
-    return `/api/pump/image?cid=${encodeURIComponent(cidPath)}`;
+    const params = new URLSearchParams({ cid: cidPath });
+    const initials = symbol.trim().replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase();
+    if (initials) params.set("symbol", initials);
+    return `/api/pump/image?${params.toString()}`;
   }
 
   return normalizePumpExternalUrl(uri);

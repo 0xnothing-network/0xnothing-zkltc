@@ -1,20 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import { memo, useEffect, useMemo, useState } from "react";
 import { getPumpImageUrl } from "@/features/pump/config";
-
-const LOGO_PLACEHOLDER =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%2315191c' d='M0 0h16v16H0z'/%3E%3Cpath fill='%23242b2f' d='M0 0h8v8H0zm8 8h8v8H8z'/%3E%3C/svg%3E";
-
-const COVER_STYLE = { objectFit: "cover" } as const;
 
 interface PumpTokenLogoProps {
   imageUri: string;
   name: string;
   symbol: string;
   size: number;
-  sizes: string;
   priority?: boolean;
   decorative?: boolean;
 }
@@ -24,11 +17,10 @@ function PumpTokenLogoInner({
   name,
   symbol,
   size,
-  sizes,
   priority = false,
   decorative = false,
 }: PumpTokenLogoProps) {
-  const source = useMemo(() => getPumpImageUrl(imageUri), [imageUri]);
+  const source = useMemo(() => getPumpImageUrl(imageUri, symbol), [imageUri, symbol]);
   const [failedSource, setFailedSource] = useState("");
   const failed = !source || failedSource === source;
   const initials = useMemo(
@@ -56,18 +48,20 @@ function PumpTokenLogoInner({
   const handleError = () => setFailedSource(source);
   if (source.startsWith("/api/pump/image?")) {
     return (
-      <Image
+      // Keep the same-origin IPFS proxy out of Next's image optimizer. The
+      // optimizer can run on a separate host in production and turn a healthy
+      // proxy response into a misleading /_next/image 404.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
         key={source}
         src={source}
         alt={alt}
-        fill
-        sizes={sizes}
-        priority={priority}
-        fetchPriority={priority ? "high" : "auto"}
+        width={size}
+        height={size}
         loading={priority ? "eager" : "lazy"}
-        placeholder="blur"
-        blurDataURL={LOGO_PLACEHOLDER}
-        style={COVER_STYLE}
+        decoding="async"
+        fetchPriority={priority ? "high" : "auto"}
+        referrerPolicy="no-referrer"
         onError={handleError}
       />
     );

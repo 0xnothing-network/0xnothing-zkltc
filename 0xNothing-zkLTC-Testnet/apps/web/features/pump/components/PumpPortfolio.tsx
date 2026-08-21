@@ -36,7 +36,6 @@ const PortfolioRowInner = memo(function PortfolioRowInner({
           name={market.name}
           symbol={market.symbol}
           size={42}
-          sizes="42px"
           decorative
         />
       </span>

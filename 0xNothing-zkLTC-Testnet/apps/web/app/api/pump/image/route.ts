@@ -5,7 +5,7 @@ import sharp from "sharp";
 export const runtime = "nodejs";
 
 const CACHE_SECONDS = 31_536_000;
-const GATEWAY_TIMEOUT_MS = 7_000;
+const GATEWAY_TIMEOUT_MS = 25_000;
 const HEDGE_DELAY_MS = 650;
 const MAX_REDIRECTS = 2;
 const MAX_IMAGE_DIMENSION = 4_096;
@@ -17,9 +17,11 @@ interface PumpImage {
 }
 
 export async function GET(request: Request) {
-  const rawCidPath = new URL(request.url).searchParams.get("cid") ?? "";
+  const searchParams = new URL(request.url).searchParams;
+  const rawCidPath = searchParams.get("cid") ?? "";
   const cidPath = normalizePumpIpfsPath(rawCidPath);
   if (!cidPath) return imageError("Invalid IPFS image CID", 400, 60);
+  const symbol = normalizeFallbackSymbol(searchParams.get("symbol") ?? "");
 
   const etag = `"pump-${cidPath.replace(/[^a-zA-Z0-9._~-]/g, "-")}"`;
   if (request.headers.get("if-none-match") === etag) {
@@ -44,7 +46,7 @@ export async function GET(request: Request) {
     });
   } catch {
     controllers.forEach((controller) => controller.abort());
-    return imageError("Token logo is temporarily unavailable", 404, 300);
+    return fallbackImage(symbol);
   }
 }
 
@@ -52,16 +54,21 @@ function gatewayUrls(cidPath: string): string[] {
   const [cid, ...pathSegments] = cidPath.split("/");
   const encodedPath = pathSegments.map(encodeURIComponent).join("/");
   const gatewayPath = encodedPath ? `/${encodedPath}` : "";
-  const urls = [
-    `https://dweb.link/ipfs/${cid}${gatewayPath}`,
-    `https://gateway.pinata.cloud/ipfs/${cid}${gatewayPath}`,
-  ];
+  const pinataUrl = `https://gateway.pinata.cloud/ipfs/${cid}${gatewayPath}`;
 
-  // CIDv1 base32 is safe as a DNS label and avoids the extra path-gateway hop.
+  // A dweb.link path request redirects to this same subdomain. Do not fetch
+  // both forms for every logo: a market grid would otherwise duplicate all
+  // dweb.link traffic and make cold IPFS retrievals more likely to time out.
   if (cid.startsWith("b")) {
-    urls.unshift(`https://${cid}.ipfs.dweb.link${gatewayPath || "/"}`);
+    return [
+      `https://${cid}.ipfs.dweb.link${gatewayPath || "/"}`,
+      pinataUrl,
+    ];
   }
-  return urls;
+  return [
+    `https://dweb.link/ipfs/${cid}${gatewayPath}`,
+    pinataUrl,
+  ];
 }
 
 async function fetchPumpImage(
@@ -212,4 +219,31 @@ function imageError(message: string, status: number, maxAge: number) {
       },
     },
   );
+}
+
+function normalizeFallbackSymbol(value: string): string {
+  return value.trim().replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase() || "?";
+}
+
+/**
+ * Keep a temporarily unavailable immutable asset from becoming a failed
+ * browser resource. This response is intentionally not cached so a later
+ * request can replace it as soon as either IPFS gateway has the content.
+ */
+function fallbackImage(symbol: string): Response {
+  const svg = [
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">',
+    '<rect width="96" height="96" fill="#15191c"/>',
+    '<path d="M0 0h48v48H0zm48 48h48v48H48z" fill="#242b2f"/>',
+    `<text x="48" y="51" fill="#77ffb1" font-family="ui-monospace,monospace" font-size="24" font-weight="700" text-anchor="middle" dominant-baseline="middle">${symbol}</text>`,
+    "</svg>",
+  ].join("");
+  return new Response(svg, {
+    headers: {
+      "Cache-Control": "no-store",
+      "Content-Type": "image/svg+xml; charset=utf-8",
+      "X-Content-Type-Options": "nosniff",
+      "X-Pump-Image-Fallback": "1",
+    },
+  });
 }

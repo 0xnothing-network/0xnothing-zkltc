@@ -219,7 +219,6 @@ export function TokenDetail({ token }: { token: Address }) {
             name={market.name}
             symbol={market.symbol}
             size={96}
-            sizes="(max-width: 640px) 60px, (max-width: 900px) 72px, 96px"
             priority
           />
         </div>
