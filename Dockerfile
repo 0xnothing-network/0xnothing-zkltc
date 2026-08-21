@@ -5,7 +5,7 @@ WORKDIR /app
 
 COPY 0xNothing-zkLTC-Testnet/apps/web/package.json ./package.json
 COPY 0xNothing-zkLTC-Testnet/apps/web/package-lock.json ./package-lock.json
-RUN --mount=type=cache,target=/root/.npm npm ci
+RUN npm ci
 
 FROM node:22-alpine AS builder
 WORKDIR /app
@@ -57,7 +57,7 @@ ARG NEXT_PUBLIC_WZKLTC_NUSD_PAIR_ADDRESS
 
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY 0xNothing-zkLTC-Testnet/apps/web/ ./
-RUN --mount=type=cache,target=/app/.next/cache npm run build
+RUN npm run build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
