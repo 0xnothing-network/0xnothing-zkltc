@@ -64,7 +64,8 @@ async function withRetry<T>(
         msg.includes("limit exceeded") ||
         msg.includes("too many requests");
       
-      if (!isRateLimit && i > 0) throw err;
+      // Deterministic RPC errors do not become healthy after an extra delay.
+      if (!isRateLimit) throw err;
       if (i < attempts - 1) {
         const delay = baseDelayMs * Math.pow(2, i);
         await new Promise((r) => setTimeout(r, delay));

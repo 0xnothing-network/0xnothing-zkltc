@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import "./home.css";
 
 export const metadata: Metadata = {
   title: "0xNothing | Nothing to everything",

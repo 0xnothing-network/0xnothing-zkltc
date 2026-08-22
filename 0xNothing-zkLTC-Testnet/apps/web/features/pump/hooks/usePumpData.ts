@@ -395,25 +395,6 @@ export function usePumpPortfolio() {
     refetch: marketsQuery.refetch,
     maxAgeMs: STEADY_LIVE_MS,
   });
-  const createdQuery = useQuery({
-    queryKey: ["pump-portfolio-created", address],
-    queryFn: ({ signal }) => fetchAllMarkets(address, signal),
-    enabled: Boolean(address),
-    staleTime: 10_000,
-    gcTime: 10 * 60 * 1000,
-    refetchInterval: address ? pumpPollInterval(`pump-portfolio:created:${address.toLowerCase()}`, STEADY_LIVE_MS) : false,
-    refetchIntervalInBackground: false,
-    refetchOnWindowFocus: false,
-    placeholderData: (prev) => prev,
-  });
-  usePumpVisibilityRefresh({
-    key: address ? `pump-portfolio:created:${address.toLowerCase()}` : "pump-portfolio:created:empty",
-    dataUpdatedAt: createdQuery.dataUpdatedAt,
-    enabled: Boolean(address),
-    isFetching: createdQuery.isFetching,
-    refetch: createdQuery.refetch,
-    maxAgeMs: STEADY_LIVE_MS,
-  });
   const markets = marketsQuery.data?.markets ?? EMPTY_MARKETS;
   const marketsHash = useMemo(() => {
     if (!markets.length) return "";
@@ -430,11 +411,12 @@ export function usePumpPortfolio() {
   const balancesQuery = useQuery({
     queryKey: ["pump-portfolio-balances", address, tokensKey],
     enabled: Boolean(address && publicClient && markets.length),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!address || !publicClient) return { balances: new Map<string, bigint>(), failed: 0 };
       const balances = new Map<string, bigint>();
       let failed = 0;
       for (let start = 0; start < markets.length; start += 100) {
+        signal.throwIfAborted();
         const page = markets.slice(start, start + 100);
         let results = await publicClient.multicall({
           allowFailure: true,
@@ -447,6 +429,7 @@ export function usePumpPortfolio() {
         });
         const retryMarkets = page.filter((_, index) => results[index].status !== "success");
         if (retryMarkets.length) {
+          signal.throwIfAborted();
           const retries = await publicClient.multicall({
             allowFailure: true,
             contracts: retryMarkets.map((market) => ({
@@ -468,6 +451,7 @@ export function usePumpPortfolio() {
           }
         });
       }
+      signal.throwIfAborted();
       return { balances, failed };
     },
     staleTime: 8_000,
@@ -485,7 +469,12 @@ export function usePumpPortfolio() {
     maxAgeMs: STEADY_LIVE_MS,
   });
 
-  const created = createdQuery.data?.markets ?? [];
+  const created = useMemo(
+    () => address
+      ? markets.filter((market) => market.creator.toLowerCase() === address.toLowerCase())
+      : EMPTY_MARKETS,
+    [address, markets],
+  );
   const balances = balancesQuery.data?.balances ?? EMPTY_BALANCES;
   const held = useMemo(
     () => markets.filter(
@@ -495,12 +484,11 @@ export function usePumpPortfolio() {
   );
   const refetchMarkets = marketsQuery.refetch;
   const refetchBalances = balancesQuery.refetch;
-  const refetchCreatedQuery = createdQuery.refetch;
   const refetchHeld = useCallback(() => {
     void refetchMarkets();
     void refetchBalances();
   }, [refetchBalances, refetchMarkets]);
-  const refetchCreated = useCallback(() => void refetchCreatedQuery(), [refetchCreatedQuery]);
+  const refetchCreated = useCallback(() => void refetchMarkets(), [refetchMarkets]);
 
   return {
     address,
@@ -510,15 +498,15 @@ export function usePumpPortfolio() {
     balanceWarning: balancesQuery.data?.failed
       ? `${balancesQuery.data.failed} token balance${balancesQuery.data.failed === 1 ? "" : "s"} could not be checked.`
       : undefined,
-    isLoading: marketsQuery.isLoading || createdQuery.isLoading || balancesQuery.isLoading,
-    error: marketsQuery.error || createdQuery.error || balancesQuery.error,
+    isLoading: marketsQuery.isLoading || balancesQuery.isLoading,
+    error: marketsQuery.error || balancesQuery.error,
     heldIsLoading: marketsQuery.isLoading || balancesQuery.isLoading,
-    createdIsLoading: createdQuery.isLoading,
+    createdIsLoading: marketsQuery.isLoading,
     heldError: marketsQuery.error || balancesQuery.error,
-    createdError: createdQuery.error,
+    createdError: marketsQuery.error,
     refetchHeld,
     refetchCreated,
-    configured: (marketsQuery.data?.configured ?? true) && (createdQuery.data?.configured ?? true),
+    configured: marketsQuery.data?.configured ?? true,
   };
 }
 

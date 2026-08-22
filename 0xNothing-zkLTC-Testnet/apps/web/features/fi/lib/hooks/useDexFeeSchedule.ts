@@ -15,7 +15,7 @@ export function useDexFeeSchedule(router: Address | undefined): DexFeeSchedule |
       { address: router, abi: dexRouterAbi, functionName: "LP_FEE_BPS" },
       { address: router, abi: dexRouterAbi, functionName: "PROTOCOL_FEE_BPS" },
     ] as const : [],
-    query: { enabled: Boolean(router), refetchInterval: 30_000, retry: false },
+    query: { enabled: Boolean(router), staleTime: Infinity, retry: false },
   });
   const lpFeeBps = reads.data?.[0]?.result as bigint | undefined;
   const protocolFeeBps = reads.data?.[1]?.result as bigint | undefined;

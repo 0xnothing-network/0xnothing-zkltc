@@ -47,6 +47,9 @@ const RPC_MARKET_HYDRATE_CONCURRENCY = 12;
 const RPC_BLOCK_TIMESTAMP_CONCURRENCY = 16;
 const GRAPH_TIMEOUT_MS = 8_000;
 const HOLDER_GRAPH_TIMEOUT_MS = 2_500;
+const LIVE_TAIL_CACHE_TTL_MS = 4_000;
+const MAX_LIVE_TAIL_CACHE_ENTRIES = 512;
+const MAX_BLOCK_TIMESTAMP_CACHE_ENTRIES = 4_096;
 const ZERO_HASH = `0x${"0".repeat(64)}` as Hex;
 const TOKEN_TRADED_EVENT = parseAbiItem(
   "event TokenTraded(address indexed token,address indexed trader,bool indexed isBuy,uint256 tokenAmount,uint256 curveNusdAmount,uint256 userNusdAmount,uint256 feeNusd,uint256 realNusdReserveAfter,uint256 tokenReserveAfter,uint256 virtualNusdReserveAfter,uint256 virtualTokenReserveAfter,uint256 circulatingSupplyAfter,uint256 spotPriceNusdWad,uint256 curveProgressBps)",
@@ -54,6 +57,12 @@ const TOKEN_TRADED_EVENT = parseAbiItem(
 const TOKEN_TRANSFER_EVENT = parseAbiItem(
   "event Transfer(address indexed from,address indexed to,uint256 value)",
 );
+
+type LiveTail = { trades: PumpTrade[]; truncated: boolean };
+const liveTailCache = new Map<string, { value: LiveTail; expiresAt: number }>();
+const liveTailInFlight = new Map<string, Promise<LiveTail>>();
+const blockTimestampCache = new Map<string, number>();
+const blockTimestampInFlight = new Map<string, Promise<number>>();
 
 interface GraphResponse<T> {
   data?: T;
@@ -413,7 +422,7 @@ export async function getPumpTrades(options: {
       };
     } catch (error) {
       return {
-        trades: await getRpcTrades(options.token, limit, skip, undefined, options.trader),
+        trades: await getRpcTrades(options.token, limit, skip, RPC_TRADE_LOOKBACK, options.trader),
         source: "rpc",
         configured: true,
         warning: warningMessage(error, "Subgraph unavailable; using recent RPC trades."),
@@ -422,7 +431,7 @@ export async function getPumpTrades(options: {
   }
 
   return {
-    trades: await getRpcTrades(options.token, limit, skip, undefined, options.trader),
+    trades: await getRpcTrades(options.token, limit, skip, RPC_TRADE_LOOKBACK, options.trader),
     source: "rpc",
     configured: true,
     warning: "Pump subgraph is not configured; history is limited to recent RPC logs.",
@@ -1005,8 +1014,7 @@ async function hydratePumpTradeLogs(logs: PumpTradeLog[]): Promise<PumpTrade[]> 
   const blockNumbers = [...new Set(logs.map((log) => log.blockNumber.toString()))];
   const timestamps = new Map<string, number>();
   await mapWithConcurrency(blockNumbers, RPC_BLOCK_TIMESTAMP_CONCURRENCY, async (blockNumber) => {
-    const block = await publicClient.getBlock({ blockNumber: BigInt(blockNumber) });
-    timestamps.set(blockNumber, safeNumber(block.timestamp));
+    timestamps.set(blockNumber, await getBlockTimestamp(blockNumber));
   });
 
   return logs.map((log) => {
@@ -1029,6 +1037,38 @@ async function hydratePumpTradeLogs(logs: PumpTradeLog[]): Promise<PumpTrade[]> 
       txHash: log.transactionHash ?? ZERO_HASH,
     };
   });
+}
+
+async function getBlockTimestamp(blockNumber: string): Promise<number> {
+  const cached = blockTimestampCache.get(blockNumber);
+  if (cached !== undefined) {
+    blockTimestampCache.delete(blockNumber);
+    blockTimestampCache.set(blockNumber, cached);
+    return cached;
+  }
+
+  let pending = blockTimestampInFlight.get(blockNumber);
+  if (!pending) {
+    pending = publicClient.getBlock({ blockNumber: BigInt(blockNumber) }).then((block) => {
+      const timestamp = safeNumber(block.timestamp);
+      blockTimestampCache.set(blockNumber, timestamp);
+      while (blockTimestampCache.size > MAX_BLOCK_TIMESTAMP_CACHE_ENTRIES) {
+        const oldest = blockTimestampCache.keys().next().value;
+        if (oldest === undefined) break;
+        blockTimestampCache.delete(oldest);
+      }
+      return timestamp;
+    });
+    blockTimestampInFlight.set(blockNumber, pending);
+  }
+
+  try {
+    return await pending;
+  } finally {
+    if (blockTimestampInFlight.get(blockNumber) === pending) {
+      blockTimestampInFlight.delete(blockNumber);
+    }
+  }
 }
 
 async function mapWithConcurrency<T, R>(
@@ -1079,6 +1119,40 @@ async function getRpcTradesAfterBlock(
   indexedBlock: bigint,
   trader?: Address,
 ): Promise<{ trades: PumpTrade[]; truncated: boolean }> {
+  const key = `${token?.toLowerCase() ?? "all"}:${trader?.toLowerCase() ?? "all"}:${indexedBlock}`;
+  const cached = liveTailCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) {
+    liveTailCache.delete(key);
+    liveTailCache.set(key, cached);
+    return cached.value;
+  }
+
+  let pending = liveTailInFlight.get(key);
+  if (!pending) {
+    pending = loadRpcTradesAfterBlock(token, indexedBlock, trader).then((value) => {
+      liveTailCache.set(key, { value, expiresAt: Date.now() + LIVE_TAIL_CACHE_TTL_MS });
+      while (liveTailCache.size > MAX_LIVE_TAIL_CACHE_ENTRIES) {
+        const oldest = liveTailCache.keys().next().value;
+        if (oldest === undefined) break;
+        liveTailCache.delete(oldest);
+      }
+      return value;
+    });
+    liveTailInFlight.set(key, pending);
+  }
+
+  try {
+    return await pending;
+  } finally {
+    if (liveTailInFlight.get(key) === pending) liveTailInFlight.delete(key);
+  }
+}
+
+async function loadRpcTradesAfterBlock(
+  token: Address | undefined,
+  indexedBlock: bigint,
+  trader?: Address,
+): Promise<LiveTail> {
   const latest = await publicClient.getBlockNumber();
   if (indexedBlock >= latest) return { trades: [], truncated: false };
 

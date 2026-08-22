@@ -36,6 +36,7 @@ const MUTABLE_CONTRACT_READS = new Set([
   "getReserves",
   "graduateReady",
   "graduationsPaused",
+  "governance",
   "isAdapterAllowed",
   "isApprovedForAll",
   "isFresh",

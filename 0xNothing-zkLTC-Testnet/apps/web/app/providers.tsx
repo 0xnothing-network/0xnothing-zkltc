@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
 import { useBlockNumber } from "wagmi";
@@ -8,12 +8,14 @@ import { wagmiConfig } from "@/lib/wagmi";
 import { ToastProvider } from "@/components/Toast";
 import { BLOCK_SYNC_MS, isBlockSyncedQueryKey } from "@/lib/liveData";
 
+const BLOCK_POLL_MS = BLOCK_SYNC_MS + Math.floor(Math.random() * 2_001);
+
 function LiveSync() {
   const queryClient = useQueryClient();
   const lastBlockRef = useRef<bigint | undefined>(undefined);
   const blockNumber = useBlockNumber({
     query: {
-      refetchInterval: BLOCK_SYNC_MS,
+      refetchInterval: BLOCK_POLL_MS,
       refetchIntervalInBackground: false,
       staleTime: 0,
     },
@@ -38,8 +40,14 @@ function LiveSync() {
   return null;
 }
 
-export function Providers({ children }: { children: React.ReactNode }) {
-  const queryClient = useMemo(
+export function Providers({
+  children,
+  withToast = true,
+}: {
+  children: React.ReactNode;
+  withToast?: boolean;
+}) {
+  const [queryClient] = useState(
     () =>
       new QueryClient({
         defaultOptions: {
@@ -56,14 +64,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
           },
         },
       }),
-    []
   );
 
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <LiveSync />
-        <ToastProvider>{children}</ToastProvider>
+        {withToast ? <ToastProvider>{children}</ToastProvider> : children}
       </QueryClientProvider>
     </WagmiProvider>
   );

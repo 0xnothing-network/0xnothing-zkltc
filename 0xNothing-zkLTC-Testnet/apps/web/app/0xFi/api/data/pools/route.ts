@@ -373,40 +373,45 @@ async function registryImage(registry: Address, token: Address): Promise<string>
 
 async function enrichLockBurnBadges(pools: PoolPoint[]): Promise<void> {
   const lpLocker = deployment.contracts.lpLocker;
-  // Lock enrichment
-  if (lpLocker) {
-    const lockedAmounts = new Map(await mapWithConcurrency(
+  const [lockedEntries, burnedEntries] = await Promise.all([
+    lpLocker
+      ? mapWithConcurrency(
+          pools,
+          RPC_READ_CONCURRENCY,
+          async (pool) => {
+            const locked = await client.readContract({
+              address: lpLocker,
+              abi: communityLiquidityLockerAbi,
+              functionName: "activeLockedByToken",
+              args: [pool.id],
+            }).catch(() => 0n);
+            return [pool.id.toLowerCase(), locked.toString()] as const;
+          },
+        )
+      : Promise.resolve([]),
+    mapWithConcurrency(
       pools,
       RPC_READ_CONCURRENCY,
       async (pool) => {
-        const locked = await client.readContract({
-          address: lpLocker,
-          abi: communityLiquidityLockerAbi,
-          functionName: "activeLockedByToken",
-          args: [pool.id],
+        const burned = await client.readContract({
+          address: pool.id,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [DEAD_ADDRESS],
         }).catch(() => 0n);
-        return [pool.id.toLowerCase(), locked.toString()] as const;
+        return [pool.id.toLowerCase(), burned.toString()] as const;
       },
-    ));
+    ),
+  ]);
+
+  if (lpLocker) {
+    const lockedAmounts = new Map(lockedEntries);
     for (const pool of pools) {
       const locked = lockedAmounts.get(pool.id.toLowerCase());
       if (locked && locked !== "0") pool.lockedLp = locked;
     }
   }
-  // Burn enrichment
-  const burnedAmounts = new Map(await mapWithConcurrency(
-    pools,
-    RPC_READ_CONCURRENCY,
-    async (pool) => {
-      const burned = await client.readContract({
-        address: pool.id,
-        abi: erc20Abi,
-        functionName: "balanceOf",
-        args: [DEAD_ADDRESS],
-      }).catch(() => 0n);
-      return [pool.id.toLowerCase(), burned.toString()] as const;
-    },
-  ));
+  const burnedAmounts = new Map(burnedEntries);
   for (const pool of pools) {
     const burned = burnedAmounts.get(pool.id.toLowerCase());
     if (burned && burned !== "0") pool.burnedLp = burned;
@@ -598,11 +603,23 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
         pool.communityPair = true;
       }
     }
-    await enrichPumpTokenImages(envelope.data).catch(() => { /* fallback logos remain available */ });
-    await enrichRegistryImages(envelope.data).catch(() => { /* registry images are additive */ });
+    const since24h = Math.floor(Date.now() / 1000) - 86_400;
+    const [oracleState, candleEnv] = await Promise.all([
+      loadCanonicalOracleSnapshots(),
+      queryGoldsky<CandlesResult, CandleRow[]>(
+        CANDLES_24H_QUERY,
+        { since: since24h.toString() },
+        (data) => data.candles ?? [],
+        [],
+      ).catch(() => undefined),
+      (async () => {
+        await enrichPumpTokenImages(envelope.data).catch(() => { /* fallback logos remain available */ });
+        await enrichRegistryImages(envelope.data).catch(() => { /* registry images are additive */ });
+      })(),
+      enrichLockBurnBadges(envelope.data).catch(() => { /* lock/burn badges are additive */ }),
+    ]);
 
     // Canonical markets are priced by DIA. Reserves remain the source of TVL.
-    const oracleState = await loadCanonicalOracleSnapshots();
     if (oracleState.failed > 0) {
       envelope.warning = `${envelope.warning ? `${envelope.warning} ` : ""}DIA price is unavailable for ${oracleState.failed} canonical market${oracleState.failed === 1 ? "" : "s"}.`;
     }
@@ -641,19 +658,8 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
       } catch { return pool; }
     });
 
-    // Enrich with LP lock/burn badges
-    await enrichLockBurnBadges(envelope.data).catch(() => { /* lock/burn badges are additive */ });
-
-    const since24h = Math.floor(Date.now() / 1000) - 86_400;
-
     // 24h metrics from Goldsky 1h candles
-    try {
-      const candleEnv = await queryGoldsky<CandlesResult, CandleRow[]>(
-        CANDLES_24H_QUERY,
-        { since: since24h.toString() },
-        (data) => data.candles ?? [],
-        [],
-      );
+    if (candleEnv) {
       const byPool = new Map<string, { volNusd: number; firstOpen?: number; lastClose?: number }>();
       for (const c of candleEnv.data) {
         const key = c.pool.id.toLowerCase();
@@ -678,7 +684,7 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
           : 0;
         return { ...pool, volume24hNusd, priceChange24h };
       });
-    } catch { /* 24h metrics are additive; failure is non-fatal */ }
+    }
 
     // RPC-tail volume for newly graduated / unindexed pools (up to MAX_TAIL_BLOCKS blocks)
     try {

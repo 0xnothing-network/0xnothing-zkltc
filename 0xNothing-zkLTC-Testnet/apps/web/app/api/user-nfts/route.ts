@@ -24,7 +24,8 @@ interface CacheEntry<T> {
 const CACHE = new Map<string, CacheEntry<NativeNft[]>>();
 const CACHE_TTL = 3_000;
 const CACHE_MAX_ENTRIES = 1024;
-const MAX_SUBGRAPH_BLOCK_LAG = 20_000n;
+const MAX_SUBGRAPH_BLOCK_LAG = 128n;
+const NFT_LOADS_IN_FLIGHT = new Map<string, Promise<NativeNft[]>>();
 
 function writeCache(address: string, value: NativeNft[]) {
   CACHE.delete(address);
@@ -49,9 +50,23 @@ async function fetchNativeNfts(address: string, force = false): Promise<NativeNf
     return cached.value;
   }
 
+  const loadKey = `${address}:${force ? "force" : "normal"}`;
+  const existing = NFT_LOADS_IN_FLIGHT.get(loadKey);
+  if (existing) return existing;
+
+  const pending = loadNativeNfts(address, force);
+  NFT_LOADS_IN_FLIGHT.set(loadKey, pending);
+  try {
+    return await pending;
+  } finally {
+    if (NFT_LOADS_IN_FLIGHT.get(loadKey) === pending) NFT_LOADS_IN_FLIGHT.delete(loadKey);
+  }
+}
+
+async function loadNativeNfts(address: string, fresh: boolean): Promise<NativeNft[]> {
   if (hasMarketplaceSubgraph()) {
     try {
-      const payload = await fetchUserNftsFromSubgraph(address);
+      const payload = await fetchUserNftsFromSubgraph(address, 5_000, fresh);
       if (await isSubgraphFresh(payload)) {
         writeCache(address, payload.tokens);
         return payload.tokens;
@@ -137,7 +152,9 @@ export async function GET(request: Request) {
   const address = searchParams.get("address");
   const force = searchParams.get("force") === "1";
   const responseHeaders = {
-    "Cache-Control": "private, no-store, max-age=0, must-revalidate",
+    "Cache-Control": force
+      ? "private, no-store, max-age=0, must-revalidate"
+      : "public, max-age=0, s-maxage=3, stale-while-revalidate=12",
   };
   if (!address || !/^0x[0-9a-fA-F]{40}$/.test(address)) {
     return NextResponse.json({ error: "Invalid address" }, { status: 400 });
@@ -169,7 +186,7 @@ async function isSubgraphFresh(payload: {
     );
     return BigInt(payload.indexedBlock) + MAX_SUBGRAPH_BLOCK_LAG >= currentBlock;
   } catch {
-    return true;
+    return false;
   }
 }
 

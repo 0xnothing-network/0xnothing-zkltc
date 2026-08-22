@@ -3,6 +3,7 @@ import { PixelMist } from "@/components/PixelMist";
 import { Providers } from "@/app/providers";
 import { FiHeader } from "@fi/components/FiHeader";
 import { ToastProvider } from "@fi/components/Toast";
+import "./shared.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function FiLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <Providers>
+    <Providers withToast={false}>
       <div className="fi-root">
         <PixelMist product="fi" />
         <ToastProvider>

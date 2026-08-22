@@ -465,7 +465,12 @@ function MarketplaceActivity({ refreshKey = 0 }: { refreshKey?: number }) {
 
       setEvents((prev) => {
         if (skip > 0) return appendUniqueEvents(prev, body.events);
-        return background ? appendUniqueEvents(body.events, prev) : body.events;
+        if (!background) return body.events;
+        // A live tab should refresh the current window, not grow the DOM forever.
+        return appendUniqueEvents(body.events, prev).slice(
+          0,
+          Math.max(ACTIVITY_PAGE_SIZE, loadedCountRef.current),
+        );
       });
       if (skip > 0) loadedCountRef.current += body.events.length;
       else if (!background) loadedCountRef.current = body.events.length;
@@ -613,6 +618,7 @@ function ActivityRow({ event }: { event: MarketActivityEvent }) {
             src={event.token.imageUrl}
             alt={tokenName}
             loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover"
             style={{ imageRendering: "pixelated" }}
           />
@@ -879,6 +885,7 @@ function ListingCard({
             src={meta.imageUrl}
             alt={meta.name}
             loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover transition-transform hover:scale-105"
             style={{ imageRendering: "pixelated" }}
           />

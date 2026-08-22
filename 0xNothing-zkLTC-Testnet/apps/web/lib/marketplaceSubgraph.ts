@@ -347,7 +347,8 @@ export async function fetchTokenMetadataFromSubgraph(
 
 export async function fetchUserNftsFromSubgraph(
   address: string,
-  limit = 5000
+  limit = 5000,
+  fresh = false,
 ): Promise<{
   tokens: SubgraphOwnedNft[];
   indexedBlock: number | null;
@@ -368,7 +369,7 @@ export async function fetchUserNftsFromSubgraph(
       collection: PIXEL_COLLECTION,
       limit: Math.min(pageSize, limit - tokenNodes.length),
       skip,
-    });
+    }, { fresh });
     const page = data.tokens ?? [];
     tokenNodes.push(...page);
     meta = data._meta ?? meta;
@@ -402,6 +403,7 @@ export async function fetchUserNftsFromSubgraph(
 
 export async function fetchAllMarketplaceListingsFromSubgraph(
   limit = 5_000,
+  fresh = false,
 ): Promise<SubgraphListingDTO[]> {
   const listings: SubgraphListingDTO[] = [];
   const pageSize = Math.min(Math.max(1, limit), 1_000);
@@ -414,6 +416,7 @@ export async function fetchAllMarketplaceListingsFromSubgraph(
         limit: Math.min(pageSize, limit - listings.length),
         skip,
       },
+      { fresh },
     );
 
     const page = data.listings ?? [];
@@ -440,10 +443,12 @@ export async function fetchMarketplaceActivityFromSubgraph({
   limit = 30,
   skip = 0,
   eventTypes,
+  fresh = false,
 }: {
   limit?: number;
   skip?: number;
   eventTypes?: SubgraphMarketEventType[];
+  fresh?: boolean;
 } = {}): Promise<{
   events: SubgraphMarketEventDTO[];
   indexedBlock: number | null;
@@ -465,10 +470,11 @@ export async function fetchMarketplaceActivityFromSubgraph({
           limit: windowSize,
           skip: 0,
           eventTypes: includeAll ? undefined : marketTypes,
+          fresh,
         })
       : Promise.resolve({ events: [], meta: null }),
     includeMinted
-      ? fetchMintedEvents({ limit: windowSize, skip: 0 })
+      ? fetchMintedEvents({ limit: windowSize, skip: 0, fresh })
       : Promise.resolve({ events: [], meta: null }),
   ]);
 
@@ -491,10 +497,12 @@ async function fetchMarketEvents({
   limit,
   skip,
   eventTypes,
+  fresh,
 }: {
   limit: number;
   skip: number;
   eventTypes?: readonly Exclude<SubgraphMarketEventType, "MINTED">[];
+  fresh?: boolean;
 }): Promise<{ events: SubgraphMarketEventDTO[]; meta: SubgraphMetaNode | null }> {
   const query = eventTypes?.length
     ? MARKET_EVENTS_BY_TYPE_QUERY
@@ -514,7 +522,8 @@ async function fetchMarketEvents({
     _meta?: SubgraphMetaNode | null;
   }>(
     query,
-    variables
+    variables,
+    { fresh },
   );
 
   const events = (data.marketEvents ?? []).map((event) => {
@@ -540,9 +549,11 @@ async function fetchMarketEvents({
 async function fetchMintedEvents({
   limit,
   skip,
+  fresh,
 }: {
   limit: number;
   skip: number;
+  fresh?: boolean;
 }): Promise<{ events: SubgraphMarketEventDTO[]; meta: SubgraphMetaNode | null }> {
   const data = await graphFetch<{
     tokens: TokenNode[];
@@ -553,7 +564,8 @@ async function fetchMintedEvents({
       collection: PIXEL_COLLECTION,
       limit,
       skip,
-    }
+    },
+    { fresh },
   );
 
   const events: SubgraphMarketEventDTO[] = (data.tokens ?? []).map((token) => ({
@@ -576,14 +588,17 @@ async function fetchMintedEvents({
 
 async function graphFetch<T>(
   query: string,
-  variables: Record<string, unknown>
+  variables: Record<string, unknown>,
+  options: { fresh?: boolean } = {},
 ): Promise<T> {
   const response = await fetch(MARKETPLACE_SUBGRAPH_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query, variables }),
     signal: AbortSignal.timeout(8_000),
-    next: { revalidate: 10 },
+    ...(options.fresh
+      ? { cache: "no-store" as const }
+      : { next: { revalidate: 3 } }),
   });
 
   if (!response.ok) {

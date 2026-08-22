@@ -51,13 +51,15 @@ const LISTING_TTL = 3_000;
 const MARKETPLACE_MULTICALL_BATCH_SIZE = 16_384;
 const payloadCache = new Map<string, CacheEntry<ListingsPayload>>();
 const pixelTokenCache = new Map<string, CacheEntry<TokenDTO | null>>();
-let payloadLoadInFlight: Promise<ListingsPayload> | undefined;
+const payloadLoadsInFlight = new Map<string, Promise<ListingsPayload>>();
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const force = searchParams.get("force") === "1";
   const responseHeaders = {
-    "Cache-Control": "private, no-store, max-age=0, must-revalidate",
+    "Cache-Control": force
+      ? "private, no-store, max-age=0, must-revalidate"
+      : "public, max-age=0, s-maxage=2, stale-while-revalidate=8",
   };
   const cacheKey = "listings:all-metadata-valid";
   const cached = payloadCache.get(cacheKey);
@@ -66,10 +68,20 @@ export async function GET(request: Request) {
     return NextResponse.json(cached.value, { headers: responseHeaders });
   }
 
-  const pending = payloadLoadInFlight ?? (payloadLoadInFlight = loadListingsPayload());
+  const loadKey = force ? "force" : "normal";
+  let pending = payloadLoadsInFlight.get(loadKey);
+  if (!pending) {
+    pending = loadListingsPayload(force).then((payload) => {
+      payloadCache.set(cacheKey, { value: payload, ts: Date.now() });
+      return payload;
+    });
+    payloadLoadsInFlight.set(loadKey, pending);
+    void pending.finally(() => {
+      if (payloadLoadsInFlight.get(loadKey) === pending) payloadLoadsInFlight.delete(loadKey);
+    }).catch(() => undefined);
+  }
   try {
-    const payload = await pending;
-    payloadCache.set(cacheKey, { value: payload, ts: Date.now() });
+    const payload = await withTimeout(pending, 12_000, "Marketplace listing load timed out");
     return NextResponse.json(payload, { headers: responseHeaders });
   } catch (error) {
     console.error("[marketplace] listing load failed:", error);
@@ -78,34 +90,16 @@ export async function GET(request: Request) {
       { error: "Marketplace data unavailable" },
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );
-  } finally {
-    if (payloadLoadInFlight === pending) payloadLoadInFlight = undefined;
   }
 }
 
-async function loadListingsPayload(): Promise<ListingsPayload> {
-  const candidates = await withTimeout(
-    loadListingCandidates(),
-    15_000,
-    "Marketplace listing read timed out",
-  );
+async function loadListingsPayload(fresh: boolean): Promise<ListingsPayload> {
+  const candidates = await loadListingCandidates(fresh);
   const [purchasable, pixelTokens] = await Promise.all([
-    withTimeout(
-      filterPurchasableListings(candidates),
-      15_000,
-      "Marketplace listing validation timed out",
-    ),
-    withTimeout(
-      fetchPixelTokensForListings(candidates),
-      30_000,
-      "Marketplace pixel metadata read timed out",
-    ),
+    filterPurchasableListings(candidates),
+    fetchPixelTokensForListings(candidates),
   ]);
-  const genericTokens = await withTimeout(
-    fetchGenericTokensForListings(purchasable),
-    30_000,
-    "Marketplace NFT metadata read timed out",
-  );
+  const genericTokens = await fetchGenericTokensForListings(purchasable);
   const tokens = { ...pixelTokens, ...genericTokens };
 
   const listings = purchasable.filter((listing) => {
@@ -121,10 +115,10 @@ async function loadListingsPayload(): Promise<ListingsPayload> {
   return { listings, tokens: visibleTokens };
 }
 
-async function loadListingCandidates(): Promise<ListingDTO[]> {
+async function loadListingCandidates(fresh: boolean): Promise<ListingDTO[]> {
   if (hasMarketplaceSubgraph()) {
     try {
-      const listings = await fetchAllMarketplaceListingsFromSubgraph();
+      const listings = await fetchAllMarketplaceListingsFromSubgraph(5_000, fresh);
       return listings.map((listing) => ({
         listingId: listing.listingId,
         collection: listing.collection,
@@ -209,7 +203,7 @@ async function filterPurchasableListings(listings: ListingDTO[]): Promise<Listin
   }
   const uniqueApprovalPairs = [...approvalPairs.entries()];
   const approvalResultIndex = new Map(
-    uniqueApprovalPairs.map(([key], index) => [key, listings.length * 2 + index]),
+    uniqueApprovalPairs.map(([key], index) => [key, listings.length * 3 + index]),
   );
   const results = await publicClient.multicall({
     allowFailure: true,
@@ -230,6 +224,12 @@ async function filterPurchasableListings(listings: ListingDTO[]): Promise<Listin
             functionName: "getApproved" as const,
             args: [tokenId] as const,
           },
+          {
+            address: PIXEL_MARKETPLACE_ADDRESS,
+            abi: MarketplaceAbi,
+            functionName: "listings" as const,
+            args: [BigInt(listing.listingId)] as const,
+          },
         ];
       }),
       ...uniqueApprovalPairs.map(([, pair]) => (
@@ -244,8 +244,9 @@ async function filterPurchasableListings(listings: ListingDTO[]): Promise<Listin
   });
 
   return listings.filter((listing, index) => {
-    const owner = results[index * 2];
-    const approved = results[index * 2 + 1];
+    const owner = results[index * 3];
+    const approved = results[index * 3 + 1];
+    const liveListing = results[index * 3 + 2];
     const pairKey = `${listing.collection.toLowerCase()}:${listing.seller.toLowerCase()}`;
     const approvedForAllIndex = approvalResultIndex.get(pairKey);
     const approvedForAll = approvedForAllIndex === undefined ? undefined : results[approvedForAllIndex];
@@ -257,7 +258,15 @@ async function filterPurchasableListings(listings: ListingDTO[]): Promise<Listin
       String(approved.result).toLowerCase() === PIXEL_MARKETPLACE_ADDRESS.toLowerCase();
     const collectionApproved =
       approvedForAll?.status === "success" && approvedForAll.result === true;
-    return ownerMatches && (tokenApproved || collectionApproved);
+    const listingMatches = liveListing?.status === "success" && (() => {
+      const tuple = liveListing.result as readonly [Address, bigint, bigint, Address, boolean];
+      return tuple[4]
+        && tuple[0].toLowerCase() === listing.collection.toLowerCase()
+        && tuple[1].toString() === listing.tokenId
+        && tuple[2].toString() === listing.price
+        && tuple[3].toLowerCase() === listing.seller.toLowerCase();
+    })();
+    return ownerMatches && listingMatches && (tokenApproved || collectionApproved);
   });
 }
 

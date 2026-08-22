@@ -28,17 +28,21 @@ export async function GET(request: Request) {
   const eventTypes = parseEventTypes(searchParams.get("type"));
   const force = searchParams.get("force") === "1";
   const responseHeaders = {
-    "Cache-Control": "private, no-store, max-age=0, must-revalidate",
+    "Cache-Control": force
+      ? "private, no-store, max-age=0, must-revalidate"
+      : "public, max-age=0, s-maxage=2, stale-while-revalidate=8",
   };
   const cacheKey = `${limit}:${skip}:${eventTypes.join(",") || "all"}`;
+  const inFlightKey = `${cacheKey}:${force ? "force" : "normal"}`;
   const cached = activityCache.get(cacheKey);
 
   if (!force && cached && Date.now() - cached.ts < ACTIVITY_TTL) {
     return NextResponse.json(cached.value, { headers: responseHeaders });
   }
 
-  const pending = activityInFlight.get(cacheKey) ?? loadMarketplaceActivity(limit, skip, eventTypes);
-  if (!activityInFlight.has(cacheKey)) activityInFlight.set(cacheKey, pending);
+  const pending = activityInFlight.get(inFlightKey)
+    ?? loadMarketplaceActivity(limit, skip, eventTypes, force);
+  if (!activityInFlight.has(inFlightKey)) activityInFlight.set(inFlightKey, pending);
   try {
     const payload = await pending;
     writeActivityCache(cacheKey, payload);
@@ -51,7 +55,7 @@ export async function GET(request: Request) {
       { status: 503, headers: { "Cache-Control": "no-store" } }
     );
   } finally {
-    if (activityInFlight.get(cacheKey) === pending) activityInFlight.delete(cacheKey);
+    if (activityInFlight.get(inFlightKey) === pending) activityInFlight.delete(inFlightKey);
   }
 }
 
@@ -59,6 +63,7 @@ async function loadMarketplaceActivity(
   limit: number,
   skip: number,
   eventTypes: SubgraphMarketEventType[],
+  fresh: boolean,
 ): Promise<{ events: SubgraphMarketEventDTO[] }> {
   if (hasMarketplaceSubgraph()) {
     try {
@@ -66,6 +71,7 @@ async function loadMarketplaceActivity(
         limit,
         skip,
         eventTypes: eventTypes.length ? eventTypes : undefined,
+        fresh,
       });
       return { events: payload.events };
     } catch (err) {

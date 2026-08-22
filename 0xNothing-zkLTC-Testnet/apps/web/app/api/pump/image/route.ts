@@ -10,11 +10,16 @@ const HEDGE_DELAY_MS = 650;
 const MAX_REDIRECTS = 2;
 const MAX_IMAGE_DIMENSION = 4_096;
 const MAX_IMAGE_PIXELS = 4_194_304;
+const FAILURE_BACKOFF_MS = 5_000;
+const MAX_FAILURE_CACHE_ENTRIES = 512;
 
 interface PumpImage {
   body: ArrayBuffer;
   contentType: string;
 }
+
+const imageLoadsInFlight = new Map<string, Promise<PumpImage>>();
+const imageFailureUntil = new Map<string, number>();
 
 export async function GET(request: Request) {
   const searchParams = new URL(request.url).searchParams;
@@ -28,14 +33,19 @@ export async function GET(request: Request) {
     return new Response(null, { status: 304, headers: imageHeaders(etag) });
   }
 
-  const gateways = gatewayUrls(cidPath);
-  const controllers = gateways.map(() => new AbortController());
+  if ((imageFailureUntil.get(cidPath) ?? 0) > Date.now()) return fallbackImage(symbol);
+
   try {
-    const attempts = gateways.map((url, index) =>
-      fetchPumpImage(url, index * HEDGE_DELAY_MS, controllers[index]),
-    );
-    const image = await Promise.any(attempts);
-    controllers.forEach((controller) => controller.abort());
+    let pending = imageLoadsInFlight.get(cidPath);
+    if (!pending) {
+      pending = loadPumpImage(cidPath);
+      imageLoadsInFlight.set(cidPath, pending);
+      void pending.finally(() => {
+        if (imageLoadsInFlight.get(cidPath) === pending) imageLoadsInFlight.delete(cidPath);
+      }).catch(() => undefined);
+    }
+    const image = await pending;
+    imageFailureUntil.delete(cidPath);
 
     return new Response(image.body, {
       headers: {
@@ -45,8 +55,27 @@ export async function GET(request: Request) {
       },
     });
   } catch {
-    controllers.forEach((controller) => controller.abort());
+    imageFailureUntil.delete(cidPath);
+    imageFailureUntil.set(cidPath, Date.now() + FAILURE_BACKOFF_MS);
+    while (imageFailureUntil.size > MAX_FAILURE_CACHE_ENTRIES) {
+      const oldest = imageFailureUntil.keys().next().value;
+      if (oldest === undefined) break;
+      imageFailureUntil.delete(oldest);
+    }
     return fallbackImage(symbol);
+  }
+}
+
+async function loadPumpImage(cidPath: string): Promise<PumpImage> {
+  const gateways = gatewayUrls(cidPath);
+  const controllers = gateways.map(() => new AbortController());
+  try {
+    const attempts = gateways.map((url, index) =>
+      fetchPumpImage(url, index * HEDGE_DELAY_MS, controllers[index]),
+    );
+    return await Promise.any(attempts);
+  } finally {
+    controllers.forEach((controller) => controller.abort());
   }
 }
 

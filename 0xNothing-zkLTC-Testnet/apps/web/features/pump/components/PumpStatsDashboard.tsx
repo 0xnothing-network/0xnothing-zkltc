@@ -38,7 +38,7 @@ export function PumpStatsDashboard() {
     abi: zeroXPumpAbi,
     functionName: "admin",
     chainId: PUMP_CHAIN_ID,
-    query: { enabled: PUMP_CONFIGURED, refetchInterval: 15_000 },
+    query: { enabled: PUMP_CONFIGURED },
   });
   const controllerOwnsFactory = Boolean(
     adminQuery.data
@@ -49,7 +49,7 @@ export function PumpStatsDashboard() {
     abi: pumpGraduationControllerAbi,
     functionName: "governance",
     chainId: PUMP_CHAIN_ID,
-    query: { enabled: PUMP_CONFIGURED && controllerOwnsFactory, refetchInterval: 15_000 },
+    query: { enabled: PUMP_CONFIGURED && controllerOwnsFactory },
   });
   const isDirectAdmin = Boolean(
     address
@@ -248,7 +248,7 @@ function DeveloperFeePanel({
     abi: zeroXPumpAbi,
     functionName: "accruedProtocolFeesNusd",
     chainId: PUMP_CHAIN_ID,
-    query: { refetchInterval: 15_000 },
+    query: {},
   });
   const claimable = claimableQuery.data ?? 0n;
   const actionPending = isClaiming || isSwitching;
