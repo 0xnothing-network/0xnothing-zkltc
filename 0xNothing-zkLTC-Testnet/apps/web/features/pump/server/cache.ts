@@ -1,12 +1,7 @@
 import "server-only";
 
 import { after } from "next/server";
-
-interface CacheEntry<T> {
-  value: T;
-  expiresAt: number;
-  staleAt: number;
-}
+import { createBoundedCache } from "@/lib/boundedCache";
 
 interface CachePolicy {
   ttlMs: number;
@@ -14,8 +9,13 @@ interface CachePolicy {
 }
 
 const MAX_ENTRIES = 512;
-const values = new Map<string, CacheEntry<unknown>>();
-const inFlight = new Map<string, Promise<unknown>>();
+// The shared cache holds each entry for its full stale horizon; `withPumpCache`
+// compares the entry age against the policy ttl to tell fresh from stale.
+const cache = createBoundedCache<unknown>({ maxEntries: MAX_ENTRIES, maxInFlight: MAX_ENTRIES });
+
+function retentionMs(policy: CachePolicy): number {
+  return policy.ttlMs + (policy.staleMs ?? policy.ttlMs * 4);
+}
 
 /**
  * Coalesce identical reads and serve a short stale snapshot while the next
@@ -27,52 +27,13 @@ export async function withPumpCache<T>(
   loader: () => Promise<T>,
   policy: CachePolicy,
 ): Promise<T> {
-  const now = Date.now();
-  const cached = values.get(key) as CacheEntry<T> | undefined;
-  if (cached && cached.expiresAt > now) return cached.value;
-
-  if (cached && cached.staleAt > now) {
-    after(() => refreshCache(key, loader, policy).then(() => undefined).catch(() => undefined));
-    return cached.value;
+  const load = loader as () => Promise<unknown>;
+  const cached = cache.entry(key);
+  if (cached?.fresh) {
+    if (cached.ageMs < policy.ttlMs) return cached.value as T;
+    after(() => cache.refresh(key, load, retentionMs(policy)).then(() => undefined).catch(() => undefined));
+    return cached.value as T;
   }
 
-  return refreshCache(key, loader, policy);
-}
-
-function refreshCache<T>(
-  key: string,
-  loader: () => Promise<T>,
-  policy: CachePolicy,
-): Promise<T> {
-  const existing = inFlight.get(key) as Promise<T> | undefined;
-  if (existing) return existing;
-
-  const pending = loader().then((value) => {
-    const cachedAt = Date.now();
-    values.delete(key);
-    values.set(key, {
-      value,
-      expiresAt: cachedAt + policy.ttlMs,
-      staleAt: cachedAt + policy.ttlMs + (policy.staleMs ?? policy.ttlMs * 4),
-    });
-    trimCache();
-    return value;
-  });
-  inFlight.set(key, pending);
-  void pending.finally(() => {
-    if (inFlight.get(key) === pending) inFlight.delete(key);
-  }).catch(() => undefined);
-  return pending;
-}
-
-function trimCache(): void {
-  const now = Date.now();
-  for (const [key, entry] of values) {
-    if (entry.staleAt <= now) values.delete(key);
-  }
-  while (values.size > MAX_ENTRIES) {
-    const oldest = values.keys().next().value;
-    if (oldest === undefined) return;
-    values.delete(oldest);
-  }
+  return cache.refresh(key, load, retentionMs(policy)) as Promise<T>;
 }

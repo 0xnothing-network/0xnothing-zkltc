@@ -132,6 +132,14 @@ function getOrCreateToken(
 function hydrateTokenData(token: Token): void {
   if (!token.collection.equals(PIXEL_COLLECTION)) return;
 
+  // PixelNFT writes _tokenData[id] once inside mint() and never mutates it, so the
+  // eth_call only has to run the first time a token is seen. Transfers and listings
+  // reuse the stored art instead of paying an RPC round-trip per event, which is what
+  // dominates indexing latency. A null/empty pixelData still retries, so a token first
+  // observed while the call reverted is backfilled by its next event.
+  const pixelData = token.pixelData;
+  if (pixelData !== null && pixelData.length > 0) return;
+
   const contract = PixelNFT.bind(PIXEL_COLLECTION);
   const result = contract.try_tokenData(token.tokenId);
   if (result.reverted) return;

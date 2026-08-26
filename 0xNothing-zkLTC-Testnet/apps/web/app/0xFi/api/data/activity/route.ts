@@ -5,6 +5,7 @@ import type { ActivityPoint, DataEnvelope } from "@fi/lib/data";
 import { queryGoldsky, unconfiguredEnvelope } from "@fi/lib/server/goldsky";
 import { isFactoryPair, loadPairTail, pairForTokens, pairTokenMetadata } from "@fi/lib/server/rpcTail";
 import { deployment } from "@fi/config/deployment";
+import { createBoundedCache } from "@/lib/boundedCache";
 
 const QUERY = `
   query Activity($pool: Bytes!, $first: Int!) {
@@ -30,22 +31,18 @@ const CACHE_HEADERS = {
 };
 
 type ActivityEnvelope = DataEnvelope<ActivityPoint[]>;
-type CacheEntry = { envelope: ActivityEnvelope; updatedAt: number };
 
-const cache = new Map<string, CacheEntry>();
-const inFlight = new Map<string, Promise<ActivityEnvelope>>();
+// Entries are retained for the whole stale window, so freshness is derived from the
+// entry age: a refresh failure can still answer from the last good activity list.
+const activityCache = createBoundedCache<ActivityEnvelope>({
+  maxEntries: MAX_CACHE_ENTRIES,
+  ttlMs: STALE_TTL_MS,
+  maxInFlight: MAX_CACHE_ENTRIES,
+});
 
 function amount(value: string | bigint, decimals: number, prefix = ""): string {
   try { return `${prefix}${formatUnits(typeof value === "bigint" ? value : BigInt(value), decimals)}`; }
   catch { return `${prefix}${value}`; }
-}
-
-function remember(pair: string, envelope: ActivityEnvelope): void {
-  if (!cache.has(pair) && cache.size >= MAX_CACHE_ENTRIES) {
-    const oldest = cache.keys().next().value;
-    if (oldest) cache.delete(oldest);
-  }
-  cache.set(pair, { envelope, updatedAt: Date.now() });
 }
 
 async function loadActivity(pair: string, dynamicPool?: Address): Promise<ActivityEnvelope> {
@@ -124,31 +121,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unsupported pair." }, { status: 400 });
     }
 
-    const cached = cache.get(pair);
-    if (cached && Date.now() - cached.updatedAt <= CACHE_TTL_MS) {
-      return NextResponse.json(cached.envelope, { headers: CACHE_HEADERS });
+    const cached = activityCache.entry(pair);
+    if (cached && cached.ageMs <= CACHE_TTL_MS) {
+      return NextResponse.json(cached.value, { headers: CACHE_HEADERS });
     }
 
-    let pending = inFlight.get(pair);
-    if (!pending) {
-      pending = loadActivity(pair, dynamicPool);
-      inFlight.set(pair, pending);
-    }
     try {
-      const envelope = await pending;
-      remember(pair, envelope);
+      const envelope = await activityCache.refresh(pair, () => loadActivity(pair, dynamicPool));
       return NextResponse.json(envelope, { headers: CACHE_HEADERS });
     } catch (error) {
-      if (cached && Date.now() - cached.updatedAt <= STALE_TTL_MS) {
+      const stale = activityCache.entry(pair);
+      if (stale?.fresh) {
         const message = error instanceof Error ? error.message : "refresh failed";
         return NextResponse.json({
-          ...cached.envelope,
-          warning: `${cached.envelope.warning ? `${cached.envelope.warning} ` : ""}Activity refresh failed; showing cached data: ${message}`,
+          ...stale.value,
+          warning: `${stale.value.warning ? `${stale.value.warning} ` : ""}Activity refresh failed; showing cached data: ${message}`,
         }, { headers: CACHE_HEADERS });
       }
       throw error;
-    } finally {
-      if (inFlight.get(pair) === pending) inFlight.delete(pair);
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Indexer query failed";

@@ -15,6 +15,8 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
+import { fallbackRpcUrl, primaryRpcUrl, RPC_BATCH_OPTIONS } from "./rpc.mjs";
+
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 dotenv.config({ path: path.join(root, ".env.local"), quiet: true });
 
@@ -55,9 +57,11 @@ export function loadRuntime({ wallet = false, walletRole = "deployer" } = {}) {
   const deployment = JSON.parse(fs.readFileSync(deploymentPath, "utf8"));
   if (Number(deployment.chainId) !== Number(network.chainId)) throw new Error("Deployment chain mismatch");
 
+  // Fail closed on a missing endpoint instead of letting `.trim()` throw a bare
+  // TypeError, so an unconfigured network config names the variable to set.
   const transport = fallback([
-    http((process.env.LITEFORGE_RPC_URL || network.rpcUrl).trim()),
-    http((process.env.LITEFORGE_FALLBACK_RPC_URL || network.fallbackRpcUrl).trim()),
+    http(primaryRpcUrl(network), RPC_BATCH_OPTIONS),
+    http(fallbackRpcUrl(network), RPC_BATCH_OPTIONS),
   ]);
   const publicClient = createPublicClient({ transport });
   if (!wallet) return { network, deployment, publicClient };

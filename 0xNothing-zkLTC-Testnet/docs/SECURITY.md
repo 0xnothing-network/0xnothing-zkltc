@@ -1,4 +1,4 @@
-3# Security model and known limits
+# Security model and known limits
 
 This code is a testnet implementation, not an audit report.
 
@@ -23,11 +23,13 @@ This code is a testnet implementation, not an audit report.
 - READY is determined by `spotPriceNusdWad * fixedTotalSupply / 1e18` reaching
   exactly `6,000 NUSD`; the contract separately derives the real-reserve target
   needed to reach that market cap.
-- The testnet router is disabled and no graduation adapter is configured.
+- The router was deployed disabled with no adapter. On testnet it is now enabled
+  with the pinned 0xFi adapter allowed; both transitions were delayed and are
+  visible onchain.
 - Adding an adapter is delayed and visible onchain.
 - Only allowlisted adapter code may receive reserves.
-- A holder can sell from `READY`; that sell reopens the curve as `TRADING` so reserves are not indefinitely trapped while no adapter exists.
-- Graduation is admin/Safe-triggered. The Pump trade pause blocks create, buy, and sell, but the router and adapter disable controls independently stop graduation.
+- A holder can sell from `READY`; that sell reopens the curve as `TRADING` so reserves are not indefinitely trapped while graduation is unavailable.
+- `graduateReady` is permissionless and cannot choose the adapter, pool, recipient, price, or liquidity amount. It reverts unless `graduationsPaused` is false, the router is enabled, and the pinned adapter is allowed. Only `governance` may unpause; the guardian and `governance` may call `emergencyPause`, which pauses graduations, pauses Pump, and disables the router in one call and cannot itself unpause. The Pump trade pause blocks create, buy, and sell, and the router and adapter disable controls independently stop graduation.
 - Adapter failures revert graduation and leave the market in `READY` with its reserves intact.
 - Mainnet graduation additionally requires an audited NUSD-to-official-zkLTC-
   stablecoin conversion or bridge, a real major-DEX fork test, terminal-price

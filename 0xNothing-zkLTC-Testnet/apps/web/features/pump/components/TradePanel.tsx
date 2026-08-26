@@ -101,8 +101,15 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
   const sourceBalance = mode === "buy" ? (nusdBalance.data ?? 0n) : (tokenBalance.data ?? 0n);
   const sourceAllowance = mode === "buy" ? (nusdAllowance.data ?? 0n) : (tokenAllowance.data ?? 0n);
   const needsApproval = actualInput > sourceAllowance;
-  const quotePending = buyQuote.isFetching || sellQuote.isFetching;
-  const quoteError = mode === "buy" ? buyQuote.error : sellQuote.error;
+  const activeQuote = mode === "buy" ? buyQuote : sellQuote;
+  // Only a quote that has no value yet blocks the trade. Both quote reads sit in
+  // the block-sync allowlist, so `isFetching` went true on every new block and
+  // the submit button disabled itself — with a perfectly good quote on screen —
+  // for the length of an RPC round trip roughly every ten seconds. `isLoading`
+  // stays false while a query is disabled, so an empty amount cannot pin the
+  // button either, and a new amount still gates it until its quote arrives.
+  const quotePending = activeQuote.isLoading;
+  const quoteError = activeQuote.error;
   const tradeAllowed = market.status === "TRADING" || (market.status === "READY" && mode === "sell");
 
   const refresh = async () => {
@@ -111,7 +118,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
       tokenBalance.refetch(),
       nusdAllowance.refetch(),
       tokenAllowance.refetch(),
-      mode === "buy" ? buyQuote.refetch() : sellQuote.refetch(),
+      activeQuote.refetch(),
       invalidateAfterPumpTrade(queryClient, market.tokenAddress),
     ]);
     onComplete?.();
@@ -223,7 +230,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
         {mode === "buy" && buyQuote.data?.[4] ? <p>This buy reaches the $6,000 READY target.</p> : null}
       </div>
 
-      {quoteError ? <p className="pump-inline-error">Quote unavailable. <button type="button" onClick={() => void (mode === "buy" ? buyQuote.refetch() : sellQuote.refetch())}>Retry</button></p> : null}
+      {quoteError ? <p className="pump-inline-error">Quote unavailable. <button type="button" onClick={() => void activeQuote.refetch()}>Retry</button></p> : null}
 
       {market.status === "READY" ? <p className="pump-form-hint">Buys are paused at the $6,000 market-cap target. Selling remains available and reopens the curve.</p> : null}
       <button type="button" className="pump-button pump-button-primary pump-button-large pump-button-full" disabled={pending || !configured || quotePending || Boolean(quoteError) || !tradeAllowed} onClick={() => void submit()}>{buttonLabel}</button>

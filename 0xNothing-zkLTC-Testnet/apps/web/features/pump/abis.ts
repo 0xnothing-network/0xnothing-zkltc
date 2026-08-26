@@ -49,6 +49,7 @@ export const pumpTokenAbi = parseAbi([
 ]);
 
 export const pumpGraduationControllerAbi = parseAbi([
+  "function pump() view returns (address)",
   "function adapter() view returns (address)",
   "function governance() view returns (address)",
   "function graduationsPaused() view returns (bool)",

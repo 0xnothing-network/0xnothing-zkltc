@@ -12,6 +12,7 @@ import {
   publicClient,
 } from "@/lib/contract";
 import { getPixelImageUrl } from "@/lib/pixelImage";
+import { createBoundedCache } from "@/lib/boundedCache";
 import {
   MARKETPLACE_START_BLOCK as PUBLIC_MARKETPLACE_START_BLOCK,
   PIXEL_START_BLOCK as PUBLIC_PIXEL_START_BLOCK,
@@ -29,6 +30,8 @@ const EXPLORER_MAX_RANGES = 64;
 const EXPLORER_TIMEOUT_MS = 8_000;
 const RAW_CACHE_TTL_MS = 3_000;
 const TOKEN_CACHE_TTL_MS = 60_000;
+const MAX_TOKEN_CACHE_ENTRIES = 4_096;
+const RAW_EVENTS_CACHE_KEY = "marketplace-raw-events";
 
 const EVENT_TOPICS = {
   minted: eventTopic("Minted(address,uint256,string)"),
@@ -60,14 +63,14 @@ interface ListingContext {
   seller: `0x${string}`;
 }
 
-interface CacheEntry<T> {
-  value: T;
-  timestamp: number;
-}
-
-let rawEventsCache: CacheEntry<SubgraphMarketEventDTO[]> | null = null;
-let rawEventsInFlight: Promise<SubgraphMarketEventDTO[]> | null = null;
-const tokenCache = new Map<string, CacheEntry<SubgraphTokenMetadata | null>>();
+const rawEventsCache = createBoundedCache<SubgraphMarketEventDTO[]>({
+  maxEntries: 1,
+  ttlMs: RAW_CACHE_TTL_MS,
+});
+const tokenCache = createBoundedCache<SubgraphTokenMetadata | null>({
+  maxEntries: MAX_TOKEN_CACHE_ENTRIES,
+  ttlMs: TOKEN_CACHE_TTL_MS,
+});
 
 export async function fetchMarketplaceActivityFromOnchain({
   limit = 30,
@@ -99,22 +102,7 @@ export async function fetchMarketplaceActivityFromOnchain({
 }
 
 async function loadRawEvents(): Promise<SubgraphMarketEventDTO[]> {
-  if (
-    rawEventsCache &&
-    Date.now() - rawEventsCache.timestamp < RAW_CACHE_TTL_MS
-  ) {
-    return rawEventsCache.value;
-  }
-  if (rawEventsInFlight) return rawEventsInFlight;
-
-  rawEventsInFlight = loadRawEventsUncached();
-  try {
-    const value = await rawEventsInFlight;
-    rawEventsCache = { value, timestamp: Date.now() };
-    return value;
-  } finally {
-    rawEventsInFlight = null;
-  }
+  return rawEventsCache.load(RAW_EVENTS_CACHE_KEY, loadRawEventsUncached);
 }
 
 async function loadRawEventsUncached(): Promise<SubgraphMarketEventDTO[]> {
@@ -390,8 +378,9 @@ async function fetchTokenMetadata(
 
   for (const tokenId of tokenIds) {
     const cached = tokenCache.get(tokenId);
-    if (cached && Date.now() - cached.timestamp < TOKEN_CACHE_TTL_MS) {
-      output[tokenId] = cached.value;
+    // A cached null records a token whose on-chain read failed; only `undefined` is a miss.
+    if (cached !== undefined) {
+      output[tokenId] = cached;
     } else {
       missing.push(tokenId);
     }
@@ -432,20 +421,8 @@ async function fetchTokenMetadata(
         mintedAt: Number(mintedAt),
       };
     }
-    tokenCache.set(tokenId, { value: metadata, timestamp: Date.now() });
+    tokenCache.set(tokenId, metadata);
     output[tokenId] = metadata;
-  }
-
-  if (tokenCache.size > 4_096) {
-    const now = Date.now();
-    for (const [key, entry] of tokenCache) {
-      if (now - entry.timestamp >= TOKEN_CACHE_TTL_MS) tokenCache.delete(key);
-    }
-    while (tokenCache.size > 4_096) {
-      const oldestKey = tokenCache.keys().next().value;
-      if (oldestKey === undefined) break;
-      tokenCache.delete(oldestKey);
-    }
   }
 
   return output;

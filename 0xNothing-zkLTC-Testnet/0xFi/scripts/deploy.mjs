@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -23,6 +22,8 @@ import {
   CURRENT_LENDING_IMPLEMENTATION_STATUS,
 } from "./lib/lending-implementation.mjs";
 import { publicEnvironmentValues, writePublicEnvironment } from "./lib/public-environment.mjs";
+import { fallbackRpcUrl, primaryRpcUrl, RPC_BATCH_OPTIONS } from "./lib/rpc.mjs";
+import { runStep } from "./lib/spawn-step.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 dotenv.config({ path: path.join(root, ".env.local"), quiet: true });
@@ -66,30 +67,15 @@ if (!/^0x[0-9a-fA-F]{64}$/.test(privateKey)) {
   throw new Error("DEPLOYER_PRIVATE_KEY/API_KEY is missing or is not a 32-byte private key");
 }
 const account = privateKeyToAccount(privateKey);
-const rpcUrl = (process.env.LITEFORGE_RPC_URL || network.rpcUrl).trim();
-const fallbackRpcUrl = (process.env.LITEFORGE_FALLBACK_RPC_URL || network.fallbackRpcUrl).trim();
+const rpcUrl = primaryRpcUrl(network);
 const client = createPublicClient({
   transport: fallback([
-    http(rpcUrl, { timeout: 15_000, retryCount: 2 }),
-    http(fallbackRpcUrl, { timeout: 15_000, retryCount: 1 }),
+    http(rpcUrl, { ...RPC_BATCH_OPTIONS, timeout: 15_000, retryCount: 2 }),
+    http(fallbackRpcUrl(network), { ...RPC_BATCH_OPTIONS, timeout: 15_000, retryCount: 1 }),
   ]),
 });
 
-async function run(command, args, extraEnv = {}, cwd = root) {
-  await new Promise((resolvePromise, reject) => {
-    const child = spawn(command, args, {
-      cwd,
-      env: { ...process.env, ...extraEnv },
-      stdio: "inherit",
-      windowsHide: true,
-    });
-    child.on("error", reject);
-    child.on("exit", (code) => {
-      if (code === 0) resolvePromise();
-      else reject(new Error(`${command} exited with code ${code}`));
-    });
-  });
-}
+const run = (command, args, extraEnv = {}, cwd = root) => runStep(command, args, extraEnv, cwd);
 
 function requireAddress(value, label) {
   if (!isAddress(value)) throw new Error(`Invalid ${label} address in deployment output`);

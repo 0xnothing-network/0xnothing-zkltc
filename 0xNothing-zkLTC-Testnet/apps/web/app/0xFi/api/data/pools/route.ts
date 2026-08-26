@@ -18,6 +18,7 @@ import type { DataEnvelope, PoolPoint, PoolTokenPoint } from "@fi/lib/data";
 import { queryGoldsky, unconfiguredEnvelope } from "@fi/lib/server/goldsky";
 import { loadPairTail } from "@fi/lib/server/rpcTail";
 import { tokenImageUrl } from "@fi/lib/tokenImage";
+import { createBoundedCache } from "@/lib/boundedCache";
 
 type PoolRow = Omit<PoolPoint, "id" | "token0" | "token1" | "totalSupply"> & {
   id: string;
@@ -249,10 +250,16 @@ async function visibleDeploymentPools(pools: PoolPoint[]): Promise<{
   return { pools: visible, excluded: pools.length - visible.length, communityPoolIds };
 }
 
-const tokenPointCache = new Map<string, { point: PoolTokenPoint; expiresAt: number }>();
-const tokenPointInFlight = new Map<string, Promise<PoolTokenPoint>>();
-const registryImageCache = new Map<string, { imageUrl: string; expiresAt: number }>();
-const registryImageInFlight = new Map<string, Promise<string>>();
+const tokenPointCache = createBoundedCache<PoolTokenPoint>({
+  maxEntries: MAX_TOKEN_POINT_CACHE_ENTRIES,
+  ttlMs: TOKEN_POINT_TTL_MS,
+  maxInFlight: MAX_TOKEN_POINT_CACHE_ENTRIES,
+});
+const registryImageCache = createBoundedCache<string>({
+  maxEntries: MAX_REGISTRY_IMAGE_CACHE_ENTRIES,
+  ttlMs: REGISTRY_IMAGE_TTL_MS,
+  maxInFlight: MAX_REGISTRY_IMAGE_CACHE_ENTRIES,
+});
 
 async function loadTokenPoint(address: Address): Promise<PoolTokenPoint> {
   const fallback = `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -266,29 +273,7 @@ async function loadTokenPoint(address: Address): Promise<PoolTokenPoint> {
 }
 
 async function tokenPoint(address: Address): Promise<PoolTokenPoint> {
-  const key = address.toLowerCase();
-  const now = Date.now();
-  const cached = tokenPointCache.get(key);
-  if (cached && cached.expiresAt > now) return cached.point;
-
-  let pending = tokenPointInFlight.get(key);
-  if (!pending) {
-    pending = loadTokenPoint(address).then((point) => {
-      if (!tokenPointCache.has(key) && tokenPointCache.size >= MAX_TOKEN_POINT_CACHE_ENTRIES) {
-        const oldest = tokenPointCache.keys().next().value;
-        if (oldest) tokenPointCache.delete(oldest);
-      }
-      tokenPointCache.set(key, { point, expiresAt: Date.now() + TOKEN_POINT_TTL_MS });
-      return point;
-    });
-    tokenPointInFlight.set(key, pending);
-  }
-
-  try {
-    return await pending;
-  } finally {
-    if (tokenPointInFlight.get(key) === pending) tokenPointInFlight.delete(key);
-  }
+  return tokenPointCache.load(address.toLowerCase(), () => loadTokenPoint(address));
 }
 
 async function enrichPumpTokenImages(pools: PoolPoint[]): Promise<void> {
@@ -341,34 +326,15 @@ async function enrichRegistryImages(pools: PoolPoint[]): Promise<void> {
 }
 
 async function registryImage(registry: Address, token: Address): Promise<string> {
-  const key = token.toLowerCase();
-  const cached = registryImageCache.get(key);
-  if (cached && cached.expiresAt > Date.now()) return cached.imageUrl;
-
-  let pending = registryImageInFlight.get(key);
-  if (!pending) {
-    pending = client.readContract({
+  return registryImageCache.load(token.toLowerCase(), async () => {
+    const imageURI = await client.readContract({
       address: registry,
       abi: tokenMetadataRegistryAbi,
       functionName: "imageURI",
       args: [token],
-    }).catch(() => "").then((imageURI) => {
-      const imageUrl = tokenImageUrl(imageURI) ?? "";
-      if (!registryImageCache.has(key) && registryImageCache.size >= MAX_REGISTRY_IMAGE_CACHE_ENTRIES) {
-        const oldest = registryImageCache.keys().next().value;
-        if (oldest) registryImageCache.delete(oldest);
-      }
-      registryImageCache.set(key, { imageUrl, expiresAt: Date.now() + REGISTRY_IMAGE_TTL_MS });
-      return imageUrl;
-    });
-    registryImageInFlight.set(key, pending);
-  }
-
-  try {
-    return await pending;
-  } finally {
-    if (registryImageInFlight.get(key) === pending) registryImageInFlight.delete(key);
-  }
+    }).catch(() => "");
+    return tokenImageUrl(imageURI) ?? "";
+  });
 }
 
 async function enrichLockBurnBadges(pools: PoolPoint[]): Promise<void> {
@@ -726,29 +692,14 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
   }
 }
 
-let cachedPools: {
-  envelope: DataEnvelope<PoolPoint[]>;
-  expiresAt: number;
-  staleWhileRevalidateExpiresAt: number;
-} | undefined;
-let poolsLoadInFlight: Promise<DataEnvelope<PoolPoint[]>> | undefined;
+// A single-entry cache retained indefinitely: freshness is derived from the entry
+// age instead of a ttl, so the last successful snapshot can still answer a request
+// after the stale-while-revalidate window when a refresh fails outright.
+const POOLS_CACHE_KEY = "pools";
+const poolsCache = createBoundedCache<DataEnvelope<PoolPoint[]>>({ maxEntries: 1 });
 
 function loadPoolsOnce(): Promise<DataEnvelope<PoolPoint[]>> {
-  if (!poolsLoadInFlight) {
-    poolsLoadInFlight = loadPoolsEnvelope().then((envelope) => {
-      const cachedAt = Date.now();
-      cachedPools = {
-        envelope,
-        expiresAt: cachedAt + POOLS_CACHE_TTL_MS,
-        staleWhileRevalidateExpiresAt: cachedAt + POOLS_CACHE_TTL_MS + POOLS_STALE_WHILE_REVALIDATE_MS,
-      };
-      return envelope;
-    });
-    void poolsLoadInFlight.finally(() => {
-      poolsLoadInFlight = undefined;
-    }).catch(() => { /* callers and stale fallback handle refresh failures */ });
-  }
-  return poolsLoadInFlight;
+  return poolsCache.refresh(POOLS_CACHE_KEY, loadPoolsEnvelope);
 }
 
 function poolsResponse(envelope: DataEnvelope<PoolPoint[]>, cacheStatus: "HIT" | "MISS" | "COALESCED" | "STALE") {
@@ -761,28 +712,28 @@ function poolsResponse(envelope: DataEnvelope<PoolPoint[]>, cacheStatus: "HIT" |
 }
 
 export async function GET() {
-  const now = Date.now();
-  if (cachedPools && cachedPools.expiresAt > now) {
-    return poolsResponse(cachedPools.envelope, "HIT");
+  const cached = poolsCache.entry(POOLS_CACHE_KEY);
+  if (cached && cached.ageMs < POOLS_CACHE_TTL_MS) {
+    return poolsResponse(cached.value, "HIT");
   }
 
-  if (cachedPools && cachedPools.staleWhileRevalidateExpiresAt > now) {
+  if (cached && cached.ageMs < POOLS_CACHE_TTL_MS + POOLS_STALE_WHILE_REVALIDATE_MS) {
     // Keep the serverless invocation alive until the shared background refresh settles.
     after(() => loadPoolsOnce().catch(() => { /* retain the last successful response during the stale window */ }));
-    return poolsResponse(cachedPools.envelope, "STALE");
+    return poolsResponse(cached.value, "STALE");
   }
 
-  const joinedExistingRequest = Boolean(poolsLoadInFlight);
-  const request = loadPoolsOnce();
+  const joinedExistingRequest = Boolean(poolsCache.pending(POOLS_CACHE_KEY));
 
   try {
-    const envelope = await request;
+    const envelope = await loadPoolsOnce();
     return poolsResponse(envelope, joinedExistingRequest ? "COALESCED" : "MISS");
   } catch (error) {
-    if (cachedPools) {
+    const stale = poolsCache.entry(POOLS_CACHE_KEY);
+    if (stale) {
       return poolsResponse({
-        ...cachedPools.envelope,
-        warning: `${cachedPools.envelope.warning ? `${cachedPools.envelope.warning} ` : ""}Live refresh failed; serving the last successful market snapshot.`,
+        ...stale.value,
+        warning: `${stale.value.warning ? `${stale.value.warning} ` : ""}Live refresh failed; serving the last successful market snapshot.`,
       }, "STALE");
     }
     return NextResponse.json(

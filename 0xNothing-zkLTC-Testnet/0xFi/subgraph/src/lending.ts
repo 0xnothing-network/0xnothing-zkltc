@@ -21,11 +21,11 @@ const NUSD = Address.fromString("0x5317e21aba902c6c7087a84457bc02ffe99604d1");
 const ZERO_ADDRESS = Address.zero();
 
 export function handleInitialize(block: ethereum.Block): void {
-  refreshMarket(dataSource.address(), block.timestamp);
+  refreshMarket(dataSource.address(), block.timestamp, true);
 }
 
 export function handleInterestAccrued(event: InterestAccrued): void {
-  refreshMarket(event.address, event.block.timestamp);
+  refreshMarket(event.address, event.block.timestamp, false);
 }
 
 export function handleSupplied(event: Supplied): void {
@@ -65,11 +65,11 @@ export function handleBadDebtRepaid(event: BadDebtRepaid): void {
 }
 
 export function handleCapsUpdated(event: CapsUpdated): void {
-  refreshMarket(event.address, event.block.timestamp);
+  refreshMarket(event.address, event.block.timestamp, true);
 }
 
 export function handlePausesUpdated(event: PausesUpdated): void {
-  refreshMarket(event.address, event.block.timestamp);
+  refreshMarket(event.address, event.block.timestamp, true);
 }
 
 function saveAction(
@@ -98,12 +98,13 @@ function saveAction(
   action.txHash = event.transaction.hash;
   action.logIndex = event.logIndex;
   action.save();
-  refreshMarket(event.address, event.block.timestamp);
+  refreshMarket(event.address, event.block.timestamp, false);
 }
 
-function refreshMarket(address: Address, timestamp: BigInt): void {
+function refreshMarket(address: Address, timestamp: BigInt, includeGovernance: boolean): void {
   const contract = LendingPool.bind(address);
   let market = LendingMarket.load(address);
+  let governance = includeGovernance;
   if (market == null) {
     market = new LendingMarket(address);
     market.totalSuppliedNusd = ZERO_BI;
@@ -115,25 +116,36 @@ function refreshMarket(address: Address, timestamp: BigInt): void {
     market.supplyPaused = true;
     market.borrowPaused = true;
     market.collateralWithdrawalPaused = true;
+    governance = true;
+  }
+  // Caps and pauses only move through CapsUpdated / PausesUpdated, so user actions
+  // skip those five eth_calls and read the four accounting values that actually
+  // change per event. All three pauses still being true is the pessimistic default,
+  // which means an earlier governance read reverted; retry it instead of leaving the
+  // market permanently reported as paused.
+  if (market.supplyPaused && market.borrowPaused && market.collateralWithdrawalPaused) {
+    governance = true;
   }
   const supplied = contract.try_totalSupplied();
   const borrowed = contract.try_totalBorrowed();
   const badDebt = contract.try_totalBadDebtNusd();
   const borrowIndex = contract.try_borrowIndexWad();
-  const supplyCap = contract.try_supplyCapNusd();
-  const borrowCap = contract.try_borrowCapNusd();
-  const supplyPaused = contract.try_supplyPaused();
-  const borrowPaused = contract.try_borrowPaused();
-  const collateralPaused = contract.try_collateralWithdrawalPaused();
   if (!supplied.reverted) market.totalSuppliedNusd = supplied.value;
   if (!borrowed.reverted) market.totalBorrowedNusd = borrowed.value;
   if (!badDebt.reverted) market.totalBadDebtNusd = badDebt.value;
   if (!borrowIndex.reverted) market.borrowIndexWad = borrowIndex.value;
-  if (!supplyCap.reverted) market.supplyCapNusd = supplyCap.value;
-  if (!borrowCap.reverted) market.borrowCapNusd = borrowCap.value;
-  if (!supplyPaused.reverted) market.supplyPaused = supplyPaused.value;
-  if (!borrowPaused.reverted) market.borrowPaused = borrowPaused.value;
-  if (!collateralPaused.reverted) market.collateralWithdrawalPaused = collateralPaused.value;
+  if (governance) {
+    const supplyCap = contract.try_supplyCapNusd();
+    const borrowCap = contract.try_borrowCapNusd();
+    const supplyPaused = contract.try_supplyPaused();
+    const borrowPaused = contract.try_borrowPaused();
+    const collateralPaused = contract.try_collateralWithdrawalPaused();
+    if (!supplyCap.reverted) market.supplyCapNusd = supplyCap.value;
+    if (!borrowCap.reverted) market.borrowCapNusd = borrowCap.value;
+    if (!supplyPaused.reverted) market.supplyPaused = supplyPaused.value;
+    if (!borrowPaused.reverted) market.borrowPaused = borrowPaused.value;
+    if (!collateralPaused.reverted) market.collateralWithdrawalPaused = collateralPaused.value;
+  }
   market.updatedAt = timestamp;
   market.save();
 }

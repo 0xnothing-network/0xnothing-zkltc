@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -6,6 +5,9 @@ import { fileURLToPath } from "node:url";
 
 import dotenv from "dotenv";
 import { privateKeyToAccount } from "viem/accounts";
+
+import { primaryRpcUrl } from "./lib/rpc.mjs";
+import { runStep } from "./lib/spawn-step.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 dotenv.config({ path: path.join(root, ".env.local"), quiet: true });
@@ -25,18 +27,7 @@ if ((mode === "--resume" || mode === "--finalize-only") && !fs.existsSync(receip
   throw new Error("No direct-governance broadcast journal exists");
 }
 
-async function run(command, args, extraEnv = {}, cwd = root) {
-  await new Promise((resolvePromise, reject) => {
-    const child = spawn(command, args, {
-      cwd,
-      env: { ...process.env, ...extraEnv },
-      stdio: "inherit",
-      windowsHide: true,
-    });
-    child.on("error", reject);
-    child.on("exit", (code) => code === 0 ? resolvePromise() : reject(new Error(`${command} exited with code ${code}`)));
-  });
-}
+const run = (command, args, extraEnv = {}, cwd = root) => runStep(command, args, extraEnv, cwd);
 
 if (mode !== "--finalize-only") {
   const rawKey = (process.env.DEPLOYER_PRIVATE_KEY || process.env.API_KEY || "").trim();
@@ -57,7 +48,7 @@ if (mode !== "--finalize-only") {
     "script",
     "script/DisableTimelockTestnet.s.sol:DisableTimelockTestnet",
     "--rpc-url",
-    (process.env.LITEFORGE_RPC_URL || network.rpcUrl).trim(),
+    primaryRpcUrl(network),
   ];
   if (mode !== "--resume") args.push("--force");
   if (mode === "--broadcast") args.push("--broadcast", "--slow");

@@ -9,6 +9,7 @@ import { createPublicClient, fallback, getAddress, http, isAddress, parseAbi, ze
 import { atomicWriteFile } from "./lib/graduation-runtime.mjs";
 import { prepareMainPumpManifestUpdate, writeMainPumpManifestUpdate } from "./lib/main-pump-publication.mjs";
 import { publicEnvironmentValues, writePublicEnvironment } from "./lib/public-environment.mjs";
+import { fallbackRpcUrl, primaryRpcUrl, RPC_BATCH_OPTIONS } from "./lib/rpc.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 dotenv.config({ path: path.join(root, ".env.local"), quiet: true });
@@ -28,12 +29,11 @@ const receiptPath = path.join(
 );
 if (!fs.existsSync(receiptPath)) throw new Error("Direct-governance broadcast receipt is missing");
 
-const rpcUrl = (process.env.LITEFORGE_RPC_URL || network.rpcUrl).trim();
-const fallbackRpcUrl = (process.env.LITEFORGE_FALLBACK_RPC_URL || network.fallbackRpcUrl).trim();
+const rpcUrl = primaryRpcUrl(network);
 const client = createPublicClient({
   transport: fallback([
-    http(rpcUrl, { timeout: 15_000, retryCount: 2 }),
-    http(fallbackRpcUrl, { timeout: 15_000, retryCount: 1 }),
+    http(rpcUrl, { ...RPC_BATCH_OPTIONS, timeout: 15_000, retryCount: 2 }),
+    http(fallbackRpcUrl(network), { ...RPC_BATCH_OPTIONS, timeout: 15_000, retryCount: 1 }),
   ]),
 });
 const chainId = await client.getChainId();

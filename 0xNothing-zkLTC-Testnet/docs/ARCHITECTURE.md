@@ -50,14 +50,20 @@ toward that derived reserve target.
 
 At the target, the market moves to `READY` and further buys stop. No DEX call
 occurs inside the target-crossing buy. The router was deployed disabled and
-without an adapter; the delayed 0xFi adapter activation has since completed.
-The pinned controller still does not own Pump or router administration, so its
-permissionless graduation path remains inactive and the client fails closed.
-Holders retain an exit while activation is incomplete: the first successful sell
+without an adapter; the delayed 0xFi adapter activation and both admin handovers
+have since completed on testnet, so the controller's permissionless graduation
+path is active. `pump.graduation` in
+`deployments/liteforge-testnet/deployments.json` records that state, but no
+manifest field gates the UI: for a `READY` market the client recomputes
+`operational` from live reads and fails closed unless the controller owns Pump
+admin, Pump points at the pinned router, controller and router agree on the
+pinned adapter, the router's admin is the controller, `graduationsPaused` is
+false, `enabled` is true, and `isAdapterAllowed` is true.
+Holders retain an exit regardless: the first successful sell
 from `READY` atomically returns the market to `TRADING` and emits
 `TokenCurveReopened`.
 
-After both admin handovers, anyone may ask the controller to graduate a READY
+With that path live, anyone may ask the controller to graduate a READY
 market. It derives the exact terminal token/NUSD amounts, atomically prepares an
 empty protected 0xFi pair, pins the expected LP output, and routes LP tokens to
 the permanent locker. A caller cannot select the adapter, pool, reserves,

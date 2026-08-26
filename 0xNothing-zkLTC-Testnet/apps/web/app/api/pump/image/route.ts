@@ -1,16 +1,22 @@
 import { PUMP_MAX_IMAGE_BYTES, validatePumpImage } from "@/features/pump/imageValidation";
 import { normalizePumpIpfsPath } from "@/features/pump/config";
+import { createBoundedCache } from "@/lib/boundedCache";
 import sharp from "sharp";
 
 export const runtime = "nodejs";
 
 const CACHE_SECONDS = 31_536_000;
-const GATEWAY_TIMEOUT_MS = 25_000;
+// A logo is capped at 2 MB, so a gateway that has not answered in this window is
+// stalled rather than slow. The old 25 s budget held a market grid's connections
+// open long after the browser had anything to paint.
+const GATEWAY_TIMEOUT_MS = 10_000;
 const HEDGE_DELAY_MS = 650;
 const MAX_REDIRECTS = 2;
 const MAX_IMAGE_DIMENSION = 4_096;
 const MAX_IMAGE_PIXELS = 4_194_304;
-const FAILURE_BACKOFF_MS = 5_000;
+// Long enough that one dead CID cannot re-enter the full gateway wait on every
+// grid render, short enough that a freshly pinned CID still appears quickly.
+const FAILURE_BACKOFF_MS = 20_000;
 const MAX_FAILURE_CACHE_ENTRIES = 512;
 
 interface PumpImage {
@@ -18,8 +24,19 @@ interface PumpImage {
   contentType: string;
 }
 
-const imageLoadsInFlight = new Map<string, Promise<PumpImage>>();
-const imageFailureUntil = new Map<string, number>();
+// Concurrent requests for one CID share a single gateway fetch. The zero ttl keeps
+// image bodies out of memory: only the in-flight promise is tracked.
+const imageLoads = createBoundedCache<PumpImage>({
+  maxEntries: 1,
+  ttlMs: 0,
+  maxInFlight: MAX_FAILURE_CACHE_ENTRIES,
+});
+// A CID that just failed every gateway is answered from the fallback for the backoff
+// window instead of retrying on each render.
+const imageFailures = createBoundedCache<true>({
+  maxEntries: MAX_FAILURE_CACHE_ENTRIES,
+  ttlMs: FAILURE_BACKOFF_MS,
+});
 
 export async function GET(request: Request) {
   const searchParams = new URL(request.url).searchParams;
@@ -29,23 +46,15 @@ export async function GET(request: Request) {
   const symbol = normalizeFallbackSymbol(searchParams.get("symbol") ?? "");
 
   const etag = `"pump-${cidPath.replace(/[^a-zA-Z0-9._~-]/g, "-")}"`;
-  if (request.headers.get("if-none-match") === etag) {
+  if (matchesEtag(request.headers.get("if-none-match"), etag)) {
     return new Response(null, { status: 304, headers: imageHeaders(etag) });
   }
 
-  if ((imageFailureUntil.get(cidPath) ?? 0) > Date.now()) return fallbackImage(symbol);
+  if (imageFailures.get(cidPath)) return fallbackImage(symbol);
 
   try {
-    let pending = imageLoadsInFlight.get(cidPath);
-    if (!pending) {
-      pending = loadPumpImage(cidPath);
-      imageLoadsInFlight.set(cidPath, pending);
-      void pending.finally(() => {
-        if (imageLoadsInFlight.get(cidPath) === pending) imageLoadsInFlight.delete(cidPath);
-      }).catch(() => undefined);
-    }
-    const image = await pending;
-    imageFailureUntil.delete(cidPath);
+    const image = await imageLoads.refresh(cidPath, () => loadPumpImage(cidPath));
+    imageFailures.delete(cidPath);
 
     return new Response(image.body, {
       headers: {
@@ -55,13 +64,7 @@ export async function GET(request: Request) {
       },
     });
   } catch {
-    imageFailureUntil.delete(cidPath);
-    imageFailureUntil.set(cidPath, Date.now() + FAILURE_BACKOFF_MS);
-    while (imageFailureUntil.size > MAX_FAILURE_CACHE_ENTRIES) {
-      const oldest = imageFailureUntil.keys().next().value;
-      if (oldest === undefined) break;
-      imageFailureUntil.delete(oldest);
-    }
+    imageFailures.set(cidPath, true);
     return fallbackImage(symbol);
   }
 }
@@ -235,6 +238,20 @@ function imageHeaders(etag: string): Record<string, string> {
     ETag: etag,
     "X-Content-Type-Options": "nosniff",
   };
+}
+
+/**
+ * If-None-Match is a list and uses weak comparison, so an intermediary that
+ * rewrote the strong tag to `W/"..."` must still get a 304 instead of a full
+ * gateway round trip.
+ */
+function matchesEtag(header: string | null, etag: string): boolean {
+  if (!header) return false;
+  const trimmed = header.trim();
+  if (trimmed === "*") return true;
+  return trimmed
+    .split(",")
+    .some((candidate) => candidate.trim().replace(/^W\//, "") === etag);
 }
 
 function imageError(message: string, status: number, maxAge: number) {

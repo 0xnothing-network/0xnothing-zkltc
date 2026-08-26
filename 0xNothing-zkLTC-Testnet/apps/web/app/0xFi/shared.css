@@ -9,64 +9,12 @@ select:not(.fi-root select) {
 input:not(.fi-root input),
 select:not(.fi-root select),
 textarea:not(.fi-root textarea) {
-  border-color: var(--pixel-line-soft) !important;
-  background-color: rgba(5,5,5,0.78) !important;
-  color: #f4f4f4 !important;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02) !important;
-}
-
-input:not(.fi-root input):focus,
-select:not(.fi-root select):focus,
-textarea:not(.fi-root textarea):focus {
-  border-color: rgba(223,255,238,0.48) !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(223,255,238,0.14),
-    0 0 0 3px rgba(223,255,238,0.045) !important;
-}
-
-input:not(.fi-root input),
-select:not(.fi-root select),
-textarea:not(.fi-root textarea) {
-  border-radius: 0 !important;
-  border-color: var(--px-line-hi) !important;
-  background: #101010 !important;
-  color: var(--px-ink) !important;
-  box-shadow: 4px 4px 0 var(--px-shadow) !important;
   clip-path: polygon(
     0 6px, 6px 6px, 6px 0,
     calc(100% - 6px) 0, calc(100% - 6px) 6px, 100% 6px,
     100% calc(100% - 6px), calc(100% - 6px) calc(100% - 6px), calc(100% - 6px) 100%,
     6px 100%, 6px calc(100% - 6px), 0 calc(100% - 6px)
   ) !important;
-}
-
-input:not(.fi-root input)::placeholder,
-textarea:not(.fi-root textarea)::placeholder {
-  color: #6f6f6f !important;
-}
-
-input:not(.fi-root input):focus,
-select:not(.fi-root select):focus,
-textarea:not(.fi-root textarea):focus {
-  border-color: var(--px-ink) !important;
-  outline: none !important;
-  box-shadow: 4px 4px 0 var(--px-shadow), 0 0 0 2px rgba(242,242,242,0.14) !important;
-}
-
-input:not(.fi-root input),
-select:not(.fi-root select),
-textarea:not(.fi-root textarea) {
-  background: #0c0c0c !important;
-  border-color: #4f4f4f !important;
-}
-
-input:not(.fi-root input):focus,
-select:not(.fi-root select):focus,
-textarea:not(.fi-root textarea):focus {
-  border-color: var(--px-cyan) !important;
-  box-shadow:
-    4px 4px 0 #000,
-    0 0 0 2px rgba(68,232,255,0.24) !important;
 }
 
 p:not(.fi-root p),
@@ -78,56 +26,6 @@ small:not(.fi-root small) {
   opacity: 1 !important;
 }
 
-input:not(.fi-root input)::placeholder,
-textarea:not(.fi-root textarea)::placeholder {
-  color: var(--px-faint) !important;
-  opacity: 1 !important;
-}
-
-input:not(.fi-root input),
-select:not(.fi-root select),
-textarea:not(.fi-root textarea) {
-  background: #0b0b0b !important;
-  border-color: rgba(255, 255, 255, 0.20) !important;
-  color: var(--px-ink) !important;
-}
-
-input:not(.fi-root input)::placeholder,
-textarea:not(.fi-root textarea)::placeholder {
-  color: rgba(154, 154, 154, 0.72) !important;
-}
-
-input:not(.fi-root input):focus,
-select:not(.fi-root select):focus,
-textarea:not(.fi-root textarea):focus {
-  border-color: var(--px-cyan) !important;
-  box-shadow:
-    4px 4px 0 #000,
-    0 0 0 2px rgba(0, 234, 255, 0.20) !important;
-}
-
-input:not(.fi-root input),
-select:not(.fi-root select),
-textarea:not(.fi-root textarea) {
-  background: #0b0b0b !important;
-  border-color: rgba(245, 245, 245, 0.20) !important;
-  color: var(--px-ink) !important;
-}
-
-input:not(.fi-root input)::placeholder,
-textarea:not(.fi-root textarea)::placeholder {
-  color: rgba(143, 143, 143, 0.74) !important;
-}
-
-input:not(.fi-root input):focus,
-select:not(.fi-root select):focus,
-textarea:not(.fi-root textarea):focus {
-  border-color: var(--px-cyan) !important;
-  box-shadow:
-    4px 4px 0 #000,
-    0 0 0 2px rgba(68, 234, 255, 0.16) !important;
-}
-
 button:not(.fi-root button):disabled {
   filter: grayscale(0.12) saturate(0.86) brightness(0.88) !important;
 }
@@ -135,207 +33,8 @@ button:not(.fi-root button):disabled {
 input:not(.fi-root input),
 select:not(.fi-root select),
 textarea:not(.fi-root textarea) {
-  background: #08101a !important;
-  border-color: rgba(216, 225, 223, 0.24) !important;
-  color: var(--px-ink) !important;
-}
-
-input:not(.fi-root input):focus,
-select:not(.fi-root select):focus,
-textarea:not(.fi-root textarea):focus {
-  border-color: var(--px-cyan) !important;
-  box-shadow:
-    4px 4px 0 #000,
-    0 0 0 2px rgba(53, 233, 255, 0.24) !important;
-}
-
-input:not(.fi-root input),
-select:not(.fi-root select),
-textarea:not(.fi-root textarea) {
-  background: #09162a !important;
-  border-color: rgba(79, 239, 255, 0.34) !important;
-  color: var(--px-ink) !important;
-}
-
-input:not(.fi-root input):focus,
-select:not(.fi-root select):focus,
-textarea:not(.fi-root textarea):focus {
-  border-color: var(--px-cyan) !important;
-  box-shadow:
-    4px 4px 0 #000,
-    0 0 0 2px rgba(54, 239, 255, 0.34),
-    0 0 22px rgba(54, 239, 255, 0.14) !important;
-}
-
-input:not(.fi-root input),
-select:not(.fi-root select),
-textarea:not(.fi-root textarea) {
-  background: #11285f !important;
-  border-color: rgba(0, 234, 255, 0.58) !important;
-  color: var(--px-ink) !important;
-}
-
-input:not(.fi-root input)::placeholder,
-textarea:not(.fi-root textarea)::placeholder {
-  color: rgba(196, 221, 255, 0.62) !important;
-}
-
-input:not(.fi-root input):focus,
-select:not(.fi-root select):focus,
-textarea:not(.fi-root textarea):focus {
-  border-color: var(--px-amber) !important;
-  box-shadow:
-    4px 4px 0 #000,
-    0 0 0 2px rgba(255, 232, 79, 0.42),
-    0 0 26px rgba(0, 234, 255, 0.20) !important;
-}
-
-input:not(.fi-root input),
-select:not(.fi-root select),
-textarea:not(.fi-root textarea) {
   background-color: var(--px-bg-3) !important;
   background-image: none !important;
-  border-color: var(--px-line) !important;
-  color: var(--px-ink) !important;
-}
-
-input:not(.fi-root input)::placeholder,
-textarea:not(.fi-root textarea)::placeholder {
-  color: rgba(246, 246, 246, 0.44) !important;
-}
-
-input:not(.fi-root input):focus,
-select:not(.fi-root select):focus,
-textarea:not(.fi-root textarea):focus {
-  border-color: var(--px-line-hi) !important;
-  box-shadow:
-    3px 3px 0 #000,
-    0 0 0 1px rgba(255, 255, 255, 0.18) !important;
-}
-
-h1:not(.fi-root h1),
-h2:not(.fi-root h2),
-h3:not(.fi-root h3),
-h4:not(.fi-root h4) {
-  color: var(--px-ink) !important;
-  opacity: 1 !important;
-}
-
-p:not(.fi-root p),
-label:not(.fi-root label),
-li:not(.fi-root li),
-small:not(.fi-root small) {
-  color: var(--px-readable) !important;
-  opacity: 1 !important;
-}
-
-input:not(.fi-root input),
-select:not(.fi-root select),
-textarea:not(.fi-root textarea) {
-  color: #ffffff !important;
-  caret-color: #ffffff !important;
-}
-
-button:not(.fi-root button):disabled,
-:not(.fi-root *)[disabled] {
-  color: #a8a8a8 !important;
-  opacity: 0.72 !important;
-}
-
-input:not(.fi-root input),
-select:not(.fi-root select),
-textarea:not(.fi-root textarea) {
-  -webkit-font-smoothing: antialiased !important;
-  -moz-osx-font-smoothing: grayscale !important;
-}
-
-h1:not(.fi-root h1),
-h2:not(.fi-root h2),
-h3:not(.fi-root h3),
-h4:not(.fi-root h4) {
-  color: var(--px-ink) !important;
-  opacity: 1 !important;
-  text-shadow: none !important;
-}
-
-p:not(.fi-root p),
-label:not(.fi-root label),
-li:not(.fi-root li),
-small:not(.fi-root small) {
-  color: var(--px-readable) !important;
-  opacity: 1 !important;
-}
-
-input:not(.fi-root input),
-select:not(.fi-root select),
-textarea:not(.fi-root textarea) {
-  background: var(--px-bg-3) !important;
-  color: var(--px-ink) !important;
-  border-color: var(--px-line) !important;
-  caret-color: var(--px-cream) !important;
-}
-
-input:not(.fi-root input)::placeholder,
-textarea:not(.fi-root textarea)::placeholder {
-  color: var(--px-faint) !important;
-  opacity: 1 !important;
-}
-
-input:not(.fi-root input):focus,
-select:not(.fi-root select):focus,
-textarea:not(.fi-root textarea):focus {
-  border-color: var(--px-yellow-hi) !important;
-  box-shadow:
-    3px 3px 0 var(--px-shadow),
-    0 0 0 1px rgba(255, 228, 92, 0.28) !important;
-}
-
-button:not(.fi-root button):disabled,
-:not(.fi-root *)[disabled] {
-  color: #bdb8aa !important;
-  opacity: 0.68 !important;
-}
-
-h1:not(.fi-root h1),
-h2:not(.fi-root h2),
-h3:not(.fi-root h3),
-h4:not(.fi-root h4) {
-  color: var(--px-ink) !important;
-  opacity: 1 !important;
-  text-shadow: 1px 1px 0 #000000 !important;
-}
-
-p:not(.fi-root p),
-label:not(.fi-root label),
-li:not(.fi-root li),
-small:not(.fi-root small) {
-  color: var(--px-readable) !important;
-  opacity: 1 !important;
-}
-
-input:not(.fi-root input),
-select:not(.fi-root select),
-textarea:not(.fi-root textarea) {
-  background: #030303 !important;
-  color: var(--px-ink) !important;
-  border-color: var(--px-line) !important;
-  box-shadow: inset 0 -2px 0 #000000 !important;
-}
-
-input:not(.fi-root input)::placeholder,
-textarea:not(.fi-root textarea)::placeholder {
-  color: #8f8777 !important;
-  opacity: 1 !important;
-}
-
-input:not(.fi-root input):focus,
-select:not(.fi-root select):focus,
-textarea:not(.fi-root textarea):focus {
-  border-color: var(--px-cyan) !important;
-  box-shadow:
-    inset 0 -2px 0 #000000,
-    0 0 0 1px rgba(79, 243, 255, 0.35),
-    0 0 16px rgba(79, 243, 255, 0.08) !important;
 }
 
 button:not(.fi-root button):disabled,
@@ -343,48 +42,6 @@ button:not(.fi-root button):disabled,
   color: #8e8878 !important;
   opacity: 0.55 !important;
   filter: grayscale(0.35) !important;
-}
-
-h1:not(.fi-root h1),
-h2:not(.fi-root h2),
-h3:not(.fi-root h3),
-h4:not(.fi-root h4) {
-  color: #ffffff !important;
-  opacity: 1 !important;
-  text-shadow: 1px 1px 0 #000000 !important;
-}
-
-p:not(.fi-root p),
-label:not(.fi-root label),
-li:not(.fi-root li),
-small:not(.fi-root small) {
-  color: #d4d4d4 !important;
-  opacity: 1 !important;
-}
-
-input:not(.fi-root input),
-select:not(.fi-root select),
-textarea:not(.fi-root textarea) {
-  background: #020202 !important;
-  color: #ffffff !important;
-  border-color: rgba(255, 255, 255, 0.24) !important;
-  caret-color: #ffffff !important;
-  box-shadow: inset 0 -2px 0 #000000 !important;
-}
-
-input:not(.fi-root input)::placeholder,
-textarea:not(.fi-root textarea)::placeholder {
-  color: #7c7c7c !important;
-  opacity: 1 !important;
-}
-
-input:not(.fi-root input):focus,
-select:not(.fi-root select):focus,
-textarea:not(.fi-root textarea):focus {
-  border-color: #ffffff !important;
-  box-shadow:
-    inset 0 -2px 0 #000000,
-    0 0 0 1px rgba(255, 255, 255, 0.38) !important;
 }
 
 input:not(.fi-root input),
@@ -415,23 +72,12 @@ small:not(.fi-root small) {
 input:not(.fi-root input),
 select:not(.fi-root select),
 textarea:not(.fi-root textarea) {
-  background: #020202 !important;
-  color: var(--ui-text) !important;
-  border-color: var(--ui-line) !important;
   caret-color: var(--ui-cream) !important;
-  box-shadow: inset 0 -2px 0 #000000 !important;
-}
-
-input:not(.fi-root input)::placeholder,
-textarea:not(.fi-root textarea)::placeholder {
-  color: var(--ui-faint) !important;
-  opacity: 1 !important;
 }
 
 input:not(.fi-root input):focus,
 select:not(.fi-root select):focus,
 textarea:not(.fi-root textarea):focus {
-  border-color: var(--ui-cyan) !important;
   box-shadow:
     inset 0 -2px 0 #000000,
     0 0 0 1px rgba(69, 232, 255, 0.38) !important;

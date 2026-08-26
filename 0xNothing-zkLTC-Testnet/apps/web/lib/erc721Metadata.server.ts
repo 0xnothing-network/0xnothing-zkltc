@@ -3,6 +3,7 @@ import "server-only";
 import { createPublicClient, getAddress, http, type Address } from "viem";
 import { litvm, LITVM_RPC_URL } from "@/config/wagmi";
 import { marketplaceNftKey } from "@/lib/marketplaceAbi";
+import { createBoundedCache } from "@/lib/boundedCache";
 
 const ERC721_METADATA_ABI = [
   {
@@ -22,6 +23,7 @@ const MAX_CACHE_ENTRIES = 2_048;
 const directPublicClient = createPublicClient({
   chain: litvm,
   transport: http(LITVM_RPC_URL, {
+    batch: { batchSize: 100, wait: 10 },
     retryCount: 2,
     retryDelay: 300,
     timeout: 15_000,
@@ -57,12 +59,13 @@ interface MetadataRequest {
   tokenId: string;
 }
 
-interface CacheEntry {
-  value: ValidatedErc721Metadata | null;
-  timestamp: number;
-}
-
-const metadataCache = new Map<string, CacheEntry>();
+// A failed read is cached as null on purpose: an unreachable or malformed token
+// URI should not be retried on every marketplace page render.
+const metadataCache = createBoundedCache<ValidatedErc721Metadata | null>({
+  maxEntries: MAX_CACHE_ENTRIES,
+  ttlMs: METADATA_TTL,
+  maxInFlight: MAX_CACHE_ENTRIES,
+});
 
 export async function fetchValidatedErc721Metadata(
   requests: MetadataRequest[],
@@ -79,42 +82,30 @@ export async function fetchValidatedErc721Metadata(
 
   const output: Record<string, ValidatedErc721Metadata | null> = {};
   await mapWithConcurrency([...unique.entries()], 8, async ([key, request]) => {
-    const cached = metadataCache.get(key);
-    if (cached && Date.now() - cached.timestamp < METADATA_TTL) {
-      output[key] = cached.value;
-      return;
-    }
-
-    let value: ValidatedErc721Metadata | null = null;
-    try {
-      const tokenUri = (await directPublicClient.readContract({
-        address: request.collection,
-        abi: ERC721_METADATA_ABI,
-        functionName: "tokenURI",
-        args: [BigInt(request.tokenId)],
-      })) as string;
-      const json = await readMetadataJson(tokenUri);
-      value = json
-        ? validatedErc721MetadataFromJson(json, request.collection, request.tokenId)
-        : null;
-    } catch (error) {
-      console.warn(
-        `[marketplace] ERC-721 metadata unavailable for ${request.collection}:${request.tokenId}:`,
-        error,
-      );
-    }
-
-    metadataCache.delete(key);
-    metadataCache.set(key, { value, timestamp: Date.now() });
-    output[key] = value;
+    output[key] = await metadataCache.load(key, () => loadTokenMetadata(request));
   });
-
-  while (metadataCache.size > MAX_CACHE_ENTRIES) {
-    const oldestKey = metadataCache.keys().next().value;
-    if (oldestKey === undefined) break;
-    metadataCache.delete(oldestKey);
-  }
   return output;
+}
+
+async function loadTokenMetadata(request: MetadataRequest): Promise<ValidatedErc721Metadata | null> {
+  try {
+    const tokenUri = (await directPublicClient.readContract({
+      address: request.collection,
+      abi: ERC721_METADATA_ABI,
+      functionName: "tokenURI",
+      args: [BigInt(request.tokenId)],
+    })) as string;
+    const json = await readMetadataJson(tokenUri);
+    return json
+      ? validatedErc721MetadataFromJson(json, request.collection, request.tokenId)
+      : null;
+  } catch (error) {
+    console.warn(
+      `[marketplace] ERC-721 metadata unavailable for ${request.collection}:${request.tokenId}:`,
+      error,
+    );
+    return null;
+  }
 }
 
 async function readMetadataJson(uri: string): Promise<Record<string, unknown> | null> {

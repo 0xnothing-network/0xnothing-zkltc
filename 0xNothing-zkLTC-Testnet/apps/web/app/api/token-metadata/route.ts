@@ -6,18 +6,14 @@ import {
   fetchTokenMetadataFromSubgraph,
   hasMarketplaceSubgraph,
 } from "@/lib/marketplaceSubgraph";
+import { createBoundedCache } from "@/lib/boundedCache";
 
 export const runtime = "nodejs";
 export const revalidate = 30;
 
-interface CacheEntry<T> {
-  value: T;
-  ts: number;
-  error?: boolean;
-}
-const CACHE = new Map<string, CacheEntry<TokenMetadata | null>>();
 const CACHE_TTL = 30_000;
 const CACHE_TTL_ERROR = 2_000;
+const MAX_CACHE_ENTRIES = 4_096;
 
 interface TokenMetadata {
   tokenId: string;
@@ -26,6 +22,13 @@ interface TokenMetadata {
   creator: string;
   mintedAt: number;
 }
+
+// A null value is a token that could not be read; it is written with the shorter
+// error ttl so a bad id is retried soon instead of being pinned for 30 seconds.
+const metadataCache = createBoundedCache<TokenMetadata | null>({
+  maxEntries: MAX_CACHE_ENTRIES,
+  ttlMs: CACHE_TTL,
+});
 
 /**
  * Fetch display metadata for a set of token IDs in a single multicall.
@@ -87,10 +90,9 @@ async function fetchMetadataBatch(
   const out: Record<string, TokenMetadata | null> = {};
   const missing: string[] = [];
   for (const id of tokenIds) {
-    const cached = CACHE.get(id);
-    const ttl = cached?.error ? CACHE_TTL_ERROR : CACHE_TTL;
-    if (cached && Date.now() - cached.ts < ttl) {
-      out[id] = cached.value;
+    const cached = metadataCache.get(id);
+    if (cached !== undefined) {
+      out[id] = cached;
     } else {
       missing.push(id);
     }
@@ -114,7 +116,7 @@ async function fetchMetadataBatch(
             creator: meta.creator,
             mintedAt: meta.mintedAt,
           };
-          CACHE.set(id, { value: next, ts: Date.now() });
+          metadataCache.set(id, next);
           out[id] = next;
         } else {
           rpcMissing.push(id);
@@ -145,7 +147,7 @@ async function fetchMetadataBatch(
     const r = results[i];
     if (!r || r.status !== "success") {
       // Cache the miss briefly so we don't hammer a bad token id.
-      CACHE.set(id, { value: null, ts: Date.now(), error: true });
+      metadataCache.set(id, null, CACHE_TTL_ERROR);
       out[id] = null;
       continue;
     }
@@ -161,22 +163,8 @@ async function fetchMetadataBatch(
       creator,
       mintedAt: Number(mintedAt),
     };
-    CACHE.set(id, { value: meta, ts: Date.now() });
+    metadataCache.set(id, meta);
     out[id] = meta;
-  }
-
-  // Garbage-collect cache so it doesn't grow unbounded.
-  if (CACHE.size > 4096) {
-    const now = Date.now();
-    for (const [k, v] of CACHE) {
-      const ttl = v.error ? CACHE_TTL_ERROR : CACHE_TTL;
-      if (now - v.ts > ttl) CACHE.delete(k);
-    }
-    while (CACHE.size > 4096) {
-      const oldestKey = CACHE.keys().next().value;
-      if (oldestKey === undefined) break;
-      CACHE.delete(oldestKey);
-    }
   }
 
   return out;

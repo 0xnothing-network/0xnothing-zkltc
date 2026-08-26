@@ -1,6 +1,7 @@
 import { createPublicClient, http } from "viem";
 import { PixelNFTABI } from "./abi";
 import { litvm, LITVM_RPC_URL } from "@/config/wagmi";
+import { createBoundedCache } from "@/lib/boundedCache";
 import {
   PIXEL_MARKETPLACE_ADDRESS as PUBLIC_PIXEL_MARKETPLACE_ADDRESS,
   PIXEL_NFT_ADDRESS,
@@ -38,6 +39,11 @@ export function shortenAddress(addr: string, head = 6, tail = 4): string {
 export const publicClient = createPublicClient({
   chain: litvm,
   transport: http(LITVM_RPC_URL, {
+    // The browser transport in lib/wagmi.ts already relies on JSON-RPC batching
+    // against this endpoint. Server routes fan out far wider (per-block
+    // timestamps, per-holder balances), so collapsing those into batched
+    // requests removes most of the round-trips from the response path.
+    batch: { batchSize: 100, wait: 10 },
     retryCount: 2,
     retryDelay: 300,
     timeout: 15_000,
@@ -78,23 +84,12 @@ async function withRetry<T>(
 const CACHE_TTL_SUCCESS = 30_000;
 const USER_NFT_CACHE_MAX = 1_024;
 
-type CacheEntry<T> = { data: T; timestamp: number; isError?: boolean };
-const userNftCache = new Map<string, CacheEntry<bigint[]>>();
-
-function setBoundedCache<K, V>(
-  cache: Map<K, V>,
-  key: K,
-  value: V,
-  maxEntries: number
-) {
-  cache.delete(key);
-  cache.set(key, value);
-  while (cache.size > maxEntries) {
-    const oldestKey = cache.keys().next().value;
-    if (oldestKey === undefined) break;
-    cache.delete(oldestKey);
-  }
-}
+// null records a failed enumeration: it blocks the fast path for the ttl without
+// ever being served as a token list.
+const userNftCache = createBoundedCache<bigint[] | null>({
+  maxEntries: USER_NFT_CACHE_MAX,
+  ttlMs: CACHE_TTL_SUCCESS,
+});
 
 export async function getUserTokenIds(address: string): Promise<bigint[]> {
   if (!address || typeof address !== "string" || !address.match(/^0x[0-9a-fA-F]{40}$/)) {
@@ -103,9 +98,7 @@ export async function getUserTokenIds(address: string): Promise<bigint[]> {
   const addr = address.toLowerCase() as `0x${string}`;
 
   const cached = userNftCache.get(addr);
-  if (cached && !cached.isError && Date.now() - cached.timestamp < CACHE_TTL_SUCCESS) {
-    return cached.data;
-  }
+  if (cached) return cached;
 
   try {
     const balance = (await withRetry(() =>
@@ -122,7 +115,7 @@ export async function getUserTokenIds(address: string): Promise<bigint[]> {
     const n = Number(balance);
 
     if (n === 0) {
-      setBoundedCache(userNftCache, addr, { data: [], timestamp: Date.now() }, USER_NFT_CACHE_MAX);
+      userNftCache.set(addr, []);
       return [];
     }
 
@@ -165,12 +158,14 @@ export async function getUserTokenIds(address: string): Promise<bigint[]> {
     if (ids.length !== n) {
       throw new Error(`Incomplete NFT enumeration: expected ${n}, received ${ids.length}`);
     }
-    setBoundedCache(userNftCache, addr, { data: ids, timestamp: Date.now() }, USER_NFT_CACHE_MAX);
+    userNftCache.set(addr, ids);
     return ids.sort((a, b) => (a === b ? 0 : a < b ? -1 : 1));
   } catch (err) {
     console.error("[Contract] getUserTokenIds error:", err);
-    if (cached && !cached.isError) return cached.data;
-    setBoundedCache(userNftCache, addr, { data: [], timestamp: Date.now(), isError: true }, USER_NFT_CACHE_MAX);
+    // A previously enumerated list is better than an error, even past its ttl.
+    const stale = userNftCache.entry(addr);
+    if (stale?.value) return stale.value;
+    userNftCache.set(addr, null);
     throw err;
   }
 }

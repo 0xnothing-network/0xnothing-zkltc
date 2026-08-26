@@ -1,7 +1,13 @@
 {
   "extends": "@graphprotocol/graph-ts/types/tsconfig.base.json",
   "compilerOptions": {
-    "ignoreDeprecations": "6.0"
+    "ignoreDeprecations": "6.0",
+    // AssemblyScript's config sets noLib + strict. strict turns on
+    // strictBindCallApply, which is the only thing that makes the checker ask
+    // for the global CallableFunction / NewableFunction interfaces, and noLib
+    // stops lib.d.ts from ever declaring them. asc never resolves bind/call/
+    // apply through those types, so switching it off only affects the editor.
+    "strictBindCallApply": false
   },
   "include": ["src"]
 }

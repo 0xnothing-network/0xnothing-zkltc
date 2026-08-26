@@ -15,6 +15,7 @@ export function SwapAmountField({
   balance,
   helper,
   error,
+  busy = false,
   onAmountChange,
   onAssetChange,
   onMax,
@@ -31,6 +32,7 @@ export function SwapAmountField({
   balance?: string;
   helper?: string;
   error?: string;
+  busy?: boolean;
   onAmountChange?: (value: string) => void;
   onAssetChange: (value: string) => void;
   onMax?: () => void;
@@ -45,7 +47,12 @@ export function SwapAmountField({
         <label htmlFor={id}>{label}</label>
         {balance ? <span title={`Balance ${balance}`}>Balance {balance}</span> : null}
       </div>
-      <div className="fi-amount-input" data-invalid={Boolean(error) || undefined}>
+      <div
+        className="fi-amount-input"
+        data-busy={busy || undefined}
+        data-invalid={Boolean(error) || undefined}
+        aria-busy={busy || undefined}
+      >
         <input
           id={id}
           type="text"
@@ -59,6 +66,7 @@ export function SwapAmountField({
           onChange={onAmountChange ? (event) => onAmountChange(event.target.value) : undefined}
           placeholder="0.0"
         />
+        {busy ? <span className="fi-amount-quote-skeleton" aria-hidden="true" /> : null}
         <div className="fi-amount-controls fi-amount-controls-select">
           <SwapAssetSelect
             id={assetSelectId}

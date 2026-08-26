@@ -106,8 +106,8 @@ function AppHeader() {
     }
 
     updateAddressMenuPosition();
-    window.addEventListener("resize", updateAddressMenuPosition);
-    window.addEventListener("scroll", updateAddressMenuPosition, true);
+    window.addEventListener("resize", updateAddressMenuPosition, { passive: true });
+    window.addEventListener("scroll", updateAddressMenuPosition, { capture: true, passive: true });
 
     return () => {
       window.removeEventListener("resize", updateAddressMenuPosition);

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { getPumpImageUrl } from "@/features/pump/config";
 
 interface PumpTokenLogoProps {
@@ -22,16 +22,21 @@ function PumpTokenLogoInner({
 }: PumpTokenLogoProps) {
   const source = useMemo(() => getPumpImageUrl(imageUri, symbol), [imageUri, symbol]);
   const [failedSource, setFailedSource] = useState("");
-  const failed = !source || failedSource === source;
+  const [trackedSource, setTrackedSource] = useState(source);
   const initials = useMemo(
     () => symbol.trim().replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase() || "?",
     [symbol],
   );
   const alt = decorative ? "" : `${name} logo`;
 
-  useEffect(() => {
-    if (failedSource && failedSource !== source) setFailedSource("");
-  }, [failedSource, source]);
+  // Drop a stale failure during render instead of in an effect: a new source has
+  // to paint as an image on its first commit, never as the previous fallback.
+  if (source !== trackedSource) {
+    setTrackedSource(source);
+    if (failedSource) setFailedSource("");
+  }
+
+  const failed = !source || failedSource === source;
 
   if (failed) {
     return (
@@ -46,29 +51,12 @@ function PumpTokenLogoInner({
   }
 
   const handleError = () => setFailedSource(source);
-  if (source.startsWith("/api/pump/image?")) {
-    return (
-      // Keep the same-origin IPFS proxy out of Next's image optimizer. The
-      // optimizer can run on a separate host in production and turn a healthy
-      // proxy response into a misleading /_next/image 404.
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        key={source}
-        src={source}
-        alt={alt}
-        width={size}
-        height={size}
-        loading={priority ? "eager" : "lazy"}
-        decoding="async"
-        fetchPriority={priority ? "high" : "auto"}
-        referrerPolicy="no-referrer"
-        onError={handleError}
-      />
-    );
-  }
 
   return (
-    // Legacy HTTPS logos stay browser-fetched so the server never proxies an arbitrary host.
+    // Both sources stay plain <img>. The same-origin IPFS proxy must skip Next's
+    // image optimizer, which can run on a separate host in production and turn a
+    // healthy proxy response into a misleading /_next/image 404; legacy HTTPS
+    // logos stay browser-fetched so the server never proxies an arbitrary host.
     // eslint-disable-next-line @next/next/no-img-element
     <img
       key={source}

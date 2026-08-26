@@ -17,6 +17,7 @@ import {
   lendingRuntimeState,
 } from "./lib/lending-implementation.mjs";
 import { writePublicEnvironment } from "./lib/public-environment.mjs";
+import { primaryRpcUrl } from "./lib/rpc.mjs";
 
 const broadcast = process.argv.includes("--broadcast");
 if (process.argv.some((argument) => argument.startsWith("--") && argument !== "--broadcast")) {
@@ -378,7 +379,7 @@ writePublicEnvironment({
   root,
   deployment,
   network,
-  rpcUrl: (process.env.LITEFORGE_RPC_URL || network.rpcUrl).trim(),
+  rpcUrl: primaryRpcUrl(network),
 });
 
 console.log(JSON.stringify({

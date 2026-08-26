@@ -22,7 +22,7 @@ import { eventId, ZERO_BI } from "./helpers";
 const ZERO_ADDRESS = Address.zero();
 
 export function handleInitialize(block: ethereum.Block): void {
-  refreshMarket(dataSource.address(), block.timestamp);
+  refreshMarket(dataSource.address(), block.timestamp, true);
 }
 
 export function handleCollateralDeposited(event: CollateralDeposited): void {
@@ -74,15 +74,15 @@ export function handleBadDebtCovered(event: BadDebtCovered): void {
 }
 
 export function handleDebtCeilingUpdated(event: DebtCeilingUpdated): void {
-  refreshMarket(event.address, event.block.timestamp);
+  refreshMarket(event.address, event.block.timestamp, true);
 }
 
 export function handleMintPauseUpdated(event: MintPauseUpdated): void {
-  refreshMarket(event.address, event.block.timestamp);
+  refreshMarket(event.address, event.block.timestamp, true);
 }
 
 export function handleWithdrawPauseUpdated(event: WithdrawPauseUpdated): void {
-  refreshMarket(event.address, event.block.timestamp);
+  refreshMarket(event.address, event.block.timestamp, true);
 }
 
 function saveAction(
@@ -107,16 +107,19 @@ function saveAction(
   action.txHash = event.transaction.hash;
   action.logIndex = event.logIndex;
   action.save();
-  refreshMarket(event.address, event.block.timestamp);
+  refreshMarket(event.address, event.block.timestamp, false);
 }
 
-function refreshMarket(address: Address, timestamp: BigInt): void {
+function refreshMarket(address: Address, timestamp: BigInt, includeGovernance: boolean): void {
   const contract = SyntheticVault.bind(address);
-  const assetResult = contract.try_syntheticAsset();
-  if (assetResult.reverted) return;
-  const asset = assetResult.value;
   let market = SyntheticMarket.load(address);
+  let governance = includeGovernance;
   if (market == null) {
+    // syntheticAsset() is immutable, so it doubles as the "is this a real vault" guard
+    // on first sight only. Later events reuse the stored asset instead of re-reading it.
+    const assetResult = contract.try_syntheticAsset();
+    if (assetResult.reverted) return;
+    const asset = assetResult.value;
     market = new SyntheticMarket(address);
     market.asset = asset;
     const symbol = ERC20.bind(asset).try_symbol();
@@ -130,16 +133,20 @@ function refreshMarket(address: Address, timestamp: BigInt): void {
     market.debtCeilingSynthetic = ZERO_BI;
     market.mintPaused = true;
     market.withdrawPaused = true;
+    governance = true;
   }
+  // The ceiling and both pause flags only move through DebtCeilingUpdated /
+  // MintPauseUpdated / WithdrawPauseUpdated, so user actions skip those three reads.
+  // Both pauses still being true is the pessimistic default left by a reverted read,
+  // so retry rather than reporting the vault as paused forever. safetyReserve has no
+  // event of its own and stays on the per-action refresh.
+  if (market.mintPaused && market.withdrawPaused) governance = true;
   const safetyReserve = contract.try_safetyReserve();
   const collateral = contract.try_totalCollateralNusd();
   const userCollateral = contract.try_totalUserCollateralNusd();
   const reserveCollateral = contract.try_totalReserveCollateralNusd();
   const debt = contract.try_totalDebtSynthetic();
   const badDebt = contract.try_totalBadDebtSynthetic();
-  const ceiling = contract.try_debtCeilingSynthetic();
-  const mintPaused = contract.try_mintPaused();
-  const withdrawPaused = contract.try_withdrawPaused();
   if (!safetyReserve.reverted) market.safetyReserve = safetyReserve.value;
   if (!userCollateral.reverted && !reserveCollateral.reverted) {
     market.totalUserCollateralNusd = userCollateral.value;
@@ -153,9 +160,14 @@ function refreshMarket(address: Address, timestamp: BigInt): void {
   }
   if (!debt.reverted) market.totalDebtSynthetic = debt.value;
   if (!badDebt.reverted) market.totalBadDebtSynthetic = badDebt.value;
-  if (!ceiling.reverted) market.debtCeilingSynthetic = ceiling.value;
-  if (!mintPaused.reverted) market.mintPaused = mintPaused.value;
-  if (!withdrawPaused.reverted) market.withdrawPaused = withdrawPaused.value;
+  if (governance) {
+    const ceiling = contract.try_debtCeilingSynthetic();
+    const mintPaused = contract.try_mintPaused();
+    const withdrawPaused = contract.try_withdrawPaused();
+    if (!ceiling.reverted) market.debtCeilingSynthetic = ceiling.value;
+    if (!mintPaused.reverted) market.mintPaused = mintPaused.value;
+    if (!withdrawPaused.reverted) market.withdrawPaused = withdrawPaused.value;
+  }
   market.updatedAt = timestamp;
   market.save();
 }

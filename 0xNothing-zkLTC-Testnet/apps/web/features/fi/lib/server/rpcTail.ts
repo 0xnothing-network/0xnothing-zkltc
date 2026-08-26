@@ -2,6 +2,7 @@ import "server-only";
 
 import { createPublicClient, formatUnits, http, parseAbiItem, type Address, type Hex } from "viem";
 import { deployment } from "@fi/config/deployment";
+import { createBoundedCache } from "@/lib/boundedCache";
 
 const MAX_TAIL_BLOCKS = 5_000n;
 const BLOCK_TIMESTAMP_CONCURRENCY = 16;
@@ -40,19 +41,26 @@ const client = createPublicClient({
   }),
 });
 
-interface CacheEntry<T> {
-  value: T;
-  expiresAt: number;
-}
-
-const pairTailCache = new Map<string, CacheEntry<PairTail>>();
-const pairTailInFlight = new Map<string, Promise<PairTail>>();
-const blockTimestampCache = new Map<string, CacheEntry<number>>();
-const blockTimestampInFlight = new Map<string, Promise<number>>();
-const pairMetadataCache = new Map<string, CacheEntry<PairTokenMetadata>>();
-const pairMetadataInFlight = new Map<string, Promise<PairTokenMetadata>>();
-const factoryPairCache = new Map<string, CacheEntry<boolean>>();
-const factoryPairInFlight = new Map<string, Promise<boolean>>();
+const pairTailCache = createBoundedCache<PairTail>({
+  maxEntries: MAX_PAIR_TAIL_CACHE_ENTRIES,
+  ttlMs: PAIR_TAIL_CACHE_TTL_MS,
+  maxInFlight: MAX_IN_FLIGHT_REQUESTS,
+});
+const blockTimestampCache = createBoundedCache<number>({
+  maxEntries: MAX_BLOCK_TIMESTAMP_CACHE_ENTRIES,
+  ttlMs: STATIC_RPC_CACHE_TTL_MS,
+  maxInFlight: MAX_IN_FLIGHT_REQUESTS,
+});
+const pairMetadataCache = createBoundedCache<PairTokenMetadata>({
+  maxEntries: MAX_PAIR_METADATA_CACHE_ENTRIES,
+  ttlMs: STATIC_RPC_CACHE_TTL_MS,
+  maxInFlight: MAX_IN_FLIGHT_REQUESTS,
+});
+const factoryPairCache = createBoundedCache<boolean>({
+  maxEntries: MAX_FACTORY_PAIR_CACHE_ENTRIES,
+  ttlMs: STATIC_RPC_CACHE_TTL_MS,
+  maxInFlight: MAX_IN_FLIGHT_REQUESTS,
+});
 
 interface TailBase {
   blockNumber: bigint;
@@ -76,29 +84,6 @@ export interface PairTail {
   capped: boolean;
 }
 
-function readCached<T>(cache: Map<string, CacheEntry<T>>, key: string): T | undefined {
-  const entry = cache.get(key);
-  if (!entry) return undefined;
-  if (entry.expiresAt <= Date.now()) {
-    cache.delete(key);
-    return undefined;
-  }
-  // Refresh insertion order so the entry cap removes the least recently used value.
-  cache.delete(key);
-  cache.set(key, entry);
-  return entry.value;
-}
-
-function writeCached<T>(cache: Map<string, CacheEntry<T>>, key: string, value: T, ttlMs: number, maxEntries: number): void {
-  cache.delete(key);
-  cache.set(key, { value, expiresAt: Date.now() + ttlMs });
-  while (cache.size > maxEntries) {
-    const oldestKey = cache.keys().next().value;
-    if (oldestKey === undefined) return;
-    cache.delete(oldestKey);
-  }
-}
-
 function required<T>(value: T | null | undefined, label: string): T {
   if (value === null || value === undefined) throw new Error(`RPC log is missing ${label}`);
   return value;
@@ -106,21 +91,7 @@ function required<T>(value: T | null | undefined, label: string): T {
 
 export async function loadPairTail(pool: Address, indexedBlock: number | null): Promise<PairTail> {
   const key = `${pool.toLowerCase()}:${indexedBlock === null ? "null" : indexedBlock}`;
-  const cached = readCached(pairTailCache, key);
-  if (cached) return cached;
-
-  const pending = pairTailInFlight.get(key);
-  if (pending) return pending;
-
-  const request = loadPairTailFromRpc(pool, indexedBlock);
-  if (pairTailInFlight.size < MAX_IN_FLIGHT_REQUESTS) {
-    pairTailInFlight.set(key, request);
-    void request.then(
-      (tail) => writeCached(pairTailCache, key, tail, PAIR_TAIL_CACHE_TTL_MS, MAX_PAIR_TAIL_CACHE_ENTRIES),
-      () => undefined,
-    ).finally(() => pairTailInFlight.delete(key));
-  }
-  return request;
+  return pairTailCache.load(key, () => loadPairTailFromRpc(pool, indexedBlock));
 }
 
 async function loadPairTailFromRpc(pool: Address, indexedBlock: number | null): Promise<PairTail> {
@@ -198,21 +169,10 @@ async function loadPairTailFromRpc(pool: Address, indexedBlock: number | null): 
 }
 
 async function loadBlockTimestamp(blockNumber: string): Promise<number> {
-  const cached = readCached(blockTimestampCache, blockNumber);
-  if (cached !== undefined) return cached;
-
-  const pending = blockTimestampInFlight.get(blockNumber);
-  if (pending) return pending;
-
-  const request = client.getBlock({ blockNumber: BigInt(blockNumber) }).then((block) => Number(block.timestamp));
-  if (blockTimestampInFlight.size < MAX_IN_FLIGHT_REQUESTS) {
-    blockTimestampInFlight.set(blockNumber, request);
-    void request.then(
-      (timestamp) => writeCached(blockTimestampCache, blockNumber, timestamp, STATIC_RPC_CACHE_TTL_MS, MAX_BLOCK_TIMESTAMP_CACHE_ENTRIES),
-      () => undefined,
-    ).finally(() => blockTimestampInFlight.delete(blockNumber));
-  }
-  return request;
+  return blockTimestampCache.load(
+    blockNumber,
+    () => client.getBlock({ blockNumber: BigInt(blockNumber) }).then((block) => Number(block.timestamp)),
+  );
 }
 
 async function mapWithConcurrency<T>(
@@ -240,22 +200,7 @@ export interface PairTokenMetadata {
 }
 
 export async function pairTokenMetadata(pool: Address): Promise<PairTokenMetadata> {
-  const key = pool.toLowerCase();
-  const cached = readCached(pairMetadataCache, key);
-  if (cached) return cached;
-
-  const pending = pairMetadataInFlight.get(key);
-  if (pending) return pending;
-
-  const request = loadPairTokenMetadata(pool);
-  if (pairMetadataInFlight.size < MAX_IN_FLIGHT_REQUESTS) {
-    pairMetadataInFlight.set(key, request);
-    void request.then(
-      (metadata) => writeCached(pairMetadataCache, key, metadata, STATIC_RPC_CACHE_TTL_MS, MAX_PAIR_METADATA_CACHE_ENTRIES),
-      () => undefined,
-    ).finally(() => pairMetadataInFlight.delete(key));
-  }
-  return request;
+  return pairMetadataCache.load(pool.toLowerCase(), () => loadPairTokenMetadata(pool));
 }
 
 async function loadPairTokenMetadata(pool: Address): Promise<PairTokenMetadata> {
@@ -288,36 +233,22 @@ export async function pairForTokens(factory?: Address, tokenA?: Address, tokenB?
 export async function isFactoryPair(factory: Address | undefined, candidate: Address): Promise<boolean> {
   if (!factory) return false;
   const key = `${factory.toLowerCase()}:${candidate.toLowerCase()}`;
-  const cached = readCached(factoryPairCache, key);
-  if (cached !== undefined) return cached;
-
-  const pending = factoryPairInFlight.get(key);
-  if (pending) return pending;
-
-  const request = client.readContract({
-    address: factory,
-    abi: [{
-      type: "function", name: "isPair", stateMutability: "view",
-      inputs: [{ name: "candidate", type: "address" }],
-      outputs: [{ name: "", type: "bool" }],
-    }],
-    functionName: "isPair",
-    args: [candidate],
-  });
-  if (factoryPairInFlight.size < MAX_IN_FLIGHT_REQUESTS) {
-    factoryPairInFlight.set(key, request);
-    void request.then(
-      (isPair) => writeCached(
-        factoryPairCache,
-        key,
-        isPair,
-        isPair ? STATIC_RPC_CACHE_TTL_MS : NEGATIVE_FACTORY_PAIR_CACHE_TTL_MS,
-        MAX_FACTORY_PAIR_CACHE_ENTRIES,
-      ),
-      () => undefined,
-    ).finally(() => factoryPairInFlight.delete(key));
-  }
-  return request;
+  return factoryPairCache.load(
+    key,
+    () => client.readContract({
+      address: factory,
+      abi: [{
+        type: "function", name: "isPair", stateMutability: "view",
+        inputs: [{ name: "candidate", type: "address" }],
+        outputs: [{ name: "", type: "bool" }],
+      }],
+      functionName: "isPair",
+      args: [candidate],
+    }),
+    // A confirmed pair stays a pair. A rejection may just be a pair that has not
+    // been deployed yet, so it is only trusted for a few seconds.
+    (isPair) => isPair ? STATIC_RPC_CACHE_TTL_MS : NEGATIVE_FACTORY_PAIR_CACHE_TTL_MS,
+  );
 }
 
 export function decimal(value: bigint, decimals = 18): number {

@@ -756,7 +756,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
               <button
                 type="button"
                 className={`fi-button fi-button-block ${mode === "remove" ? "fi-button-muted" : "fi-button-primary"}`}
-                disabled={!poolReady || Boolean(error) || tx.pending || (mode === "swap" ? !poolHasLiquidity || !swapStateReady || Boolean(swapsPaused.data) || swapQuote.isFetching || !swapAmountIn || !swapAmountOut : mode === "add" ? !amountA || !amountB || !expectedLiquidity : !poolHasLiquidity || !liquidity || removeAmountA === undefined || removeAmountB === undefined)}
+                disabled={!poolReady || Boolean(error) || tx.pending || (mode === "swap" ? !poolHasLiquidity || !swapStateReady || Boolean(swapsPaused.data) || swapQuote.isLoading || !swapAmountIn || !swapAmountOut : mode === "add" ? !amountA || !amountB || !expectedLiquidity : !poolHasLiquidity || !liquidity || removeAmountA === undefined || removeAmountB === undefined)}
                 onClick={() => void (mode === "swap" ? submitSwap() : mode === "add" ? submitAdd() : submitRemove())}
               >
                 {!poolReady ? poolLoading ? "Loading pool" : "Pool unavailable" : tx.pending ? "Processing" : mode === "swap" ? !poolHasLiquidity ? "No liquidity" : routeReadError ? "Route unavailable" : !swapStateReady ? "Checking route" : swapsPaused.data ? "Swaps paused" : "Swap" : mode === "add" ? "Add liquidity" : !poolHasLiquidity ? "No liquidity" : "Remove liquidity"}

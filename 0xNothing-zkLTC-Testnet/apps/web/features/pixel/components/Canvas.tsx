@@ -326,6 +326,21 @@ export function Canvas({
     };
   }, [drawGrid]);
 
+  // React attaches its root `wheel` listener with `{ passive: true }`, so a
+  // `preventDefault()` inside an `onWheel` prop is discarded: the canvas zoomed
+  // and the page scrolled underneath it at the same time. Zoom has to be bound
+  // natively and non-passively for the default scroll to actually be cancelled.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      setZoom((z) => (event.deltaY < 0 ? Math.min(z * 1.2, 10) : Math.max(z / 1.2, 0.5)));
+    };
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", handleWheel);
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target;
@@ -706,7 +721,6 @@ export function Canvas({
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
           onPointerLeave={handlePointerLeave}
-          onWheel={e => { e.preventDefault(); setZoom(z => e.deltaY < 0 ? Math.min(z * 1.2, 10) : Math.max(z / 1.2, 0.5)); }}
           onContextMenu={e => e.preventDefault()}
         />
         <canvas

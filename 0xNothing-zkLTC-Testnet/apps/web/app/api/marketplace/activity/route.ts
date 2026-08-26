@@ -6,20 +6,22 @@ import {
   type SubgraphMarketEventType,
 } from "@/lib/marketplaceSubgraph";
 import { fetchMarketplaceActivityFromOnchain } from "@/lib/onchainMarketplace";
+import { createBoundedCache } from "@/lib/boundedCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-interface CacheEntry {
-  value: { events: SubgraphMarketEventDTO[] };
-  ts: number;
-}
+type ActivityPayload = { events: SubgraphMarketEventDTO[] };
 
 const ACTIVITY_TTL = 3_000;
 const ACTIVITY_CACHE_MAX_ENTRIES = 256;
-const activityCache = new Map<string, CacheEntry>();
-const activityInFlight = new Map<string, Promise<{ events: SubgraphMarketEventDTO[] }>>();
+// Entries are kept until the entry cap evicts them, so freshness is derived from the
+// entry age and the last successful payload stays available as a failure fallback.
+const activityCache = createBoundedCache<ActivityPayload>({
+  maxEntries: ACTIVITY_CACHE_MAX_ENTRIES,
+  maxInFlight: ACTIVITY_CACHE_MAX_ENTRIES,
+});
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -33,29 +35,29 @@ export async function GET(request: Request) {
       : "public, max-age=0, s-maxage=2, stale-while-revalidate=8",
   };
   const cacheKey = `${limit}:${skip}:${eventTypes.join(",") || "all"}`;
-  const inFlightKey = `${cacheKey}:${force ? "force" : "normal"}`;
-  const cached = activityCache.get(cacheKey);
+  const cached = activityCache.entry(cacheKey);
 
-  if (!force && cached && Date.now() - cached.ts < ACTIVITY_TTL) {
+  if (!force && cached && cached.ageMs < ACTIVITY_TTL) {
     return NextResponse.json(cached.value, { headers: responseHeaders });
   }
 
-  const pending = activityInFlight.get(inFlightKey)
-    ?? loadMarketplaceActivity(limit, skip, eventTypes, force);
-  if (!activityInFlight.has(inFlightKey)) activityInFlight.set(inFlightKey, pending);
   try {
-    const payload = await pending;
-    writeActivityCache(cacheKey, payload);
+    // A forced load skips Next's data cache, so it coalesces only with other forced
+    // loads: a separate key with a zero ttl tracks that flight without retaining it,
+    // and the result then seeds the shared entry.
+    const payload = force
+      ? await activityCache.refresh(`force:${cacheKey}`, () => loadMarketplaceActivity(limit, skip, eventTypes, true), 0)
+      : await activityCache.refresh(cacheKey, () => loadMarketplaceActivity(limit, skip, eventTypes, false));
+    if (force) activityCache.set(cacheKey, payload);
     return NextResponse.json(payload, { headers: responseHeaders });
   } catch (err) {
     console.error("[marketplace] on-chain activity fallback failed:", err);
-    if (cached) return NextResponse.json(cached.value, { headers: responseHeaders });
+    const stale = activityCache.entry(cacheKey);
+    if (stale) return NextResponse.json(stale.value, { headers: responseHeaders });
     return NextResponse.json(
       { error: "Marketplace activity is unavailable" },
       { status: 503, headers: { "Cache-Control": "no-store" } }
     );
-  } finally {
-    if (activityInFlight.get(inFlightKey) === pending) activityInFlight.delete(inFlightKey);
   }
 }
 
@@ -64,7 +66,7 @@ async function loadMarketplaceActivity(
   skip: number,
   eventTypes: SubgraphMarketEventType[],
   fresh: boolean,
-): Promise<{ events: SubgraphMarketEventDTO[] }> {
+): Promise<ActivityPayload> {
   if (hasMarketplaceSubgraph()) {
     try {
       const payload = await fetchMarketplaceActivityFromSubgraph({
@@ -84,16 +86,6 @@ async function loadMarketplaceActivity(
     skip,
     eventTypes: eventTypes.length ? eventTypes : undefined,
   });
-}
-
-function writeActivityCache(key: string, value: CacheEntry["value"]) {
-  activityCache.delete(key);
-  activityCache.set(key, { value, ts: Date.now() });
-  while (activityCache.size > ACTIVITY_CACHE_MAX_ENTRIES) {
-    const oldestKey = activityCache.keys().next().value;
-    if (oldestKey === undefined) break;
-    activityCache.delete(oldestKey);
-  }
 }
 
 function clampNumber(

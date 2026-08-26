@@ -14,6 +14,7 @@ import {
   hasMarketplaceSubgraph,
 } from "@/lib/marketplaceSubgraph";
 import { fetchValidatedErc721Metadata } from "@/lib/erc721Metadata.server";
+import { createBoundedCache } from "@/lib/boundedCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,17 +42,18 @@ interface ListingsPayload {
   tokens: Record<string, TokenDTO | null>;
 }
 
-interface CacheEntry<T> {
-  value: T;
-  ts: number;
-}
-
 const TOKEN_TTL = 60_000;
 const LISTING_TTL = 3_000;
 const MARKETPLACE_MULTICALL_BATCH_SIZE = 16_384;
-const payloadCache = new Map<string, CacheEntry<ListingsPayload>>();
-const pixelTokenCache = new Map<string, CacheEntry<TokenDTO | null>>();
-const payloadLoadsInFlight = new Map<string, Promise<ListingsPayload>>();
+const MAX_PIXEL_TOKEN_CACHE_ENTRIES = 4_096;
+const PAYLOAD_CACHE_KEY = "listings:all-metadata-valid";
+// The payload entry is kept until it is overwritten, so freshness comes from the
+// entry age and the last successful payload can still answer a failed refresh.
+const payloadCache = createBoundedCache<ListingsPayload>({ maxEntries: 1 });
+const pixelTokenCache = createBoundedCache<TokenDTO | null>({
+  maxEntries: MAX_PIXEL_TOKEN_CACHE_ENTRIES,
+  ttlMs: TOKEN_TTL,
+});
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -61,31 +63,29 @@ export async function GET(request: Request) {
       ? "private, no-store, max-age=0, must-revalidate"
       : "public, max-age=0, s-maxage=2, stale-while-revalidate=8",
   };
-  const cacheKey = "listings:all-metadata-valid";
-  const cached = payloadCache.get(cacheKey);
+  const cached = payloadCache.entry(PAYLOAD_CACHE_KEY);
 
-  if (!force && cached && Date.now() - cached.ts < LISTING_TTL) {
+  if (!force && cached && cached.ageMs < LISTING_TTL) {
     return NextResponse.json(cached.value, { headers: responseHeaders });
   }
 
-  const loadKey = force ? "force" : "normal";
-  let pending = payloadLoadsInFlight.get(loadKey);
-  if (!pending) {
-    pending = loadListingsPayload(force).then((payload) => {
-      payloadCache.set(cacheKey, { value: payload, ts: Date.now() });
-      return payload;
-    });
-    payloadLoadsInFlight.set(loadKey, pending);
-    void pending.finally(() => {
-      if (payloadLoadsInFlight.get(loadKey) === pending) payloadLoadsInFlight.delete(loadKey);
-    }).catch(() => undefined);
-  }
   try {
-    const payload = await withTimeout(pending, 12_000, "Marketplace listing load timed out");
+    // A forced load bypasses the subgraph read cache, so it coalesces only with other
+    // forced loads: a separate key with a zero ttl tracks that flight without being
+    // retained, and its result then seeds the shared entry.
+    const payload = await withTimeout(
+      force
+        ? payloadCache.refresh(`force:${PAYLOAD_CACHE_KEY}`, () => loadListingsPayload(true), 0)
+        : payloadCache.refresh(PAYLOAD_CACHE_KEY, () => loadListingsPayload(false)),
+      12_000,
+      "Marketplace listing load timed out",
+    );
+    if (force) payloadCache.set(PAYLOAD_CACHE_KEY, payload);
     return NextResponse.json(payload, { headers: responseHeaders });
   } catch (error) {
     console.error("[marketplace] listing load failed:", error);
-    if (cached) return NextResponse.json(cached.value, { headers: responseHeaders });
+    const stale = payloadCache.entry(PAYLOAD_CACHE_KEY);
+    if (stale) return NextResponse.json(stale.value, { headers: responseHeaders });
     return NextResponse.json(
       { error: "Marketplace data unavailable" },
       { status: 503, headers: { "Cache-Control": "no-store" } },
@@ -316,8 +316,9 @@ async function fetchPixelTokensOnchain(
   const missing: string[] = [];
   for (const tokenId of tokenIds) {
     const cached = pixelTokenCache.get(tokenId);
-    if (cached && Date.now() - cached.ts < TOKEN_TTL) {
-      output[tokenId] = cached.value;
+    // A cached null is a token without a usable image; only `undefined` is a miss.
+    if (cached !== undefined) {
+      output[tokenId] = cached;
     } else {
       missing.push(tokenId);
     }
@@ -354,15 +355,10 @@ async function fetchPixelTokensOnchain(
           }
         : null;
     }
-    pixelTokenCache.set(tokenId, { value: metadata, ts: Date.now() });
+    pixelTokenCache.set(tokenId, metadata);
     output[tokenId] = metadata;
   }
 
-  while (pixelTokenCache.size > 4_096) {
-    const oldestKey = pixelTokenCache.keys().next().value;
-    if (oldestKey === undefined) break;
-    pixelTokenCache.delete(oldestKey);
-  }
   return output;
 }
 

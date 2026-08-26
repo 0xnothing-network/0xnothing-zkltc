@@ -214,6 +214,11 @@ export function writePublicEnvironment({ root, deployment, network, rpcUrl, appU
     const contents = mergeEnvironment(source, values, [
       "NEXT_PUBLIC_FARM_FACTORY_ADDRESS",
       "NEXT_PUBLIC_NUSD_HEALTH_GUARD_ADDRESS",
+      "NEXT_PUBLIC_REWARD_POOL_ADDRESS",
+      "NEXT_PUBLIC_REWARDED_FI_ROUTER_ADDRESS",
+      "NEXT_PUBLIC_PUMP_REWARD_ADAPTER_ADDRESS",
+      "NEXT_PUBLIC_PIXEL_NOTIONAL_ORACLE_ADDRESS",
+      "NEXT_PUBLIC_PIXEL_REWARD_ADAPTER_ADDRESS",
     ]);
     atomicWriteFile(target, contents);
   }

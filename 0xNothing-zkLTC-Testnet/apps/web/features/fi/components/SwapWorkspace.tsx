@@ -3,55 +3,47 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowsDownUp, MagnifyingGlass } from "@phosphor-icons/react";
 import { formatUnits, getAddress, isAddress } from "viem";
-import { useAccount, useBalance, useReadContract } from "wagmi";
+import { useAccount, useBalance, useReadContract, useReadContracts } from "wagmi";
 import type { AssetSelectOption } from "@fi/components/AssetSelect";
 import { ConnectWalletButton } from "@fi/components/ConnectWalletButton";
 import { SwapAmountField } from "@fi/components/SwapAmountField";
 import { NotDeployed, PanelHeading, TransactionStatus } from "@fi/components/UiStates";
 import { SlippageControl } from "@fi/components/SlippageControl";
 import { deployment, explorerAddressUrl } from "@fi/config/deployment";
-import { dexFactoryAbi, dexRouterAbi } from "@fi/lib/abis/dex";
+import { dexRouterAbi } from "@fi/lib/abis/dex";
 import { erc20Abi } from "@fi/lib/abis/erc20";
 import { nusdOracleAbi } from "@fi/lib/abis/nusd";
-import { formatAmount, minimumAfterSlippage, parseAmount, shortAddress, transactionDeadline } from "@fi/lib/format";
+import {
+  formatAmount,
+  formatTokenAmount,
+  minimumAfterSlippage,
+  parseAmount,
+  shortAddress,
+  transactionDeadline,
+} from "@fi/lib/format";
+import {
+  buildDexSwapCall,
+  computeExecutionImpactBps,
+  importedTokenStatus,
+  mergeVerifiedMetadata,
+  quotedRate,
+  readSwapDeepLink,
+  spendableSwapBalance,
+  swapButtonLabel,
+  swapLiquidityStatus,
+  swapRouteLabel,
+  ORACLE_QUOTE_REFRESH_MS,
+  type ImportSide,
+} from "@fi/lib/swap";
 import { useActiveDexRouter } from "@fi/lib/hooks/useActiveDexRouter";
 import { formatFeeBps, useDexFeeSchedule } from "@fi/lib/hooks/useDexFeeSchedule";
+
 import { useImportedSwapAsset } from "@fi/lib/hooks/useImportedSwapAsset";
 import { useProtocolTransaction } from "@fi/lib/hooks/useProtocolTransaction";
 import { useSwapAssets, type SwapAsset } from "@fi/lib/hooks/useSwapAssets";
 import { useSwapRoute } from "@fi/lib/hooks/useSwapRoute";
+import { useSwapRouteGuards } from "@fi/lib/hooks/useSwapRouteGuards";
 import { useToast } from "@fi/components/Toast";
-
-const NATIVE_GAS_RESERVE_WEI = 10_000_000_000_000_000n;
-const RATE_PRECISION = 10n ** 18n;
-const CANONICAL_SWAP_IDS = new Set(["zkLTC", "NUSD", "nBTC", "nETH"]);
-type ImportSide = "pay" | "receive";
-
-function mergeVerifiedMetadata(asset: SwapAsset, verified: SwapAsset): SwapAsset {
-  return {
-    ...asset,
-    ...(asset.trustedCore ? {} : {
-      decimals: verified.decimals,
-      name: verified.name,
-      symbol: verified.symbol,
-    }),
-    explorerStatus: verified.explorerStatus,
-    metadataSource: verified.metadataSource,
-  };
-}
-
-function quotedRate(
-  amountIn: bigint | undefined,
-  inputDecimals: number,
-  amountOut: bigint | undefined,
-  outputDecimals: number,
-): string | undefined {
-  if (!amountIn || !amountOut) return undefined;
-  const inputScale = 10n ** BigInt(inputDecimals);
-  const outputScale = 10n ** BigInt(outputDecimals);
-  const rate = amountOut * inputScale * RATE_PRECISION / (amountIn * outputScale);
-  return formatAmount(rate, 18, 4);
-}
 
 export function SwapWorkspace() {
   const { address, isConnected } = useAccount();
@@ -59,6 +51,7 @@ export function SwapWorkspace() {
   const swapAssets = useSwapAssets();
   const activeDexRouter = useActiveDexRouter();
   const feeSchedule = useDexFeeSchedule(activeDexRouter);
+
   const [tokenIn, setTokenIn] = useState("NUSD");
   const [tokenOut, setTokenOut] = useState("zkLTC");
   const [amountText, setAmountText] = useState("");
@@ -71,30 +64,12 @@ export function SwapWorkspace() {
   const resetTransaction = tx.reset;
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const requestedIn = params.get("in");
-    const requestedOut = params.get("out");
-    const duplicateRequest = Boolean(
-      requestedIn && requestedOut && requestedIn.toLowerCase() === requestedOut.toLowerCase(),
-    );
-
-    if (requestedIn) {
-      if (CANONICAL_SWAP_IDS.has(requestedIn)) {
-        setTokenIn(requestedIn);
-        if (duplicateRequest && requestedIn === "NUSD") setTokenOut("zkLTC");
-      } else if (isAddress(requestedIn)) {
-        setPayContract(requestedIn);
-        setImportSide("pay");
-      }
-    }
-    if (requestedOut && !duplicateRequest) {
-      if (CANONICAL_SWAP_IDS.has(requestedOut)) {
-        setTokenOut(requestedOut);
-      } else if (isAddress(requestedOut)) {
-        setReceiveContract(requestedOut);
-        setImportSide("receive");
-      }
-    }
+    const link = readSwapDeepLink(window.location.search);
+    if (link.tokenIn) setTokenIn(link.tokenIn);
+    if (link.tokenOut) setTokenOut(link.tokenOut);
+    if (link.payContract) setPayContract(link.payContract);
+    if (link.receiveContract) setReceiveContract(link.receiveContract);
+    if (link.importSide) setImportSide(link.importSide);
   }, []);
 
   const payCandidate = useMemo(() => {
@@ -243,9 +218,7 @@ export function SwapWorkspace() {
     query: { enabled: Boolean(address && assetIn && !assetIn.native && assetIn.poolAddress) },
   });
   const balance = assetIn?.native ? nativeBalance.data?.value : tokenBalance.data;
-  const spendableBalance = assetIn?.native && balance !== undefined
-    ? balance > NATIVE_GAS_RESERVE_WEI ? balance - NATIVE_GAS_RESERVE_WEI : 0n
-    : balance;
+  const spendableBalance = spendableSwapBalance(balance, Boolean(assetIn?.native));
   const amountIn = assetIn ? parseAmount(amountText, assetIn.decimals) : undefined;
   const tokenInAddress = assetIn?.poolAddress;
   const tokenOutAddress = assetOut?.poolAddress;
@@ -271,6 +244,7 @@ export function SwapWorkspace() {
   const isMintRoute = isOracleNusdRoute && tokenInIsWzkLtc;
   const swapRoute = useSwapRoute({
     amountIn,
+    bridge: canonicalNusd,
     factory: deployment.contracts.dexFactory,
     input: tokenInAddress,
     isOracleRoute: isOracleNusdRoute,
@@ -278,62 +252,56 @@ export function SwapWorkspace() {
     router: activeDexRouter,
   });
   const path = swapRoute.path;
+
+  const routeReserves = useReadContracts({
+    contracts: !isOracleNusdRoute && activeDexRouter && path
+      ? path.slice(0, -1).map((token, index) => ({
+          address: activeDexRouter,
+          abi: dexRouterAbi,
+          functionName: "getReserves" as const,
+          args: [token, path[index + 1]] as const,
+        }))
+      : [],
+    query: { enabled: Boolean(!isOracleNusdRoute && activeDexRouter && path) },
+  });
   const totalFeeBps = path && feeSchedule
-    ? (path.length - 1) * feeSchedule.lpFeeBps + feeSchedule.protocolFeeBps
+    ? (path.length - 1) * feeSchedule.lpFeeBps
+      + feeSchedule.protocolFeeBps
+      + (path.length > 2 ? feeSchedule.routeSurchargeBps : 0)
     : undefined;
   const routeConfigured = isOracleNusdRoute
     ? Boolean(deployment.contracts.nusd)
-    : swapRoute.kind === "direct";
+    : swapRoute.kind === "direct" || swapRoute.kind === "via-nusd";
   const mintQuote = useReadContract({
     address: deployment.contracts.nusd,
     abi: nusdOracleAbi,
     functionName: "quoteMint",
     args: isMintRoute && amountIn ? [amountIn] : undefined,
-    query: { enabled: Boolean(isMintRoute && routeConfigured && amountIn) },
+    query: {
+      enabled: Boolean(isMintRoute && routeConfigured && amountIn),
+      refetchInterval: ORACLE_QUOTE_REFRESH_MS,
+      refetchIntervalInBackground: false,
+    },
   });
   const redeemQuote = useReadContract({
     address: deployment.contracts.nusd,
     abi: nusdOracleAbi,
     functionName: "quoteRedeem",
     args: isOracleNusdRoute && !isMintRoute && amountIn ? [amountIn] : undefined,
-    query: { enabled: Boolean(isOracleNusdRoute && !isMintRoute && routeConfigured && amountIn) },
+    query: {
+      enabled: Boolean(isOracleNusdRoute && !isMintRoute && routeConfigured && amountIn),
+      refetchInterval: ORACLE_QUOTE_REFRESH_MS,
+      refetchIntervalInBackground: false,
+    },
   });
-  const dexPauseState = useReadContract({
-    address: deployment.contracts.dexFactory,
-    abi: dexFactoryAbi,
-    functionName: "swapsPaused",
-    query: { enabled: Boolean(!isOracleNusdRoute && deployment.contracts.dexFactory) },
-  });
-  const mintPauseState = useReadContract({
-    address: deployment.contracts.nusd,
-    abi: nusdOracleAbi,
-    functionName: "mintPaused",
-    query: { enabled: Boolean(isMintRoute && deployment.contracts.nusd) },
-  });
-  const redeemPauseState = useReadContract({
-    address: deployment.contracts.nusd,
-    abi: nusdOracleAbi,
-    functionName: "redeemPaused",
-    query: { enabled: Boolean(isOracleNusdRoute && !isMintRoute && deployment.contracts.nusd) },
-  });
-  const supplyCeilingState = useReadContract({
-    address: deployment.contracts.nusd,
-    abi: nusdOracleAbi,
-    functionName: "supplyCeilingNusd",
-    query: { enabled: Boolean(isMintRoute && deployment.contracts.nusd) },
-  });
-  const totalSupplyState = useReadContract({
-    address: deployment.contracts.nusd,
-    abi: nusdOracleAbi,
-    functionName: "totalSupply",
-    query: { enabled: Boolean(isMintRoute && deployment.contracts.nusd) },
-  });
-  const collateralReserveState = useReadContract({
-    address: deployment.contracts.nusd,
-    abi: nusdOracleAbi,
-    functionName: "totalCollateralWei",
-    query: { enabled: Boolean(isOracleNusdRoute && !isMintRoute && deployment.contracts.nusd) },
-  });
+  const {
+    mintCapacityUnavailable,
+    redeemReserve,
+    redeemReserveUnavailable,
+    remainingMintCapacity,
+    routePaused,
+    routeStateReady,
+  } = useSwapRouteGuards({ isMintRoute, isOracleRoute: isOracleNusdRoute });
 
   const amountOut = amountIn
     ? isOracleNusdRoute
@@ -347,34 +315,42 @@ export function SwapWorkspace() {
       : redeemQuote.data === undefined && !redeemQuote.error
   ));
   const quoteFetching = isOracleNusdRoute ? oracleQuotePending : swapRoute.isFetching;
+  const activeOracleQuote = isMintRoute ? mintQuote : redeemQuote;
+  const oracleQuoteExecutable = Boolean(
+    !isOracleNusdRoute
+    || amountIn && amountOut !== undefined && !activeOracleQuote.isFetching && !activeOracleQuote.error,
+  );
+  const executableQuoteCurrent = isOracleNusdRoute
+    ? oracleQuoteExecutable
+    : swapRoute.amountInQuoted === amountIn;
   const quoteError = isOracleNusdRoute
     ? isMintRoute ? mintQuote.error : redeemQuote.error
     : swapRoute.error;
-  const routePaused = isOracleNusdRoute
-    ? isMintRoute ? mintPauseState.data : redeemPauseState.data
-    : dexPauseState.data;
-  const pauseState = isOracleNusdRoute
-    ? isMintRoute ? mintPauseState : redeemPauseState
-    : dexPauseState;
-  const capacityStateReady = !isOracleNusdRoute || (isMintRoute
-    ? supplyCeilingState.data !== undefined && totalSupplyState.data !== undefined && !supplyCeilingState.error && !totalSupplyState.error
-    : collateralReserveState.data !== undefined && !collateralReserveState.error);
-  const routeStateReady = pauseState.data !== undefined && !pauseState.error && capacityStateReady;
   const rate = quotedRate(
     amountIn,
     assetIn?.decimals ?? 18,
     amountOut,
     assetOut?.decimals ?? 18,
   );
+  const executionImpactBps = useMemo(() => isOracleNusdRoute ? undefined : computeExecutionImpactBps({
+    amountIn,
+    amountOut,
+    hops: path ? path.length - 1 : undefined,
+    reserveReads: routeReserves.data,
+  }), [amountIn, amountOut, isOracleNusdRoute, path, routeReserves.data]);
+  const executionImpactLabel = executionImpactBps === undefined
+    ? "--"
+    : `${Number(executionImpactBps) / 100}%`;
+  const executionImpactTone = executionImpactBps === undefined
+    ? undefined
+    : executionImpactBps >= 500n ? "danger" : executionImpactBps >= 100n ? "warning" : "positive";
   const feeLabel = isOracleNusdRoute ? "0%" : formatFeeBps(totalFeeBps);
-  const routeLabel = (() => {
-    const from = assetIn?.symbol;
-    const to = assetOut?.symbol;
-    if (!from || !to) return undefined;
-    if (isOracleNusdRoute) return `${from} → ${to}`;
-    if (swapRoute.kind === "direct") return `${from} → ${to}`;
-    return undefined;
-  })();
+  const routeLabel = swapRouteLabel({
+    from: assetIn?.symbol,
+    isOracleRoute: isOracleNusdRoute,
+    kind: swapRoute.kind,
+    to: assetOut?.symbol,
+  });
   const infrastructureConfigured = isOracleNusdRoute
     ? Boolean(deployment.contracts.nusd)
     : Boolean(deployment.contracts.dexFactory && activeDexRouter);
@@ -388,33 +364,8 @@ export function SwapWorkspace() {
   );
   const importedContractsReady = payContractReady && receiveContractReady;
 
-  function importStatus(
-    value: string,
-    detected: SwapAsset | undefined,
-    imported: ReturnType<typeof useImportedSwapAsset>,
-  ) {
-    if (!value.trim()) return { message: "Paste a token address to import it.", tone: "neutral" };
-    if (imported.status === "invalid" || imported.status === "unsupported" || imported.status === "unavailable") {
-      return { message: imported.error ?? "Token could not be recognized.", tone: "danger" };
-    }
-    if (imported.status === "loading") return { message: "Checking Explorer…", tone: "neutral" };
-    if (imported.status !== "ready" || !detected) return { message: "Checking token…", tone: "neutral" };
-    if (imported.metadataSource === "explorer") {
-      return { message: `${detected.symbol} · Explorer verified`, tone: "positive" };
-    }
-    const explorerCopy = imported.explorerStatus === "not-indexed"
-      ? "Explorer not indexed"
-      : imported.explorerStatus === "unavailable"
-        ? "Explorer unavailable"
-        : "Explorer metadata invalid";
-    return {
-      message: `${detected.symbol} · On-chain metadata · ${explorerCopy}`,
-      tone: "positive",
-    };
-  }
-
-  const payContractStatus = importStatus(payContract, detectedPayAsset, importedPay);
-  const receiveContractStatus = importStatus(receiveContract, detectedReceiveAsset, importedReceive);
+  const payContractStatus = importedTokenStatus(payContract, detectedPayAsset, importedPay);
+  const receiveContractStatus = importedTokenStatus(receiveContract, detectedReceiveAsset, importedReceive);
   const activeContract = importSide === "pay" ? payContract : receiveContract;
   const activeDetectedAsset = importSide === "pay" ? detectedPayAsset : detectedReceiveAsset;
   const activeContractStatus = importSide === "pay" ? payContractStatus : receiveContractStatus;
@@ -424,36 +375,37 @@ export function SwapWorkspace() {
     else setReceiveContract(value);
     resetAmount();
   }
-  const routeLiquidityStatus = (() => {
-    if (!payContract.trim() && !receiveContract.trim()) return undefined;
-    if (!importedContractsReady || !detectedPayAsset && !detectedReceiveAsset) return undefined;
-    if (isOracleNusdRoute) return "Liquidity found · 0% fee";
-    if (swapRoute.kind === "checking") return "Checking liquidity…";
-    if (swapRoute.kind === "direct") return "Direct liquidity found";
-    if (swapRoute.error) return "Liquidity check is temporarily unavailable.";
-    return "No liquidity is available for this pair.";
-  })();
+  const routeLiquidityStatus = swapLiquidityStatus({
+    bridgeLive: swapRoute.bridgeLive,
+    detected: Boolean(detectedPayAsset || detectedReceiveAsset),
+    directLive: swapRoute.directLive,
+    hasImportInput: Boolean(payContract.trim() || receiveContract.trim()),
+    importsReady: importedContractsReady,
+    isOracleRoute: isOracleNusdRoute,
+    kind: swapRoute.kind,
+    routeError: Boolean(swapRoute.error),
+  });
 
   const validation = useMemo(() => {
     if (!amountText) return undefined;
     if (!amountIn || !assetIn) return "Enter a valid positive amount.";
     if (!importedContractsReady) return "Resolve both token contracts before swapping.";
+    if (!executableQuoteCurrent) return "Waiting for a quote for the current amount.";
     if (quoteError) return "A fresh swap quote is unavailable.";
     if (!routeConfigured) return "No liquidity is available for this pair.";
     if (spendableBalance !== undefined && amountIn > spendableBalance) {
       return assetIn.native ? "Leave at least 0.01 zkLTC in your wallet for network fees." : "Amount exceeds wallet balance.";
     }
-    if (isMintRoute && (supplyCeilingState.error || totalSupplyState.error)) return "NUSD mint capacity is unavailable.";
-    if (isMintRoute && amountOut !== undefined && supplyCeilingState.data !== undefined && totalSupplyState.data !== undefined) {
-      const remainingCapacity = supplyCeilingState.data > totalSupplyState.data ? supplyCeilingState.data - totalSupplyState.data : 0n;
-      if (amountOut > remainingCapacity) return "Amount exceeds the remaining NUSD mint capacity.";
+    if (isMintRoute && mintCapacityUnavailable) return "NUSD mint capacity is unavailable.";
+    if (isMintRoute && amountOut !== undefined && remainingMintCapacity !== undefined) {
+      if (amountOut > remainingMintCapacity) return "Amount exceeds the remaining NUSD mint capacity.";
     }
-    if (isOracleNusdRoute && !isMintRoute && collateralReserveState.error) return "NUSD reserve data is unavailable.";
-    if (isOracleNusdRoute && !isMintRoute && amountOut !== undefined && collateralReserveState.data !== undefined && amountOut > collateralReserveState.data) {
+    if (isOracleNusdRoute && !isMintRoute && redeemReserveUnavailable) return "NUSD reserve data is unavailable.";
+    if (isOracleNusdRoute && !isMintRoute && amountOut !== undefined && redeemReserve !== undefined && amountOut > redeemReserve) {
       return "The NUSD native reserve cannot cover this redemption.";
     }
     return undefined;
-  }, [amountIn, amountOut, amountText, assetIn, collateralReserveState.data, collateralReserveState.error, importedContractsReady, isMintRoute, isOracleNusdRoute, quoteError, routeConfigured, spendableBalance, supplyCeilingState.data, supplyCeilingState.error, totalSupplyState.data, totalSupplyState.error]);
+  }, [amountIn, amountOut, amountText, assetIn, executableQuoteCurrent, importedContractsReady, isMintRoute, isOracleNusdRoute, mintCapacityUnavailable, quoteError, redeemReserve, redeemReserveUnavailable, remainingMintCapacity, routeConfigured, spendableBalance]);
 
   function resetAmount() {
     setAmountText("");
@@ -491,10 +443,11 @@ export function SwapWorkspace() {
 
   async function submit() {
     if (
-      !importedContractsReady || !routeConfigured || !routeStateReady || routePaused || quoteFetching
+      !importedContractsReady || !routeConfigured || !routeStateReady || routePaused || quoteFetching || !executableQuoteCurrent
       || validation || tx.pending || !amountIn || !amountOut || !address || !assetIn || !assetOut
     ) return;
     const minimumOut = minimumAfterSlippage(amountOut, slippageBps);
+
     if (isOracleNusdRoute) {
       const hash = isMintRoute
         ? await tx.execute({ call: { address: deployment.contracts.nusd, abi: nusdOracleAbi, functionName: "mintAtOracle", args: [minimumOut, address], value: amountIn } })
@@ -508,14 +461,24 @@ export function SwapWorkspace() {
     }
 
     if (!tokenInAddress || !tokenOutAddress || !path) return;
-    const swapCall = assetIn.native
-      ? { functionName: "swapExactNativeForTokens", args: [minimumOut, [...path], address, transactionDeadline()] as const, value: amountIn }
-      : assetOut.native
-        ? { functionName: "swapExactTokensForNative", args: [amountIn, minimumOut, [...path], address, transactionDeadline()] as const }
-        : { functionName: "swapExactTokensForTokens", args: [amountIn, minimumOut, [...path], address, transactionDeadline()] as const };
+    const swapCall = buildDexSwapCall({
+      amountIn,
+      deadline: transactionDeadline(),
+      minimumOut,
+      path,
+      payNative: assetIn.native,
+      receiveNative: assetOut.native,
+      recipient: address,
+    });
     const hash = await tx.execute({
       approval: assetIn.native ? undefined : { token: tokenInAddress, spender: activeDexRouter, amount: amountIn },
-      call: { address: activeDexRouter, abi: dexRouterAbi, functionName: swapCall.functionName, args: swapCall.args, value: "value" in swapCall ? swapCall.value : undefined },
+      call: {
+        address: activeDexRouter,
+        abi: dexRouterAbi,
+        functionName: swapCall.functionName,
+        args: swapCall.args,
+        value: swapCall.value,
+      },
     });
     if (hash) {
       toast.show("Swap confirmed", `${amountText} ${assetIn.symbol} was settled on LitVM.`, "success");
@@ -523,6 +486,24 @@ export function SwapWorkspace() {
       void nativeBalance.refetch(); void tokenBalance.refetch();
     }
   }
+
+  const submitDisabled = !importedContractsReady || !routeConfigured || !routeStateReady || routePaused
+    || quoteFetching || !executableQuoteCurrent || !amountIn || !amountOut || Boolean(validation)
+    || tx.pending;
+  const submitLabel = swapButtonLabel({
+    importsReady: importedContractsReady,
+    infrastructureConfigured,
+    payImportStatus: importedPay.status,
+    pending: tx.pending,
+
+    quoteFetching,
+    receiveImportStatus: importedReceive.status,
+    routeConfigured,
+    routeError: Boolean(swapRoute.error),
+    routeKind: swapRoute.kind,
+    routePaused,
+    routeStateReady,
+  });
 
   return (
     <section className="fi-panel fi-sticky-panel fi-swap-terminal" aria-labelledby="fi-swap-title">
@@ -558,7 +539,8 @@ export function SwapWorkspace() {
           asset={assetOut?.symbol ?? "--"}
           assetValue={tokenOut}
           assets={selectorEntries}
-          value={amountOut ? formatAmount(amountOut, assetOut?.decimals ?? 18, 8).replace(/,/g, "") : ""}
+          value={amountOut ? formatTokenAmount(amountOut, assetOut?.decimals ?? 18).replace(/,/g, "") : ""}
+          busy={quoteFetching}
           helper={quoteFetching
             ? "Checking liquidity…"
             : !isOracleNusdRoute && swapRoute.error
@@ -618,6 +600,14 @@ export function SwapWorkspace() {
             <div><strong>Swap route</strong><p>{routeLiquidityStatus}</p></div>
           </div>
         ) : null}
+        {executionImpactBps !== undefined && executionImpactBps >= 500n ? (
+          <div className="fi-inline-state fi-inline-warning" role="alert">
+            <div>
+              <strong>High execution impact</strong>
+              <p>The current route is {executionImpactLabel} below the fee-free spot value. Reduce the amount or wait for deeper liquidity.</p>
+            </div>
+          </div>
+        ) : null}
         {amountIn ? (
           <dl className="fi-form-details">
             {routeLabel ? (
@@ -627,7 +617,9 @@ export function SwapWorkspace() {
               </div>
             ) : null}
             <div><dt>Rate</dt><dd>{rate ? `${rate} ${assetOut?.symbol ?? ""} / ${assetIn?.symbol ?? ""}` : "--"}</dd></div>
-            <div><dt>Minimum received</dt><dd>{minimumReceived ? `${formatAmount(minimumReceived, assetOut?.decimals ?? 18)} ${assetOut?.symbol ?? ""}` : "--"}</dd></div>
+            <div><dt>Route fee</dt><dd>{feeLabel}</dd></div>
+            <div><dt>Execution impact</dt><dd data-tone={executionImpactTone}>{executionImpactLabel}</dd></div>
+            <div><dt>Minimum received</dt><dd>{minimumReceived ? `${formatTokenAmount(minimumReceived, assetOut?.decimals ?? 18)} ${assetOut?.symbol ?? ""}` : "--"}</dd></div>
           </dl>
         ) : null}
         <details className="fi-settings-details">
@@ -637,21 +629,8 @@ export function SwapWorkspace() {
         {!isConnected ? (
           <ConnectWalletButton />
         ) : (
-          <button type="submit" className="fi-button fi-button-primary fi-button-block" disabled={!importedContractsReady || !routeConfigured || !routeStateReady || routePaused || quoteFetching || !amountIn || !amountOut || Boolean(validation) || tx.pending}>
-            {!importedContractsReady
-              ? importedPay.status === "unavailable" || importedReceive.status === "unavailable" ? "Token check unavailable"
-                : importedPay.status === "invalid" || importedPay.status === "unsupported"
-                  || importedReceive.status === "invalid" || importedReceive.status === "unsupported" ? "Check token addresses"
-                  : "Checking tokens"
-              : !infrastructureConfigured ? "Not deployed"
-                : swapRoute.kind === "checking" ? "Checking liquidity"
-                  : swapRoute.error ? swapRoute.kind === "unavailable" ? "Liquidity check unavailable" : "Quote unavailable"
-                    : !routeConfigured ? "No liquidity"
-                      : !routeStateReady ? "Checking route"
-                        : routePaused ? "Swaps paused"
-                          : tx.pending ? "Processing"
-                            : quoteFetching ? "Refreshing quote"
-                              : "Swap"}
+          <button type="submit" className="fi-button fi-button-primary fi-button-block" disabled={submitDisabled}>
+            {submitLabel}
           </button>
         )}
         <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />

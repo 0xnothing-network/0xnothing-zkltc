@@ -12,30 +12,20 @@ import {
   fetchUserNftsFromSubgraph,
   hasMarketplaceSubgraph,
 } from "@/lib/marketplaceSubgraph";
+import { createBoundedCache } from "@/lib/boundedCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-interface CacheEntry<T> {
-  value: T;
-  ts: number;
-}
-const CACHE = new Map<string, CacheEntry<NativeNft[]>>();
 const CACHE_TTL = 3_000;
 const CACHE_MAX_ENTRIES = 1024;
 const MAX_SUBGRAPH_BLOCK_LAG = 128n;
-const NFT_LOADS_IN_FLIGHT = new Map<string, Promise<NativeNft[]>>();
-
-function writeCache(address: string, value: NativeNft[]) {
-  CACHE.delete(address);
-  CACHE.set(address, { value, ts: Date.now() });
-  while (CACHE.size > CACHE_MAX_ENTRIES) {
-    const oldestKey = CACHE.keys().next().value;
-    if (oldestKey === undefined) break;
-    CACHE.delete(oldestKey);
-  }
-}
+const nftCache = createBoundedCache<NativeNft[]>({
+  maxEntries: CACHE_MAX_ENTRIES,
+  ttlMs: CACHE_TTL,
+  maxInFlight: CACHE_MAX_ENTRIES,
+});
 
 export interface NativeNft {
   tokenId: string;
@@ -45,22 +35,14 @@ export interface NativeNft {
 }
 
 async function fetchNativeNfts(address: string, force = false): Promise<NativeNft[]> {
-  const cached = CACHE.get(address);
-  if (!force && cached && Date.now() - cached.ts < CACHE_TTL) {
-    return cached.value;
-  }
+  if (!force) return nftCache.load(address, () => loadNativeNfts(address, false));
 
-  const loadKey = `${address}:${force ? "force" : "normal"}`;
-  const existing = NFT_LOADS_IN_FLIGHT.get(loadKey);
-  if (existing) return existing;
-
-  const pending = loadNativeNfts(address, force);
-  NFT_LOADS_IN_FLIGHT.set(loadKey, pending);
-  try {
-    return await pending;
-  } finally {
-    if (NFT_LOADS_IN_FLIGHT.get(loadKey) === pending) NFT_LOADS_IN_FLIGHT.delete(loadKey);
-  }
+  // A forced reload must read past the subgraph's own response cache, so it neither
+  // uses the cached entry nor joins a non-forced load. It still coalesces with other
+  // forced reloads (a key that is never retained) and then seeds the shared entry.
+  const tokens = await nftCache.refresh(`force:${address}`, () => loadNativeNfts(address, true), 0);
+  nftCache.set(address, tokens);
+  return tokens;
 }
 
 async function loadNativeNfts(address: string, fresh: boolean): Promise<NativeNft[]> {
@@ -68,7 +50,6 @@ async function loadNativeNfts(address: string, fresh: boolean): Promise<NativeNf
     try {
       const payload = await fetchUserNftsFromSubgraph(address, 5_000, fresh);
       if (await isSubgraphFresh(payload)) {
-        writeCache(address, payload.tokens);
         return payload.tokens;
       }
       console.warn(
@@ -82,7 +63,6 @@ async function loadNativeNfts(address: string, fresh: boolean): Promise<NativeNf
   // Get token IDs first
   const tokenIds = await getUserTokenIds(address);
   if (tokenIds.length === 0) {
-    writeCache(address, []);
     return [];
   }
 
@@ -143,7 +123,6 @@ async function loadNativeNfts(address: string, fresh: boolean): Promise<NativeNf
     };
   });
 
-  writeCache(address, tokens);
   return tokens;
 }
 

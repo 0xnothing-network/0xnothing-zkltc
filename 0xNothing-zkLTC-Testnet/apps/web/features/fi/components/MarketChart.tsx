@@ -18,6 +18,7 @@ import { EmptyState, ErrorState, SkeletonRows } from "@fi/components/UiStates";
 import { fiPath } from "@fi/config/paths";
 import type { CandlePoint, DataEnvelope } from "@fi/lib/data";
 import { fiPollInterval } from "@fi/lib/hooks/useFiPolling";
+import { CHART_FONT_FAMILY } from "@/lib/chartTheme";
 import { fetchJson } from "@/lib/http";
 
 type Period = "5m" | "1h" | "4h" | "1d";
@@ -317,6 +318,7 @@ export function MarketChart({
       layout: {
         background: { type: ColorType.Solid, color: "#0c0e10" },
         textColor: "#9299a1",
+        fontFamily: CHART_FONT_FAMILY,
         attributionLogo: false,
       },
       grid: {

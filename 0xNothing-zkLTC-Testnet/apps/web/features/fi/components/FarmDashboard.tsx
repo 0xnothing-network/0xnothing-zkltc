@@ -43,7 +43,14 @@ function FarmRow({
     abi: dexFactoryAbi,
     functionName: "getPair",
     args: addressA && addressB ? [addressA, addressB] : undefined,
-    query: { enabled: Boolean(deployment.contracts.dexFactory && addressA && addressB) },
+    query: {
+      enabled: Boolean(deployment.contracts.dexFactory && addressA && addressB),
+      // A resolved pair mapping never changes, so polling stops once it is
+      // known. Until then the farm card would otherwise stay on "no pool"
+      // until a manual reload, because getPair is not block-synced.
+      refetchInterval: (query) => query.state.data && query.state.data !== zeroAddress ? false : 10_000,
+      refetchIntervalInBackground: false,
+    },
   });
   const pool = poolRead.data && poolRead.data !== zeroAddress ? poolRead.data : undefined;
   const configuredGauge = tokenA === "zkLTC"

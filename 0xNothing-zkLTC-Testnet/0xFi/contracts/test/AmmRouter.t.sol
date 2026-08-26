@@ -147,6 +147,103 @@ contract AmmRouterTest is TestBase {
         assertEq(router.accruedRouterFees(address(outputToken)), 0, "no output surcharge");
     }
 
+    function testNativeInputRoutesThroughNusdWithoutIntermediateResidue() public {
+        MockERC20 outputToken = _seedNativeNusdOutputPools();
+        address[] memory path = new address[](3);
+        path[0] = address(wrapped);
+        path[1] = address(nusd);
+        path[2] = address(outputToken);
+
+        uint256 grossAmount = 2 ether;
+        uint256[] memory quoted = router.getAmountsOut(grossAmount, path);
+        uint256 outputBefore = outputToken.balanceOf(BOB);
+        vm.prank(BOB);
+        router.swapExactNativeForTokens{ value: grossAmount }(quoted[2], path, BOB, block.timestamp + 1);
+
+        uint256 routerFee = router.routerFeeFor(grossAmount, path.length);
+        assertEq(outputToken.balanceOf(BOB) - outputBefore, quoted[2], "native multihop output");
+        assertEq(router.accruedRouterFees(address(wrapped)), routerFee, "wrapped fee accrued once");
+        assertEq(wrapped.balanceOf(address(router)), routerFee, "wrapped fee remains backed");
+        assertEq(nusd.balanceOf(address(router)), 0, "no intermediate NUSD residue");
+        assertEq(outputToken.balanceOf(address(router)), 0, "no output residue");
+    }
+
+    function testTokenInputRoutesThroughNusdToNativeWithoutIntermediateResidue() public {
+        MockERC20 inputToken = _seedNativeNusdOutputPools();
+        address[] memory path = new address[](3);
+        path[0] = address(inputToken);
+        path[1] = address(nusd);
+        path[2] = address(wrapped);
+
+        uint256 grossAmount = 100 ether;
+        uint256[] memory quoted = router.getAmountsOut(grossAmount, path);
+        uint256 nativeBefore = BOB.balance;
+        vm.prank(BOB);
+        router.swapExactTokensForNative(grossAmount, quoted[2], path, BOB, block.timestamp + 1);
+
+        uint256 routerFee = router.routerFeeFor(grossAmount, path.length);
+        assertEq(BOB.balance - nativeBefore, quoted[2], "native recipient receives exact quote");
+        assertEq(router.accruedRouterFees(address(inputToken)), routerFee, "input-token fee accrued once");
+        assertEq(inputToken.balanceOf(address(router)), routerFee, "input-token fee remains backed");
+        assertEq(nusd.balanceOf(address(router)), 0, "no intermediate NUSD residue");
+        assertEq(wrapped.balanceOf(address(router)), 0, "wrapped output fully unwrapped");
+    }
+
+    function testMaximumThreeHopPathSettlesEveryIntermediatePair() public {
+        _seedStandardPair();
+        MockERC20 middle = new MockERC20("Middle", "MID");
+        MockERC20 output = new MockERC20("Output", "OUT");
+        _fundAndApprove(ALICE, middle, 1_000_000 ether);
+        _fundAndApprove(ALICE, output, 1_000_000 ether);
+        _fundAndApprove(BOB, output, 1_000_000 ether);
+
+        vm.startPrank(ALICE);
+        router.addLiquidity(
+            ZeroXFiRouter.AddLiquidityParams({
+                tokenA: address(nusd),
+                tokenB: address(middle),
+                amountADesired: 200_000 ether,
+                amountBDesired: 150_000 ether,
+                amountAMin: 200_000 ether,
+                amountBMin: 150_000 ether,
+                minimumLiquidity: 1,
+                to: ALICE,
+                deadline: block.timestamp + 1
+            })
+        );
+        router.addLiquidity(
+            ZeroXFiRouter.AddLiquidityParams({
+                tokenA: address(middle),
+                tokenB: address(output),
+                amountADesired: 100_000 ether,
+                amountBDesired: 80_000 ether,
+                amountAMin: 100_000 ether,
+                amountBMin: 80_000 ether,
+                minimumLiquidity: 1,
+                to: ALICE,
+                deadline: block.timestamp + 1
+            })
+        );
+        vm.stopPrank();
+
+        address[] memory path = new address[](4);
+        path[0] = address(token);
+        path[1] = address(nusd);
+        path[2] = address(middle);
+        path[3] = address(output);
+        uint256 grossAmount = 100 ether;
+        uint256[] memory quoted = router.getAmountsOut(grossAmount, path);
+        uint256 outputBefore = output.balanceOf(BOB);
+        vm.prank(BOB);
+        router.swapExactTokensForTokens(grossAmount, quoted[3], path, BOB, block.timestamp + 1);
+
+        assertEq(output.balanceOf(BOB) - outputBefore, quoted[3], "three-hop exact output");
+        assertEq(router.accruedRouterFees(address(token)), router.routerFeeFor(grossAmount, path.length), "one fee");
+        assertEq(nusd.balanceOf(address(router)), 0, "no first intermediate residue");
+        assertEq(middle.balanceOf(address(router)), 0, "no second intermediate residue");
+        assertEq(output.balanceOf(address(router)), 0, "no output residue");
+    }
+
     function testPathBoundsAndRepeatedTokensAreRejected() public {
         assertEq(router.routerFeeFor(1 ether, 4), 0.002 ether, "three-hop surcharge charged once");
         assertEq(router.routerFeeBpsForPathLength(4), 20, "three-hop router bps");
@@ -410,6 +507,39 @@ contract AmmRouterTest is TestBase {
     function _seedStandardPair() private {
         vm.prank(ALICE);
         router.addLiquidity(_addParams(ALICE, 100_000 ether, 200_000 ether));
+    }
+
+    function _seedNativeNusdOutputPools() private returns (MockERC20 outputToken) {
+        outputToken = new MockERC20("Output", "OUT");
+        _fundAndApprove(ALICE, outputToken, 1_000_000 ether);
+        _fundAndApprove(BOB, outputToken, 1_000_000 ether);
+
+        vm.startPrank(ALICE);
+        router.addLiquidityNative{ value: 1000 ether }(
+            ZeroXFiRouter.AddLiquidityNativeParams({
+                token: address(nusd),
+                amountTokenDesired: 200_000 ether,
+                amountTokenMin: 200_000 ether,
+                amountNativeMin: 1000 ether,
+                minimumLiquidity: 1,
+                to: ALICE,
+                deadline: block.timestamp + 1
+            })
+        );
+        router.addLiquidity(
+            ZeroXFiRouter.AddLiquidityParams({
+                tokenA: address(nusd),
+                tokenB: address(outputToken),
+                amountADesired: 200_000 ether,
+                amountBDesired: 100_000 ether,
+                amountAMin: 200_000 ether,
+                amountBMin: 100_000 ether,
+                minimumLiquidity: 1,
+                to: ALICE,
+                deadline: block.timestamp + 1
+            })
+        );
+        vm.stopPrank();
     }
 
     function _constantProduct(address pair) private view returns (uint256 product) {

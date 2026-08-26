@@ -75,11 +75,15 @@ const addresses = {
   nETHNusdGauge: addressOf(deployment.nETHNusdGauge, "nETH/NUSD gauge"),
 };
 
-const deployed = {};
-for (const [name, address] of Object.entries(addresses)) {
-  const code = await publicClient.getCode({ address });
-  deployed[name] = Boolean(code && code !== "0x");
-}
+// Issue every bytecode probe in one pass so the batching transport collapses
+// them into a single request instead of one round trip per address.
+const addressEntries = Object.entries(addresses);
+const addressCodes = await Promise.all(
+  addressEntries.map(([, address]) => publicClient.getCode({ address })),
+);
+const deployed = Object.fromEntries(addressEntries.map(([name], index) => (
+  [name, Boolean(addressCodes[index] && addressCodes[index] !== "0x")]
+)));
 if (mode === "timelock") {
   const code = await publicClient.getCode({ address: governance });
   deployed.governance = Boolean(code && code !== "0x");
@@ -325,8 +329,11 @@ const collateralDefinitions = synthMigration
     ["nBTC", "nBTC", addresses.nBTC, addresses.btcOracle, deployment.nBTCLendingCollateralCap || deployment.nBTCDebtCeiling, true],
     ["nETH", "nETH", addresses.nETH, addresses.ethOracle, deployment.nETHLendingCollateralCap || deployment.nETHDebtCeiling, true],
   ];
-const collateral = [];
-for (const [symbol, feedKey, asset, oracle, cap, enabled] of collateralDefinitions) {
+// Every collateral probe is an independent view read, so fan them out together
+// and keep the definition order through the resolved array.
+const collateral = await Promise.all(collateralDefinitions.map(async (
+  [symbol, feedKey, asset, oracle, cap, enabled],
+) => {
   const [config, feed, fresh] = await Promise.all([
     publicClient.readContract({ address: addresses.lending, abi: lendingCollateralAbi, functionName: "collateralConfigs", args: [asset] }),
     publicClient.readContract({ address: oracle, abi: oracleAbi, functionName: "feed" }),
@@ -336,7 +343,7 @@ for (const [symbol, feedKey, asset, oracle, cap, enabled] of collateralDefinitio
   const configured = lendingImplementation.runtimeCompatible
     && lendingCollateralConfigurationMatches(config, { oracle, cap, enabled })
     && feed.toLowerCase() === expectedFeed.toLowerCase();
-  collateral.push({
+  return {
     symbol,
     oracle,
     feed,
@@ -349,21 +356,23 @@ for (const [symbol, feedKey, asset, oracle, cap, enabled] of collateralDefinitio
     liquidationBonusBps: config[4],
     decimals: config[5],
     oracleFresh: fresh,
-  });
-}
-const collateralAssetCount = await publicClient.readContract({
-  address: addresses.lending,
-  abi: lendingAbi,
-  functionName: "collateralAssetCount",
-});
-const collateralAssetOrder = await Promise.all(collateralDefinitions.map((_, index) => (
+  };
+}));
+const [collateralAssetCount, collateralAssetOrder] = await Promise.all([
   publicClient.readContract({
     address: addresses.lending,
     abi: lendingAbi,
-    functionName: "collateralAssetAt",
-    args: [BigInt(index)],
-  })
-)));
+    functionName: "collateralAssetCount",
+  }),
+  Promise.all(collateralDefinitions.map((_, index) => (
+    publicClient.readContract({
+      address: addresses.lending,
+      abi: lendingAbi,
+      functionName: "collateralAssetAt",
+      args: [BigInt(index)],
+    })
+  ))),
+]);
 const lendingCollateralTopologyReady = collateralAssetCount === BigInt(collateralDefinitions.length)
   && collateralDefinitions.every((definition, index) => (
     sameAddress(collateralAssetOrder[index], definition[2])
@@ -374,15 +383,16 @@ const expectedPairs = [
   ["nBTC", addresses.nBTC, addresses.nBTCNusdPair, addresses.nBTCNusdGauge, synthFeeGaugeFactoryAddress || addresses.gaugeFactory],
   ["nETH", addresses.nETH, addresses.nETHNusdPair, addresses.nETHNusdGauge, synthFeeGaugeFactoryAddress || addresses.gaugeFactory],
 ];
-const pools = [];
-for (const [symbol, asset, expectedPair, expectedGauge, gaugeFactory] of expectedPairs) {
+const pools = await Promise.all(expectedPairs.map(async (
+  [symbol, asset, expectedPair, expectedGauge, gaugeFactory],
+) => {
   const [pair, gauge, lpSupply, depositsPaused] = await Promise.all([
     publicClient.readContract({ address: addresses.factory, abi: factoryAbi, functionName: "getPair", args: [asset, addresses.nusd] }),
     publicClient.readContract({ address: gaugeFactory, abi: gaugeFactoryAbi, functionName: "gaugeForPair", args: [expectedPair] }),
     publicClient.readContract({ address: expectedPair, abi: pairAbi, functionName: "totalSupply" }),
     publicClient.readContract({ address: expectedGauge, abi: gaugeAbi, functionName: "depositsPaused" }),
   ]);
-  pools.push({
+  return {
     asset: symbol,
     pair,
     gauge,
@@ -391,15 +401,16 @@ for (const [symbol, asset, expectedPair, expectedGauge, gaugeFactory] of expecte
     hasLiquidity: lpSupply > 0n,
     lpSupply: lpSupply.toString(),
     depositsPaused,
-  });
-}
+  };
+}));
 
 const vaultDefinitions = [
   ["nBTC", addresses.nBTC, addresses.nBTCVault, addresses.btcOracle, deployment.nBTCDebtCeiling],
   ["nETH", addresses.nETH, addresses.nETHVault, addresses.ethOracle, deployment.nETHDebtCeiling],
 ];
-const vaults = [];
-for (const [symbol, asset, vault, oracle, debtCeiling] of vaultDefinitions) {
+const vaults = await Promise.all(vaultDefinitions.map(async (
+  [symbol, asset, vault, oracle, debtCeiling],
+) => {
   const [assetOwner, boundVault, synthSupply, vaultNusd, vaultAsset, vaultOracle, ceiling, mintFeeDistributor] = await Promise.all([
     publicClient.readContract({ address: asset, abi: synthAbi, functionName: "owner" }),
     publicClient.readContract({ address: asset, abi: synthAbi, functionName: "vault" }),
@@ -455,7 +466,7 @@ for (const [symbol, asset, vault, oracle, debtCeiling] of vaultDefinitions) {
         && synthSupply === totalDebt + totalBadDebt,
     };
   }
-  vaults.push({
+  return {
     symbol,
     bindingOk: assetOwner.toLowerCase() === zeroAddress
       && boundVault.toLowerCase() === vault.toLowerCase()
@@ -474,8 +485,8 @@ for (const [symbol, asset, vault, oracle, debtCeiling] of vaultDefinitions) {
     mintFeeDistributor: mintFeeDistributor || null,
     syntheticSupply: synthSupply,
     reserveAccounting,
-  });
-}
+  };
+}));
 
 let synthSafetyReserve = {
   expected: synthSafetyReserveExpected,
@@ -572,53 +583,52 @@ if (synthSafetyReserveAddress) {
   };
 }
 
-const retiredSynthMarkets = [];
 const reserveMigration = synthMigration;
-if (reserveMigration) {
-  const retiredDefinitions = [
+const retiredDefinitions = reserveMigration
+  ? [
     ["nBTC", reserveMigration.previousNBTC, reserveMigration.previousNBTCVault],
     ["nETH", reserveMigration.previousNETH, reserveMigration.previousNETHVault],
-  ];
-  for (const [symbol, rawAsset, rawVault] of retiredDefinitions) {
-    const asset = addressOf(rawAsset, `previous ${symbol}`);
-    const vault = addressOf(rawVault, `previous ${symbol} vault`);
-    const [config, lendingCollateral, totalSupply, collateral, debt, badDebt, mintPaused, withdrawPaused, rawNusdBalance] = await Promise.all([
-      publicClient.readContract({ address: addresses.lending, abi: lendingCollateralAbi, functionName: "collateralConfigs", args: [asset] }),
-      publicClient.readContract({ address: addresses.lending, abi: lendingAbi, functionName: "totalCollateralByAsset", args: [asset] }),
-      publicClient.readContract({ address: asset, abi: erc20Abi, functionName: "totalSupply" }),
-      publicClient.readContract({ address: vault, abi: vaultAbi, functionName: "totalCollateralNusd" }),
-      publicClient.readContract({ address: vault, abi: vaultAbi, functionName: "totalDebtSynthetic" }),
-      publicClient.readContract({ address: vault, abi: vaultAbi, functionName: "totalBadDebtSynthetic" }),
-      publicClient.readContract({ address: vault, abi: vaultAbi, functionName: "mintPaused" }),
-      publicClient.readContract({ address: vault, abi: vaultAbi, functionName: "withdrawPaused" }),
-      publicClient.readContract({ address: addresses.nusd, abi: erc20Abi, functionName: "balanceOf", args: [vault] }),
-    ]);
-    const ready = !config[6]
-      && lendingCollateral === 0n
-      && totalSupply === 0n
-      && debt === 0n
-      && badDebt === 0n
-      && mintPaused
-      && !withdrawPaused
-      && rawNusdBalance >= collateral;
-    retiredSynthMarkets.push({
-      symbol,
-      asset,
-      vault,
-      lendingEnabled: config[6],
-      lendingCollateral,
-      totalSupply,
-      collateral,
-      rawNusdBalance,
-      surplusNusd: rawNusdBalance - collateral,
-      debt,
-      badDebt,
-      mintPaused,
-      withdrawPaused,
-      ready,
-    });
-  }
-}
+  ]
+  : [];
+const retiredSynthMarkets = await Promise.all(retiredDefinitions.map(async ([symbol, rawAsset, rawVault]) => {
+  const asset = addressOf(rawAsset, `previous ${symbol}`);
+  const vault = addressOf(rawVault, `previous ${symbol} vault`);
+  const [config, lendingCollateral, totalSupply, collateral, debt, badDebt, mintPaused, withdrawPaused, rawNusdBalance] = await Promise.all([
+    publicClient.readContract({ address: addresses.lending, abi: lendingCollateralAbi, functionName: "collateralConfigs", args: [asset] }),
+    publicClient.readContract({ address: addresses.lending, abi: lendingAbi, functionName: "totalCollateralByAsset", args: [asset] }),
+    publicClient.readContract({ address: asset, abi: erc20Abi, functionName: "totalSupply" }),
+    publicClient.readContract({ address: vault, abi: vaultAbi, functionName: "totalCollateralNusd" }),
+    publicClient.readContract({ address: vault, abi: vaultAbi, functionName: "totalDebtSynthetic" }),
+    publicClient.readContract({ address: vault, abi: vaultAbi, functionName: "totalBadDebtSynthetic" }),
+    publicClient.readContract({ address: vault, abi: vaultAbi, functionName: "mintPaused" }),
+    publicClient.readContract({ address: vault, abi: vaultAbi, functionName: "withdrawPaused" }),
+    publicClient.readContract({ address: addresses.nusd, abi: erc20Abi, functionName: "balanceOf", args: [vault] }),
+  ]);
+  const ready = !config[6]
+    && lendingCollateral === 0n
+    && totalSupply === 0n
+    && debt === 0n
+    && badDebt === 0n
+    && mintPaused
+    && !withdrawPaused
+    && rawNusdBalance >= collateral;
+  return {
+    symbol,
+    asset,
+    vault,
+    lendingEnabled: config[6],
+    lendingCollateral,
+    totalSupply,
+    collateral,
+    rawNusdBalance,
+    surplusNusd: rawNusdBalance - collateral,
+    debt,
+    badDebt,
+    mintPaused,
+    withdrawPaused,
+    ready,
+  };
+}));
 
 const localContracts = network.deployment?.contracts || {};
 const localBindings = {

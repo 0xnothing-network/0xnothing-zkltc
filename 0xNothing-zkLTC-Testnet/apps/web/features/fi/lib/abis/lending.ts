@@ -1,4 +1,7 @@
 export const lendingPoolAbi = [
+  { type: "function", name: "owner", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "address" }] },
+  { type: "function", name: "protocolInterestNusd", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "withdrawProtocolInterest", stateMutability: "nonpayable", inputs: [{ name: "amountNusd", type: "uint256" }, { name: "recipient", type: "address" }], outputs: [] },
   {
     type: "function", name: "collateralConfigs", stateMutability: "view",
     inputs: [{ name: "asset", type: "address" }],

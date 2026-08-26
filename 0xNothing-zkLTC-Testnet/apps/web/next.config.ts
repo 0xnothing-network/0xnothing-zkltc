@@ -65,20 +65,13 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24 * 30,
+    // next/image is used only for the bundled cover art. IPFS and token logos are
+    // plain <img> on purpose, so the optimizer needs no proxy entry point: every
+    // remote pattern here would only widen /_next/image without serving anything.
     localPatterns: [
       { pathname: "/0xNothing.jpg", search: "" },
-      { pathname: "/api/pump/image" },
     ],
-    remotePatterns: [
-      { protocol: "https", hostname: "**.mypinata.cloud" },
-      { protocol: "https", hostname: "gateway.pinata.cloud" },
-      { protocol: "https", hostname: "dweb.link" },
-      { protocol: "https", hostname: "**.ipfs.dweb.link" },
-      { protocol: "https", hostname: "ipfs.io" },
-      { protocol: "https", hostname: "**.infura.io" },
-      { protocol: "https", hostname: "**.alchemy.com" },
-      { protocol: "https", hostname: "**.moralis.io" },
-    ],
+    remotePatterns: [],
   },
   async redirects() {
     return [

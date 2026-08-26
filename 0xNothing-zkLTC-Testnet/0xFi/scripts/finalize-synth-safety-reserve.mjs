@@ -6,15 +6,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import dotenv from "dotenv";
-import {
-  createPublicClient,
-  fallback,
-  getAddress,
-  http,
-  isAddress,
-  parseAbi,
-  zeroAddress,
-} from "viem";
+import { getAddress, isAddress, parseAbi, zeroAddress } from "viem";
 
 import { atomicWriteFile } from "./lib/graduation-runtime.mjs";
 import {
@@ -23,6 +15,7 @@ import {
   CURRENT_LENDING_IMPLEMENTATION_ID,
 } from "./lib/lending-implementation.mjs";
 import { writePublicEnvironment } from "./lib/public-environment.mjs";
+import { createRpcClient, primaryRpcUrl } from "./lib/rpc.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 dotenv.config({ path: path.join(root, ".env.local"), quiet: true });
@@ -126,10 +119,8 @@ if (prediction.status === "synth-safety-reserve-migration-staged") {
   requireEqual(prediction.broadcasted, true, "staged prediction broadcast marker");
 }
 requireEqual(prediction.vaultActivationRequired, true, "prediction activation requirement");
-const rpcUrl = (process.env.LITEFORGE_RPC_URL || network.rpcUrl || "").trim();
-const fallbackUrl = (process.env.LITEFORGE_FALLBACK_RPC_URL || "https://liteforge.rpc.caldera.xyz/http").trim();
-if (!rpcUrl) throw new Error("LITEFORGE_RPC_URL or network.rpcUrl is required");
-const client = createPublicClient({ transport: fallback([http(rpcUrl), http(fallbackUrl)]) });
+const rpcUrl = primaryRpcUrl(network);
+const client = createRpcClient(network, "https://liteforge.rpc.caldera.xyz/http");
 const chainId = await client.getChainId();
 if (chainId !== CHAIN_ID) throw new Error(`Wrong chain: expected ${CHAIN_ID}, got ${chainId}`);
 

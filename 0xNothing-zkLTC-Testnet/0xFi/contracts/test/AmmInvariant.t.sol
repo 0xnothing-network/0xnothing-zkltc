@@ -12,6 +12,7 @@ contract SwapHandler {
     MockERC20 public immutable token0;
     MockERC20 public immutable token1;
     ZeroXFiRouter public immutable router;
+    uint256 public unexpectedReverts;
 
     constructor(MockERC20 token0_, MockERC20 token1_, ZeroXFiRouter router_) {
         token0 = token0_;
@@ -36,7 +37,10 @@ contract SwapHandler {
         address[] memory path = new address[](2);
         path[0] = address(input);
         path[1] = address(output);
-        try router.swapExactTokensForTokens(amountIn, 0, path, address(this), block.timestamp) { } catch { }
+        try router.swapExactTokensForTokens(amountIn, 0, path, address(this), block.timestamp) { }
+        catch {
+            ++unexpectedReverts;
+        }
     }
 }
 
@@ -45,6 +49,7 @@ contract AmmInvariantTest is TestBase {
     MockERC20 private tokenB;
     ZeroXFiPair private pair;
     ZeroXFiRouter private router;
+    SwapHandler private handler;
     uint256 private initialK;
     address[] private invariantTargets;
 
@@ -86,7 +91,7 @@ contract AmmInvariantTest is TestBase {
         (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
         initialK = uint256(reserve0) * reserve1;
 
-        SwapHandler handler = new SwapHandler(tokenA, tokenB, router);
+        handler = new SwapHandler(tokenA, tokenB, router);
         tokenA.mint(address(handler), 1_000_000 ether);
         tokenB.mint(address(handler), 1_000_000 ether);
         invariantTargets.push(address(handler));
@@ -114,5 +119,9 @@ contract AmmInvariantTest is TestBase {
         assertGe(
             tokenB.balanceOf(address(router)), router.accruedRouterFees(address(tokenB)), "token B router fee backing"
         );
+    }
+
+    function invariantValidHandlerSwapsDoNotRevert() public view {
+        assertEq(handler.unexpectedReverts(), 0, "valid handler swap reverted");
     }
 }

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
-import { PUBLIC_APP_URL } from "@/lib/publicConfig";
+import { LITVM_RPC_URL, PUBLIC_APP_URL } from "@/lib/publicConfig";
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
@@ -10,6 +10,11 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
   preload: false,
 });
+
+// Every contract read leaves the browser for this origin, and the first one only
+// starts after hydration. Opening the socket while the document parses removes a
+// cold DNS and TLS round trip from the first on-chain number the page shows.
+const rpcOrigin = new URL(LITVM_RPC_URL).origin;
 
 const vercelAnalyticsEnabled = process.env.VERCEL === "1";
 
@@ -38,6 +43,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" data-scroll-behavior="smooth">
       <head>
+        <link rel="preconnect" href={rpcOrigin} crossOrigin="anonymous" />
         <link
           rel="preload"
           href="/fonts/DepartureMono-Regular.woff2"

@@ -1,11 +1,13 @@
 "use client";
 
-import { memo, useState, useEffect, useRef } from "react";
+import { memo, useState, useEffect, useMemo, useRef } from "react";
 
 interface AIPromptGeneratorProps {
   gridSize: number;
   onApplyPixelData?: (pixelData: string[][]) => void;
 }
+
+const GRID_ENTRY_SOURCE = String.raw`\[(\d+),(\d+)\]\s*=\s*(#[0-9A-Fa-f]{6})`;
 
 export const AIPromptGenerator = memo(function AIPromptGenerator({ gridSize, onApplyPixelData }: AIPromptGeneratorProps) {
   const [generated, setGenerated] = useState("");
@@ -23,7 +25,9 @@ export const AIPromptGenerator = memo(function AIPromptGenerator({ gridSize, onA
       Array(gridSize).fill("transparent")
     );
 
-    const pattern = /\[(\d+),(\d+)\]\s*=\s*(#[0-9A-Fa-f]{6})/g;
+    // A fresh RegExp per parse: a shared `/g` literal carries `lastIndex`
+    // between calls, which would make the second parse start mid-input.
+    const pattern = new RegExp(GRID_ENTRY_SOURCE, "g");
     let match;
 
     while ((match = pattern.exec(text)) !== null) {
@@ -54,7 +58,12 @@ export const AIPromptGenerator = memo(function AIPromptGenerator({ gridSize, onA
     }
   };
 
-  const count = (generated.match(/\[(\d+),(\d+)\]\s*=\s*(#[0-9A-Fa-f]{6})/g) || []).length;
+  // Pasted grid data can run to thousands of entries; scanning it on every
+  // keystroke of the textarea is wasted work once the text stops changing.
+  const count = useMemo(
+    () => (generated.match(new RegExp(GRID_ENTRY_SOURCE, "g")) || []).length,
+    [generated],
+  );
 
   return (
     <div className="bg-[#1A1A2E] rounded-2xl p-3 sm:p-5 border border-[#2D2D44]">

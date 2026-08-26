@@ -13,6 +13,7 @@ import {
 } from "viem";
 import { deployment } from "@fi/config/deployment";
 import { erc20Abi } from "@fi/lib/abis/erc20";
+import { createBoundedCache } from "@/lib/boundedCache";
 import type {
   ImportedTokenApiResponse,
   ImportedTokenExplorerStatus,
@@ -47,23 +48,21 @@ type LookupResult = {
   status: number;
 };
 
-type LookupCacheEntry = {
-  expiresAt: number;
-  result: LookupResult;
-};
-
 type RateLimitBucket = {
   tokens: number;
   updatedAt: number;
 };
 
-const lookupCache = new Map<string, LookupCacheEntry>();
-const lookupInFlight = new Map<string, Promise<LookupResult>>();
+const lookupCache = createBoundedCache<LookupResult>({
+  maxEntries: MAX_LOOKUP_CACHE_ENTRIES,
+  maxInFlight: MAX_ACTIVE_LOOKUPS,
+});
 const rateLimitBuckets = new Map<string, RateLimitBucket>();
 let lastRateLimitSweep = 0;
 
 const client = createPublicClient({
   transport: http(deployment.chain.rpcUrl, {
+    batch: { batchSize: 100, wait: 10 },
     retryCount: 1,
     retryDelay: 250,
     timeout: RPC_TIMEOUT_MS,
@@ -395,26 +394,14 @@ function json(
   });
 }
 
-function cachedLookup(key: string, now: number): LookupResult | undefined {
-  const cached = lookupCache.get(key);
-  if (!cached) return undefined;
-  if (cached.expiresAt <= now) {
-    lookupCache.delete(key);
-    return undefined;
-  }
-  lookupCache.delete(key);
-  lookupCache.set(key, cached);
-  return cached.result;
-}
-
-function rememberLookup(key: string, result: LookupResult, ttlMs: number): void {
-  lookupCache.delete(key);
-  while (lookupCache.size >= MAX_LOOKUP_CACHE_ENTRIES) {
-    const oldest = lookupCache.keys().next().value as string | undefined;
-    if (!oldest) break;
-    lookupCache.delete(oldest);
-  }
-  lookupCache.set(key, { expiresAt: Date.now() + ttlMs, result });
+/**
+ * A verified token is stable, so it is held for a minute. An "unsupported"
+ * verdict is held only briefly because the address may be a contract that is
+ * still being deployed, and a transient upstream failure is not cached at all.
+ */
+function lookupTtl(result: LookupResult): number {
+  if (result.status === 200) return POSITIVE_CACHE_TTL_MS;
+  return result.status === 422 ? NEGATIVE_CACHE_TTL_MS : 0;
 }
 
 async function resolveToken(address: Address): Promise<LookupResult> {
@@ -473,34 +460,24 @@ async function resolveToken(address: Address): Promise<LookupResult> {
 
 async function resolveTokenCached(address: Address): Promise<LookupResult> {
   const key = address.toLowerCase();
-  const cached = cachedLookup(key, Date.now());
+  const cached = lookupCache.get(key);
   if (cached) return cached;
 
-  let pending = lookupInFlight.get(key);
-  if (!pending) {
-    if (lookupInFlight.size >= MAX_ACTIVE_LOOKUPS) {
-      return {
-        payload: {
-          error: "Token verification is busy. Try again shortly.",
-          status: "unavailable",
-        },
-        status: 503,
-        cacheControl: "no-store",
-      };
-    }
-    pending = resolveToken(address).then((result) => {
-      if (result.status === 200) rememberLookup(key, result, POSITIVE_CACHE_TTL_MS);
-      else if (result.status === 422) rememberLookup(key, result, NEGATIVE_CACHE_TTL_MS);
-      return result;
-    });
-    lookupInFlight.set(key, pending);
+  // A request that would open a new upstream lookup is rejected while the
+  // concurrency budget is spent. Joining a lookup already running for this key
+  // costs nothing, so it stays allowed.
+  if (!lookupCache.pending(key) && lookupCache.saturated()) {
+    return {
+      payload: {
+        error: "Token verification is busy. Try again shortly.",
+        status: "unavailable",
+      },
+      status: 503,
+      cacheControl: "no-store",
+    };
   }
 
-  try {
-    return await pending;
-  } finally {
-    if (lookupInFlight.get(key) === pending) lookupInFlight.delete(key);
-  }
+  return lookupCache.load(key, () => resolveToken(address), lookupTtl);
 }
 
 export async function GET(

@@ -54,11 +54,14 @@ ZeroXPump as both its NUSD and vault address. When
 on the router before scheduling any future DEX adapter. Do not use `--broadcast`
 until the deployment phase has been explicitly approved.
 
-The initial deployment deliberately leaves liquidity migration unavailable.
-The live testnet router has since completed its delayed enable and 0xFi adapter
-activation, but the pinned controller does not yet own Pump and router
-administration. Until both handovers complete, the controller path and UI remain
-inactive. Reaching a `6,000 NUSD` market cap moves a market to READY and pauses
+The initial deployment deliberately leaves liquidity migration unavailable. On
+the live testnet the router has since completed its delayed enable and its 0xFi
+adapter activation, and the pinned controller now holds both Pump and router
+administration, so the controller path is active. The authoritative state is
+`pump.graduation` in `deployments/liteforge-testnet/deployments.json`: treat the
+path as live only while `enabled`, `adapterAllowed`, `controllerOwnsPumpAdmin`,
+`controllerOwnsRouterAdmin`, and `operational` are all true.
+Reaching a `6,000 NUSD` market cap moves a market to READY and pauses
 buys; while a market remains READY, holders may sell, atomically reopening the
 curve to TRADING.
 

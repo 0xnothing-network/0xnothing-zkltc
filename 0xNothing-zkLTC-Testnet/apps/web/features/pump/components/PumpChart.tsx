@@ -12,6 +12,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import type { Address } from "viem";
+import { CHART_FONT_FAMILY } from "@/lib/chartTheme";
 import { usePumpCandles } from "@/features/pump/hooks/usePumpData";
 import { PumpInlineLoading } from "@/features/pump/components/PumpStates";
 import {
@@ -236,7 +237,7 @@ export function PumpChart({ token, tokenName }: { token: Address; tokenName: str
       layout: {
         background: { type: ColorType.Solid, color: "#090a0c" },
         textColor: "#7f8791",
-        fontFamily: "var(--font-departure), monospace",
+        fontFamily: CHART_FONT_FAMILY,
         fontSize: 10,
         attributionLogo: false,
       },

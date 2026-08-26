@@ -6,6 +6,7 @@ import { createPublicClient, fallback, formatEther, formatUnits, http, parseAbi 
 import { privateKeyToAccount } from "viem/accounts";
 
 import { pumpAdministrationTopology } from "./lib/preflight-topology.mjs";
+import { fallbackRpcUrl, primaryRpcUrl, RPC_BATCH_OPTIONS } from "./lib/rpc.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const localEnv = resolve(root, ".env.local");
@@ -19,10 +20,11 @@ if (!/^0x[0-9a-fA-F]{64}$/.test(privateKey)) {
 }
 
 const account = privateKeyToAccount(privateKey);
-const rpcUrl = process.env.LITEFORGE_RPC_URL || network.rpcUrl;
-const fallbackRpcUrl = process.env.LITEFORGE_FALLBACK_RPC_URL || network.fallbackRpcUrl;
 const client = createPublicClient({
-  transport: fallback([http(rpcUrl, { timeout: 15_000, retryCount: 2 }), http(fallbackRpcUrl, { timeout: 15_000 })]),
+  transport: fallback([
+    http(primaryRpcUrl(network), { ...RPC_BATCH_OPTIONS, timeout: 15_000, retryCount: 2 }),
+    http(fallbackRpcUrl(network), { ...RPC_BATCH_OPTIONS, timeout: 15_000 }),
+  ]),
 });
 
 const erc20Abi = [

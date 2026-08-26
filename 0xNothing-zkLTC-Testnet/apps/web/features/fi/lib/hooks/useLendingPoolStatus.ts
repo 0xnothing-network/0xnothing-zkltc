@@ -40,6 +40,71 @@ function successfulResult(result: { status: string; result?: unknown } | undefin
   return result?.status === "success" ? result.result : undefined;
 }
 
+/**
+ * Fixed copy, so it belongs at module scope. The reads behind this hook are
+ * block-synced, which used to rebuild all eleven entries on every new block.
+ */
+const STATUS_COPY: Record<
+  LendingPoolStatus,
+  { title: string; message: string; actionLabel: string }
+> = {
+  unconfigured: {
+    title: "Lending is not configured",
+    message: "The testnet lending deployment is missing one or more contract addresses.",
+    actionLabel: "Not deployed",
+  },
+  disabled: {
+    title: "Lending activation pending",
+    message: "New supply, collateral deposits, and borrowing stay disabled while the deployment is finalized. Exit actions remain available.",
+    actionLabel: "Activation pending",
+  },
+  checking: {
+    title: "Verifying lending pool",
+    message: "Checking the implementation, fixed rates, and collateral limits on-chain.",
+    actionLabel: "Verifying pool",
+  },
+  "rpc-error": {
+    title: "Lending verification unavailable",
+    message: "The RPC request failed, so risk-increasing actions remain disabled until verification succeeds.",
+    actionLabel: "RPC unavailable",
+  },
+  "verification-error": {
+    title: "Lending verification failed",
+    message: "One or more required pool reads failed. Risk-increasing actions remain disabled.",
+    actionLabel: "Verification failed",
+  },
+  "implementation-mismatch": {
+    title: "Lending upgrade required",
+    message: "The configured address does not expose the expected fixed-rate lending implementation.",
+    actionLabel: "Upgrade required",
+  },
+  "rate-mismatch": {
+    title: "Lending rate mismatch",
+    message: "The on-chain lender, borrower, or protocol rate differs from the verified deployment.",
+    actionLabel: "Rates unverified",
+  },
+  "collateral-mismatch": {
+    title: "Lending risk limits mismatch",
+    message: "One or more collateral assets do not match the required 80 / 85 / 90 risk configuration.",
+    actionLabel: "Limits unverified",
+  },
+  "activation-mismatch": {
+    title: "Lending activation incomplete",
+    message: "The fixed-rate pool is still in bootstrap or has not completed its atomic activation.",
+    actionLabel: "Activation pending",
+  },
+  paused: {
+    title: "Lending risk actions paused",
+    message: "A guardian pause is active. Verified collateral top-ups and exit actions that remain available on-chain can still be used.",
+    actionLabel: "Guardian pause",
+  },
+  ready: {
+    title: "Lending verified",
+    message: "The fixed-rate pool and collateral limits match the active testnet deployment.",
+    actionLabel: "Ready",
+  },
+};
+
 function matchesRiskConfiguration(value: LendingCollateralConfig | undefined): boolean {
   return Boolean(
     value
@@ -120,70 +185,13 @@ export function useLendingPoolStatus() {
   else if (supplyPaused || borrowPaused || collateralWithdrawalPaused) status = "paused";
   else status = "ready";
 
-  const statusCopy: Record<LendingPoolStatus, { title: string; message: string; actionLabel: string }> = {
-    unconfigured: {
-      title: "Lending is not configured",
-      message: "The testnet lending deployment is missing one or more contract addresses.",
-      actionLabel: "Not deployed",
-    },
-    disabled: {
-      title: "Lending activation pending",
-      message: "New supply, collateral deposits, and borrowing stay disabled while the deployment is finalized. Exit actions remain available.",
-      actionLabel: "Activation pending",
-    },
-    checking: {
-      title: "Verifying lending pool",
-      message: "Checking the implementation, fixed rates, and collateral limits on-chain.",
-      actionLabel: "Verifying pool",
-    },
-    "rpc-error": {
-      title: "Lending verification unavailable",
-      message: "The RPC request failed, so risk-increasing actions remain disabled until verification succeeds.",
-      actionLabel: "RPC unavailable",
-    },
-    "verification-error": {
-      title: "Lending verification failed",
-      message: "One or more required pool reads failed. Risk-increasing actions remain disabled.",
-      actionLabel: "Verification failed",
-    },
-    "implementation-mismatch": {
-      title: "Lending upgrade required",
-      message: "The configured address does not expose the expected fixed-rate lending implementation.",
-      actionLabel: "Upgrade required",
-    },
-    "rate-mismatch": {
-      title: "Lending rate mismatch",
-      message: "The on-chain lender, borrower, or protocol rate differs from the verified deployment.",
-      actionLabel: "Rates unverified",
-    },
-    "collateral-mismatch": {
-      title: "Lending risk limits mismatch",
-      message: "One or more collateral assets do not match the required 80 / 85 / 90 risk configuration.",
-      actionLabel: "Limits unverified",
-    },
-    "activation-mismatch": {
-      title: "Lending activation incomplete",
-      message: "The fixed-rate pool is still in bootstrap or has not completed its atomic activation.",
-      actionLabel: "Activation pending",
-    },
-    paused: {
-      title: "Lending risk actions paused",
-      message: "A guardian pause is active. Verified collateral top-ups and exit actions that remain available on-chain can still be used.",
-      actionLabel: "Guardian pause",
-    },
-    ready: {
-      title: "Lending verified",
-      message: "The fixed-rate pool and collateral limits match the active testnet deployment.",
-      actionLabel: "Ready",
-    },
-  };
   const ready = status === "ready";
   const verified = status === "ready" || status === "paused";
   const checking = status === "checking";
 
   return {
     status,
-    ...statusCopy[status],
+    ...STATUS_COPY[status],
     ready,
     verified,
     supplyReady: verified && supplyPaused === false,

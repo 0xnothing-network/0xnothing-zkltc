@@ -7,10 +7,7 @@ import { fileURLToPath } from "node:url";
 
 import dotenv from "dotenv";
 import {
-  createPublicClient,
-  fallback,
   getAddress,
-  http,
   isAddress,
   keccak256,
   parseAbi,
@@ -21,6 +18,7 @@ import {
 import { atomicWriteFile } from "./lib/graduation-runtime.mjs";
 import { creationInputMatchesArtifact } from "./lib/lending-implementation.mjs";
 import { writePublicEnvironment } from "./lib/public-environment.mjs";
+import { createRpcClient, primaryRpcUrl } from "./lib/rpc.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 dotenv.config({ path: path.join(root, ".env.local"), quiet: true });
@@ -215,9 +213,8 @@ for (const transaction of broadcast.transactions || []) {
   if (sender) requireAddress(sender, deployer, `sender for ${transaction.hash}`);
 }
 
-const rpcUrl = (process.env.LITEFORGE_RPC_URL || network.rpcUrl).trim();
-const fallbackUrl = (process.env.LITEFORGE_FALLBACK_RPC_URL || network.fallbackRpcUrl).trim();
-const client = createPublicClient({ transport: fallback([http(rpcUrl), http(fallbackUrl)]) });
+const rpcUrl = primaryRpcUrl(network);
+const client = createRpcClient(network);
 const chainId = await client.getChainId();
 if (chainId !== CHAIN_ID) throw new Error(`Wrong chain: expected ${CHAIN_ID}, got ${chainId}`);
 

@@ -7,6 +7,7 @@ import { deployment } from "@fi/config/deployment";
 import { diaOracleAdapterAbi } from "@fi/lib/abis/dia";
 import { canonicalOracleMarketForIdentifier } from "@fi/lib/canonicalMarkets";
 import { decimal, isFactoryPair, loadPairTail, pairForTokens, pairTokenMetadata } from "@fi/lib/server/rpcTail";
+import { createBoundedCache } from "@/lib/boundedCache";
 
 const PERIODS = { "5m": 300, "1h": 3_600, "4h": 14_400, "1d": 86_400 } as const;
 type CandlePeriod = keyof typeof PERIODS;
@@ -14,7 +15,9 @@ const CANDLES_CACHE_TTL_MS = 12_000;
 const CANDLES_STALE_TTL_MS = 5 * 60_000;
 const MAX_CANDLES_CACHE_ENTRIES = 256;
 const CANDLES_CACHE_CONTROL = "public, s-maxage=10, stale-while-revalidate=30";
-const client = createPublicClient({ transport: http(deployment.chain.rpcUrl) });
+const client = createPublicClient({
+  transport: http(deployment.chain.rpcUrl, { batch: { batchSize: 100, wait: 10 } }),
+});
 const QUERY = `
   query Candles($pool: Bytes!, $period: Int!, $first: Int!) {
     _meta { block { number } }
@@ -28,23 +31,13 @@ type Result = {
   candles?: Array<Record<"timestamp" | "open" | "high" | "low" | "close" | "volumeNusd", string>>;
 };
 
-type CachedCandles = {
-  envelope: DataEnvelope<CandlePoint[]>;
-  cachedAt: number;
-};
-
-const candlesCache = new Map<string, CachedCandles>();
-const candlesLoadInFlight = new Map<string, Promise<DataEnvelope<CandlePoint[]>>>();
-
-function rememberCandles(cacheKey: string, envelope: DataEnvelope<CandlePoint[]>): void {
-  candlesCache.delete(cacheKey);
-  candlesCache.set(cacheKey, { envelope, cachedAt: Date.now() });
-  while (candlesCache.size > MAX_CANDLES_CACHE_ENTRIES) {
-    const oldestKey = candlesCache.keys().next().value;
-    if (oldestKey === undefined) return;
-    candlesCache.delete(oldestKey);
-  }
-}
+// Entries are retained past their ttl on purpose: a refresh failure falls back to
+// the last good candles for up to CANDLES_STALE_TTL_MS.
+const candlesCache = createBoundedCache<DataEnvelope<CandlePoint[]>>({
+  maxEntries: MAX_CANDLES_CACHE_ENTRIES,
+  ttlMs: CANDLES_CACHE_TTL_MS,
+  maxInFlight: MAX_CANDLES_CACHE_ENTRIES,
+});
 
 class CandleRouteError extends Error {
   constructor(readonly status: number, message: string) {
@@ -286,34 +279,27 @@ export async function GET(request: NextRequest) {
 
   const period = requestedPeriod as CandlePeriod;
   const cacheKey = `${pair}:${period}`;
-  const now = Date.now();
-  const cached = candlesCache.get(cacheKey);
-  if (cached && now - cached.cachedAt < CANDLES_CACHE_TTL_MS) {
-    return candlesResponse(cached.envelope, "HIT");
-  }
+  const fresh = candlesCache.get(cacheKey);
+  if (fresh) return candlesResponse(fresh, "HIT");
 
-  let pending = candlesLoadInFlight.get(cacheKey);
-  const coalesced = Boolean(pending);
-  if (!pending) {
-    pending = loadCandles(pair, period, dynamicPool);
-    candlesLoadInFlight.set(cacheKey, pending);
-  }
-
+  const coalesced = Boolean(candlesCache.pending(cacheKey));
   try {
-    const envelope = await pending;
-    rememberCandles(cacheKey, envelope);
-    return candlesResponse(envelope, coalesced ? "COALESCED" : "MISS");
+    return candlesResponse(
+      await candlesCache.load(cacheKey, () => loadCandles(pair, period, dynamicPool)),
+      coalesced ? "COALESCED" : "MISS",
+    );
   } catch (error) {
+    const stale = candlesCache.entry(cacheKey);
     if (
-      cached
-      && now - cached.cachedAt < CANDLES_STALE_TTL_MS
+      stale
+      && stale.ageMs < CANDLES_STALE_TTL_MS
       && (!(error instanceof CandleRouteError) || error.status >= 500)
     ) {
       const warning = error instanceof Error ? error.message : "RPC request failed";
       return candlesResponse({
-        ...cached.envelope,
-        meta: { ...cached.envelope.meta, generatedAt: new Date().toISOString() },
-        warning: `${cached.envelope.warning ? `${cached.envelope.warning} ` : ""}Serving cached candles after refresh failed: ${warning}`,
+        ...stale.value,
+        meta: { ...stale.value.meta, generatedAt: new Date().toISOString() },
+        warning: `${stale.value.warning ? `${stale.value.warning} ` : ""}Serving cached candles after refresh failed: ${warning}`,
       }, "STALE");
     }
     const status = error instanceof CandleRouteError ? error.status : 502;
@@ -322,7 +308,5 @@ export async function GET(request: NextRequest) {
       { error: message },
       { status, headers: { "Cache-Control": "no-store" } },
     );
-  } finally {
-    if (candlesLoadInFlight.get(cacheKey) === pending) candlesLoadInFlight.delete(cacheKey);
   }
 }

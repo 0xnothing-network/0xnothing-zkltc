@@ -16,6 +16,7 @@ import { PixelButton } from "@/features/pixel/components/PixelButton";
 import { pixelDataToPNG, pixelDataToPackedBytes } from "@/lib/gridParser";
 import { useToast } from "@/components/Toast";
 import { normalizeError } from "@/lib/errors";
+import { LITVM_CHAIN_ID } from "@/lib/chainSwitch";
 import { PixelLoadingIndicator } from "@/components/PageLoader";
 
 interface MintPanelProps {
@@ -27,7 +28,6 @@ interface MintPanelProps {
 
 const DEBOUNCE_MS = 600;
 const TX_TOAST_DURATION = 12_000; // keep "submitted" toast visible longer
-const LITVM_CHAIN_ID = 4441;
 
 export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvasUpdating = false, onMintSuccess }: MintPanelProps) {
   const [name, setName] = useState("");
@@ -42,18 +42,11 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
   const { sendTransactionAsync } = useSendTransaction();
   const toast = useToast();
 
-  // Auto-switch to LitVM when connected to wrong chain
-  useEffect(() => {
-    if (isConnected && chainId && chainId !== LITVM_CHAIN_ID) {
-      toast.show({
-        title: "Wrong Network",
-        description: "Switching to LitVM...",
-        kind: "info",
-        duration: 3000,
-      });
-      switchChain?.({ chainId: LITVM_CHAIN_ID });
-    }
-  }, [isConnected, chainId, switchChain, toast]);
+  // The wrong-network prompt lives in PixelHeader, which the /0xpixel layout
+  // mounts on every page of the section. Repeating the effect here fired two
+  // toasts and two switchChain() calls — so two wallet prompts — for one wrong
+  // network. The manual guard inside handleMint below still covers the case
+  // where the chain changes between mount and submit.
 
   const { data: mintReceipt, isLoading: isConfirming } =
     useWaitForTransactionReceipt({ hash: txHash ?? undefined });

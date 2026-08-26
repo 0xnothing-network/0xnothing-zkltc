@@ -248,11 +248,15 @@ function DeveloperFeePanel({
     abi: zeroXPumpAbi,
     functionName: "accruedProtocolFeesNusd",
     chainId: PUMP_CHAIN_ID,
-    query: {},
   });
   const claimable = claimableQuery.data ?? 0n;
   const actionPending = isClaiming || isSwitching;
-  const feeReadPending = claimableQuery.isPending || claimableQuery.isFetching;
+  // Only the first read blocks the button. `accruedProtocolFeesNusd` is in the
+  // block-sync allowlist, so `isFetching` went true every ten seconds and the
+  // claim button disabled itself — and relabelled — on every new block. The
+  // amount is re-simulated against the chain before the write anyway, so a
+  // background refresh does not need to gate the action.
+  const feeReadPending = claimableQuery.isLoading;
   const usesController = authority.toLowerCase() === PUMP_GRADUATION_CONTROLLER_ADDRESS.toLowerCase();
   const withdrawTarget = {
     address: authority,
