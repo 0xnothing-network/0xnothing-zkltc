@@ -39,7 +39,11 @@ import { useActiveDexRouter } from "@fi/lib/hooks/useActiveDexRouter";
 import { formatFeeBps, useDexFeeSchedule } from "@fi/lib/hooks/useDexFeeSchedule";
 
 import { useImportedSwapAsset } from "@fi/lib/hooks/useImportedSwapAsset";
-import { useProtocolTransaction } from "@fi/lib/hooks/useProtocolTransaction";
+import {
+  useProtocolTransaction,
+  type ProtocolCall,
+  type ProtocolStage,
+} from "@fi/lib/hooks/useProtocolTransaction";
 import { useSwapAssets, type SwapAsset } from "@fi/lib/hooks/useSwapAssets";
 import { useSwapRoute } from "@fi/lib/hooks/useSwapRoute";
 import { useSwapRouteGuards } from "@fi/lib/hooks/useSwapRouteGuards";
@@ -242,16 +246,26 @@ export function SwapWorkspace() {
     (tokenInIsWzkLtc && tokenOutIsNusd) || (tokenInIsNusd && tokenOutIsWzkLtc),
   );
   const isMintRoute = isOracleNusdRoute && tokenInIsWzkLtc;
+  // With native zkLTC on one side, the oracle can settle that leg at the feed
+  // price while the other leg stays an ordinary pool hop. Offering it as a
+  // candidate keeps a cross swap off the thin WzkLTC/NUSD pool whenever the
+  // oracle actually delivers more.
+  const oracleMintable = tokenInIsWzkLtc && !isOracleNusdRoute;
+  const oracleRedeemable = tokenOutIsWzkLtc && !isOracleNusdRoute;
   const swapRoute = useSwapRoute({
     amountIn,
     bridge: canonicalNusd,
     factory: deployment.contracts.dexFactory,
     input: tokenInAddress,
     isOracleRoute: isOracleNusdRoute,
+    oracleMintable,
+    oracleRedeemable,
     output: tokenOutAddress,
     router: activeDexRouter,
   });
   const path = swapRoute.path;
+  const routeIsOracleMint = swapRoute.kind === "oracle-mint";
+  const routeIsOracleRedeem = swapRoute.kind === "oracle-redeem";
 
   const routeReserves = useReadContracts({
     contracts: !isOracleNusdRoute && activeDexRouter && path
@@ -271,7 +285,8 @@ export function SwapWorkspace() {
     : undefined;
   const routeConfigured = isOracleNusdRoute
     ? Boolean(deployment.contracts.nusd)
-    : swapRoute.kind === "direct" || swapRoute.kind === "via-nusd";
+    : swapRoute.kind === "direct" || swapRoute.kind === "via-nusd"
+      || routeIsOracleMint || routeIsOracleRedeem;
   const mintQuote = useReadContract({
     address: deployment.contracts.nusd,
     abi: nusdOracleAbi,
@@ -294,6 +309,10 @@ export function SwapWorkspace() {
       refetchIntervalInBackground: false,
     },
   });
+  // An oracle-bridged route settles through the oracle *and* the DEX, so both
+  // sets of gates have to hold before it can be submitted.
+  const oracleMintGuarded = isMintRoute || routeIsOracleMint;
+  const oracleRedeemGuarded = (isOracleNusdRoute && !isMintRoute) || routeIsOracleRedeem;
   const {
     mintCapacityUnavailable,
     redeemReserve,
@@ -301,7 +320,11 @@ export function SwapWorkspace() {
     remainingMintCapacity,
     routePaused,
     routeStateReady,
-  } = useSwapRouteGuards({ isMintRoute, isOracleRoute: isOracleNusdRoute });
+  } = useSwapRouteGuards({
+    needsDex: !isOracleNusdRoute,
+    needsMint: oracleMintGuarded,
+    needsRedeem: oracleRedeemGuarded,
+  });
 
   const amountOut = amountIn
     ? isOracleNusdRoute
@@ -309,6 +332,11 @@ export function SwapWorkspace() {
       : swapRoute.amountOut
     : undefined;
   const minimumReceived = amountOut ? minimumAfterSlippage(amountOut, slippageBps) : undefined;
+  // The mint ceiling applies to the NUSD the oracle creates: that is the final
+  // output on a pure oracle route and the bridged amount on a longer one.
+  const mintedNusdAmount = isMintRoute
+    ? amountOut
+    : routeIsOracleMint ? swapRoute.bridgeAmount : undefined;
   const oracleQuotePending = Boolean(amountIn && (
     isMintRoute
       ? mintQuote.data === undefined && !mintQuote.error
@@ -333,11 +361,11 @@ export function SwapWorkspace() {
     assetOut?.decimals ?? 18,
   );
   const executionImpactBps = useMemo(() => isOracleNusdRoute ? undefined : computeExecutionImpactBps({
-    amountIn,
-    amountOut,
+    amountIn: swapRoute.poolAmountIn,
+    amountOut: swapRoute.poolAmountOut,
     hops: path ? path.length - 1 : undefined,
     reserveReads: routeReserves.data,
-  }), [amountIn, amountOut, isOracleNusdRoute, path, routeReserves.data]);
+  }), [isOracleNusdRoute, path, routeReserves.data, swapRoute.poolAmountIn, swapRoute.poolAmountOut]);
   const executionImpactLabel = executionImpactBps === undefined
     ? "--"
     : `${Number(executionImpactBps) / 100}%`;
@@ -396,16 +424,16 @@ export function SwapWorkspace() {
     if (spendableBalance !== undefined && amountIn > spendableBalance) {
       return assetIn.native ? "Leave at least 0.01 zkLTC in your wallet for network fees." : "Amount exceeds wallet balance.";
     }
-    if (isMintRoute && mintCapacityUnavailable) return "NUSD mint capacity is unavailable.";
-    if (isMintRoute && amountOut !== undefined && remainingMintCapacity !== undefined) {
-      if (amountOut > remainingMintCapacity) return "Amount exceeds the remaining NUSD mint capacity.";
+    if (oracleMintGuarded && mintCapacityUnavailable) return "NUSD mint capacity is unavailable.";
+    if (oracleMintGuarded && mintedNusdAmount !== undefined && remainingMintCapacity !== undefined) {
+      if (mintedNusdAmount > remainingMintCapacity) return "Amount exceeds the remaining NUSD mint capacity.";
     }
-    if (isOracleNusdRoute && !isMintRoute && redeemReserveUnavailable) return "NUSD reserve data is unavailable.";
-    if (isOracleNusdRoute && !isMintRoute && amountOut !== undefined && redeemReserve !== undefined && amountOut > redeemReserve) {
+    if (oracleRedeemGuarded && redeemReserveUnavailable) return "NUSD reserve data is unavailable.";
+    if (oracleRedeemGuarded && amountOut !== undefined && redeemReserve !== undefined && amountOut > redeemReserve) {
       return "The NUSD native reserve cannot cover this redemption.";
     }
     return undefined;
-  }, [amountIn, amountOut, amountText, assetIn, executableQuoteCurrent, importedContractsReady, isMintRoute, isOracleNusdRoute, mintCapacityUnavailable, quoteError, redeemReserve, redeemReserveUnavailable, remainingMintCapacity, routeConfigured, spendableBalance]);
+  }, [amountIn, amountOut, amountText, assetIn, executableQuoteCurrent, importedContractsReady, mintCapacityUnavailable, mintedNusdAmount, oracleMintGuarded, oracleRedeemGuarded, quoteError, redeemReserve, redeemReserveUnavailable, remainingMintCapacity, routeConfigured, spendableBalance]);
 
   function resetAmount() {
     setAmountText("");
@@ -456,6 +484,77 @@ export function SwapWorkspace() {
         toast.show("Swap confirmed", `${amountText} ${assetIn.symbol} was swapped for ${assetOut.symbol}.`, "success");
         setAmountText("");
         void nativeBalance.refetch(); void tokenBalance.refetch(); void mintQuote.refetch(); void redeemQuote.refetch();
+      }
+      return;
+    }
+
+    if (routeIsOracleMint || routeIsOracleRedeem) {
+      const bridgeAmount = swapRoute.bridgeAmount;
+      if (!bridgeAmount || !canonicalNusd || !activeDexRouter || !path || !tokenInAddress) return;
+      // The router has no oracle entry point, so the two legs settle as two
+      // wallet-confirmed stages. Stage two spends the NUSD that really landed
+      // and scales its floor down in the same proportion — pool output is
+      // concave, so a linear down-scale is always a safe floor, and the floor is
+      // never scaled up.
+      const scaledFloor = (delivered: bigint) => minimumAfterSlippage(
+        delivered >= bridgeAmount ? amountOut : amountOut * delivered / bridgeAmount,
+        slippageBps,
+      );
+      const poolCall = (amount: bigint, floor: bigint): ProtocolCall => {
+        const built = buildDexSwapCall({
+          amountIn: amount,
+          deadline: transactionDeadline(),
+          minimumOut: floor,
+          path,
+          payNative: false,
+          receiveNative: false,
+          recipient: address,
+        });
+        return {
+          address: activeDexRouter,
+          abi: dexRouterAbi,
+          functionName: built.functionName,
+          args: built.args,
+          value: built.value,
+        };
+      };
+      const stages: readonly ProtocolStage[] = routeIsOracleMint
+        ? [
+          {
+            call: {
+              address: canonicalNusd,
+              abi: nusdOracleAbi,
+              functionName: "mintAtOracle",
+              args: [minimumAfterSlippage(bridgeAmount, slippageBps), address],
+              value: amountIn,
+            },
+            deliveredToken: canonicalNusd,
+          },
+          {
+            approval: { token: canonicalNusd, spender: activeDexRouter },
+            call: (delivered) => poolCall(delivered, scaledFloor(delivered)),
+          },
+        ]
+        : [
+          {
+            approval: { token: tokenInAddress, spender: activeDexRouter, amount: amountIn },
+            call: poolCall(amountIn, minimumAfterSlippage(bridgeAmount, slippageBps)),
+            deliveredToken: canonicalNusd,
+          },
+          {
+            call: (delivered) => ({
+              address: canonicalNusd,
+              abi: nusdOracleAbi,
+              functionName: "redeemAtOracle",
+              args: [delivered, scaledFloor(delivered), address],
+            }),
+          },
+        ];
+      const hash = await tx.execute({ stages });
+      if (hash) {
+        toast.show("Swap confirmed", `${amountText} ${assetIn.symbol} was settled on LitVM.`, "success");
+        setAmountText("");
+        void nativeBalance.refetch(); void tokenBalance.refetch();
       }
       return;
     }

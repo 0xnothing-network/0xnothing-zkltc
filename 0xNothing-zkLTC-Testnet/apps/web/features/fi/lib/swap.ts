@@ -153,6 +153,11 @@ export function importedTokenStatus(
   };
 }
 
+/** Every NUSD-bridged shape reads the same to the user, oracle leg or pool hop. */
+function routesThroughNusd(kind: SwapRouteKind): boolean {
+  return kind === "via-nusd" || kind === "oracle-mint" || kind === "oracle-redeem";
+}
+
 export function swapRouteLabel({
   from,
   isOracleRoute,
@@ -166,7 +171,7 @@ export function swapRouteLabel({
 }): string | undefined {
   if (!from || !to) return undefined;
   if (isOracleRoute || kind === "direct") return `${from} → ${to}`;
-  if (kind === "via-nusd") return `${from} → NUSD → ${to}`;
+  if (routesThroughNusd(kind)) return `${from} → NUSD → ${to}`;
   return undefined;
 }
 
@@ -200,7 +205,7 @@ export function swapLiquidityStatus({
   if (kind === "direct") {
     return bridgeLive ? "Best quote selected · Direct route" : "Direct liquidity found";
   }
-  if (kind === "via-nusd") {
+  if (routesThroughNusd(kind)) {
     return directLive ? "Best quote selected · Routed through NUSD" : "NUSD bridge liquidity found";
   }
   if (routeError) return "Liquidity check is temporarily unavailable.";

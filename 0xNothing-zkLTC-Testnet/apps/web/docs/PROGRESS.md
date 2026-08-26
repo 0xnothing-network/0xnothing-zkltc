@@ -299,6 +299,37 @@ tests passing.**
 
 ## Bugs fixed
 
+- **Every cross swap involving native zkLTC was routed through a 115×-mispriced pool.**
+  NUSD is the only DEX hub, so a `zkLTC → X` swap had exactly one pool shape available:
+  `[WzkLTC, NUSD, X]`. That first hop is the `NUSD/WzkLTC` pair, which holds
+  `4.4433 NUSD / 10.1528 WzkLTC` — a pool price of `0.4377 NUSD/zkLTC` against the DIA
+  feed's `50.3377`. Measured on chain, `0.1 zkLTC → NOTHING` quoted **17,562.56** through
+  the pool versus **2,036,682.13** through `mintAtOracle` plus the `NUSD/NOTHING` pool:
+  a **116×** loss, and self-reinforcing, because each such swap sold zkLTC into that pool
+  and pushed the price further off.
+  [useSwapRoute.ts](../features/fi/lib/hooks/useSwapRoute.ts) had the oracle available but
+  never as a *leg* — `mintAtOracle` / `redeemAtOracle` were used only when the pair was
+  exactly `WzkLTC ↔ NUSD`. It now quotes four candidates and takes the largest delivered
+  output: the direct pool, the NUSD pool bridge, and — when one side is native zkLTC —
+  the oracle mint or redeem spliced onto a single pool hop.
+  **The comparison is the fix, not a preference for the oracle.** In the reverse direction
+  `1,000,000 NOTHING → zkLTC` measures `3.5644` through the pool against `0.0482` through
+  `redeemAtOracle`, so a hardcoded oracle preference would be 74× *worse* there. Picking the
+  maximum stays correct as the pool price moves, in both directions.
+  Two further consequences fell out of the same change. The oracle legs depend only on the
+  pool on their own side, so an empty `WzkLTC/NUSD` pair no longer reports the whole pair as
+  having no liquidity. And because the router has no oracle-aware entry point, the winning
+  oracle route settles as two wallet-confirmed stages — `stages` in
+  [useProtocolTransaction.ts](../features/fi/lib/hooks/useProtocolTransaction.ts) measures
+  the intermediate token's wallet balance delta and builds the second call from what
+  actually landed, then scales that stage's slippage floor by `delivered / quoted` and never
+  scales it up. Pool output is concave, so a linear down-scale is always a safe floor.
+  No copy changed: the route line already read `zkLTC → NUSD → NOTHING`, and the fee badge
+  reads `0.6%` on its own because the DEX path is two tokens long.
+  [useSwapRouteGuards.ts](../features/fi/lib/hooks/useSwapRouteGuards.ts) now takes
+  `needsDex` / `needsMint` / `needsRedeem` instead of the route's shape, so a bridged route
+  has to clear the DEX pause *and* the oracle pause and capacity before it can submit.
+
 - **Wheel zoom also scrolled the page** on the 0xPixel canvas
   ([Canvas.tsx](../features/pixel/components/Canvas.tsx)). React attaches its root `wheel`
   listener as passive, so the `preventDefault()` inside the `onWheel` prop was silently
@@ -353,14 +384,16 @@ Each was confirmed to have zero importers or callers before deletion.
 
 Recorded so the same ideas are not re-litigated. Each was measured, not assumed.
 
-- **`swapRoute.isFetching` in [useSwapRoute.ts:230](../features/fi/lib/hooks/useSwapRoute.ts#L230)
-  and the oracle twin at [SwapWorkspace.tsx:321](../features/fi/components/SwapWorkspace.tsx#L321).**
-  These look like the `isFetching` trap above and are not. `useSwapRoute` picks between a
-  direct pair and a via-NUSD bridge by comparing two quotes, so a mid-refresh comparison
-  can select the wrong *path*, not merely a stale price — slippage does not protect
-  against that. The guard blanks `amountInQuoted`, which surfaces as the existing
-  "Waiting for a quote for the current amount." validation string. The two fixed call
-  sites above quote a single fixed route and have nothing to choose between.
+- **`swapRoute.isFetching` in [useSwapRoute.ts:383](../features/fi/lib/hooks/useSwapRoute.ts#L383)
+  and the oracle twin at [SwapWorkspace.tsx:349](../features/fi/components/SwapWorkspace.tsx#L349).**
+  These look like the `isFetching` trap above and are not. `useSwapRoute` picks among four
+  candidates by comparing their quotes, so a mid-refresh comparison can select the wrong
+  *path*, not merely a stale price — slippage does not protect against that. The guard blanks
+  `amountInQuoted`, which surfaces as the existing "Waiting for a quote for the current
+  amount." validation string. It reads the *selected* candidate's `isFetching` rather than any
+  candidate's: the oracle legs are chained reads, so gating on all four would leave the button
+  disabled through every refresh. The two fixed call sites above quote a single fixed route
+  and have nothing to choose between.
 - **`staleTime: Infinity` on four graduation reads** in
   [TokenDetail.tsx](../features/pump/components/TokenDetail.tsx) (`graduationRouter`,
   `pump`, `router`, `adapter`). Those four function names are intentionally absent from
@@ -420,10 +453,13 @@ Ordered by remaining value, highest first.
 
 ## Notes
 
-- Cross-swap (via-NUSD bridge routing) was removed before this work started. Files
-  touched then: `features/fi/lib/hooks/useSwapRoute.ts`,
+- Cross-swap (via-NUSD bridge routing) was removed before this work started and has since
+  been restored and extended with the two oracle legs — see the first entry under
+  "Bugs fixed". Files touched: `features/fi/lib/hooks/useSwapRoute.ts`,
   `features/fi/components/SwapWorkspace.tsx`,
-  `features/fi/lib/hooks/useDexFeeSchedule.ts`.
+  `features/fi/lib/hooks/useDexFeeSchedule.ts`,
+  `features/fi/lib/hooks/useSwapRouteGuards.ts`,
+  `features/fi/lib/hooks/useProtocolTransaction.ts`, `features/fi/lib/swap.ts`.
 - Farm reward code is unrelated to the removed draw/prize pool and stays: `FarmDashboard`,
   `features/fi/lib/abis/farm.ts`, and the reward function names in `lib/liveData.ts`
   (`rewardRate`, `periodFinish`, `earned`, `totalFunded`, `totalPaid`,
