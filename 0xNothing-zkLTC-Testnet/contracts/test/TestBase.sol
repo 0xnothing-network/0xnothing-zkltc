@@ -9,6 +9,7 @@ interface Vm {
     function warp(uint256 newTimestamp) external;
     function expectRevert() external;
     function expectRevert(bytes4 selector) external;
+    function expectRevert(bytes calldata revertData) external;
     function assume(bool condition) external;
     function createSelectFork(string calldata rpcUrl) external returns (uint256 forkId);
     function envOr(string calldata key, string calldata defaultValue) external returns (string memory value);

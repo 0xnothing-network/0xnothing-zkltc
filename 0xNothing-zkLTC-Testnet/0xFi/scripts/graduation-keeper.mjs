@@ -1,6 +1,7 @@
 import process from "node:process";
 
 import { formatEther, getAddress } from "viem";
+import { keeperScanFailed, parseBoundedInteger } from "./lib/graduation-keeper-policy.mjs";
 import {
   controllerAbi,
   governanceAddress,
@@ -31,10 +32,12 @@ const controller = deployment.pumpGraduationController
   ? requiredAddress(deployment.pumpGraduationController, "graduation controller")
   : undefined;
 const governance = governanceAddress(deployment);
-const maxPerScan = Number.parseInt(process.env.GRADUATION_KEEPER_MAX_PER_SCAN || "3", 10);
-if (!Number.isSafeInteger(maxPerScan) || maxPerScan < 1 || maxPerScan > 20) {
-  throw new Error("GRADUATION_KEEPER_MAX_PER_SCAN must be between 1 and 20");
-}
+const maxPerScan = parseBoundedInteger(process.env.GRADUATION_KEEPER_MAX_PER_SCAN, {
+  name: "GRADUATION_KEEPER_MAX_PER_SCAN",
+  defaultValue: 3,
+  min: 1,
+  max: 20,
+});
 
 async function scan() {
   const [pumpAdmin, routerAdmin, routerEnabled, adapterAllowed, rawTokens] = await Promise.all([
@@ -66,6 +69,7 @@ async function scan() {
   }
   const ready = [];
   const statusReadFailures = [];
+  const graduationFailures = [];
   for (let index = 0; index < tokens.length; index += 20) {
     const page = tokens.slice(index, index + 20);
     const statuses = await Promise.all(page.map(async (token) => {
@@ -96,6 +100,7 @@ async function scan() {
     controllerPaused,
     totalMarkets: tokens.length,
     statusReadFailures,
+    graduationFailures,
     ready,
   };
   console.log(JSON.stringify({ type: "scan", ...state }, null, 2));
@@ -110,7 +115,12 @@ async function scan() {
       const { hash } = await sendContract(runtime, controller, controllerAbi, "graduateReady", [token]);
       console.log(JSON.stringify({ type: "graduated", token: getAddress(token), pool: preview.pool, nusdLiquidity: formatEther(preview.nusdAmount), expectedLp: preview.expectedLp.toString(), transactionHash: hash }, null, 2));
     } catch (error) {
-      console.error(JSON.stringify({ type: "skipped", token: getAddress(token), reason: error instanceof Error ? error.shortMessage || error.message : String(error) }));
+      const failure = {
+        token: getAddress(token),
+        reason: error instanceof Error ? error.shortMessage || error.message : String(error),
+      };
+      graduationFailures.push(failure);
+      console.error(JSON.stringify({ type: "skipped", ...failure }));
     }
   }
   return state;
@@ -118,17 +128,19 @@ async function scan() {
 
 if (once || dryRun) {
   const state = await scan();
-  if (!state.operational || state.statusReadFailures.length) process.exitCode = 1;
+  if (keeperScanFailed(state)) process.exitCode = 1;
 } else {
-  const intervalSeconds = Number.parseInt(process.env.GRADUATION_KEEPER_INTERVAL_SECONDS || "20", 10);
-  if (!Number.isSafeInteger(intervalSeconds) || intervalSeconds < 10 || intervalSeconds > 3600) {
-    throw new Error("GRADUATION_KEEPER_INTERVAL_SECONDS must be between 10 and 3600");
-  }
+  const intervalSeconds = parseBoundedInteger(process.env.GRADUATION_KEEPER_INTERVAL_SECONDS, {
+    name: "GRADUATION_KEEPER_INTERVAL_SECONDS",
+    defaultValue: 20,
+    min: 10,
+    max: 3600,
+  });
   let consecutiveFailures = 0;
   while (true) {
     try {
-      await scan();
-      consecutiveFailures = 0;
+      const state = await scan();
+      consecutiveFailures = keeperScanFailed(state) ? consecutiveFailures + 1 : 0;
     } catch (error) {
       console.error(error);
       consecutiveFailures += 1;

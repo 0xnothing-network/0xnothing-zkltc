@@ -154,6 +154,26 @@ contract FarmingTest is TestBase {
         assertEq(nusd.balanceOf(address(gauge)), 0, "failed schedule funding rolled back");
     }
 
+    function testRewardPerTokenAvoidsOverflowForFullyBackedLargeSchedules() public {
+        MockERC20 stakingAsset = new MockERC20("Stake", "STK");
+        MockERC20 rewardAsset = new MockERC20("Reward", "RWD");
+        LiquidityGauge largeGauge = new LiquidityGauge(address(stakingAsset), address(rewardAsset), address(this));
+
+        stakingAsset.mint(ALICE, 1 ether);
+        vm.startPrank(ALICE);
+        stakingAsset.approve(address(largeGauge), 1 ether);
+        largeGauge.stake(1 ether);
+        vm.stopPrank();
+
+        uint256 rewardAmount = type(uint256).max / 2;
+        rewardAsset.mint(address(largeGauge), rewardAmount);
+        largeGauge.notifyRewardAmount(rewardAmount, 1 days);
+        vm.warp(block.timestamp + 1);
+
+        assertEq(largeGauge.rewardPerToken(), largeGauge.rewardRate(), "one second reward per staked token");
+        assertEq(largeGauge.earned(ALICE), largeGauge.rewardRate(), "large backed schedule remains queryable");
+    }
+
     function testMintFeeRouteRequiresTheCanonicalBoundVaultAndPair() public {
         (SyntheticAsset asset, MockSynthMintFeeVault feeVault, address feePair,) = _createSynthFeeMarket();
         MockSynthMintFeeVault impostor = new MockSynthMintFeeVault(address(nusd), asset, gaugeFactory);

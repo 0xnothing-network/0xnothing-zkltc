@@ -5,6 +5,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { governanceAddress, governanceMode } from "../lib/graduation-runtime.mjs";
+import { keeperScanFailed, parseBoundedInteger } from "../lib/graduation-keeper-policy.mjs";
 import {
   creationInputMatchesArtifact,
   CURRENT_LENDING_COLLATERAL_RISK,
@@ -20,6 +21,7 @@ import {
 } from "../lib/lending-implementation.mjs";
 import { projectMainPumpGraduation } from "../lib/main-pump-publication.mjs";
 import { pumpAdministrationTopology } from "../lib/preflight-topology.mjs";
+import { resolvePrivateKey } from "../lib/private-key.mjs";
 import {
   mergeEnvironment,
   publicEnvironmentTargets,
@@ -34,6 +36,70 @@ const addresses = Array.from(
   (_, index) => `0x${(index + 1).toString(16).padStart(40, "0")}`,
 );
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+
+test("deployer key resolver gives the explicit variable precedence without exposing either key", () => {
+  const deployerKey = `0x${"11".repeat(32)}`;
+  const legacyKey = `0x${"22".repeat(32)}`;
+  const warnings = [];
+  const resolved = resolvePrivateKey({
+    env: { DEPLOYER_PRIVATE_KEY: deployerKey, API_KEY: legacyKey },
+    warn: (warning) => warnings.push(warning),
+  });
+  assert.deepEqual(resolved, { privateKey: deployerKey, source: "DEPLOYER_PRIVATE_KEY" });
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /API_KEY is ignored/);
+  assert.equal(warnings[0].includes(deployerKey), false);
+  assert.equal(warnings[0].includes(legacyKey), false);
+});
+
+test("deployer key resolver preserves and deprecates the legacy API_KEY fallback", () => {
+  const legacyKey = "33".repeat(32);
+  const warnings = [];
+  assert.deepEqual(resolvePrivateKey({
+    env: { API_KEY: legacyKey },
+    warn: (warning) => warnings.push(warning),
+  }), {
+    privateKey: `0x${legacyKey}`,
+    source: "API_KEY",
+  });
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /deprecated.*DEPLOYER_PRIVATE_KEY/i);
+  assert.equal(warnings[0].includes(legacyKey), false);
+});
+
+test("keeper key resolution never falls back to deployment or generic API credentials", () => {
+  const keeperKey = `0x${"44".repeat(32)}`;
+  assert.deepEqual(resolvePrivateKey({ env: { KEEPER_PRIVATE_KEY: keeperKey }, role: "keeper" }), {
+    privateKey: keeperKey,
+    source: "KEEPER_PRIVATE_KEY",
+  });
+  assert.throws(
+    () => resolvePrivateKey({
+      env: { DEPLOYER_PRIVATE_KEY: `0x${"55".repeat(32)}`, API_KEY: `0x${"66".repeat(32)}` },
+      role: "keeper",
+    }),
+    /KEEPER_PRIVATE_KEY must be a 32-byte hex private key/,
+  );
+  assert.throws(() => resolvePrivateKey({ env: { DEPLOYER_PRIVATE_KEY: "invalid" } }), /DEPLOYER_PRIVATE_KEY/);
+});
+
+test("keeper policy strictly validates decimal configuration and reports partial scan failure", () => {
+  assert.equal(parseBoundedInteger(undefined, {
+    name: "LIMIT", defaultValue: 3, min: 1, max: 20,
+  }), 3);
+  assert.equal(parseBoundedInteger(" 20 ", {
+    name: "LIMIT", defaultValue: 3, min: 1, max: 20,
+  }), 20);
+  for (const value of ["3junk", "1.5", "-1", "21"]) {
+    assert.throws(() => parseBoundedInteger(value, {
+      name: "LIMIT", defaultValue: 3, min: 1, max: 20,
+    }), /LIMIT must be an integer between 1 and 20/);
+  }
+  assert.equal(keeperScanFailed({ operational: true, statusReadFailures: [], graduationFailures: [] }), false);
+  assert.equal(keeperScanFailed({ operational: true, statusReadFailures: [{}], graduationFailures: [] }), true);
+  assert.equal(keeperScanFailed({ operational: true, statusReadFailures: [], graduationFailures: [{}] }), true);
+  assert.equal(keeperScanFailed({ operational: false, statusReadFailures: [], graduationFailures: [] }), true);
+});
 
 test("governance mode resolves explicit direct governance without using a stale timelock", () => {
   const deployment = {
@@ -411,6 +477,7 @@ test("synth activation lending safety permits healthy debt only after both marke
 
 test("deployment finalizers bind journal transactions to receipt senders and targets", () => {
   for (const script of [
+    "deploy.mjs",
     "finalize-lending-fixed-rate.mjs",
     "finalize-synth-safety-reserve.mjs",
   ]) {

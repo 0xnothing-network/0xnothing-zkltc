@@ -19,6 +19,7 @@ import { queryGoldsky, unconfiguredEnvelope } from "@fi/lib/server/goldsky";
 import { loadPairTail } from "@fi/lib/server/rpcTail";
 import { tokenImageUrl } from "@fi/lib/tokenImage";
 import { createBoundedCache } from "@/lib/boundedCache";
+import { hasPositiveBigInt, nonNegativeBigInt } from "@/lib/integer";
 
 type PoolRow = Omit<PoolPoint, "id" | "token0" | "token1" | "totalSupply"> & {
   id: string;
@@ -226,9 +227,11 @@ async function visibleDeploymentPools(pools: PoolPoint[]): Promise<{
     const token0 = pool.token0.id.toLowerCase();
     const token1 = pool.token1.id.toLowerCase();
     const isNusdPair = token0 === nusd || token1 === nusd;
-    const hasLiquidityEvidence = BigInt(pool.totalSupply || "0") > 0n
-      || BigInt(pool.reserve0 || "0") > 0n
-      || BigInt(pool.reserve1 || "0") > 0n;
+    const hasLiquidityEvidence = hasPositiveBigInt(
+      pool.totalSupply,
+      pool.reserve0,
+      pool.reserve1,
+    );
     if (isNusdPair && hasLiquidityEvidence) {
       visibleIds.add(poolId);
     }
@@ -626,11 +629,11 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
 
     // 24h metrics from Goldsky 1h candles
     if (candleEnv) {
-      const byPool = new Map<string, { volNusd: number; firstOpen?: number; lastClose?: number }>();
+      const byPool = new Map<string, { volNusd: bigint; firstOpen?: number; lastClose?: number }>();
       for (const c of candleEnv.data) {
         const key = c.pool.id.toLowerCase();
-        const existing = byPool.get(key) ?? { volNusd: 0 };
-        existing.volNusd += Number(formatUnits(BigInt(c.volumeNusd), 18));
+        const existing = byPool.get(key) ?? { volNusd: 0n };
+        existing.volNusd += nonNegativeBigInt(c.volumeNusd) ?? 0n;
         if (existing.firstOpen === undefined) existing.firstOpen = Number(c.open);
         existing.lastClose = Number(c.close);
         byPool.set(key, existing);
@@ -640,7 +643,7 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
         // Candle prices are already the non-NUSD token price in NUSD. No swaps in the
         // rolling window means the pool price did not move, so report 0% instead of N/A.
         if (!stats) return { ...pool, priceChange24h: pool.priceNusd === undefined ? undefined : 0 };
-        const volume24hNusd = stats.volNusd.toString();
+        const volume24hNusd = formatUnits(stats.volNusd, 18);
         const priceChange24h = stats.firstOpen !== undefined
           && Number.isFinite(stats.firstOpen)
           && stats.firstOpen > 0
@@ -655,7 +658,7 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
     // RPC-tail volume for newly graduated / unindexed pools (up to MAX_TAIL_BLOCKS blocks)
     try {
       const poolsNeedingTailVol = envelope.data.filter(
-        (p) => p.volume24hNusd === undefined && BigInt(p.totalSupply || "0") > 0n,
+        (p) => p.volume24hNusd === undefined && hasPositiveBigInt(p.totalSupply),
       );
       if (poolsNeedingTailVol.length > 0 && nusd) {
         let incompleteTailVolume = false;
@@ -669,15 +672,15 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
             const isToken0Nusd = pool.token0.id.toLowerCase() === nusd;
             const isToken1Nusd = pool.token1.id.toLowerCase() === nusd;
             if (!isToken0Nusd && !isToken1Nusd) return;
-            let vol = 0;
+            let vol = 0n;
             for (const ev of tail.events) {
               if (ev.kind !== "swap" || ev.timestamp < since24h) continue;
               const nusdFlow = isToken0Nusd
                 ? ev.amount0In + ev.amount0Out
                 : ev.amount1In + ev.amount1Out;
-              vol += Number(formatUnits(nusdFlow, 18));
+              vol += nusdFlow;
             }
-            pool.volume24hNusd = vol.toString();
+            pool.volume24hNusd = formatUnits(vol, 18);
           } catch { /* non-fatal */ }
         });
         if (incompleteTailVolume) {

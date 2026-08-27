@@ -9,6 +9,7 @@ import dotenv from "dotenv";
 import { getAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
+import { resolvePrivateKey } from "./lib/private-key.mjs";
 import { primaryRpcUrl } from "./lib/rpc.mjs";
 import { runStep } from "./lib/spawn-step.mjs";
 
@@ -71,11 +72,7 @@ if ((mode === "--resume" || mode === "--finalize-only") && !hasBroadcastJournal)
 const run = (command, args, extraEnv = {}, cwd = root) => runStep(command, args, extraEnv, cwd);
 
 if (mode !== "--finalize-only") {
-  const rawKey = (process.env.DEPLOYER_PRIVATE_KEY || process.env.API_KEY || "").trim();
-  const privateKey = rawKey.startsWith("0x") ? rawKey : `0x${rawKey}`;
-  if (!/^0x[0-9a-fA-F]{64}$/.test(privateKey)) {
-    throw new Error("DEPLOYER_PRIVATE_KEY/API_KEY must be a 32-byte private key");
-  }
+  const { privateKey } = resolvePrivateKey();
   const account = privateKeyToAccount(privateKey);
   if (account.address.toLowerCase() !== String(deployment.deployer).toLowerCase()) {
     throw new Error("Configured wallet does not match the deployment owner");

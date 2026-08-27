@@ -16,19 +16,19 @@ library SafeTransferLib {
     function safeTransfer(address token, address to, uint256 amount) internal {
         (bool success, bytes memory data) =
             token.call(abi.encodeWithSelector(IERC20Minimal.transfer.selector, to, amount));
-        if (!success || (data.length != 0 && !abi.decode(data, (bool)))) revert ERC20CallFailed(token);
+        if (!_didCallSucceed(token, success, data)) revert ERC20CallFailed(token);
     }
 
     function safeTransferFrom(address token, address from, address to, uint256 amount) internal {
         (bool success, bytes memory data) =
             token.call(abi.encodeWithSelector(IERC20Minimal.transferFrom.selector, from, to, amount));
-        if (!success || (data.length != 0 && !abi.decode(data, (bool)))) revert ERC20CallFailed(token);
+        if (!_didCallSucceed(token, success, data)) revert ERC20CallFailed(token);
     }
 
     function forceApprove(address token, address spender, uint256 amount) internal {
         (bool success, bytes memory data) =
             token.call(abi.encodeWithSelector(IERC20Minimal.approve.selector, spender, amount));
-        if (success && (data.length == 0 || abi.decode(data, (bool)))) return;
+        if (_didCallSucceed(token, success, data)) return;
 
         _approve(token, spender, 0);
         _approve(token, spender, amount);
@@ -42,6 +42,18 @@ library SafeTransferLib {
     function _approve(address token, address spender, uint256 amount) private {
         (bool success, bytes memory data) =
             token.call(abi.encodeWithSelector(IERC20Minimal.approve.selector, spender, amount));
-        if (!success || (data.length != 0 && !abi.decode(data, (bool)))) revert ERC20CallFailed(token);
+        if (!_didCallSucceed(token, success, data)) revert ERC20CallFailed(token);
+    }
+
+    function _didCallSucceed(address token, bool success, bytes memory data) private view returns (bool) {
+        if (!success || token.code.length == 0) return false;
+        if (data.length == 0) return true;
+        if (data.length < 32) return false;
+
+        uint256 returnedValue;
+        assembly ("memory-safe") {
+            returnedValue := mload(add(data, 0x20))
+        }
+        return returnedValue == 1;
     }
 }

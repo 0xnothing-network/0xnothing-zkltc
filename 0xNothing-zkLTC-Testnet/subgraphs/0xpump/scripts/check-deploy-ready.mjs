@@ -74,10 +74,14 @@ if (config.goldskySupported && hasDeploymentCoordinates) {
       if (!/^0x[0-9a-f]{40}$/iu.test(routerAddress) || routerAddress === ZERO_ADDRESS) {
         problems.push("Configured contract does not expose a valid graduation router");
       } else {
-        const [routerEnabledHex, routerEnableAtHex] = await Promise.all([
+        const [routerCode, routerEnabledHex, routerEnableAtHex] = await Promise.all([
+          rpc(config.rpcUrl, "eth_getCode", [routerAddress, "latest"]),
           rpc(config.rpcUrl, "eth_call", [{ to: routerAddress, data: "0x238dafe0" }, "latest"]),
           rpc(config.rpcUrl, "eth_call", [{ to: routerAddress, data: "0x6474111e" }, "latest"]),
         ]);
+        if (routerCode === "0x") {
+          problems.push("Configured graduation router has no deployed bytecode");
+        }
         if (BigInt(routerEnabledHex) !== 0n || BigInt(routerEnableAtHex) !== 0n) {
           problems.push("Testnet graduation router must remain disabled and unscheduled");
         }

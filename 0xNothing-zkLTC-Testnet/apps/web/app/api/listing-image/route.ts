@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { PixelNFTABI } from "@/lib/abi";
 import { PIXEL_NFT_CONTRACT_ADDRESS, publicClient } from "@/lib/contract";
 import { getPixelImageUrl } from "@/lib/pixelImage";
+import { normalizeUint256TokenId } from "@/lib/tokenId";
 
 export const runtime = "nodejs";
 export const revalidate = 60;
@@ -9,7 +10,8 @@ export const revalidate = 60;
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const raw = searchParams.get("tokenId");
-  if (!raw || !/^\d+$/.test(raw)) {
+  const tokenId = raw ? normalizeUint256TokenId(raw) : undefined;
+  if (!tokenId) {
     return NextResponse.json({ error: "Invalid tokenId" }, { status: 400 });
   }
   let imageUrl = "";
@@ -18,15 +20,15 @@ export async function GET(request: Request) {
       address: PIXEL_NFT_CONTRACT_ADDRESS,
       abi: PixelNFTABI,
       functionName: "tokenData",
-      args: [BigInt(raw)],
+      args: [BigInt(tokenId)],
     }) as readonly [string, bigint, string, `0x${string}`, bigint, string];
-    if (tokenData[2]) imageUrl = getPixelImageUrl(raw);
+    if (tokenData[2]) imageUrl = getPixelImageUrl(tokenId);
   } catch {
     // Preserve the legacy endpoint contract for missing token IDs.
   }
 
   return NextResponse.json(
-    { tokenId: raw, imageUrl },
+    { tokenId, imageUrl },
     {
       headers: {
         "Cache-Control": imageUrl

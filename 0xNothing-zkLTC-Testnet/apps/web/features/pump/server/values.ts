@@ -2,6 +2,7 @@ import "server-only";
 
 import { getAddress, type Address, type Hex } from "viem";
 import { ZERO_ADDRESS } from "@/features/pump/config";
+export { decimalMax, decimalMin } from "@/features/pump/decimal";
 
 /**
  * Coercion helpers shared by the subgraph and RPC readers. Every value that
@@ -52,14 +53,6 @@ export function integerString(value: string): string {
 
 export function decimalString(value: string): string {
   return /^\d+(?:\.\d+)?$/.test(value || "") ? value : "0";
-}
-
-export function decimalMax(left: string, right: string): string {
-  return Number(right) > Number(left) ? right : left;
-}
-
-export function decimalMin(left: string, right: string): string {
-  return Number(right) < Number(left) ? right : left;
 }
 
 export function clamp(value: number, min: number, max: number): number {

@@ -61,6 +61,9 @@ Next.js service.
 
 Only run `npm.cmd run deploy:testnet` after every local gate passes and the
 printed chain, deployer, existing NUSD, DIA oracle, and Pump addresses are exact.
+Signing commands use `DEPLOYER_PRIVATE_KEY`. The legacy `API_KEY` alias remains
+temporarily supported with a deprecation warning, but an explicit deployer key
+always takes precedence and no command prints either credential.
 If a broadcast is interrupted, use `deploy:resume`; if transactions landed but
 local finalization failed, use `deploy:finalize`. Testnet core contracts keep the
 recorded deployer as direct owner and guardian. The Pump router still enforces

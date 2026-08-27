@@ -21,6 +21,7 @@ import {
   CURRENT_LENDING_COLLATERAL_RISK,
   CURRENT_LENDING_IMPLEMENTATION_STATUS,
 } from "./lib/lending-implementation.mjs";
+import { resolvePrivateKey } from "./lib/private-key.mjs";
 import { publicEnvironmentValues, writePublicEnvironment } from "./lib/public-environment.mjs";
 import { fallbackRpcUrl, primaryRpcUrl, RPC_BATCH_OPTIONS } from "./lib/rpc.mjs";
 import { runStep } from "./lib/spawn-step.mjs";
@@ -61,11 +62,7 @@ if (broadcast && fs.existsSync(broadcastPath)) {
 }
 if (resume && !fs.existsSync(broadcastPath)) throw new Error("No live broadcast journal exists to resume");
 
-const rawKey = (process.env.DEPLOYER_PRIVATE_KEY || process.env.API_KEY || "").trim();
-const privateKey = rawKey.startsWith("0x") ? rawKey : `0x${rawKey}`;
-if (!/^0x[0-9a-fA-F]{64}$/.test(privateKey)) {
-  throw new Error("DEPLOYER_PRIVATE_KEY/API_KEY is missing or is not a 32-byte private key");
-}
+const { privateKey } = resolvePrivateKey();
 const account = privateKeyToAccount(privateKey);
 const rpcUrl = primaryRpcUrl(network);
 const client = createPublicClient({
@@ -116,7 +113,18 @@ const addressKeys = [
 async function finalizeDeployment(prediction) {
   if (!fs.existsSync(broadcastPath)) throw new Error("Foundry broadcast receipt file is missing");
   const broadcastData = JSON.parse(fs.readFileSync(broadcastPath, "utf8"));
-  const lendingCreates = (broadcastData.transactions || []).filter((transaction) => (
+  const transactions = broadcastData.transactions || [];
+  const deployer = requireAddress(prediction.deployer, "deployer");
+  if (deployer.toLowerCase() !== account.address.toLowerCase()) {
+    throw new Error(`Prediction deployer ${deployer} differs from configured wallet ${account.address}`);
+  }
+  if (!transactions.length || transactions.some((transaction) => !/^0x[0-9a-fA-F]{64}$/.test(transaction.hash || ""))) {
+    throw new Error("Broadcast journal contains a missing or invalid transaction hash");
+  }
+  const hashes = [...new Set(transactions.map((transaction) => transaction.hash.toLowerCase()))];
+  if (hashes.length !== transactions.length) throw new Error("Broadcast journal contains duplicate transaction hashes");
+
+  const lendingCreates = transactions.filter((transaction) => (
     transaction.transactionType === "CREATE" && transaction.contractName === "PooledNUSDLendingPool"
   ));
   if (lendingCreates.length !== 1) {
@@ -134,7 +142,7 @@ async function finalizeDeployment(prediction) {
   if (!creationInputMatchesArtifact(lendingCreates[0].transaction?.input, lendingArtifact.bytecode?.object)) {
     throw new Error("Broadcast lending creation bytecode does not match the current audited artifact");
   }
-  const reserveCreates = (broadcastData.transactions || []).filter((transaction) => (
+  const reserveCreates = transactions.filter((transaction) => (
     transaction.transactionType === "CREATE" && transaction.contractName === "SynthSafetyReserve"
   ));
   if (reserveCreates.length !== 1) {
@@ -152,17 +160,33 @@ async function finalizeDeployment(prediction) {
   if (!creationInputMatchesArtifact(reserveCreates[0].transaction?.input, reserveArtifact.bytecode?.object)) {
     throw new Error("Broadcast synth reserve creation bytecode does not match the current audited artifact");
   }
-  const hashes = [...new Set(
-    (broadcastData.transactions || [])
-      .map((transaction) => transaction.hash)
-      .filter((hash) => /^0x[0-9a-fA-F]{64}$/.test(hash || "")),
-  )];
-  if (!hashes.length) throw new Error("Broadcast file contains no transaction hashes");
   const receipts = [];
   for (const hash of hashes) {
     const receipt = await client.waitForTransactionReceipt({ hash, timeout: 120_000 });
     if (receipt.status !== "success") throw new Error(`Deployment transaction reverted: ${hash}`);
     receipts.push(receipt);
+  }
+  const receiptByHash = new Map(receipts.map((receipt) => [
+    receipt.transactionHash.toLowerCase(),
+    receipt,
+  ]));
+  for (const transaction of transactions) {
+    const receipt = receiptByHash.get(transaction.hash.toLowerCase());
+    if (!receipt) throw new Error(`Missing receipt evidence for ${transaction.hash}`);
+    expectAddress(receipt.from, deployer, `receipt sender for ${transaction.hash}`);
+    if (transaction.transactionType === "CREATE") {
+      if (!receipt.contractAddress) {
+        throw new Error(`CREATE receipt has no contract address: ${transaction.hash}`);
+      }
+      expectAddress(
+        receipt.contractAddress,
+        transaction.contractAddress,
+        `CREATE receipt address for ${transaction.hash}`,
+      );
+    } else if (transaction.transaction?.to) {
+      if (!receipt.to) throw new Error(`Call receipt has no target: ${transaction.hash}`);
+      expectAddress(receipt.to, transaction.transaction.to, `receipt target for ${transaction.hash}`);
+    }
   }
   const deploymentBlock = receipts.reduce(
     (minimum, receipt) => receipt.blockNumber < minimum ? receipt.blockNumber : minimum,
@@ -177,10 +201,8 @@ async function finalizeDeployment(prediction) {
   const nusd = requireAddress(prediction.nusd, "NUSD");
   const pump = requireAddress(prediction.pump, "Pump");
   const pumpRouter = requireAddress(prediction.pumpGraduationRouter, "Pump graduation router");
-  const deployer = requireAddress(prediction.deployer, "deployer");
-  if (deployer.toLowerCase() !== account.address.toLowerCase()) {
-    throw new Error(`Prediction deployer ${deployer} differs from configured wallet ${account.address}`);
-  }
+  expectAddress(lendingCreates[0].contractAddress, normalized.lendingPool, "broadcast lending creation");
+  expectAddress(reserveCreates[0].contractAddress, normalized.synthSafetyReserve, "broadcast synth reserve creation");
   expectAddress(nusd, network.existingContracts.nusd, "NUSD");
   expectAddress(pump, network.existingContracts.pump, "Pump");
   expectAddress(pumpRouter, network.existingContracts.pumpGraduationRouter, "Pump router");

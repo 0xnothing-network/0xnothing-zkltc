@@ -1,4 +1,4 @@
-type Account @entity {
+type Account @entity(immutable: false) {
   id: ID!
   tokens: [Token!]! @derivedFrom(field: "ownerAccount")
   createdTokens: [Token!]! @derivedFrom(field: "creatorAccount")
@@ -11,7 +11,7 @@ type Account @entity {
   updatedAt: BigInt!
 }
 
-type Token @entity {
+type Token @entity(immutable: false) {
   id: ID!
   tokenId: BigInt! @index
   collection: Bytes! @index
@@ -32,7 +32,7 @@ type Token @entity {
   updatedAt: BigInt!
 }
 
-type Listing @entity {
+type Listing @entity(immutable: false) {
   id: ID!
   listingId: BigInt! @index
   collection: Bytes! @index
@@ -57,7 +57,7 @@ type Listing @entity {
   updatedAt: BigInt!
 }
 
-type TransferEvent @entity {
+type TransferEvent @entity(immutable: true) {
   id: ID!
   token: Token
   collection: Bytes! @index
@@ -69,7 +69,7 @@ type TransferEvent @entity {
   txHash: Bytes!
 }
 
-type MarketEvent @entity {
+type MarketEvent @entity(immutable: true) {
   id: ID!
   listing: Listing
   listingId: BigInt! @index
@@ -84,7 +84,7 @@ type MarketEvent @entity {
   txHash: Bytes!
 }
 
-type MarketplaceStats @entity {
+type MarketplaceStats @entity(immutable: false) {
   id: ID!
   totalTokens: BigInt!
   totalListings: BigInt!

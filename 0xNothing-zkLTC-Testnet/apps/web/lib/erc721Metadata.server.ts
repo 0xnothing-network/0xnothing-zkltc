@@ -4,6 +4,8 @@ import { createPublicClient, getAddress, http, type Address } from "viem";
 import { litvm, LITVM_RPC_URL } from "@/config/wagmi";
 import { marketplaceNftKey } from "@/lib/marketplaceAbi";
 import { createBoundedCache } from "@/lib/boundedCache";
+import { readLimitedBytes } from "@/lib/server/readLimitedBytes";
+import { normalizeUint256TokenId } from "@/lib/tokenId";
 
 const ERC721_METADATA_ABI = [
   {
@@ -72,11 +74,12 @@ export async function fetchValidatedErc721Metadata(
 ): Promise<Record<string, ValidatedErc721Metadata | null>> {
   const unique = new Map<string, MetadataRequest>();
   for (const request of requests) {
-    if (!/^\d+$/.test(request.tokenId)) continue;
+    const tokenId = normalizeUint256TokenId(request.tokenId);
+    if (!tokenId) continue;
     const collection = getAddress(request.collection);
-    unique.set(marketplaceNftKey(collection, request.tokenId), {
+    unique.set(marketplaceNftKey(collection, tokenId), {
       collection,
-      tokenId: BigInt(request.tokenId).toString(),
+      tokenId,
     });
   }
 
@@ -148,24 +151,16 @@ async function readMetadataJson(uri: string): Promise<Record<string, unknown> | 
 async function readLimitedResponse(response: Response): Promise<string> {
   const contentLength = Number(response.headers.get("content-length"));
   if (Number.isFinite(contentLength) && contentLength > MAX_METADATA_BYTES) {
+    await response.body?.cancel().catch(() => undefined);
     throw new Error("NFT metadata exceeds size limit");
   }
   if (!response.body) return "";
-
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > MAX_METADATA_BYTES) {
-      await reader.cancel();
-      throw new Error("NFT metadata exceeds size limit");
-    }
-    chunks.push(value);
-  }
-  return Buffer.concat(chunks).toString("utf8");
+  const bytes = await readLimitedBytes(
+    response.body,
+    MAX_METADATA_BYTES,
+    () => new Error("NFT metadata exceeds size limit"),
+  );
+  return Buffer.from(bytes).toString("utf8");
 }
 
 function metadataName(json: Record<string, unknown>): string {

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { isIP } from "node:net";
 import { verifyMessage, type Address, type Hex } from "viem";
 import { zeroXPumpAbi } from "@/features/pump/abis";
 import { computePumpContentHash } from "@/features/pump/contentHash";
@@ -18,6 +17,8 @@ import {
   parsePumpUploadMessage,
 } from "@/features/pump/uploadMessage";
 import { publicClient } from "@/lib/contract";
+import { trustedProxyClientKey } from "@/lib/server/clientIp";
+import { readLimitedBytes } from "@/lib/server/readLimitedBytes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -288,31 +289,7 @@ async function readLimitedRequestBody(
   limit: number,
 ): Promise<Blob> {
   if (!stream) throw new Error("Upload request has no body");
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      total += value.byteLength;
-      if (total > limit) throw new UploadBodyTooLargeError();
-      chunks.push(value);
-    }
-  } catch (error) {
-    await reader.cancel(error).catch(() => undefined);
-    throw error;
-  } finally {
-    reader.releaseLock();
-  }
-
-  const body = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    body.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
+  const body = await readLimitedBytes(stream, limit, () => new UploadBodyTooLargeError());
   return new Blob([body.buffer as ArrayBuffer]);
 }
 
@@ -332,52 +309,11 @@ function clientIp(request: Request): string {
   // Only use forwarding headers when the deployment explicitly guarantees
   // that its proxy overwrites the selected header. Otherwise they are
   // attacker-controlled and would make the IP rate limit trivial to bypass.
-  const configuredHeader = process.env.UPLOAD_TRUSTED_PROXY_CLIENT_IP_HEADER?.trim().toLowerCase();
-  if (configuredHeader && /^[a-z0-9-]{1,64}$/.test(configuredHeader)) {
-    const value = request.headers.get(configuredHeader);
-    const address = configuredHeader.includes("forwarded")
-      ? rightmostForwardedIp(value)
-      : normalizedIp(value);
-    if (address) return `${configuredHeader}:${address}`;
-  }
-
-  if (process.env.VERCEL === "1") {
-    const address = rightmostForwardedIp(request.headers.get("x-vercel-forwarded-for"))
-      ?? rightmostForwardedIp(request.headers.get("x-forwarded-for"))
-      ?? normalizedIp(request.headers.get("x-real-ip"));
-    if (address) return `vercel:${address}`;
-  }
-
-  return "unidentified-client";
-}
-
-function normalizedIp(value: string | null): string | undefined {
-  if (!value) return undefined;
-  let candidate = value.trim().replace(/^"|"$/g, "");
-  if (!candidate) return undefined;
-
-  if (candidate.startsWith("[")) {
-    const closingBracket = candidate.indexOf("]");
-    if (closingBracket > 1) candidate = candidate.slice(1, closingBracket);
-  } else if (isIP(candidate) === 0) {
-    const separator = candidate.lastIndexOf(":");
-    if (separator > 0 && /^\d+$/.test(candidate.slice(separator + 1))) {
-      const withoutPort = candidate.slice(0, separator);
-      if (isIP(withoutPort) !== 0) candidate = withoutPort;
-    }
-  }
-
-  return isIP(candidate) !== 0 ? candidate.toLowerCase() : undefined;
-}
-
-function rightmostForwardedIp(value: string | null): string | undefined {
-  if (!value) return undefined;
-  const entries = value.split(",");
-  for (let index = entries.length - 1; index >= 0; index -= 1) {
-    const candidate = normalizedIp(entries[index]);
-    if (candidate) return candidate;
-  }
-  return undefined;
+  return trustedProxyClientKey(
+    request,
+    process.env.UPLOAD_TRUSTED_PROXY_CLIENT_IP_HEADER,
+    process.env.VERCEL === "1",
+  );
 }
 
 function normalizeUploadDomain(value: string): string | null {

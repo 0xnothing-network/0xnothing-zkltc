@@ -15,6 +15,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
+import { resolvePrivateKey } from "./private-key.mjs";
 import { fallbackRpcUrl, primaryRpcUrl, RPC_BATCH_OPTIONS } from "./rpc.mjs";
 
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -66,15 +67,7 @@ export function loadRuntime({ wallet = false, walletRole = "deployer" } = {}) {
   const publicClient = createPublicClient({ transport });
   if (!wallet) return { network, deployment, publicClient };
 
-  if (walletRole !== "deployer" && walletRole !== "keeper") throw new Error("Unsupported wallet role");
-  const rawKey = (walletRole === "keeper"
-    ? process.env.KEEPER_PRIVATE_KEY || ""
-    : process.env.DEPLOYER_PRIVATE_KEY || process.env.API_KEY || "").trim();
-  const privateKey = rawKey.startsWith("0x") ? rawKey : `0x${rawKey}`;
-  if (!/^0x[0-9a-fA-F]{64}$/.test(privateKey)) {
-    const variable = walletRole === "keeper" ? "KEEPER_PRIVATE_KEY" : "DEPLOYER_PRIVATE_KEY/API_KEY";
-    throw new Error(`${variable} must be a 32-byte hex private key`);
-  }
+  const { privateKey } = resolvePrivateKey({ role: walletRole });
   const account = privateKeyToAccount(privateKey);
   const walletClient = createWalletClient({ account, transport });
   return { network, deployment, publicClient, walletClient, account };

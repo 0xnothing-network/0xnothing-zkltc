@@ -1,6 +1,7 @@
 import { PUMP_MAX_IMAGE_BYTES, validatePumpImage } from "@/features/pump/imageValidation";
 import { normalizePumpIpfsPath } from "@/features/pump/config";
 import { createBoundedCache } from "@/lib/boundedCache";
+import { readLimitedBytes } from "@/lib/server/readLimitedBytes";
 import sharp from "sharp";
 
 export const runtime = "nodejs";
@@ -118,7 +119,12 @@ async function fetchPumpImage(
     const contentLength = Number(response.headers.get("content-length") ?? 0);
     if (contentLength > PUMP_MAX_IMAGE_BYTES) throw new Error("IPFS image is too large");
 
-    const body = await readLimitedBody(response.body, PUMP_MAX_IMAGE_BYTES);
+    const bytes = await readLimitedBytes(
+      response.body,
+      PUMP_MAX_IMAGE_BYTES,
+      () => new Error("IPFS image is too large"),
+    );
+    const body = bytes.buffer as ArrayBuffer;
     const validationError = await validatePumpImage(new Blob([body], { type: contentType }));
     if (validationError) throw new Error(validationError);
     await validateImageDimensions(body);
@@ -187,35 +193,6 @@ async function validateImageDimensions(body: ArrayBuffer): Promise<void> {
   ) {
     throw new Error("IPFS image dimensions are unsafe");
   }
-}
-
-async function readLimitedBody(stream: ReadableStream<Uint8Array>, limit: number): Promise<ArrayBuffer> {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      total += value.byteLength;
-      if (total > limit) throw new Error("IPFS image is too large");
-      chunks.push(value);
-    }
-  } catch (error) {
-    await reader.cancel(error).catch(() => undefined);
-    throw error;
-  } finally {
-    reader.releaseLock();
-  }
-
-  const output = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    output.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return output.buffer;
 }
 
 function abortableDelay(delayMs: number, signal: AbortSignal): Promise<void> {

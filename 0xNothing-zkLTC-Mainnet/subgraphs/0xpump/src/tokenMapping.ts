@@ -63,7 +63,7 @@ function debit(
   holder: Address,
   amount: BigInt,
   event: Transfer,
-): void {
+): boolean {
   const id = tokenBalanceId(token, holder);
   const position = TokenBalance.load(id);
   if (position === null || position.balance.lt(amount)) {
@@ -71,7 +71,7 @@ function debit(
       market.id.toHexString(),
       holder.toHexString(),
     ]);
-    return;
+    return false;
   }
 
   position.balance = position.balance.minus(amount);
@@ -82,6 +82,7 @@ function debit(
   if (position.balance.equals(ZERO_BI) && isActiveHolder(market, holder)) {
     decrementHolderCount(market);
   }
+  return true;
 }
 
 export function handleTransfer(event: Transfer): void {
@@ -114,8 +115,11 @@ export function handleTransfer(event: Transfer): void {
     return;
   }
 
-  if (!isMint) {
-    debit(market, event.address, event.params.from, event.params.value, event);
+  if (
+    !isMint &&
+    !debit(market, event.address, event.params.from, event.params.value, event)
+  ) {
+    return;
   }
   if (!isBurn) {
     credit(market, event.address, event.params.to, event.params.value, event);

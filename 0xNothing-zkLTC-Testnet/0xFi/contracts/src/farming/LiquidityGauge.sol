@@ -80,7 +80,7 @@ contract LiquidityGauge is ReentrancyGuard {
     function rewardPerToken() public view returns (uint256) {
         if (totalSupply == 0) return rewardPerTokenStored;
         return rewardPerTokenStored
-            + Math.mulDiv(lastTimeRewardApplicable() - lastUpdateTime, rewardRate * PRECISION, totalSupply);
+            + Math.mulDiv((lastTimeRewardApplicable() - lastUpdateTime) * PRECISION, rewardRate, totalSupply);
     }
 
     function earned(address account) public view returns (uint256) {

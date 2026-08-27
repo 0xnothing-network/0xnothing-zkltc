@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { isIP } from "node:net";
 import {
   createPublicClient,
   decodeFunctionResult,
@@ -14,6 +13,8 @@ import {
 import { deployment } from "@fi/config/deployment";
 import { erc20Abi } from "@fi/lib/abis/erc20";
 import { createBoundedCache } from "@/lib/boundedCache";
+import { trustedProxyClientKey } from "@/lib/server/clientIp";
+import { readLimitedBytes } from "@/lib/server/readLimitedBytes";
 import type {
   ImportedTokenApiResponse,
   ImportedTokenExplorerStatus,
@@ -79,58 +80,14 @@ interface OnchainLookup {
   status: "unavailable" | "unsupported" | "verified";
 }
 
-function normalizedIp(value: string | null): string | undefined {
-  if (!value) return undefined;
-  let candidate = value.trim().replace(/^"|"$/g, "");
-  if (!candidate) return undefined;
-
-  if (candidate.startsWith("[")) {
-    const closingBracket = candidate.indexOf("]");
-    if (closingBracket > 1) candidate = candidate.slice(1, closingBracket);
-  } else if (isIP(candidate) === 0) {
-    const separator = candidate.lastIndexOf(":");
-    if (separator > 0 && /^\d+$/.test(candidate.slice(separator + 1))) {
-      const withoutPort = candidate.slice(0, separator);
-      if (isIP(withoutPort) !== 0) candidate = withoutPort;
-    }
-  }
-
-  return isIP(candidate) !== 0 ? candidate.toLowerCase() : undefined;
-}
-
-function rightmostForwardedIp(value: string | null): string | undefined {
-  if (!value) return undefined;
-  const entries = value.split(",");
-  for (let index = entries.length - 1; index >= 0; index -= 1) {
-    const candidate = normalizedIp(entries[index]);
-    if (candidate) return candidate;
-  }
-  return undefined;
-}
-
 function trustedClientKey(request: Request): string {
   // Configure this only when the origin is reachable through a reverse proxy
   // that overwrites the selected header (for example, x-forwarded-for).
-  const configuredHeader = process.env.FI_TRUSTED_PROXY_CLIENT_IP_HEADER?.trim().toLowerCase();
-  if (configuredHeader && /^[a-z0-9-]{1,64}$/.test(configuredHeader)) {
-    const value = request.headers.get(configuredHeader);
-    const address = configuredHeader.includes("forwarded")
-      ? rightmostForwardedIp(value)
-      : normalizedIp(value);
-    if (address) return `${configuredHeader}:${address}`;
-  }
-
-  if (process.env.VERCEL === "1") {
-    const address = rightmostForwardedIp(request.headers.get("x-vercel-forwarded-for"))
-      ?? rightmostForwardedIp(request.headers.get("x-forwarded-for"))
-      ?? normalizedIp(request.headers.get("x-real-ip"));
-    if (address) return `vercel:${address}`;
-  }
-
-  // Without an explicitly trusted reverse proxy there is no trustworthy
-  // remote address on the Web Request API. A shared fallback cannot be
-  // bypassed by spoofing arbitrary forwarding headers.
-  return "unidentified-client";
+  return trustedProxyClientKey(
+    request,
+    process.env.FI_TRUSTED_PROXY_CLIENT_IP_HEADER,
+    process.env.VERCEL === "1",
+  );
 }
 
 function pruneRateLimitBuckets(now: number): void {
@@ -232,33 +189,15 @@ async function boundedResponseText(response: Response, maxBytes: number): Promis
   }
 
   if (!response.body) return undefined;
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder("utf-8", { fatal: true });
-  const chunks: string[] = [];
-  let receivedBytes = 0;
-
   try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      receivedBytes += value.byteLength;
-      if (receivedBytes > maxBytes) {
-        await reader.cancel();
-        return undefined;
-      }
-      chunks.push(decoder.decode(value, { stream: true }));
-    }
-    chunks.push(decoder.decode());
-    return chunks.join("");
+    const bytes = await readLimitedBytes(
+      response.body,
+      maxBytes,
+      () => new Error("Explorer response exceeds size limit"),
+    );
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
-    try {
-      await reader.cancel();
-    } catch {
-      // Ignore a second stream error while releasing the response body.
-    }
     return undefined;
-  } finally {
-    reader.releaseLock();
   }
 }
 

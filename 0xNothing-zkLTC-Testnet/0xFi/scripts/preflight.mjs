@@ -5,6 +5,7 @@ import { config as loadEnv } from "dotenv";
 import { createPublicClient, fallback, formatEther, formatUnits, http, parseAbi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
+import { resolvePrivateKey } from "./lib/private-key.mjs";
 import { pumpAdministrationTopology } from "./lib/preflight-topology.mjs";
 import { fallbackRpcUrl, primaryRpcUrl, RPC_BATCH_OPTIONS } from "./lib/rpc.mjs";
 
@@ -13,11 +14,7 @@ const localEnv = resolve(root, ".env.local");
 if (existsSync(localEnv)) loadEnv({ path: localEnv, quiet: true });
 
 const network = JSON.parse(readFileSync(resolve(root, "config/liteforge-testnet.json"), "utf8"));
-const rawKey = process.env.DEPLOYER_PRIVATE_KEY || process.env.API_KEY || "";
-const privateKey = rawKey.startsWith("0x") ? rawKey : `0x${rawKey}`;
-if (!/^0x[0-9a-fA-F]{64}$/.test(privateKey)) {
-  throw new Error("DEPLOYER_PRIVATE_KEY or API_KEY must be a 32-byte hex private key");
-}
+const { privateKey } = resolvePrivateKey();
 
 const account = privateKeyToAccount(privateKey);
 const client = createPublicClient({

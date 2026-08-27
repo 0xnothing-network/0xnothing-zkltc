@@ -7,6 +7,7 @@ import {
   hasMarketplaceSubgraph,
 } from "@/lib/marketplaceSubgraph";
 import { createBoundedCache } from "@/lib/boundedCache";
+import { normalizeUint256TokenId } from "@/lib/tokenId";
 
 export const runtime = "nodejs";
 export const revalidate = 30;
@@ -48,8 +49,8 @@ export async function GET(request: Request) {
   const ids = raw
     .split(",")
     .map((s) => s.trim())
-    .filter((s) => /^\d+$/.test(s))
-    .slice(0, 20); // safety cap
+    .map(normalizeUint256TokenId)
+    .filter((id): id is string => Boolean(id));
 
   if (ids.length === 0) {
     return NextResponse.json({ error: "No valid ids" }, { status: 400 });
@@ -62,6 +63,7 @@ export async function GET(request: Request) {
     if (!seen.has(id)) {
       seen.add(id);
       uniqueIds.push(id);
+      if (uniqueIds.length === 20) break; // safety cap after canonical de-duplication
     }
   }
 

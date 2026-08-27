@@ -2,6 +2,7 @@ import { unstable_cache } from "next/cache";
 import { publicClient, PIXEL_NFT_CONTRACT_ADDRESS } from "@/lib/contract";
 import { PixelNFTABI } from "@/lib/abi";
 import { pixelDataToSVGMarkup } from "@/lib/gridParser";
+import { normalizeUint256TokenId } from "@/lib/tokenId";
 
 export const runtime = "nodejs";
 export const revalidate = 31_536_000;
@@ -24,8 +25,9 @@ const readPixelImage = unstable_cache(
 );
 
 export async function GET(request: Request) {
-  const tokenId = new URL(request.url).searchParams.get("tokenId")?.trim() ?? "";
-  if (!/^\d{1,78}$/.test(tokenId)) {
+  const rawTokenId = new URL(request.url).searchParams.get("tokenId")?.trim() ?? "";
+  const tokenId = normalizeUint256TokenId(rawTokenId);
+  if (!tokenId) {
     return Response.json(
       { error: "Invalid tokenId" },
       { status: 400, headers: { "Cache-Control": "no-store" } },
