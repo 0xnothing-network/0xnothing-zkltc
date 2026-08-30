@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  DAPP_APPROVAL_EXECUTION_BUDGET_MS,
   DAPP_REQUEST_TIMEOUT_MS,
   MAX_PENDING_PER_ORIGIN,
   MAX_PENDING_REQUESTS,
   type DappRequest,
   planPendingAdmission,
+  planPendingClaim,
+  planPendingClaimRelease,
   sanitizePendingRequests,
 } from "../src/core/services/dapp.ts";
 
@@ -62,6 +65,62 @@ test("an expired orphan is pruned before a fresh request is queued", () => {
   assert.deepEqual(result.queue, [fresh]);
 });
 
+test("only one approval window can claim a persisted request", () => {
+  const now = 1_000_001;
+  const pending = request("tx-1", "https://app.example");
+  const firstToken = "11111111-1111-4111-8111-111111111111";
+  const secondToken = "22222222-2222-4222-8222-222222222222";
+  const first = planPendingClaim([pending], pending.id, firstToken, now);
+  assert.equal(first.accepted, true);
+  if (!first.accepted) return;
+  assert.equal(first.queue[0]?.approvalClaim, firstToken);
+  assert.deepEqual(
+    planPendingClaim(first.queue, pending.id, secondToken, now),
+    { accepted: false, reason: "claimed" },
+  );
+  assert.deepEqual(
+    planPendingClaim([pending], pending.id, "not-a-uuid", now),
+    { accepted: false, reason: "invalid-claim" },
+  );
+});
+
+test("approval execution cannot start without enough request-timeout headroom", () => {
+  const now = 2_000_000;
+  const token = "11111111-1111-4111-8111-111111111111";
+  const atBoundary = request(
+    "boundary",
+    "https://app.example",
+    "transaction",
+    now - DAPP_REQUEST_TIMEOUT_MS + DAPP_APPROVAL_EXECUTION_BUDGET_MS,
+  );
+  assert.equal(planPendingClaim([atBoundary], atBoundary.id, token, now).accepted, true);
+  assert.deepEqual(
+    planPendingClaim(
+      [{ ...atBoundary, id: "too-late", at: atBoundary.at - 1 }],
+      "too-late",
+      token,
+      now,
+    ),
+    { accepted: false, reason: "expired" },
+  );
+});
+
+test("only the owning approval window can release its claim", () => {
+  const token = "11111111-1111-4111-8111-111111111111";
+  const pending = { ...request("tx-1", "https://app.example"), approvalClaim: token };
+  const wrong = planPendingClaimRelease(
+    [pending],
+    pending.id,
+    "22222222-2222-4222-8222-222222222222",
+  );
+  assert.equal(wrong.released, false);
+  assert.equal(wrong.queue[0]?.approvalClaim, token);
+
+  const owner = planPendingClaimRelease([pending], pending.id, token);
+  assert.equal(owner.released, true);
+  assert.equal(owner.queue[0]?.approvalClaim, undefined);
+});
+
 test("persisted approval rows are validated before the UI or worker uses them", () => {
   const valid = {
     id: "request-1",
@@ -80,10 +139,16 @@ test("persisted approval rows are validated before the UI or worker uses them", 
   assert.equal(sanitized.length, 1);
   assert.equal(sanitized[0]?.id, valid.id);
   assert.equal(sanitized[0]?.tx?.value, "0x1");
+  const claimed = sanitizePendingRequests([{
+    ...valid,
+    approvalClaim: "11111111-1111-4111-8111-111111111111",
+  }]);
+  assert.equal(claimed[0]?.approvalClaim, "11111111-1111-4111-8111-111111111111");
   assert.deepEqual(sanitizePendingRequests([
     { ...valid, origin: "chrome-extension://hostile" },
     { ...valid, account: "not-an-address" },
     { ...valid, tx: { data: `0x${"00".repeat(1_000_001)}` } },
+    { ...valid, approvalClaim: "not-a-uuid" },
     null,
   ]), []);
 });

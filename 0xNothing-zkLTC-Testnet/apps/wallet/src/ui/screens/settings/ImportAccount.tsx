@@ -4,6 +4,7 @@ import { t } from "../../../core/i18n";
 import { importPrivateKey } from "../../../core/keyring/vault";
 import { describeError } from "../../../core/lib/errors";
 import { Button, Note, Panel, PanelBody } from "../../components/kit";
+import { useActionGate } from "../../hooks/useActionGate";
 import { useWallet } from "../../state/WalletContext";
 
 /**
@@ -23,6 +24,7 @@ export function ImportAccount(): ReactNode {
   const [password, setPassword] = useState("");
   const [label, setLabel] = useState("");
   const [busy, setBusy] = useState(false);
+  const actionGate = useActionGate();
   const [error, setError] = useState<string | null>(null);
 
   const trimmed = key.trim();
@@ -38,7 +40,7 @@ export function ImportAccount(): ReactNode {
   };
 
   const submit = async (): Promise<void> => {
-    if (busy || !ready) return;
+    if (busy || !ready || !actionGate.tryEnter()) return;
     setBusy(true);
     setError(null);
     try {
@@ -54,6 +56,7 @@ export function ImportAccount(): ReactNode {
       setPassword("");
       setError(describeError(cause));
     } finally {
+      actionGate.leave();
       setBusy(false);
     }
   };

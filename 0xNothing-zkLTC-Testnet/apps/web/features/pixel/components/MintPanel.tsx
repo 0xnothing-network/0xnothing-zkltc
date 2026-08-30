@@ -18,6 +18,7 @@ import { useToast } from "@/components/Toast";
 import { normalizeError } from "@/lib/errors";
 import { LITVM_CHAIN_ID } from "@/lib/chainSwitch";
 import { PixelLoadingIndicator } from "@/components/PageLoader";
+import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 
 interface MintPanelProps {
   pixelData: string[][];
@@ -48,10 +49,11 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
   // network. The manual guard inside handleMint below still covers the case
   // where the chain changes between mount and submit.
 
-  const { data: mintReceipt, isLoading: isConfirming } =
+  const { data: mintReceipt, error: mintReceiptError, isLoading: isConfirming } =
     useWaitForTransactionReceipt({ hash: txHash ?? undefined });
 
   const firedRef = useRef(false);
+  const mintLockRef = useRef(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const preparedPixelDataRef = useRef<string[][] | null>(null);
   const toastIdsRef = useRef<{ submitted?: string; confirmed?: string }>({});
@@ -111,6 +113,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
   useEffect(() => {
     if (!mintReceipt || !txHash || firedRef.current) return;
     firedRef.current = true;
+    releaseAction(mintLockRef);
 
     if (mintReceipt.status !== "success") {
       if (toastIdsRef.current.submitted) toast.dismiss(toastIdsRef.current.submitted);
@@ -168,6 +171,10 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
     };
   }, [mintReceipt, txHash, onMintSuccess, toast]);
 
+  useEffect(() => {
+    if (mintReceiptError) releaseAction(mintLockRef);
+  }, [mintReceiptError]);
+
   const handleMint = useCallback(async () => {
     if (!isConnected || !address) {
       toast.warning("Connect your wallet", "Click CONNECT WALLET in the top-right to begin.");
@@ -199,6 +206,11 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
       toast.info("Already minted", "This exact artwork has been claimed by someone else.");
       return;
     }
+    if (preparedPixelDataRef.current !== pixelData || debouncedPackedBytes.length <= 2) {
+      toast.info("Preparing artwork", "Wait a moment for the artwork check to finish.");
+      return;
+    }
+    if (!tryAcquireAction(mintLockRef)) return;
 
     setIsLoading(true);
     setTxHash(null);
@@ -206,11 +218,6 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
     if (toastIdsRef.current.submitted) toast.dismiss(toastIdsRef.current.submitted);
 
     try {
-      if (preparedPixelDataRef.current !== pixelData || debouncedPackedBytes.length <= 2) {
-        toast.info("Preparing artwork", "Wait a moment for the artwork check to finish.");
-        setIsLoading(false);
-        return;
-      }
       const packedPixelBytes = debouncedPackedBytes;
 
       const data = encodeFunctionData({
@@ -254,6 +261,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
         hrefLabel: "View on Explorer",
       });
     } catch (err: unknown) {
+      releaseAction(mintLockRef);
       const normalized = normalizeError(err);
       console.error("Mint error:", err);
       toast.show({

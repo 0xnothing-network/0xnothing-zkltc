@@ -5,6 +5,7 @@ import { createVault, MIN_WALLET_PASSWORD_LENGTH } from "../../core/keyring/vaul
 import { describeError } from "../../core/lib/errors";
 import { copyText } from "../../core/platform/env";
 import { Button, Note } from "../components/kit";
+import { useActionGate } from "../hooks/useActionGate";
 import { Screen } from "../components/Screen";
 import { useWallet } from "../state/WalletContext";
 
@@ -28,6 +29,7 @@ export function Onboarding(): ReactNode {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const actionGate = useActionGate();
 
   const words = phrase.length === 0 ? [] : phrase.split(" ");
   const tail = typed.split(/\s+/u).at(-1) ?? "";
@@ -45,7 +47,7 @@ export function Onboarding(): ReactNode {
   };
 
   const acceptTyped = async (): Promise<void> => {
-    if (busy || !typedReady) return;
+    if (busy || !typedReady || !actionGate.tryEnter()) return;
     setBusy(true);
     setError(null);
     try {
@@ -65,6 +67,7 @@ export function Onboarding(): ReactNode {
     } catch (cause) {
       setError(describeError(cause));
     } finally {
+      actionGate.leave();
       setBusy(false);
     }
   };
@@ -78,6 +81,7 @@ export function Onboarding(): ReactNode {
       setError(t("onb.mismatch"));
       return;
     }
+    if (!actionGate.tryEnter()) return;
     setBusy(true);
     setError(null);
     try {
@@ -91,6 +95,7 @@ export function Onboarding(): ReactNode {
     } catch (cause) {
       setError(describeError(cause));
     } finally {
+      actionGate.leave();
       setBusy(false);
     }
   };

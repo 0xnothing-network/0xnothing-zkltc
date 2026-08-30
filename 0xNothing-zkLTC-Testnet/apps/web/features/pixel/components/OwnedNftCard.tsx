@@ -12,6 +12,7 @@ import {
 } from "@/lib/contract";
 import { PixelNFTABI } from "@/lib/abi";
 import { MarketplaceAbi } from "@/lib/marketplaceAbi";
+import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 
 export interface OwnedNft {
   tokenId: bigint;
@@ -150,6 +151,7 @@ function ListForSaleControl({
   const { data: listReceipt, isLoading: waitingList, error: listReceiptErr } =
     useWaitForTransactionReceipt({ hash: listHash });
   const firedRef = useRef(false);
+  const submitLockRef = useRef(false);
   const approved = approveReceipt?.status === "success";
   const listed = listReceipt?.status === "success";
 
@@ -159,6 +161,17 @@ function ListForSaleControl({
       onSuccess();
     }
   }, [listed, onSuccess]);
+
+  useEffect(() => {
+    if (
+      listReceipt ||
+      listReceiptErr ||
+      approveReceipt?.status === "reverted" ||
+      approveReceiptErr
+    ) {
+      releaseAction(submitLockRef);
+    }
+  }, [approveReceipt, approveReceiptErr, listReceipt, listReceiptErr]);
 
   const priceWei = useMemo(() => {
     if (!/^\d+(?:\.\d+)?$/.test(price)) return null;
@@ -182,6 +195,7 @@ function ListForSaleControl({
         args: [PIXEL_NFT_CONTRACT_ADDRESS, tokenId, priceWei],
       });
     } catch {
+      releaseAction(submitLockRef);
       // surfaced via listErr
     }
   }, [priceWei, writeListAsync, tokenId]);
@@ -195,6 +209,7 @@ function ListForSaleControl({
   const handleSubmit = async () => {
     firedRef.current = false;
     if (!priceValid) return;
+    if (!tryAcquireAction(submitLockRef)) return;
     try {
       await writeContractAsync({
         address: PIXEL_NFT_CONTRACT_ADDRESS,
@@ -203,6 +218,7 @@ function ListForSaleControl({
         args: [PIXEL_MARKETPLACE_ADDRESS, tokenId],
       });
     } catch {
+      releaseAction(submitLockRef);
       // surfaced via approveErr
     }
   };
@@ -284,6 +300,7 @@ function CancelListingControl({
     hash: txHash,
   });
   const firedRef = useRef(false);
+  const cancelLockRef = useRef(false);
 
   useEffect(() => {
     if (receipt?.status === "success" && !firedRef.current) {
@@ -292,8 +309,13 @@ function CancelListingControl({
     }
   }, [receipt, onSuccess]);
 
+  useEffect(() => {
+    if (receipt || receiptError) releaseAction(cancelLockRef);
+  }, [receipt, receiptError]);
+
   const handleCancel = async () => {
     firedRef.current = false;
+    if (!tryAcquireAction(cancelLockRef)) return;
     try {
       await writeContractAsync({
         address: PIXEL_MARKETPLACE_ADDRESS,
@@ -302,6 +324,7 @@ function CancelListingControl({
         args: [listingId],
       });
     } catch {
+      releaseAction(cancelLockRef);
       // surfaced via error
     }
   };

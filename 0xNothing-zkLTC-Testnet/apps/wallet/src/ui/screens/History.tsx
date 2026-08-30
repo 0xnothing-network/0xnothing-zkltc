@@ -14,6 +14,7 @@ import {
 } from "../../core/services/history";
 import { Button, Empty, Note, Pill, type Tone } from "../components/kit";
 import { Screen } from "../components/Screen";
+import { useActionGate } from "../hooks/useActionGate";
 import { useLiveRead } from "../hooks/useLiveRead";
 import { goHome } from "../router";
 import { useWallet } from "../state/WalletContext";
@@ -47,11 +48,12 @@ export function History(): ReactNode {
     identity: [address, network.id],
   });
   const [busy, setBusy] = useState(false);
+  const actionGate = useActionGate();
   const [actionError, setActionError] = useState<string | null>(null);
   const rows = read.data ?? [];
 
   const clear = async (): Promise<void> => {
-    if (busy || !address) return;
+    if (busy || !address || !actionGate.tryEnter()) return;
     setBusy(true);
     setActionError(null);
     try {
@@ -60,6 +62,7 @@ export function History(): ReactNode {
     } catch (cause) {
       setActionError(describeError(cause));
     } finally {
+      actionGate.leave();
       setBusy(false);
     }
   };

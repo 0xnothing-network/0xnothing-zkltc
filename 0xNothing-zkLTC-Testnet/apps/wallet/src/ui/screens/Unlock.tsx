@@ -3,6 +3,7 @@ import { t } from "../../core/i18n";
 import { unlock, wipeWallet, WrongPasswordError } from "../../core/keyring/vault";
 import { describeError } from "../../core/lib/errors";
 import { Button, Note } from "../components/kit";
+import { useActionGate } from "../hooks/useActionGate";
 import { Screen } from "../components/Screen";
 import { useWallet } from "../state/WalletContext";
 
@@ -24,11 +25,12 @@ export function Unlock(): ReactNode {
   const [busy, setBusy] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [confirmWord, setConfirmWord] = useState("");
+  const actionGate = useActionGate();
   const wipeWord = t("wipe.word");
   const wipeReady = confirmWord.trim().toUpperCase() === wipeWord.toUpperCase();
 
   const submit = async (): Promise<void> => {
-    if (busy || password.length === 0) return;
+    if (busy || password.length === 0 || !actionGate.tryEnter()) return;
     setBusy(true);
     setError(null);
     try {
@@ -40,12 +42,13 @@ export function Unlock(): ReactNode {
         cause instanceof WrongPasswordError ? t("vault.wrongPassword") : describeError(cause),
       );
     } finally {
+      actionGate.leave();
       setBusy(false);
     }
   };
 
   const wipe = async (): Promise<void> => {
-    if (busy || !wipeReady) return;
+    if (busy || !wipeReady || !actionGate.tryEnter()) return;
     setBusy(true);
     setError(null);
     try {
@@ -55,6 +58,7 @@ export function Unlock(): ReactNode {
       window.location.reload();
     } catch (cause) {
       setError(describeError(cause));
+      actionGate.leave();
       setBusy(false);
     }
   };

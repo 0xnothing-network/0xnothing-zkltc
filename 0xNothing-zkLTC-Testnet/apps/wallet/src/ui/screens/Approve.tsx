@@ -8,15 +8,18 @@ import { signerFor } from "../../core/keyring/vault";
 import { describeError } from "../../core/lib/errors";
 import { formatAmount, shortenAddress } from "../../core/lib/format";
 import {
+  claimPendingRequest,
   type DappRequest,
   listPending,
-  rejectRequest,
+  rejectClaimedRequest,
+  releasePendingRequestClaim,
   resolveRequest,
   watchPending,
 } from "../../core/services/dapp";
 import { previewRaw, sendRaw } from "../../core/services/tx";
 import { Button, Note, Panel, PanelBody, Row, Rows } from "../components/kit";
 import { Screen } from "../components/Screen";
+import { useActionGate } from "../hooks/useActionGate";
 import { useLiveRead } from "../hooks/useLiveRead";
 import { useRoute } from "../router";
 import { useWallet } from "../state/WalletContext";
@@ -139,6 +142,7 @@ export function Approve(): ReactNode {
   const [queue, setQueue] = useState<DappRequest[] | null>(null);
   const [queueError, setQueueError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const actionGate = useActionGate();
   const [error, setError] = useState<string | null>(null);
 
   // The worker may queue a second request while the first is being read, so the
@@ -214,34 +218,76 @@ export function Approve(): ReactNode {
     if (wanted !== null && rest.length === 0) window.close();
   };
   const approve = async (): Promise<void> => {
-    if (busy || request === null || signer === null || mismatch || networkMismatch) return;
+    if (
+      busy
+      || request === null
+      || signer === null
+      || mismatch
+      || networkMismatch
+      || !actionGate.tryEnter()
+    ) return;
     setBusy(true);
     setError(null);
+    let approvalClaim: string | null = null;
+    let executionCompleted = false;
     try {
+      approvalClaim = await claimPendingRequest(request.id);
+      if (approvalClaim === null) {
+        window.close();
+        return;
+      }
       const result = await execute(request, signer, hostOf(request.origin));
-      await resolveRequest(request.id, result);
+      executionCompleted = true;
+      const settled = await resolveRequest(request.id, result, approvalClaim);
       if (request.kind === "transaction") {
         notify(t("apr.txSent"), "ok", txUrl(result, network));
         refresh();
+      }
+      if (!settled) {
+        await finish();
+        return;
       }
       await finish();
     } catch (cause) {
       setError(describeError(cause));
     } finally {
+      if (
+        approvalClaim !== null
+        && !executionCompleted
+        && request.kind !== "transaction"
+      ) {
+        await releasePendingRequestClaim(request.id, approvalClaim).catch(() => undefined);
+      }
+      actionGate.leave();
       setBusy(false);
     }
   };
 
   const reject = async (): Promise<void> => {
-    if (busy || request === null) return;
+    if (busy || request === null || !actionGate.tryEnter()) return;
     setBusy(true);
     setError(null);
+    let approvalClaim: string | null = null;
+    let settled = false;
     try {
-      await rejectRequest(request.id);
+      approvalClaim = await claimPendingRequest(request.id);
+      if (approvalClaim === null) {
+        window.close();
+        return;
+      }
+      settled = await rejectClaimedRequest(request.id, approvalClaim);
+      if (!settled) {
+        window.close();
+        return;
+      }
       await finish();
     } catch (cause) {
       setError(describeError(cause));
     } finally {
+      if (approvalClaim !== null && !settled) {
+        await releasePendingRequestClaim(request.id, approvalClaim).catch(() => undefined);
+      }
+      actionGate.leave();
       setBusy(false);
     }
   };

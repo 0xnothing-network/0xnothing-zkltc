@@ -23,6 +23,8 @@ import {
   revokeConnection,
   takeExpiredPending,
 } from "../core/services/dapp";
+import { isBoundedRpcCall, type RpcCall } from "./protocol";
+import { createRpcIngressGate } from "./rpcIngress";
 
 /**
  * The dapp-facing service worker. It holds no key material and never can: the
@@ -62,15 +64,12 @@ const READ_METHODS = new Set([
   "web3_clientVersion",
 ]);
 
-interface RpcCall {
-  method: string;
-  params?: unknown[];
-}
-
 interface Answer {
   result?: unknown;
   error?: { code: number; message: string };
 }
+
+const providerIngress = createRpcIngressGate({ maxGlobal: 64, maxPerOrigin: 16 });
 
 interface StoredNetworkSettings {
   networkId?: unknown;
@@ -285,7 +284,7 @@ chrome.windows.onRemoved.addListener((closed) => {
   approvalWindowId = undefined;
   void listPending().then(async (queue) => {
     await Promise.allSettled(queue
-      .filter((request) => request.at <= closedAt)
+      .filter((request) => request.approvalClaim === undefined && request.at <= closedAt)
       .map((request) => rejectRequest(request.id)));
     await syncKeepAlive().catch(() => undefined);
   }).catch(() => undefined);
@@ -413,6 +412,21 @@ function senderOrigin(sender: chrome.runtime.MessageSender): string | undefined 
   if (!sender.url) return undefined;
   try {
     return new URL(sender.url).origin;
+  } catch {
+    return undefined;
+  }
+}
+
+function providerSenderOrigin(sender: chrome.runtime.MessageSender): string | undefined {
+  if (sender.id !== chrome.runtime.id || sender.tab === undefined || !sender.url) return undefined;
+  const raw = senderOrigin(sender);
+  if (!raw) return undefined;
+  try {
+    const origin = new URL(raw);
+    const page = new URL(sender.url);
+    if (origin.protocol !== "http:" && origin.protocol !== "https:") return undefined;
+    if (page.protocol !== "http:" && page.protocol !== "https:") return undefined;
+    return page.origin === origin.origin ? origin.origin : undefined;
   } catch {
     return undefined;
   }
@@ -561,23 +575,24 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
     | null;
 
   if (request?.kind === "provider-request" && request.call) {
-    if (
-      typeof request.call.method !== "string"
-      || request.call.method.length === 0
-      || request.call.method.length > 128
-      || (request.call.params !== undefined && !Array.isArray(request.call.params))
-    ) {
+    if (!isBoundedRpcCall(request.call)) {
       sendResponse(fail(-32600, "Invalid request"));
       return false;
     }
-    const origin = senderOrigin(sender);
-    if (!origin || !/^https?:\/\//.test(origin)) {
+    const origin = providerSenderOrigin(sender);
+    if (!origin) {
       sendResponse(fail(4100, "Unsupported origin"));
+      return false;
+    }
+    const release = providerIngress.tryAcquire(origin);
+    if (!release) {
+      sendResponse(fail(-32005, "The wallet request queue is busy"));
       return false;
     }
     void handle(request.call, origin, sender.tab?.title)
       .catch((error: unknown) => fail(-32603, error instanceof Error ? error.message : "Wallet request failed"))
-      .then(sendResponse);
+      .then(sendResponse)
+      .finally(release);
     return true;
   }
 

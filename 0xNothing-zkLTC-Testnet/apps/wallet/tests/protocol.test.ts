@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { LITVM_CHAIN_ID, LITVM_CHAIN_ID_HEX } from "../src/config/chain.ts";
 import {
+  isBoundedRpcCall,
   isContentMessage,
   isPageMessage,
+  MAX_PROVIDER_CALL_BYTES,
   newProviderUuid,
   PROVIDER_CHAIN_ID_HEX,
   PROVIDER_RDNS,
@@ -37,6 +39,39 @@ test("page messages are only accepted with a channel, id and method", () => {
   assert.equal(isPageMessage({ channel: TO_CONTENT, id: "1" }), false);
   assert.equal(isPageMessage(null), false);
   assert.equal(isPageMessage("eth_chainId"), false);
+  assert.equal(isPageMessage({ channel: TO_CONTENT, id: "", call: { method: "eth_chainId" } }), false);
+  assert.equal(
+    isPageMessage({ channel: TO_CONTENT, id: "x".repeat(129), call: { method: "eth_chainId" } }),
+    false,
+  );
+  assert.equal(
+    isPageMessage({ channel: TO_CONTENT, id: "1", call: { method: "eth_call", params: {} } }),
+    false,
+  );
+});
+
+test("provider calls are bounded before crossing into the worker", () => {
+  assert.equal(isBoundedRpcCall({ method: "eth_call", params: [{ data: "0x1234" }, "latest"] }), true);
+  assert.equal(isBoundedRpcCall({ method: "" }), false);
+  assert.equal(isBoundedRpcCall({ method: "x".repeat(129), params: [] }), false);
+  assert.equal(isBoundedRpcCall({ method: "eth_call", params: ["x".repeat(MAX_PROVIDER_CALL_BYTES)] }), false);
+
+  let deep: unknown = null;
+  for (let index = 0; index < 66; index += 1) deep = [deep];
+  assert.equal(isBoundedRpcCall({ method: "eth_call", params: [deep] }), false);
+
+  const cyclic: unknown[] = [];
+  cyclic.push(cyclic);
+  assert.equal(isBoundedRpcCall({ method: "eth_call", params: cyclic }), false);
+
+  const hostile = Object.defineProperty({}, "method", {
+    enumerable: true,
+    get: () => {
+      throw new Error("getter should fail closed");
+    },
+  });
+  assert.doesNotThrow(() => isBoundedRpcCall(hostile));
+  assert.equal(isBoundedRpcCall(hostile), false);
 });
 
 test("content messages carry results and events on their own channel", () => {

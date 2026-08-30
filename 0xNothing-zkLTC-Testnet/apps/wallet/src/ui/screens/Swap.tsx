@@ -29,7 +29,9 @@ import {
   type SwapTokenOption,
 } from "../components/SwapTokenPicker";
 import { TokenLogo } from "../components/TokenLogo";
+import { useActionGate } from "../hooks/useActionGate";
 import { useLiveRead } from "../hooks/useLiveRead";
+import { reviewKey } from "../lib/reviewKey";
 import { useWallet } from "../state/WalletContext";
 
 function tokenOptions(
@@ -68,6 +70,8 @@ export function Swap(): ReactNode {
   const [error, setError] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewRoute, setReviewRoute] = useState<SwapRoute | null>(null);
+  const [reviewIdentity, setReviewIdentity] = useState<string | null>(null);
+  const confirmGate = useActionGate();
 
   const tokenIn = tokens.find((entry) => entry.id === inId) ?? NATIVE_TOKEN;
   const tokenOut = tokens.find((entry) => entry.id === outId) ?? NUSD_TOKEN;
@@ -143,6 +147,8 @@ export function Swap(): ReactNode {
       tokenOut.address ?? "native",
       amount,
       positive && !over,
+      network.id,
+      network.rpcUrl,
     ],
     { debounceMs: 180 },
   );
@@ -161,11 +167,35 @@ export function Swap(): ReactNode {
     && !route.paused;
   const amountInvalid = amount.length > 0 && (parsed === null || !positive || over);
   const loading = read.loading || quote.loading;
+  const currentReviewIdentity = reviewKey([
+    address,
+    network.id,
+    network.rpcUrl,
+    inId,
+    tokenIn.address,
+    outId,
+    tokenOut.address,
+    amount,
+    parsed,
+    settings.slippageBps,
+  ]);
+  const reviewCurrent = reviewIdentity === currentReviewIdentity;
 
   useEffect(() => {
     setReviewOpen(false);
     setReviewRoute(null);
-  }, [address, amount, inId, network.id, outId]);
+    setReviewIdentity(null);
+  }, [
+    address,
+    amount,
+    inId,
+    network.id,
+    network.rpcUrl,
+    outId,
+    settings.slippageBps,
+    tokenIn.address,
+    tokenOut.address,
+  ]);
 
   useEffect(() => {
     if (!reviewOpen) return;
@@ -237,38 +267,60 @@ export function Swap(): ReactNode {
     if (busy || tokenBusy || !ready || !address || parsed === null || route === null) return;
     setError(null);
     setReviewRoute(route);
+    setReviewIdentity(currentReviewIdentity);
     setReviewOpen(true);
   };
 
   const confirmSwap = async (): Promise<void> => {
-    if (busy || tokenBusy || !ready || !address || parsed === null || reviewRoute === null) return;
+    if (
+      busy
+      || tokenBusy
+      || !reviewOpen
+      || !reviewCurrent
+      || !ready
+      || !address
+      || parsed === null
+      || reviewRoute === null
+      || !confirmGate.tryEnter()
+    ) return;
+    const submitted = {
+      from: address,
+      tokenIn,
+      tokenOut,
+      amountIn: parsed,
+      route: reviewRoute,
+      slippageBps: settings.slippageBps,
+      network,
+    };
     setBusy(true);
     setError(null);
     try {
       const hash = await executeSwap({
-        from: address,
-        tokenIn,
-        tokenOut,
-        amountIn: parsed,
-        route: reviewRoute,
-        slippageBps: settings.slippageBps,
+        from: submitted.from,
+        tokenIn: submitted.tokenIn,
+        tokenOut: submitted.tokenOut,
+        amountIn: submitted.amountIn,
+        route: submitted.route,
+        slippageBps: submitted.slippageBps,
       });
       notify(
         t("swap.toast", {
-          amount: formatAmount(parsed, tokenIn.decimals, 4),
-          from: tokenIn.symbol,
-          to: tokenOut.symbol,
+          amount: formatAmount(submitted.amountIn, submitted.tokenIn.decimals, 4),
+          from: submitted.tokenIn.symbol,
+          to: submitted.tokenOut.symbol,
         }),
         "ok",
-        txUrl(hash, network),
+        txUrl(hash, submitted.network),
       );
       setAmount("");
       setReviewOpen(false);
+      setReviewIdentity(null);
       refresh();
     } catch (cause) {
       setError(describeError(cause));
       setReviewOpen(false);
     } finally {
+      confirmGate.leave();
       setBusy(false);
     }
   };
@@ -402,7 +454,7 @@ export function Swap(): ReactNode {
         </div>
       </form>
 
-      {reviewOpen && reviewRoute !== null && parsed !== null && address !== null ? (
+      {reviewOpen && reviewCurrent && reviewRoute !== null && parsed !== null && address !== null ? (
         <div
           className="w-sheet"
           onClick={() => {
@@ -487,7 +539,7 @@ export function Swap(): ReactNode {
                 </Button>
                 <Button
                   variant="primary"
-                  disabled={busy || !ready}
+                  disabled={busy || !ready || !reviewCurrent}
                   onClick={() => void confirmSwap()}
                 >
                   {busy ? t("swap.swapping") : t("swap.confirmSubmit")}

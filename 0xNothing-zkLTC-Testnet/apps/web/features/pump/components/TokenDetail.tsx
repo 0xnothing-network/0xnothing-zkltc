@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Address } from "viem";
 import { useAccount, usePublicClient, useReadContract, useSwitchChain, useWriteContract } from "wagmi";
@@ -26,6 +26,7 @@ import { TradeHistory } from "@/features/pump/components/TradeHistory";
 import { TokenHolders } from "@/features/pump/components/TokenHolders";
 import { PumpConfigNotice, PumpErrorState, PumpInlineLoading } from "@/features/pump/components/PumpStates";
 import { useToast } from "@/components/Toast";
+import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 
 interface TokenMetadata {
   description?: string;
@@ -39,6 +40,7 @@ function GraduationAction({ market, onComplete }: { market: PumpMarket; onComple
   const publicClient = usePublicClient({ chainId: PUMP_CHAIN_ID });
   const { switchChain } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
+  const submitLockRef = useRef(false);
   const [pending, setPending] = useState(false);
   const pumpAdmin = useReadContract({
     address: PUMP_FACTORY_ADDRESS,
@@ -126,6 +128,7 @@ function GraduationAction({ market, onComplete }: { market: PumpMarket; onComple
       toast.error("RPC unavailable", "Refresh and try again.");
       return;
     }
+    if (!tryAcquireAction(submitLockRef)) return;
     try {
       setPending(true);
       await publicClient.simulateContract({
@@ -148,6 +151,7 @@ function GraduationAction({ market, onComplete }: { market: PumpMarket; onComple
     } catch (error) {
       toast.handleError(error, "Graduation failed");
     } finally {
+      releaseAction(submitLockRef);
       setPending(false);
     }
   }

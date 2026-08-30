@@ -8,6 +8,7 @@ import { listConnections, revokeConnection } from "../../core/services/dapp";
 import { announceToPages } from "../../core/services/walletEvents";
 import { Button, Note, Panel, PanelBody } from "../components/kit";
 import { Screen } from "../components/Screen";
+import { useActionGate } from "../hooks/useActionGate";
 import { useLiveRead } from "../hooks/useLiveRead";
 import { useWallet } from "../state/WalletContext";
 
@@ -27,11 +28,12 @@ export function Dapps(): ReactNode {
     identity: [],
   });
   const [busy, setBusy] = useState<string | null>(null);
+  const actionGate = useActionGate();
   const [actionError, setActionError] = useState<string | null>(null);
   const connections = read.data ?? [];
 
   const revoke = async (origin: string): Promise<void> => {
-    if (busy !== null) return;
+    if (busy !== null || !actionGate.tryEnter()) return;
     setBusy(origin);
     setActionError(null);
     try {
@@ -41,6 +43,7 @@ export function Dapps(): ReactNode {
     } catch (cause) {
       setActionError(describeError(cause));
     } finally {
+      actionGate.leave();
       setBusy(null);
     }
   };

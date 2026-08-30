@@ -13,7 +13,9 @@ import { Button, Note, Panel, Row, Rows } from "../components/kit";
 import { Screen } from "../components/Screen";
 import { TokenSelect } from "../components/TokenSelect";
 import { TransactionReview } from "../components/TransactionReview";
+import { useActionGate } from "../hooks/useActionGate";
 import { useLiveRead } from "../hooks/useLiveRead";
+import { reviewKey } from "../lib/reviewKey";
 import { goHome, useRoute } from "../router";
 import { useWallet } from "../state/WalletContext";
 import { SendNft } from "./send/SendNft";
@@ -41,12 +43,14 @@ function SendToken({ initial }: { initial: string | null }): ReactNode {
   const [error, setError] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewFeeWei, setReviewFeeWei] = useState<bigint | null>(null);
+  const [reviewIdentity, setReviewIdentity] = useState<string | null>(null);
+  const confirmGate = useActionGate();
   // Balances come from the same portfolio read HOME uses, so the number on the
   // row the user tapped and the number here are the same number.
   const read = useLiveRead(
     address ? () => loadPortfolio(address, tokens) : null,
-    [address, tokens, tick],
-    { identity: [address, tokens] },
+    [address, network.id, network.rpcUrl, tokens, tick],
+    { identity: [address, network.id, network.rpcUrl, tokens] },
   );
   const token = tokens.find((entry) => entry.id === tokenId) ?? nativeToken;
   const native = token.address === undefined;
@@ -83,8 +87,12 @@ function SendToken({ initial }: { initial: string | null }): ReactNode {
     address,
     to,
     token.id,
+    token.address ?? "native",
+    token.decimals,
     amount,
     job !== null,
+    network.id,
+    network.rpcUrl,
   ], { live: false, debounceMs: 180 });
   const feeWei = quote.data?.feeWei ?? null;
   const shortOnGas = feeWei !== null
@@ -96,11 +104,26 @@ function SendToken({ initial }: { initial: string | null }): ReactNode {
     );
   const amountInvalid = amount.length > 0 && (parsed === null || parsed <= 0n || over);
   const loading = read.loading || quote.loading;
+  const currentReviewIdentity = reviewKey([
+    address,
+    network.id,
+    network.rpcUrl,
+    tokenId,
+    token.id,
+    token.address,
+    token.decimals,
+    to,
+    recipient,
+    amount,
+    parsed,
+  ]);
+  const reviewCurrent = reviewIdentity === currentReviewIdentity;
 
   useEffect(() => {
     setReviewOpen(false);
     setReviewFeeWei(null);
-  }, [address, amount, network.id, to, tokenId]);
+    setReviewIdentity(null);
+  }, [address, amount, network.id, network.rpcUrl, to, tokenId, token.address, token.decimals]);
 
   const fillMax = (): void => {
     if (balance === null) return;
@@ -113,31 +136,44 @@ function SendToken({ initial }: { initial: string | null }): ReactNode {
     if (busy || job === null || shortOnGas || quote.loading || quote.data === null) return;
     setError(null);
     setReviewFeeWei(quote.data.feeWei);
+    setReviewIdentity(currentReviewIdentity);
     setReviewOpen(true);
   };
 
   const confirm = async (): Promise<void> => {
-    if (busy || !reviewOpen || job === null || shortOnGas || reviewFeeWei === null) return;
+    if (
+      busy
+      || !reviewOpen
+      || !reviewCurrent
+      || job === null
+      || shortOnGas
+      || reviewFeeWei === null
+      || !confirmGate.tryEnter()
+    ) return;
+    const submittedJob = job;
+    const submittedNetwork = network;
     setBusy(true);
     setError(null);
     try {
-      const hash = await sendToken(job);
+      const hash = await sendToken(submittedJob);
       notify(
         t("send.toast", {
-          amount: formatAmount(job.amount, token.decimals),
-          symbol: token.symbol,
+          amount: formatAmount(submittedJob.amount, submittedJob.token.decimals),
+          symbol: submittedJob.token.symbol,
         }),
         "ok",
-        txUrl(hash, network),
+        txUrl(hash, submittedNetwork),
       );
       setAmount("");
       setTo("");
       setReviewOpen(false);
+      setReviewIdentity(null);
       refresh();
       goHome();
     } catch (cause) {
       setError(describeError(cause));
     } finally {
+      confirmGate.leave();
       setBusy(false);
     }
   };
@@ -250,11 +286,11 @@ function SendToken({ initial }: { initial: string | null }): ReactNode {
           </Button>
         </div>
       </form>
-      {reviewOpen && job !== null && reviewFeeWei !== null ? (
+      {reviewOpen && reviewCurrent && job !== null && reviewFeeWei !== null ? (
         <TransactionReview
           title={t("apr.titleTx")}
           busy={busy}
-          ready={!shortOnGas}
+          ready={!shortOnGas && reviewCurrent}
           onClose={() => setReviewOpen(false)}
           onConfirm={() => void confirm()}
         >

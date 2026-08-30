@@ -19,6 +19,7 @@ import {
 import { publicClient } from "@/lib/contract";
 import { trustedProxyClientKey } from "@/lib/server/clientIp";
 import { readLimitedBytes } from "@/lib/server/readLimitedBytes";
+import { createSlidingWindowRateLimiter } from "@/lib/server/slidingWindowRateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,7 +34,11 @@ const MAX_RATE_LIMIT_KEYS = 8_192;
 // multipart framing without allowing arbitrarily large request bodies.
 const MAX_UPLOAD_BODY_BYTES = PUMP_MAX_IMAGE_BYTES + 512 * 1024;
 
-const requestHistory = new Map<string, number[]>();
+const requestRateLimiter = createSlidingWindowRateLimiter({
+  windowMs: RATE_WINDOW_MS,
+  maxAttempts: RATE_MAX_ATTEMPTS,
+  maxKeys: MAX_RATE_LIMIT_KEYS,
+});
 const consumedSignatures = new Map<string, number>();
 const inFlightSignatures = new Set<string>();
 const inFlightContentHashes = new Set<string>();
@@ -192,16 +197,14 @@ export async function POST(request: Request) {
 
   const ip = clientIp(request);
   const rateKeys = [`wallet:${submittedAddress}`, `ip:${ip}`];
-  for (const key of rateKeys) {
-    if (!consumeRateLimit(key, now)) {
-      return NextResponse.json(
-        { error: "Upload rate limit reached. Wait before trying again." },
-        {
-          status: 429,
-          headers: { "Cache-Control": "no-store", "Retry-After": "600" },
-        },
-      );
-    }
+  if (!requestRateLimiter.consume(rateKeys, now)) {
+    return NextResponse.json(
+      { error: "Upload rate limit reached. Wait before trying again." },
+      {
+        status: 429,
+        headers: { "Cache-Control": "no-store", "Retry-After": "600" },
+      },
+    );
   }
 
   const validationError = await validatePumpImage(file);
@@ -335,29 +338,8 @@ function normalizeUploadDomain(value: string): string | null {
   }
 }
 
-function consumeRateLimit(key: string, now: number): boolean {
-  const recent = (requestHistory.get(key) ?? []).filter(
-    (timestamp) => timestamp > now - RATE_WINDOW_MS,
-  );
-  if (recent.length >= RATE_MAX_ATTEMPTS) {
-    requestHistory.set(key, recent);
-    return false;
-  }
-  if (!requestHistory.has(key) && requestHistory.size >= MAX_RATE_LIMIT_KEYS) {
-    const oldestKey = requestHistory.keys().next().value as string | undefined;
-    if (oldestKey) requestHistory.delete(oldestKey);
-  }
-  recent.push(now);
-  requestHistory.set(key, recent);
-  return true;
-}
-
 function pruneTransientState(now: number) {
-  for (const [key, timestamps] of requestHistory) {
-    const recent = timestamps.filter((timestamp) => timestamp > now - RATE_WINDOW_MS);
-    if (recent.length) requestHistory.set(key, recent);
-    else requestHistory.delete(key);
-  }
+  requestRateLimiter.prune(now);
   for (const [signature, timestamp] of consumedSignatures) {
     if (timestamp <= now - SIGNATURE_TTL_MS) consumedSignatures.delete(signature);
   }

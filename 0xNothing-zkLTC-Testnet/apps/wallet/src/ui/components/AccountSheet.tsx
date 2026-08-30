@@ -4,6 +4,7 @@ import { t } from "../../core/i18n";
 import { addHdAccount, accountLabel, renameAccount } from "../../core/keyring/vault";
 import { describeError } from "../../core/lib/errors";
 import { shortenAddress } from "../../core/lib/format";
+import { useActionGate } from "../hooks/useActionGate";
 import { useWallet } from "../state/WalletContext";
 import { Button } from "./kit";
 
@@ -17,6 +18,7 @@ export function AccountSheet({ onClose }: { onClose: () => void }): ReactNode {
   const [renaming, setRenaming] = useState<Address | null>(null);
   const [label, setLabel] = useState("");
   const [busy, setBusy] = useState(false);
+  const actionGate = useActionGate();
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -46,6 +48,7 @@ export function AccountSheet({ onClose }: { onClose: () => void }): ReactNode {
       onClose();
       return;
     }
+    if (!actionGate.tryEnter()) return;
     setBusy(true);
     try {
       await selectAccount(next);
@@ -53,6 +56,7 @@ export function AccountSheet({ onClose }: { onClose: () => void }): ReactNode {
     } catch (error) {
       notify(describeError(error), "error");
     } finally {
+      actionGate.leave();
       if (mountedRef.current) setBusy(false);
     }
   };
@@ -64,6 +68,7 @@ export function AccountSheet({ onClose }: { onClose: () => void }): ReactNode {
       setRenaming(null);
       return;
     }
+    if (!actionGate.tryEnter()) return;
     setBusy(true);
     try {
       await renameAccount(target, trimmed.slice(0, 24));
@@ -73,12 +78,13 @@ export function AccountSheet({ onClose }: { onClose: () => void }): ReactNode {
     } catch (error) {
       notify(describeError(error), "error");
     } finally {
+      actionGate.leave();
       if (mountedRef.current) setBusy(false);
     }
   };
 
   const addAccount = async (): Promise<void> => {
-    if (busy) return;
+    if (busy || !actionGate.tryEnter()) return;
     setBusy(true);
     try {
       const state = await addHdAccount();
@@ -89,6 +95,7 @@ export function AccountSheet({ onClose }: { onClose: () => void }): ReactNode {
     } catch (error) {
       notify(describeError(error), "error");
     } finally {
+      actionGate.leave();
       if (mountedRef.current) setBusy(false);
     }
   };

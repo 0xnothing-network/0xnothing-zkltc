@@ -4,6 +4,7 @@ import { isLocaleCode, LOCALES, t } from "../../core/i18n";
 import type { WalletSettings } from "../../core/keyring/vault";
 import { isExtension, platform } from "../../core/platform/env";
 import { Button, Note, Panel, PanelBody, Row, Rows } from "../components/kit";
+import { useActionGate } from "../hooks/useActionGate";
 import { Screen } from "../components/Screen";
 import { goHome } from "../router";
 import { useWallet } from "../state/WalletContext";
@@ -45,6 +46,7 @@ async function requestRpcPermission(rpcUrl: string): Promise<boolean> {
 export function Settings(): ReactNode {
   const { network, settings, saveSettings, lockWallet } = useWallet();
   const [saving, setSaving] = useState(false);
+  const saveGate = useActionGate();
   const [networkError, setNetworkError] = useState<string | null>(null);
   const [draft, setDraft] = useState({
     name: "",
@@ -56,19 +58,27 @@ export function Settings(): ReactNode {
     explorerUrl: "",
   });
 
-  const persist = async (patch: Partial<WalletSettings>): Promise<void> => {
-    if (saving) return;
+  const runSaving = async (action: () => Promise<boolean>): Promise<boolean> => {
+    if (!saveGate.tryEnter()) return false;
     setSaving(true);
     try {
-      await saveSettings(patch);
+      return await action();
+    } catch {
+      // WalletContext reports storage failures through the existing toast.
+      return false;
     } finally {
       setSaving(false);
+      saveGate.leave();
     }
   };
 
+  const persist = (patch: Partial<WalletSettings>): Promise<boolean> => runSaving(async () => {
+    await saveSettings(patch);
+    return true;
+  });
+
   const addNetwork = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    if (saving) return;
     const candidate = sanitizeCustomNetwork({
       name: draft.name,
       rpcUrl: draft.rpcUrl,
@@ -91,15 +101,19 @@ export function Settings(): ReactNode {
       setNetworkError(t("set.networkDuplicate"));
       return;
     }
-    if (!(await requestRpcPermission(candidate.rpcUrl))) {
-      setNetworkError(t("set.networkPermission"));
-      return;
-    }
-    setNetworkError(null);
-    await persist({
-      customNetworks: [...settings.customNetworks, candidate],
-      networkId: candidate.id,
+    const saved = await runSaving(async () => {
+      if (!(await requestRpcPermission(candidate.rpcUrl))) {
+        setNetworkError(t("set.networkPermission"));
+        return false;
+      }
+      setNetworkError(null);
+      await saveSettings({
+        customNetworks: [...settings.customNetworks, candidate],
+        networkId: candidate.id,
+      });
+      return true;
     });
+    if (!saved) return;
     setDraft({
       name: "",
       rpcUrl: "",
@@ -112,7 +126,6 @@ export function Settings(): ReactNode {
   };
 
   const removeNetwork = async (id: string): Promise<void> => {
-    if (saving) return;
     const next = settings.customNetworks.filter((entry) => entry.id !== id);
     await persist({
       customNetworks: next,

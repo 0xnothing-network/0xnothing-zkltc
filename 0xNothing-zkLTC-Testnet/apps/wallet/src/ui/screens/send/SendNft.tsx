@@ -9,7 +9,9 @@ import { validateRecipient } from "../../../core/services/transfer";
 import { Button, Empty, Note, Panel, Row, Rows } from "../../components/kit";
 import { Screen } from "../../components/Screen";
 import { TransactionReview } from "../../components/TransactionReview";
+import { useActionGate } from "../../hooks/useActionGate";
 import { useLiveRead } from "../../hooks/useLiveRead";
+import { reviewKey } from "../../lib/reviewKey";
 import { goHome } from "../../router";
 import { useWallet } from "../../state/WalletContext";
 
@@ -20,24 +22,43 @@ import { useWallet } from "../../state/WalletContext";
  */
 export function SendNft({ tokenId }: { tokenId: string }): ReactNode {
   const { address, network, notify, refresh, tick } = useWallet();
-  const read = useLiveRead(address ? () => loadPixelNfts(address) : null, [address, tick], {
+  const read = useLiveRead(address ? () => loadPixelNfts(address) : null, [
+    address,
+    network.id,
+    network.rpcUrl,
+    tick,
+  ], {
     live: false,
-    identity: [address, network.id],
+    identity: [address, network.id, network.rpcUrl],
   });
   const [to, setTo] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewIdentity, setReviewIdentity] = useState<string | null>(null);
+  const confirmGate = useActionGate();
 
   const valid = /^\d+$/u.test(tokenId);
   const nft = read.data?.find((entry) => entry.tokenId.toString() === tokenId) ?? null;
   const recipient = validateRecipient(to);
   const self = recipient !== null && address !== null
     && recipient.toLowerCase() === address.toLowerCase();
+  const currentReviewIdentity = reviewKey([
+    address,
+    network.id,
+    network.rpcUrl,
+    to,
+    recipient,
+    tokenId,
+    nft?.tokenId,
+    nft?.name,
+  ]);
+  const reviewCurrent = reviewIdentity === currentReviewIdentity;
 
   useEffect(() => {
     setReviewOpen(false);
-  }, [address, network.id, to, tokenId]);
+    setReviewIdentity(null);
+  }, [address, network.id, network.rpcUrl, to, tokenId]);
 
   if (!network.builtin) {
     return (
@@ -52,27 +73,40 @@ export function SendNft({ tokenId }: { tokenId: string }): ReactNode {
   const submit = (): void => {
     if (busy || !address || !recipient || !nft) return;
     setError(null);
+    setReviewIdentity(currentReviewIdentity);
     setReviewOpen(true);
   };
 
   const confirm = async (): Promise<void> => {
-    if (busy || !reviewOpen || !address || !recipient || !nft) return;
+    if (
+      busy
+      || !reviewOpen
+      || !reviewCurrent
+      || !address
+      || !recipient
+      || !nft
+      || !confirmGate.tryEnter()
+    ) return;
+    const submitted = {
+      from: address,
+      to: recipient,
+      tokenId: nft.tokenId,
+      name: nft.name,
+    };
+    const submittedNetwork = network;
     setBusy(true);
     setError(null);
     try {
-      const hash = await transferPixelNft({
-        from: address,
-        to: recipient,
-        tokenId: nft.tokenId,
-        name: nft.name,
-      });
-      notify(t("nft.sentToast", { name: nft.name }), "ok", txUrl(hash, network));
+      const hash = await transferPixelNft(submitted);
+      notify(t("nft.sentToast", { name: submitted.name }), "ok", txUrl(hash, submittedNetwork));
       setReviewOpen(false);
+      setReviewIdentity(null);
       refresh();
       goHome();
     } catch (cause) {
       setError(describeError(cause));
     } finally {
+      confirmGate.leave();
       setBusy(false);
     }
   };
@@ -155,11 +189,11 @@ export function SendNft({ tokenId }: { tokenId: string }): ReactNode {
           </div>
         </form>
       )}
-      {reviewOpen && nft !== null && recipient !== null ? (
+      {reviewOpen && reviewCurrent && nft !== null && recipient !== null ? (
         <TransactionReview
           title={t("apr.titleTx")}
           busy={busy}
-          ready={address !== null}
+          ready={address !== null && reviewCurrent}
           onClose={() => setReviewOpen(false)}
           onConfirm={() => void confirm()}
         >

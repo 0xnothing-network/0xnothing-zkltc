@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   decodeEventLog,
@@ -33,6 +33,7 @@ import { computePumpContentHash } from "@/features/pump/contentHash";
 import { PUMP_MAX_IMAGE_BYTES, validatePumpImage } from "@/features/pump/imageValidation";
 import { useToast } from "@/components/Toast";
 import { PumpConfigNotice } from "@/features/pump/components/PumpStates";
+import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 
 type CreateStage = "idle" | "switching" | "hashing" | "approving" | "reserving" | "uploading" | "creating" | "confirming";
 
@@ -47,6 +48,7 @@ export function CreateTokenForm() {
   const { switchChainAsync } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
   const { upload, isUploading } = useIpfsUpload();
+  const submitLockRef = useRef(false);
   const [stage, setStage] = useState<CreateStage>("idle");
   const [name, setName] = useState("");
   const [symbol, setSymbol] = useState("");
@@ -120,6 +122,7 @@ export function CreateTokenForm() {
       toast.warning("Form incomplete", validation ?? "Choose a token logo");
       return;
     }
+    if (!tryAcquireAction(submitLockRef)) return;
     let contentHash: Hex | undefined;
     let reservationReady = false;
     try {
@@ -322,6 +325,7 @@ export function CreateTokenForm() {
         toast.info("Creation fee remains reserved", "Retry with the same form fields and logo to continue without paying again.");
       }
     } finally {
+      releaseAction(submitLockRef);
       setStage("idle");
     }
   };

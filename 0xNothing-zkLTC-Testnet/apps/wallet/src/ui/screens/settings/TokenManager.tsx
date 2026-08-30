@@ -5,6 +5,7 @@ import { describeError } from "../../../core/lib/errors";
 import { shortenAddress } from "../../../core/lib/format";
 import { addCustomToken, lookupToken, removeCustomToken } from "../../../core/services/tokens";
 import { Button, Note, Panel, PanelBody, Row, Rows } from "../../components/kit";
+import { useActionGate } from "../../hooks/useActionGate";
 import { useLiveRead } from "../../hooks/useLiveRead";
 import { useWallet } from "../../state/WalletContext";
 
@@ -18,6 +19,7 @@ export function TokenManager(): ReactNode {
   const [adding, setAdding] = useState(false);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const actionGate = useActionGate();
   const [error, setError] = useState<string | null>(null);
 
   const trimmed = input.trim();
@@ -33,7 +35,13 @@ export function TokenManager(): ReactNode {
 
   const add = async (): Promise<void> => {
     const candidate = input.trim();
-    if (busy !== null || !isAddress(candidate) || preview.data === null || preview.loading) return;
+    if (
+      busy !== null
+      || !isAddress(candidate)
+      || preview.data === null
+      || preview.loading
+      || !actionGate.tryEnter()
+    ) return;
     setBusy("add");
     setError(null);
     try {
@@ -45,12 +53,13 @@ export function TokenManager(): ReactNode {
     } catch (cause) {
       setError(describeError(cause));
     } finally {
+      actionGate.leave();
       setBusy(null);
     }
   };
 
   const remove = async (id: string): Promise<void> => {
-    if (busy !== null) return;
+    if (busy !== null || !actionGate.tryEnter()) return;
     setBusy(id);
     setError(null);
     try {
@@ -59,6 +68,7 @@ export function TokenManager(): ReactNode {
     } catch (cause) {
       setError(describeError(cause));
     } finally {
+      actionGate.leave();
       setBusy(null);
     }
   };

@@ -14,6 +14,7 @@ import { MarketplaceAbi, marketplaceNftKey, type RawListing } from "@/lib/market
 import { GridSkeleton } from "@/features/pixel/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { LITVM_CHAIN_ID } from "@/lib/chainSwitch";
+import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 
 type SortKey = "newest" | "price-asc" | "price-desc";
 type ActivityFilter = "all" | "sold" | "minted" | "listed" | "cancelled";
@@ -428,6 +429,7 @@ function MarketplaceActivity({ refreshKey = 0 }: { refreshKey?: number }) {
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const loadedCountRef = useRef(0);
+  const loadMoreLockRef = useRef(false);
 
   const fetchActivity = useCallback(async (skip = 0, force = false, background = false) => {
     if (skip === 0) {
@@ -509,9 +511,14 @@ function MarketplaceActivity({ refreshKey = 0 }: { refreshKey?: number }) {
     };
   }, [fetchActivity]);
 
-  const handleLoadMore = useCallback(() => {
+  const handleLoadMore = useCallback(async () => {
     if (loading || loadingMore) return;
-    void fetchActivity(loadedCountRef.current);
+    if (!tryAcquireAction(loadMoreLockRef)) return;
+    try {
+      await fetchActivity(loadedCountRef.current);
+    } finally {
+      releaseAction(loadMoreLockRef);
+    }
   }, [fetchActivity, loading, loadingMore]);
 
   return (
@@ -582,7 +589,7 @@ function MarketplaceActivity({ refreshKey = 0 }: { refreshKey?: number }) {
           {hasMore ? (
             <div className="border-t border-[#2D2D44] p-4 text-center">
               <button
-                onClick={handleLoadMore}
+                onClick={() => void handleLoadMore()}
                 disabled={loadingMore}
                 className="rounded-lg bg-[#1A1A2E] border border-[#2D2D44] px-4 py-2.5 text-xs font-bold text-white transition-colors hover:border-[#8888ff]/50 disabled:opacity-50"
                 style={{ fontFamily: "var(--font-departure)" }}
@@ -726,6 +733,7 @@ function ListingCard({
   const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
   const publicClient = usePublicClient();
   const handledTxRef = useRef<`0x${string}` | null>(null);
+  const actionLockRef = useRef(false);
 
   const priceEth = formatEther(listing.price);
   const isOwner = userAddress && listing.seller.toLowerCase() === userAddress.toLowerCase();
@@ -746,6 +754,7 @@ function ListingCard({
 
     if (receipt.status !== "success") {
       toast.error("Transaction failed", "The transaction was reverted onchain.");
+      releaseAction(actionLockRef);
       setBusy(null);
       onActionComplete();
       return;
@@ -758,6 +767,7 @@ function ListingCard({
       href: getMarketplaceTxUrl(txHash),
       hrefLabel: "View on Explorer",
     });
+    releaseAction(actionLockRef);
     setBusy(null);
     onActionComplete();
   }, [isConfirmed, txHash, receipt, busy, listing.tokenId, meta, toast, onActionComplete]);
@@ -765,6 +775,7 @@ function ListingCard({
   useEffect(() => {
     if (!isReceiptError || !receiptError || !busy) return;
     toast.handleError(receiptError, "Transaction failed");
+    releaseAction(actionLockRef);
     setBusy(null);
   }, [busy, isReceiptError, receiptError, toast]);
 
@@ -782,6 +793,7 @@ function ListingCard({
       toast.error("RPC unavailable", "Please refresh and try again.");
       return;
     }
+    if (!tryAcquireAction(actionLockRef)) return;
 
     try {
       setBusy("buy");
@@ -795,17 +807,20 @@ function ListingCard({
       const [, , currentPrice, currentSeller, active] = currentListing;
       if (!active) {
         toast.error("Listing inactive", "This NFT was already bought or cancelled.");
+        releaseAction(actionLockRef);
         setBusy(null);
         onActionComplete();
         return;
       }
       if (currentSeller.toLowerCase() === address.toLowerCase()) {
         toast.error("Seller cannot buy", "You own this listing.");
+        releaseAction(actionLockRef);
         setBusy(null);
         return;
       }
       if (currentPrice !== listing.price) {
         toast.error("Price changed", "Refreshing the listing price.");
+        releaseAction(actionLockRef);
         setBusy(null);
         onActionComplete();
         return;
@@ -835,6 +850,7 @@ function ListingCard({
       });
     } catch (err) {
       toast.handleError(err, "Purchase failed");
+      releaseAction(actionLockRef);
       setBusy(null);
     }
   }, [
@@ -851,6 +867,7 @@ function ListingCard({
   ]);
 
   const handleCancel = useCallback(async () => {
+    if (!tryAcquireAction(actionLockRef)) return;
     try {
       setBusy("cancel");
       const hash = await writeContractAsync({
@@ -867,6 +884,7 @@ function ListingCard({
       });
     } catch (err) {
       toast.handleError(err, "Cancel failed");
+      releaseAction(actionLockRef);
       setBusy(null);
     }
   }, [listing.listingId, writeContractAsync, toast]);

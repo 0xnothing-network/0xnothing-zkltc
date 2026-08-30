@@ -55,8 +55,31 @@ test("a staged route applies the displayed slippage only once end to end", () =>
 });
 
 test("a quote is executable only for the amount and pair it was built for", () => {
-  const quote = { tokenInId: "native", tokenOutId: "nusd", quotedAmountIn: 10n };
-  assert.equal(quoteMatches(quote, "native", "nusd", 10n), true);
-  assert.equal(quoteMatches(quote, "native", "nusd", 100n), false);
-  assert.equal(quoteMatches(quote, "nusd", "native", 10n), false);
+  const quote = {
+    networkId: "litvm-4441",
+    rpcUrl: "https://rpc.example",
+    tokenInId: "native",
+    tokenOutId: "nusd",
+    quotedAmountIn: 10n,
+  };
+  assert.equal(
+    quoteMatches(quote, "litvm-4441", "https://rpc.example", "native", "nusd", 10n),
+    true,
+  );
+  assert.equal(
+    quoteMatches(quote, "litvm-4441", "https://rpc.example", "native", "nusd", 100n),
+    false,
+  );
+  assert.equal(
+    quoteMatches(quote, "litvm-4441", "https://rpc.example", "nusd", "native", 10n),
+    false,
+  );
+  assert.equal(
+    quoteMatches(quote, "other", "https://rpc.example", "native", "nusd", 10n),
+    false,
+  );
+  assert.equal(
+    quoteMatches(quote, "litvm-4441", "https://other.example", "native", "nusd", 10n),
+    false,
+  );
 });

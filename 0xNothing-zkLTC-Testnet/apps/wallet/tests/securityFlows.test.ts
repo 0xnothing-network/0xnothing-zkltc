@@ -25,6 +25,8 @@ test("every wallet-initiated transfer path requires an explicit review", () => {
 test("dapp approvals fail closed after account or network context changes", () => {
   assert.match(approve, /signer === null \|\| mismatch \|\| networkMismatch/u);
   assert.match(approve, /mismatch \|\| networkMismatch \|\| unreadable/u);
+  assert.match(approve, /claimPendingRequest\(request\.id\)/u);
+  assert.match(approve, /resolveRequest\(request\.id, result, approvalClaim\)/u);
   assert.match(background, /kind: "switch-network"/u);
   assert.match(background, /targetNetworkId: target\.id/u);
 });
@@ -37,6 +39,9 @@ test("extension-only events are authenticated and consumed signatures are remove
 });
 
 test("the dapp RPC bridge bounds both request and streamed response bodies", () => {
+  assert.match(background, /isBoundedRpcCall\(request\.call\)/u);
+  assert.match(background, /providerIngress\.tryAcquire\(origin\)/u);
+  assert.match(background, /sender\.id !== chrome\.runtime\.id/u);
   assert.match(background, /MAX_RPC_REQUEST_LENGTH/u);
   assert.match(background, /MAX_RPC_RESPONSE_BYTES/u);
   assert.match(background, /response\.body\.getReader\(\)/u);

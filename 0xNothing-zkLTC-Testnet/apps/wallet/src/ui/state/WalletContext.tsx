@@ -122,12 +122,14 @@ export function WalletProvider({ children }: { children: ReactNode }): ReactNode
       settingsQueueRef.current.then(readSettings),
     ]);
     const selected = resolveNetwork(saved.networkId, saved.customNetworks);
-    configureRpcClient(selected);
     const list = await listTokens(selected);
     if (
       generation !== reloadGenerationRef.current
       || revision !== settingsRevisionRef.current
     ) return;
+    // A superseded reload must not repoint the process-wide RPC client after a
+    // newer reload has already committed a different network to the UI.
+    configureRpcClient(selected);
     setAccounts(state.accounts);
     setAddress(state.active ?? state.accounts[0]?.address ?? null);
     // Language before the first painted screen: `setSettings` below is what
@@ -165,16 +167,20 @@ export function WalletProvider({ children }: { children: ReactNode }): ReactNode
     };
   }, [decidePhase, reload]);
 
-  // A dapp can switch to a saved custom chain through the extension provider.
-  // Follow that storage event so an already-open popup never displays one
-  // network while signing against another.
+  // A dapp can switch networks, while another popup can select an account or
+  // change the token catalog. Follow all three records so every open wallet
+  // surface displays the same state it will use for reads and signing.
   useEffect(() => {
-    const unwatch = persistentStore.subscribe(STORAGE_KEYS.settings, () => {
+    const unwatch = [
+      STORAGE_KEYS.settings,
+      STORAGE_KEYS.accounts,
+      STORAGE_KEYS.tokens,
+    ].map((key) => persistentStore.subscribe(key, () => {
       void reload().catch((cause: unknown) => {
         setToast({ id: Date.now(), message: describeError(cause), tone: "error" });
       });
-    });
-    return unwatch;
+    }));
+    return () => unwatch.forEach((stop) => stop());
   }, [reload]);
 
   /**
@@ -263,7 +269,6 @@ export function WalletProvider({ children }: { children: ReactNode }): ReactNode
     const task = settingsQueueRef.current.then(async () => {
       const next = await writeSettings(patch);
       const selected = resolveNetwork(next.networkId, next.customNetworks);
-      configureRpcClient(selected);
       const list = await listTokens(selected);
       // Writes run in this queue, so successful results are applied in the
       // exact same order in which the controls produced them.
@@ -271,6 +276,7 @@ export function WalletProvider({ children }: { children: ReactNode }): ReactNode
         generation === reloadGenerationRef.current
         && revision === settingsRevisionRef.current
       ) {
+        configureRpcClient(selected);
         setLocale(next.locale);
         applyTheme(next.theme);
         setSettings(next);
@@ -286,6 +292,7 @@ export function WalletProvider({ children }: { children: ReactNode }): ReactNode
       if (revision === settingsRevisionRef.current) {
         setToast({ id: Date.now(), message: describeError(cause), tone: "error" });
       }
+      throw cause;
     });
   }, []);
 

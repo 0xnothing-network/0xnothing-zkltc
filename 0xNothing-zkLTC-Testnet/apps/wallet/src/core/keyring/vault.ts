@@ -267,7 +267,7 @@ export async function getSecret(): Promise<VaultSecret> {
   }
 }
 
-export async function unlock(password: string): Promise<VaultSecret> {
+async function unlockUnderVaultLock(password: string): Promise<VaultSecret> {
   const blob = await readVaultBlob();
   if (!blob) throw new WalletLockedError();
   let key: CryptoKey;
@@ -282,6 +282,10 @@ export async function unlock(password: string): Promise<VaultSecret> {
   }
   await putSession(key);
   return secret;
+}
+
+export function unlock(password: string): Promise<VaultSecret> {
+  return withNamedLock(VAULT_LOCK, () => unlockUnderVaultLock(password));
 }
 
 /* ---------------------------------------------------------------- accounts */
@@ -401,7 +405,7 @@ export async function importPrivateKey(
   label?: string,
 ): Promise<AccountsState> {
   return withNamedLock(VAULT_LOCK, async () => {
-    const secret = await unlock(password);
+    const secret = await unlockUnderVaultLock(password);
     const account = privateKeyToAccount(privateKey);
     const state = await readAccounts();
     if (state.accounts.some((existing) => existing.address === account.address)) {
@@ -491,7 +495,7 @@ export async function revealPrivateKey(password: string, address: Address): Prom
 export async function changePassword(current: string, next: string): Promise<void> {
   await withNamedLock(VAULT_LOCK, async () => {
     assertNewPassword(next);
-    const secret = await unlock(current);
+    const secret = await unlockUnderVaultLock(current);
     const blob = await encryptJson(secret, next);
     await persistentStore.set(STORAGE_KEYS.vault, blob);
     await putSession(await keyForBlob(blob, next));

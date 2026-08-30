@@ -41,6 +41,8 @@ export function endToEndMinOut(quotedAmount: bigint, slippageBps: number): bigin
 }
 
 export interface QuoteIdentity {
+  networkId: string;
+  rpcUrl: string;
   tokenInId: string;
   tokenOutId: string;
   quotedAmountIn: bigint;
@@ -49,11 +51,15 @@ export interface QuoteIdentity {
 /** Prevents a quote produced for an older form state from being submitted. */
 export function quoteMatches(
   quote: QuoteIdentity,
+  networkId: string,
+  rpcUrl: string,
   tokenInId: string,
   tokenOutId: string,
   amountIn: bigint,
 ): boolean {
-  return quote.tokenInId === tokenInId
+  return quote.networkId === networkId
+    && quote.rpcUrl === rpcUrl
+    && quote.tokenInId === tokenInId
     && quote.tokenOutId === tokenOutId
     && quote.quotedAmountIn === amountIn;
 }

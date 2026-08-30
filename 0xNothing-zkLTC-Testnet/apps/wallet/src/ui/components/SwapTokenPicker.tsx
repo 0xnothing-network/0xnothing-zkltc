@@ -4,6 +4,7 @@ import type { WalletToken } from "../../config/assets";
 import { t } from "../../core/i18n";
 import { shortenAddress } from "../../core/lib/format";
 import type { SwapMarketSource } from "../../core/services/marketCatalog";
+import { useActionGate } from "../hooks/useActionGate";
 import { TokenLogo } from "./TokenLogo";
 import { VerifiedMark } from "./VerifiedMark";
 
@@ -50,6 +51,7 @@ export function SwapTokenPicker({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [choosing, setChoosing] = useState(false);
+  const actionGate = useActionGate();
   const normalized = query.trim().replace(/^\$/u, "").toLowerCase();
   const exactAddress = isAddress(query.trim()) ? getAddress(query.trim()) : null;
   const exactListed = exactAddress !== null && options.some(
@@ -77,7 +79,7 @@ export function SwapTokenPicker({
   }, [choosing, open]);
 
   const choose = async (option: SwapTokenOption): Promise<void> => {
-    if (choosing || disabled) return;
+    if (choosing || disabled || !actionGate.tryEnter()) return;
     setChoosing(true);
     try {
       if (await onSelect(option)) {
@@ -85,12 +87,13 @@ export function SwapTokenPicker({
         setQuery("");
       }
     } finally {
+      actionGate.leave();
       setChoosing(false);
     }
   };
 
   const importAddress = async (address: Address): Promise<void> => {
-    if (choosing || disabled) return;
+    if (choosing || disabled || !actionGate.tryEnter()) return;
     setChoosing(true);
     try {
       if (await onImport(address)) {
@@ -98,6 +101,7 @@ export function SwapTokenPicker({
         setQuery("");
       }
     } finally {
+      actionGate.leave();
       setChoosing(false);
     }
   };

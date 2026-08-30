@@ -15,7 +15,9 @@ import { loadPortfolio } from "../../core/services/portfolio";
 import { AmountField } from "../components/AmountField";
 import { Button, Note, Panel, Row, Rows } from "../components/kit";
 import { Screen } from "../components/Screen";
+import { useActionGate } from "../hooks/useActionGate";
 import { useLiveRead } from "../hooks/useLiveRead";
+import { reviewKey } from "../lib/reviewKey";
 import { goHome } from "../router";
 import { useWallet } from "../state/WalletContext";
 
@@ -34,6 +36,8 @@ export function Lend(): ReactNode {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewIdentity, setReviewIdentity] = useState<string | null>(null);
+  const confirmGate = useActionGate();
 
   const read = useLiveRead(
     address
@@ -45,8 +49,8 @@ export function Lend(): ReactNode {
           return { state, portfolio };
         }
       : null,
-    [address, tokens, tick],
-    { identity: [address, tokens] },
+    [address, network.id, network.rpcUrl, tokens, tick],
+    { identity: [address, network.id, network.rpcUrl, tokens] },
   );
   const state = read.data?.state ?? null;
   const walletNusd =
@@ -63,6 +67,15 @@ export function Lend(): ReactNode {
     : state === null || !state.activated;
   const ready = address !== null && positive && !over && !blocked;
   const amountInvalid = amount.length > 0 && (parsed === null || !positive || over);
+  const currentReviewIdentity = reviewKey([
+    address,
+    network.id,
+    network.rpcUrl,
+    mode,
+    amount,
+    parsed,
+  ]);
+  const reviewCurrent = reviewIdentity === currentReviewIdentity;
 
   const utilization = state === null || state.totalSupplied === 0n
     ? null
@@ -75,7 +88,8 @@ export function Lend(): ReactNode {
 
   useEffect(() => {
     setReviewOpen(false);
-  }, [amount, mode]);
+    setReviewIdentity(null);
+  }, [address, amount, mode, network.id, network.rpcUrl]);
 
   useEffect(() => {
     if (!reviewOpen) return;
@@ -89,31 +103,43 @@ export function Lend(): ReactNode {
   const submit = (): void => {
     if (busy || !ready || !address || parsed === null) return;
     setError(null);
+    setReviewIdentity(currentReviewIdentity);
     setReviewOpen(true);
   };
 
   const confirm = async (): Promise<void> => {
-    if (busy || !ready || !address || parsed === null) return;
+    if (
+      busy
+      || !reviewOpen
+      || !reviewCurrent
+      || !ready
+      || !address
+      || parsed === null
+      || !confirmGate.tryEnter()
+    ) return;
+    const submitted = { from: address, amount: parsed, supply, network };
     setBusy(true);
     setError(null);
     try {
-      const hash = supply
-        ? await supplyNusd({ from: address, amount: parsed })
-        : await withdrawNusd({ from: address, amount: parsed });
+      const hash = submitted.supply
+        ? await supplyNusd({ from: submitted.from, amount: submitted.amount })
+        : await withdrawNusd({ from: submitted.from, amount: submitted.amount });
       notify(
-        t(supply ? "lend.toastSupply" : "lend.toastWithdraw", {
-          amount: formatAmount(parsed, NUSD_TOKEN.decimals, 2),
+        t(submitted.supply ? "lend.toastSupply" : "lend.toastWithdraw", {
+          amount: formatAmount(submitted.amount, NUSD_TOKEN.decimals, 2),
           symbol: NUSD_TOKEN.symbol,
         }),
         "ok",
-        txUrl(hash, network),
+        txUrl(hash, submitted.network),
       );
       setAmount("");
       setReviewOpen(false);
+      setReviewIdentity(null);
       refresh();
     } catch (cause) {
       setError(describeError(cause));
     } finally {
+      confirmGate.leave();
       setBusy(false);
     }
   };
@@ -238,7 +264,7 @@ export function Lend(): ReactNode {
         </div>
       </form>
 
-      {reviewOpen && parsed !== null && address !== null ? (
+      {reviewOpen && reviewCurrent && parsed !== null && address !== null ? (
         <div
           className="w-sheet"
           onClick={() => {
@@ -300,7 +326,7 @@ export function Lend(): ReactNode {
                 </Button>
                 <Button
                   variant="primary"
-                  disabled={busy || !ready}
+                  disabled={busy || !ready || !reviewCurrent}
                   onClick={() => void confirm()}
                 >
                   {busy ? t("common.working") : t("swap.confirmSubmit")}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import {
   useAccount,
@@ -24,6 +24,7 @@ import { usePumpMarkets, usePumpStats } from "@/features/pump/hooks/usePumpData"
 import { PumpConfigNotice, PumpErrorState } from "@/features/pump/components/PumpStates";
 import { useToast } from "@/components/Toast";
 import { getTransactionExplorerUrl, publicClient } from "@/lib/contract";
+import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 
 function usd(value: string, fractionDigits = 2): string {
   return `$${formatWad(value, fractionDigits)}`;
@@ -241,6 +242,7 @@ function DeveloperFeePanel({
   const { chainId } = useAccount();
   const { switchChainAsync, isPending: isSwitching } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
+  const claimLockRef = useRef(false);
   const [isClaiming, setIsClaiming] = useState(false);
   const wrongChain = chainId !== PUMP_CHAIN_ID;
   const claimableQuery = useReadContract({
@@ -276,7 +278,7 @@ function DeveloperFeePanel({
       await claimableQuery.refetch();
       return;
     }
-    if (claimable <= 0n || isClaiming) return;
+    if (claimable <= 0n || !tryAcquireAction(claimLockRef)) return;
 
     setIsClaiming(true);
     try {
@@ -309,6 +311,7 @@ function DeveloperFeePanel({
     } catch (error) {
       toast.handleError(error, "Fee claim failed");
     } finally {
+      releaseAction(claimLockRef);
       setIsClaiming(false);
     }
   };

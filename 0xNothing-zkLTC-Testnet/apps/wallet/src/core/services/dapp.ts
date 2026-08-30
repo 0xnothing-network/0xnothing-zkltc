@@ -46,6 +46,12 @@ export interface DappRequest {
   tx?: DappTxRequest;
   /** personal_sign payload, or the typed-data JSON string. */
   message?: string;
+  /**
+   * Persistent single-owner token for the approval action. A claimed request
+   * stays claimed until its original timeout if the owning window disappears,
+   * so another window can never replay a transaction or signature.
+   */
+  approvalClaim?: string;
 }
 
 export interface DappResolution {
@@ -69,6 +75,8 @@ const hasChrome = typeof chrome !== "undefined" && !!chrome?.storage?.local;
 /** Resolutions are read once and then only kept as a short audit tail. */
 const RESOLVED_KEEP = 20;
 export const DAPP_REQUEST_TIMEOUT_MS = 240_000;
+/** Leaves enough time for the 15s transport and its configured retries. */
+export const DAPP_APPROVAL_EXECUTION_BUDGET_MS = 60_000;
 export const MAX_PENDING_REQUESTS = 24;
 export const MAX_PENDING_PER_ORIGIN = 4;
 const MAX_PENDING_BYTES = 4 * 1024 * 1024;
@@ -91,6 +99,7 @@ const REQUEST_KINDS = new Set<DappRequestKind>([
 ]);
 const QUANTITY = /^0x(?:0|[1-9a-fA-F][0-9a-fA-F]*)$/u;
 const DATA = /^0x(?:[0-9a-fA-F]{2})*$/u;
+const APPROVAL_CLAIM = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 
 function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -173,6 +182,11 @@ function safeRequest(value: unknown): DappRequest | null {
     : typeof entry.message === "string" && entry.message.length <= MAX_MESSAGE_LENGTH
       ? entry.message
       : undefined;
+  const approvalClaim = entry.approvalClaim === undefined
+    ? undefined
+    : typeof entry.approvalClaim === "string" && APPROVAL_CLAIM.test(entry.approvalClaim)
+      ? entry.approvalClaim
+      : null;
   const tx = kind === "transaction" ? safeTx(entry.tx) : undefined;
   if (
     !id
@@ -186,6 +200,7 @@ function safeRequest(value: unknown): DappRequest | null {
     || (kind === "transaction" && tx === undefined)
     || ((kind === "sign" || kind === "sign-typed") && message === undefined)
     || (kind === "switch-network" && targetNetworkId === undefined)
+    || approvalClaim === null
   ) return null;
   return {
     id,
@@ -198,6 +213,7 @@ function safeRequest(value: unknown): DappRequest | null {
     account,
     tx,
     message,
+    approvalClaim,
   };
 }
 
@@ -214,6 +230,15 @@ export type PendingAdmission =
       accepted: false;
       reason: "duplicate-connect" | "origin-limit" | "queue-limit" | "storage-limit";
     };
+
+export type PendingClaimPlan =
+  | { accepted: true; queue: DappRequest[] }
+  | { accepted: false; reason: "missing" | "claimed" | "expired" | "invalid-claim" };
+
+export interface PendingClaimReleasePlan {
+  released: boolean;
+  queue: DappRequest[];
+}
 
 function pendingBytes(queue: DappRequest[]): number {
   try {
@@ -255,6 +280,49 @@ export function planPendingAdmission(
     return { accepted: false, reason: "storage-limit" };
   }
   return { accepted: true, queue: next, expiredIds };
+}
+
+/** Pure claim planner: only one approval document can own a persisted request. */
+export function planPendingClaim(
+  queue: DappRequest[],
+  id: string,
+  approvalClaim: string,
+  now = Date.now(),
+): PendingClaimPlan {
+  if (!APPROVAL_CLAIM.test(approvalClaim)) {
+    return { accepted: false, reason: "invalid-claim" };
+  }
+  const index = queue.findIndex((entry) => entry.id === id);
+  if (index < 0) return { accepted: false, reason: "missing" };
+  const request = queue[index];
+  if (!request) return { accepted: false, reason: "missing" };
+  if (request.approvalClaim !== undefined) {
+    return { accepted: false, reason: "claimed" };
+  }
+  if (request.at + DAPP_REQUEST_TIMEOUT_MS - now < DAPP_APPROVAL_EXECUTION_BUDGET_MS) {
+    return { accepted: false, reason: "expired" };
+  }
+  const next = [...queue];
+  next[index] = { ...request, approvalClaim };
+  return { accepted: true, queue: next };
+}
+
+/** A failed pre-submit attempt may release only the exact claim it acquired. */
+export function planPendingClaimRelease(
+  queue: DappRequest[],
+  id: string,
+  approvalClaim: string,
+): PendingClaimReleasePlan {
+  const index = queue.findIndex((entry) => entry.id === id);
+  const request = index < 0 ? undefined : queue[index];
+  if (!request || request.approvalClaim !== approvalClaim) {
+    return { released: false, queue };
+  }
+  const next = [...queue];
+  const released = { ...request };
+  delete released.approvalClaim;
+  next[index] = released;
+  return { released: true, queue: next };
 }
 
 export function newRequestId(): string {
@@ -351,6 +419,32 @@ export async function pushPending(request: DappRequest): Promise<PendingAdmissio
   });
 }
 
+/** Atomically assigns a pending request to one approval window. */
+export async function claimPendingRequest(id: string): Promise<string | null> {
+  if (!hasChrome) return null;
+  const approvalClaim = crypto.randomUUID();
+  return withNamedLock(PENDING_LOCK, async () => {
+    const plan = planPendingClaim(await listPending(), id, approvalClaim);
+    if (!plan.accepted) return null;
+    await chromeSet("local", STORAGE_KEYS.pending, plan.queue);
+    return approvalClaim;
+  });
+}
+
+/** Releases a claim only when execution failed before producing a result. */
+export async function releasePendingRequestClaim(
+  id: string,
+  approvalClaim: string,
+): Promise<boolean> {
+  if (!hasChrome) return false;
+  return withNamedLock(PENDING_LOCK, async () => {
+    const plan = planPendingClaimRelease(await listPending(), id, approvalClaim);
+    if (!plan.released) return false;
+    await chromeSet("local", STORAGE_KEYS.pending, plan.queue);
+    return true;
+  });
+}
+
 export async function dropPending(id: string): Promise<void> {
   if (!hasChrome) return;
   await withNamedLock(PENDING_LOCK, async () => {
@@ -406,13 +500,61 @@ async function readResolutions(): Promise<DappResolution[]> {
   });
 }
 
-async function writeResolution(resolution: DappResolution): Promise<void> {
-  await withNamedLock(RESOLVED_LOCK, async () => {
+async function writeResolution(
+  resolution: DappResolution,
+  approvalClaim?: string,
+): Promise<boolean> {
+  if (!hasChrome) return false;
+  return withNamedLock(RESOLVED_LOCK, () => withNamedLock(PENDING_LOCK, async () => {
+    const queue = await listPending();
+    if (
+      approvalClaim !== undefined
+      && !queue.some((entry) =>
+        entry.id === resolution.id && entry.approvalClaim === approvalClaim
+      )
+    ) return false;
+
     const list = await readResolutions();
     const next = [resolution, ...list.filter((entry) => entry.id !== resolution.id)];
+    // Remove the executable request first. If the following resolution write
+    // fails, the page may time out, but no second window can replay the action.
+    await chromeSet(
+      "local",
+      STORAGE_KEYS.pending,
+      queue.filter((entry) => entry.id !== resolution.id),
+    );
     await chromeSet("local", STORAGE_KEYS.resolved, next.slice(0, RESOLVED_KEEP));
-  });
-  await dropPending(resolution.id);
+    return true;
+  }));
+}
+
+export async function resolveRequest(
+  id: string,
+  result: string,
+  approvalClaim: string,
+): Promise<boolean> {
+  return writeResolution({ id, result }, approvalClaim);
+}
+
+export async function rejectClaimedRequest(
+  id: string,
+  approvalClaim: string,
+  error = "User rejected the request",
+  code = 4001,
+): Promise<boolean> {
+  return writeResolution({ id, code, error }, approvalClaim);
+}
+
+/**
+ * System-owned rejection for expiry/window-open failures. User actions use the
+ * claim-checked variant above so two approval documents cannot race each other.
+ */
+export async function rejectRequest(
+  id: string,
+  error = "User rejected the request",
+  code = 4001,
+): Promise<void> {
+  await writeResolution({ id, code, error });
 }
 
 async function consumeResolution(id: string): Promise<void> {
@@ -426,22 +568,6 @@ async function consumeResolution(id: string): Promise<void> {
   });
 }
 
-export async function resolveRequest(id: string, result: string): Promise<void> {
-  await writeResolution({ id, result });
-}
-
-/**
- * Refuses a queued request. The text reaches the page as a JSON-RPC error
- * message, so it stays English like the rest of the protocol surface — the
- * localised wording the user reads lives in the approval window.
- */
-export async function rejectRequest(
-  id: string,
-  error = "User rejected the request",
-  code = 4001,
-): Promise<void> {
-  await writeResolution({ id, code, error });
-}
 
 /**
  * Waits for the approval window to answer. The queue entry is dropped on the way

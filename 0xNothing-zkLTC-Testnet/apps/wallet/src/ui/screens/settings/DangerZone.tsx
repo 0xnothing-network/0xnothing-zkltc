@@ -3,6 +3,7 @@ import { t } from "../../../core/i18n";
 import { describeError } from "../../../core/lib/errors";
 import { wipeWallet } from "../../../core/keyring/vault";
 import { Button, Note, Panel, PanelBody } from "../../components/kit";
+import { useActionGate } from "../../hooks/useActionGate";
 
 /**
  * Wiping the wallet. The confirmation has to be typed because there is no
@@ -20,13 +21,14 @@ export function DangerZone(): ReactNode {
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const [busy, setBusy] = useState(false);
+  const actionGate = useActionGate();
   const [error, setError] = useState<string | null>(null);
   const confirmWord = t("wipe.word");
 
   const ready = typed.trim().toUpperCase() === confirmWord.toUpperCase();
 
   const wipe = async (): Promise<void> => {
-    if (busy || !ready) return;
+    if (busy || !ready || !actionGate.tryEnter()) return;
     setBusy(true);
     setError(null);
     try {
@@ -34,6 +36,7 @@ export function DangerZone(): ReactNode {
       window.location.reload();
     } catch (cause) {
       setError(describeError(cause));
+      actionGate.leave();
       setBusy(false);
     }
   };

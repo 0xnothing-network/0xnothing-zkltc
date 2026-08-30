@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowSquareOut,
   ArrowsClockwise,
@@ -38,6 +38,7 @@ import { PixelNFTABI } from "@/lib/abi";
 import { publicClient } from "@/lib/contract";
 import { STEADY_LIVE_MS } from "@/lib/liveData";
 import { jitteredPollInterval } from "@/lib/pollJitter";
+import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { ConnectWalletButton } from "@fi/components/ConnectWalletButton";
 import { parseAmount } from "@fi/lib/format";
 import styles from "./dev.module.css";
@@ -124,6 +125,7 @@ export default function DevPage() {
   const chainId = useChainId();
   const switchChain = useSwitchChain();
   const { writeContractAsync, isPending: isWriting } = useWriteContract();
+  const writeLockRef = useRef(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [fiWithdrawAmount, setFiWithdrawAmount] = useState("");
   const [fiWithdrawToken, setFiWithdrawToken] = useState("nusd");
@@ -256,6 +258,7 @@ export default function DevPage() {
   useEffect(() => {
     if (!txHash) return;
     if (txReceipt.isError) {
+      releaseAction(writeLockRef);
       setTxHash(undefined);
       setTxDomain(undefined);
       setActionSuccess(undefined);
@@ -263,6 +266,7 @@ export default function DevPage() {
       return;
     }
     if (!txReceipt.data?.status || txReceipt.data.transactionHash !== txHash) return;
+    releaseAction(writeLockRef);
     setTxHash(undefined);
     setTxDomain(undefined);
     if (txReceipt.data.status === "reverted") {
@@ -279,6 +283,7 @@ export default function DevPage() {
   }, [refreshTransactionDomain, txDomain, txHash, txReceipt.data, txReceipt.isError]);
 
   async function submitContractWrite(request: Parameters<typeof writeContractAsync>[0], domain: RefreshDomain) {
+    if (!tryAcquireAction(writeLockRef)) return;
     setActionError(undefined);
     setActionSuccess(undefined);
     try {
@@ -288,6 +293,7 @@ export default function DevPage() {
       setTxDomain(domain);
       setTxHash(hash);
     } catch (error) {
+      releaseAction(writeLockRef);
       setActionError(friendlyActionError(error));
     }
   }

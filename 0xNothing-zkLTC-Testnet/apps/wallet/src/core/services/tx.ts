@@ -35,9 +35,20 @@ export interface WriteRequest extends TxLine {
   kind: TxKind;
 }
 
-export async function writeCall(request: WriteRequest): Promise<Hex> {
-  const network = activeNetwork;
-  const readClient = publicClient;
+export interface TxExecutionContext {
+  network: WalletNetwork;
+  client: typeof publicClient;
+}
+
+function executionContext(context?: TxExecutionContext): TxExecutionContext {
+  return context ?? { network: activeNetwork, client: publicClient };
+}
+
+export async function writeCall(
+  request: WriteRequest,
+  context?: TxExecutionContext,
+): Promise<Hex> {
+  const { network, client: readClient } = executionContext(context);
   const hash = await withNamedLock(`tx:${request.from.toLowerCase()}`, async () => {
     const client = await walletClientFor(request.from, network);
     const { request: simulated } = await readClient.simulateContract({
@@ -197,11 +208,12 @@ export async function ensureAllowance(params: {
   spender: Address;
   amount: bigint;
   symbol: string;
-}): Promise<Hex | null> {
+}, context?: TxExecutionContext): Promise<Hex | null> {
+  const { client: readClient } = executionContext(context);
   return withNamedLock(
     `allowance:${params.from.toLowerCase()}:${params.token.toLowerCase()}:${params.spender.toLowerCase()}`,
     async () => {
-      const current = await publicClient.readContract({
+      const current = await readClient.readContract({
         address: params.token,
         abi: erc20Abi,
         functionName: "allowance",
@@ -216,8 +228,8 @@ export async function ensureAllowance(params: {
         args: [params.spender, params.amount],
         kind: "approve",
         label: { key: "tx.approve", params: { symbol: params.symbol } },
-      });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
+      }, context);
+      const receipt = await readClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
       if (receipt.status !== "success") throw new Error(t("err.txReverted"));
       return hash;
     },

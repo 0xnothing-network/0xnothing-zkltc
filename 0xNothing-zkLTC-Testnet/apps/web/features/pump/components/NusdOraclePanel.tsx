@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { formatUnits, parseUnits } from "viem";
 import {
   useAccount,
@@ -22,6 +22,7 @@ import {
   formatCompactNumber,
   formatRelativeTime,
 } from "@/features/pump/format";
+import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 
 type OracleMode = "mint" | "redeem";
 
@@ -62,6 +63,7 @@ export function NusdOraclePanel() {
   const publicClient = usePublicClient({ chainId: PUMP_CHAIN_ID });
   const { switchChain } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
+  const submitLockRef = useRef(false);
   const [mode, setMode] = useState<OracleMode>("mint");
   const [mintAmount, setMintAmount] = useState("");
   const [redeemAmount, setRedeemAmount] = useState("");
@@ -265,6 +267,7 @@ export function NusdOraclePanel() {
     if (!guard() || !address || !publicClient || amountIn === 0n || quote === undefined || actionError) {
       return;
     }
+    if (!tryAcquireAction(submitLockRef)) return;
 
     try {
       setIsSubmitting(true);
@@ -315,6 +318,7 @@ export function NusdOraclePanel() {
     } catch (error) {
       toast.handleError(error, mode === "mint" ? "Could not mint NUSD" : "Could not redeem NUSD");
     } finally {
+      releaseAction(submitLockRef);
       setIsSubmitting(false);
     }
   };

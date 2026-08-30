@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatUnits, maxUint256, parseUnits } from "viem";
 import {
@@ -23,6 +23,7 @@ import { formatCompactNumber } from "@/features/pump/format";
 import type { PumpMarket } from "@/features/pump/types";
 import { useToast } from "@/components/Toast";
 import { invalidateAfterPumpTrade } from "@/lib/liveData";
+import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 
 type TradeMode = "buy" | "sell";
 
@@ -45,6 +46,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
   const publicClient = usePublicClient();
   const { switchChain } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
+  const submitLockRef = useRef(false);
   const [mode, setMode] = useState<TradeMode>(market.status === "READY" ? "sell" : "buy");
   const [amount, setAmount] = useState("");
   const [slippageBps, setSlippageBps] = useState(100n);
@@ -158,6 +160,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
       toast.warning("Insufficient balance", `Your ${mode === "buy" ? "NUSD" : market.symbol} balance is too low.`);
       return;
     }
+    if (!tryAcquireAction(submitLockRef)) return;
 
     try {
       setPending(true);
@@ -193,6 +196,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
     } catch (error) {
       toast.handleError(error, "Trade failed");
     } finally {
+      releaseAction(submitLockRef);
       setPending(false);
     }
   };

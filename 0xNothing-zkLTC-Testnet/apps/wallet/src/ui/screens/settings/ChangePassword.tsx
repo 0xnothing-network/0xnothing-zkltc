@@ -3,6 +3,7 @@ import { t } from "../../../core/i18n";
 import { changePassword, MIN_WALLET_PASSWORD_LENGTH } from "../../../core/keyring/vault";
 import { describeError } from "../../../core/lib/errors";
 import { Button, Note, Panel, PanelBody } from "../../components/kit";
+import { useActionGate } from "../../hooks/useActionGate";
 import { useWallet } from "../../state/WalletContext";
 
 /**
@@ -17,6 +18,7 @@ export function ChangePassword(): ReactNode {
   const [next, setNext] = useState("");
   const [again, setAgain] = useState("");
   const [busy, setBusy] = useState(false);
+  const actionGate = useActionGate();
   const [error, setError] = useState<string | null>(null);
 
   const tooShort = next.length > 0 && next.length < MIN_WALLET_PASSWORD_LENGTH;
@@ -34,7 +36,7 @@ export function ChangePassword(): ReactNode {
   };
 
   const submit = async (): Promise<void> => {
-    if (busy || !ready) return;
+    if (busy || !ready || !actionGate.tryEnter()) return;
     setBusy(true);
     setError(null);
     try {
@@ -44,6 +46,7 @@ export function ChangePassword(): ReactNode {
     } catch (cause) {
       setError(describeError(cause));
     } finally {
+      actionGate.leave();
       setBusy(false);
     }
   };

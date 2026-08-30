@@ -23,7 +23,9 @@ import { Button, Note, Panel, Row, Rows } from "../components/kit";
 import { Screen } from "../components/Screen";
 import { TokenLogo } from "../components/TokenLogo";
 import { TransactionReview } from "../components/TransactionReview";
+import { useActionGate } from "../hooks/useActionGate";
 import { useLiveRead } from "../hooks/useLiveRead";
+import { reviewKey } from "../lib/reviewKey";
 import { goHome } from "../router";
 import { useWallet } from "../state/WalletContext";
 
@@ -45,6 +47,8 @@ export function MintNusd(): ReactNode {
   const [error, setError] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewQuote, setReviewQuote] = useState<bigint | null>(null);
+  const [reviewIdentity, setReviewIdentity] = useState<string | null>(null);
+  const confirmGate = useActionGate();
 
   // Oracle panel and balances are requested together, so the client-level
   // multicall collapses them into one round trip instead of two.
@@ -58,8 +62,8 @@ export function MintNusd(): ReactNode {
           return { state, portfolio };
         }
       : null,
-    [address, network.id, tokens, tick],
-    { identity: [address, network.id, tokens] },
+    [address, network.id, network.rpcUrl, tokens, tick],
+    { identity: [address, network.id, network.rpcUrl, tokens] },
   );
   const state = read.data?.state ?? null;
   const rows = read.data?.portfolio.rows ?? [];
@@ -81,7 +85,7 @@ export function MintNusd(): ReactNode {
 
   const quote = useLiveRead(
     parsed !== null && positive && !over ? () => (mint ? quoteMint(parsed) : quoteRedeem(parsed)) : null,
-    [mode, amount, positive && !over],
+    [mode, amount, positive && !over, network.id, network.rpcUrl],
     { debounceMs: 180 },
   );
   const quoted = quote.data;
@@ -104,11 +108,22 @@ export function MintNusd(): ReactNode {
     && !overCollateral;
   const amountInvalid = amount.length > 0 && (parsed === null || !positive || over);
   const loading = read.loading || quote.loading;
+  const currentReviewIdentity = reviewKey([
+    address,
+    network.id,
+    network.rpcUrl,
+    mode,
+    amount,
+    parsed,
+    settings.slippageBps,
+  ]);
+  const reviewCurrent = reviewIdentity === currentReviewIdentity;
 
   useEffect(() => {
     setReviewOpen(false);
     setReviewQuote(null);
-  }, [address, amount, mode, network.id]);
+    setReviewIdentity(null);
+  }, [address, amount, mode, network.id, network.rpcUrl, settings.slippageBps]);
 
   const fillMax = (): void => {
     if (balance === null) return;
@@ -119,43 +134,67 @@ export function MintNusd(): ReactNode {
     if (busy || !ready || !address || parsed === null || quoted === null) return;
     setError(null);
     setReviewQuote(quoted);
+    setReviewIdentity(currentReviewIdentity);
     setReviewOpen(true);
   };
 
   const confirm = async (): Promise<void> => {
-    if (busy || !reviewOpen || !ready || !address || parsed === null || reviewQuote === null) {
+    if (
+      busy
+      || !reviewOpen
+      || !reviewCurrent
+      || !ready
+      || !address
+      || parsed === null
+      || reviewQuote === null
+      || !confirmGate.tryEnter()
+    ) {
       return;
     }
+    const submitted = {
+      from: address,
+      amount: parsed,
+      quote: reviewQuote,
+      mint,
+      slippageBps: settings.slippageBps,
+      network,
+    };
     setBusy(true);
     setError(null);
     try {
-      const hash = mint
+      const hash = submitted.mint
         ? await mintNusd({
-            from: address,
-            collateralWei: parsed,
-            quotedNusd: reviewQuote,
-            slippageBps: settings.slippageBps,
+            from: submitted.from,
+            collateralWei: submitted.amount,
+            quotedNusd: submitted.quote,
+            slippageBps: submitted.slippageBps,
           })
         : await redeemNusd({
-            from: address,
-            amountNusd: parsed,
-            quotedCollateralWei: reviewQuote,
-            slippageBps: settings.slippageBps,
+            from: submitted.from,
+            amountNusd: submitted.amount,
+            quotedCollateralWei: submitted.quote,
+            slippageBps: submitted.slippageBps,
           });
       notify(
-        t(mint ? "mint.toastMint" : "mint.toastRedeem", {
-          amount: formatAmount(mint ? reviewQuote : parsed, NUSD_TOKEN.decimals, 2),
+        t(submitted.mint ? "mint.toastMint" : "mint.toastRedeem", {
+          amount: formatAmount(
+            submitted.mint ? submitted.quote : submitted.amount,
+            NUSD_TOKEN.decimals,
+            2,
+          ),
           symbol: NUSD_TOKEN.symbol,
         }),
         "ok",
-        txUrl(hash, network),
+        txUrl(hash, submitted.network),
       );
       setAmount("");
       setReviewOpen(false);
+      setReviewIdentity(null);
       refresh();
     } catch (cause) {
       setError(describeError(cause));
     } finally {
+      confirmGate.leave();
       setBusy(false);
     }
   };
@@ -310,11 +349,11 @@ export function MintNusd(): ReactNode {
           </Button>
         </div>
       </form>
-      {reviewOpen && reviewQuote !== null && parsed !== null && address !== null ? (
+      {reviewOpen && reviewCurrent && reviewQuote !== null && parsed !== null && address !== null ? (
         <TransactionReview
           title={t("apr.titleTx")}
           busy={busy}
-          ready={ready}
+          ready={ready && reviewCurrent}
           onClose={() => setReviewOpen(false)}
           onConfirm={() => void confirm()}
           hero={(
