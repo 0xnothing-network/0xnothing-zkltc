@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="dark light" />
+    <title>0xWallet</title>
+    <link rel="icon" href="./icons/icon-48.png" />
+    <script vite-ignore src="./theme-boot.js"></script>
+    <link
+      rel="preload"
+      href="./fonts/DepartureMono-Regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <!--
+      The face is declared here, not in wallet.css: the stylesheet is emitted
+      into assets/ with a hash, so a relative url() inside it would point one
+      directory too deep, while a document-relative href resolves from the
+      extension root and from the Capacitor webview root alike.
+    -->
+    <style>
+      @font-face {
+        font-family: "Departure Mono";
+        src: url("./fonts/DepartureMono-Regular.woff2") format("woff2");
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+      html {
+        background: #050806;
+      }
+      html[data-theme="light"] {
+        background: #ffffff;
+        color-scheme: light;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/ui/main.tsx"></script>
+  </body>
+</html>

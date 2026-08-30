@@ -1,0 +1,1799 @@
+/*
+ * 0xNothing Wallet — the only stylesheet, shared by the extension popup, the
+ * approval window and the Android app.
+ *
+ * The token set is the one from apps/web/app/0xFi/globals.css, value for value,
+ * so the wallet reads as the same product as the site: same palette, Departure
+ * Mono, square 1px borders, 10px uppercase labels, stepped transitions. It is
+ * duplicated rather than imported — an extension ships as a fixed bundle — and
+ * tests/tokens.test.ts pins the duplicate against the site's own declaration.
+ *
+ * Nine languages share this file, so nothing in it is sized to a string: a label
+ * wraps rather than overflowing its border, every 1fr track is minmax(0, 1fr) so
+ * one long word cannot widen a column, and in a label/value row the value is
+ * what keeps its line. The same tree has to hold "Lock now", "Jetzt sperren",
+ * "Заблокировать сейчас" and "今すぐロック" without a per-locale rule.
+ */
+.w-root {
+  --fi-bg: #050806;
+  --fi-panel: #0a100c;
+  --fi-panel-2: #101812;
+  --fi-input: #060a07;
+  --fi-line: rgba(177, 232, 201, 0.11);
+  --fi-line-strong: rgba(177, 232, 201, 0.24);
+  --fi-text: #edf5f0;
+  --fi-muted: #8d9c94;
+  --fi-dim: #59665f;
+  --fi-green: #8ee9b8;
+  --fi-green-hover: #b5f0ce;
+  --fi-red: #ff8f9f;
+  --fi-yellow: #d8c98d;
+  --fi-blue: #c6d0ca;
+  --fi-control-height: 42px;
+  --fi-text-label: 10px;
+  --fi-text-body: 11px;
+  --fi-text-data: 12px;
+  --w-gutter: 14px;
+  --w-nav-height: 52px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--fi-bg);
+  color: var(--fi-text);
+  color-scheme: dark;
+  font-family: "Departure Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: var(--fi-text-data);
+  font-synthesis: none;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Opt-in light surface. The dark palette above remains the default. */
+.w-root[data-theme="light"] {
+  --fi-bg: #ffffff;
+  --fi-panel: #ffffff;
+  --fi-panel-2: #f3f3f3;
+  --fi-input: #fafafa;
+  --fi-line: rgba(0, 0, 0, 0.14);
+  --fi-line-strong: rgba(0, 0, 0, 0.3);
+  --fi-text: #111111;
+  --fi-muted: #505050;
+  --fi-dim: #737373;
+  --fi-green: #0b6b3f;
+  --fi-green-hover: #07532f;
+  --fi-red: #b4233b;
+  --fi-yellow: #765c00;
+  --fi-blue: #414141;
+  color-scheme: light;
+}
+
+.w-root[data-theme="light"] ::selection {
+  color: #ffffff;
+}
+
+.w-root[data-theme="light"] .w-head,
+.w-root[data-theme="light"] .w-nav {
+  background: var(--fi-bg);
+}
+
+.w-root[data-theme="light"] .w-btn:hover:not(:disabled) {
+  border-color: rgba(0, 0, 0, 0.72);
+  background: #f0f0f0;
+}
+
+.w-root[data-theme="light"] .w-btn[data-variant="primary"] {
+  color: #ffffff;
+}
+
+.w-root[data-theme="light"] .w-btn[data-variant="danger"]:hover:not(:disabled) {
+  background: rgba(180, 35, 59, 0.12);
+}
+
+.w-root[data-theme="light"] .w-action:hover,
+.w-root[data-theme="light"] .w-action:focus-visible,
+.w-root[data-theme="light"] .w-asset:hover,
+.w-root[data-theme="light"] .w-tx:hover,
+.w-root[data-theme="light"] .w-dapp:hover {
+  background: rgba(11, 107, 63, 0.06);
+}
+
+.w-root[data-theme="light"] .w-max:hover,
+.w-root[data-theme="light"] .w-max:focus-visible {
+  background: rgba(11, 107, 63, 0.1);
+}
+
+.w-root[data-theme="light"] .w-pill[data-tone="ok"] {
+  border-color: rgba(11, 107, 63, 0.5);
+}
+
+.w-root[data-theme="light"] .w-pill[data-tone="warn"] {
+  border-color: rgba(118, 92, 0, 0.5);
+}
+
+.w-root[data-theme="light"] .w-pill[data-tone="bad"],
+.w-root[data-theme="light"] .w-toast[data-tone="error"] {
+  border-color: rgba(180, 35, 59, 0.55);
+}
+
+.w-root[data-theme="light"] .w-toast[data-tone="ok"] {
+  border-color: rgba(11, 107, 63, 0.55);
+}
+
+.w-root[data-theme="light"] .w-sheet {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.w-root[data-theme="light"] .w-account[aria-current="true"] {
+  background: rgba(11, 107, 63, 0.07);
+}
+
+.w-root[data-theme="light"] .w-token-option:hover,
+.w-root[data-theme="light"] .w-token-option[aria-selected="true"] {
+  background: rgba(11, 107, 63, 0.07);
+}
+/*
+ * The popup is a fixed 360×600 surface. The approval window and Android get the
+ * viewport, so the same tree has to work at both sizes without a second layout.
+ */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--fi-bg, #050806);
+}
+
+body {
+  overscroll-behavior: none;
+}
+
+#root {
+  display: flex;
+  height: 100%;
+}
+
+.w-root[data-surface="popup"] {
+  width: 360px;
+  height: 600px;
+}
+
+.w-root[data-surface="full"] {
+  min-height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.w-root *,
+.w-root *::before,
+.w-root *::after {
+  box-sizing: border-box;
+}
+
+.w-root button,
+.w-root input,
+.w-root select,
+.w-root textarea {
+  font: inherit;
+  color: inherit;
+}
+
+.w-root button {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.w-root button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+.w-root a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.w-root h1,
+.w-root h2,
+.w-root h3,
+.w-root p,
+.w-root dl,
+.w-root dd {
+  margin: 0;
+}
+
+.w-root ::selection {
+  background: var(--fi-green);
+  color: #051009;
+}
+
+.w-root :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 1px solid var(--fi-green);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ screen */
+
+.w-screen {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  animation: w-screen-in 100ms steps(2, end);
+}
+
+@keyframes w-screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.w-body {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--fi-line-strong) transparent;
+}
+
+.w-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.w-body::-webkit-scrollbar-thumb {
+  background: var(--fi-line-strong);
+}
+
+.w-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: var(--w-gutter);
+}
+
+/*
+ * Short transaction forms use the full popup height: fields stay grouped at
+ * the top while the single decisive action remains easy to reach at the
+ * bottom. Long forms keep scrolling normally and the action becomes sticky.
+ */
+.w-flow {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+}
+
+.w-tabs + .w-flow {
+  min-height: calc(100% - 37px);
+}
+
+.w-flow-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: var(--w-gutter);
+}
+
+.w-flow-actions {
+  position: sticky;
+  z-index: 8;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  border-top: 1px solid var(--fi-line);
+  padding: 10px var(--w-gutter) calc(10px + env(safe-area-inset-bottom));
+  background: var(--fi-bg);
+}
+
+.w-flow-actions:empty {
+  display: none;
+}
+
+/* Lightweight hierarchy primitives shared by dashboard and task screens. */
+.w-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.w-section-head {
+  display: flex;
+  min-height: 22px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--fi-muted);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.w-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--fi-line-strong);
+  padding: 12px;
+  background: var(--fi-panel);
+}
+
+.w-summary-label {
+  color: var(--fi-muted);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.w-summary-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--fi-text);
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.w-summary-meta {
+  color: var(--fi-dim);
+  font-size: var(--fi-text-label);
+  line-height: 1.55;
+}
+
+.w-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.w-network-row {
+  border-top: 1px solid var(--fi-line);
+  padding: 9px 0;
+}
+
+.w-disclosure {
+  border: 1px solid var(--fi-line);
+  background: var(--fi-panel);
+}
+
+.w-disclosure > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 10px 12px;
+  color: var(--fi-muted);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.w-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.w-disclosure > summary::after {
+  float: right;
+  color: var(--fi-green);
+  content: "+";
+}
+
+.w-disclosure[open] > summary {
+  border-bottom: 1px solid var(--fi-line);
+  color: var(--fi-text);
+}
+
+.w-disclosure[open] > summary::after {
+  content: "−";
+}
+
+.w-disclosure-body {
+  padding: 12px;
+}
+
+.w-network-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* ------------------------------------------------------------------ header */
+
+.w-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--fi-line-strong);
+  padding: 10px var(--w-gutter);
+  background: rgba(5, 8, 6, 0.985);
+}
+
+.w-head-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.w-head-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--fi-text);
+  font-size: var(--fi-text-body);
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.w-head-caret {
+  color: var(--fi-dim);
+  font-size: 9px;
+}
+
+.w-address {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--fi-muted);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.04em;
+  transition: color 100ms steps(2, end);
+}
+.w-address:hover,
+.w-address:focus-visible {
+  color: var(--fi-green);
+}
+
+.w-address[data-copied="true"] {
+  color: var(--fi-green);
+}
+
+.w-back {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--fi-line);
+  background: transparent;
+  color: var(--fi-muted);
+  font-size: var(--fi-text-body);
+  transition: border-color 100ms steps(2, end), color 100ms steps(2, end);
+}
+
+.w-back:hover {
+  border-color: var(--fi-line-strong);
+  color: var(--fi-text);
+}
+
+/* --------------------------------------------------------------- balance */
+
+.w-total-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid var(--fi-line);
+  padding: 16px var(--w-gutter) 14px;
+}
+
+/*
+ * The total is never abbreviated — a balance with a digit hidden behind an
+ * ellipsis is worse than a wrapped line — so when a faucet-sized number fills
+ * the row the 24h figure drops underneath it instead of being pushed out.
+ */
+.w-total-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 2px 10px;
+}
+
+.w-total {
+  color: var(--fi-text);
+  font-size: 30px;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+.w-delta {
+  padding-bottom: 3px;
+  color: var(--fi-muted);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.06em;
+}
+
+.w-delta[data-tone="up"] {
+  color: var(--fi-green);
+}
+
+.w-delta[data-tone="down"] {
+  color: var(--fi-red);
+}
+
+.w-total-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.w-total-note {
+  flex: 1 1 auto;
+  color: var(--fi-dim);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* --------------------------------------------------------------- buttons */
+
+/*
+ * A label is nine languages long: `Lock now` is 8 characters, "Verrouiller
+ * maintenant" is 22 and "今すぐロック" is 6. So the label wraps instead of running
+ * past the border, and the vertical padding leaves room for the second line —
+ * two 10px lines still fit inside the 42px control height, so a button that
+ * wraps is the same size as one that does not.
+ */
+.w-btn {
+  display: inline-flex;
+  min-height: var(--fi-control-height);
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--fi-line-strong);
+  border-radius: 0;
+  padding: 5px 14px;
+  background: transparent;
+  color: var(--fi-text);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.06em;
+  line-height: 1.3;
+  overflow-wrap: break-word;
+  text-align: center;
+  text-transform: uppercase;
+  text-wrap: balance;
+  transition: border-color 120ms steps(2, end), background-color 120ms steps(2, end),
+    color 120ms steps(2, end), transform 80ms steps(2, end);
+}
+.w-btn:hover:not(:disabled) {
+  border-color: rgba(237, 245, 240, 0.72);
+  background: #141d17;
+}
+
+.w-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.w-btn[data-variant="primary"] {
+  border-color: var(--fi-green);
+  background: var(--fi-green);
+  color: #051009;
+}
+
+.w-btn[data-variant="primary"]:hover:not(:disabled) {
+  border-color: var(--fi-green-hover);
+  background: var(--fi-green-hover);
+}
+
+.w-btn[data-variant="danger"] {
+  border-color: var(--fi-red);
+  color: var(--fi-red);
+}
+
+.w-btn[data-variant="danger"]:hover:not(:disabled) {
+  border-color: var(--fi-red);
+  background: rgba(255, 143, 159, 0.12);
+  color: var(--fi-red);
+}
+
+/* A chip in a list row is one or two words; it stays on one line and the row
+ * gives it the room, rather than growing taller around it. */
+.w-btn[data-size="sm"] {
+  min-height: 30px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.w-btn[data-block="true"] {
+  width: 100%;
+}
+
+/*
+ * A button beside text — the header gear, MINT NUSD on the total, REVOKE and
+ * RENAME in list rows — keeps its own width. The text next to it is what yields
+ * when a translation runs long, because a clipped control is unusable while
+ * clipped prose is still readable.
+ */
+.w-head > .w-btn,
+.w-total-foot > .w-btn,
+.w-split > .w-btn,
+.w-account > .w-btn {
+  flex: 0 0 auto;
+}
+
+.w-btn-row {
+  display: flex;
+  gap: 8px;
+}
+
+.w-btn-row > .w-btn {
+  flex: 1;
+}
+/* ------------------------------------------------------- action row / tabs */
+
+/*
+ * Four actions across 360px is 90px each, which "Historique" and "Отправить"
+ * fill almost exactly. minmax(0, 1fr) keeps the four columns equal whatever the
+ * labels are — a bare 1fr floors at the widest word and would let one language
+ * push the row wider than the popup.
+ */
+.w-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid var(--fi-line);
+}
+
+.w-action {
+  display: flex;
+  min-height: 58px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-right: 1px solid var(--fi-line);
+  padding: 5px 4px;
+  background: transparent;
+  color: var(--fi-muted);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.06em;
+  line-height: 1.3;
+  overflow-wrap: break-word;
+  text-align: center;
+  text-transform: uppercase;
+  transition: background-color 120ms steps(2, end), color 120ms steps(2, end);
+}
+
+.w-action:last-child {
+  border-right: 0;
+}
+
+.w-action:hover,
+.w-action:focus-visible {
+  background: rgba(155, 231, 189, 0.06);
+  color: var(--fi-text);
+}
+
+.w-action-glyph {
+  color: var(--fi-green);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.w-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--fi-line-strong);
+}
+/* Two tabs on MINT read `NUSD prägen` / `zkLTC einlösen`; min-width: 0 is what
+ * lets those share the width evenly instead of the longer one taking more. */
+.w-tab {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 5px 6px;
+  background: transparent;
+  color: var(--fi-dim);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.08em;
+  line-height: 1.3;
+  overflow-wrap: break-word;
+  text-transform: uppercase;
+  transition: color 120ms steps(2, end), border-color 120ms steps(2, end);
+}
+
+.w-tab:hover {
+  color: var(--fi-muted);
+}
+
+.w-tab[aria-selected="true"] {
+  border-bottom-color: var(--fi-green);
+  color: var(--fi-text);
+}
+
+/* ---------------------------------------------------------------- asset list */
+
+.w-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.w-asset {
+  display: flex;
+  width: 100%;
+  min-height: 56px;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-bottom: 1px solid var(--fi-line);
+  padding: 0 var(--w-gutter);
+  background: transparent;
+  text-align: left;
+  transition: background-color 120ms steps(2, end);
+}
+
+.w-asset:hover {
+  background: rgba(155, 231, 189, 0.05);
+}
+.w-logo {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border: 1px solid var(--fi-line);
+  border-radius: 50%;
+  background: var(--fi-panel-2);
+  object-fit: cover;
+  overflow: hidden;
+}
+
+.w-logo[data-fallback="true"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fi-muted);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+
+/* On-chain pixel art must not be smoothed when it is scaled up. */
+.w-logo[data-pixel="true"] {
+  image-rendering: pixelated;
+  border-radius: 2px;
+}
+
+.w-logo[data-size="lg"] {
+  width: 56px;
+  height: 56px;
+}
+
+.w-logo[data-size="md"] {
+  width: 40px;
+  height: 40px;
+}
+
+.w-logo[data-size="sm"] {
+  width: 24px;
+  height: 24px;
+}
+
+.w-asset-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.w-asset-symbol {
+  overflow: hidden;
+  color: var(--fi-text);
+  font-size: var(--fi-text-data);
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.w-asset-sub {
+  color: var(--fi-dim);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.04em;
+}
+
+.w-asset-side {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.w-asset-amount {
+  color: var(--fi-text);
+  font-size: var(--fi-text-data);
+}
+
+.w-asset-usd {
+  color: var(--fi-muted);
+  font-size: var(--fi-text-label);
+}
+
+/* --------------------------------------------------------------- bottom nav */
+
+.w-nav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  flex: 0 0 auto;
+  border-top: 1px solid var(--fi-line-strong);
+  background: rgba(5, 8, 6, 0.985);
+}
+
+.w-nav-item {
+  display: flex;
+  min-height: var(--w-nav-height);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 0;
+  padding: 4px;
+  background: transparent;
+  color: var(--fi-dim);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.08em;
+  line-height: 1.3;
+  overflow-wrap: break-word;
+  text-align: center;
+  text-transform: uppercase;
+  transition: color 120ms steps(2, end), background-color 120ms steps(2, end);
+}
+
+.w-nav-item[aria-current="page"] {
+  color: var(--fi-green);
+}
+
+.w-nav-item:hover:not([aria-current="page"]) {
+  color: var(--fi-muted);
+}
+
+.w-nav-glyph {
+  font-size: 14px;
+  line-height: 1;
+}
+/* ------------------------------------------------------------ panels / rows */
+
+.w-panel {
+  border: 1px solid var(--fi-line);
+  background: var(--fi-panel);
+}
+
+.w-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--fi-line);
+  padding: 9px 12px;
+  color: var(--fi-muted);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.w-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.w-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.w-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 12px;
+}
+
+.w-row + .w-row {
+  border-top: 1px solid var(--fi-line);
+}
+
+/*
+ * Label left, value right. The label is prose and may wrap — an uppercase German
+ * compound is the widest thing in this stylesheet — while the value is data and
+ * keeps its line. `min-width: 0` on the value is what makes the ellipsis work at
+ * all: a nowrap flex item floors at its full text width, so without it a long
+ * value pushed past the panel border instead of being clipped inside it.
+ */
+.w-row dt {
+  color: var(--fi-muted);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.06em;
+  overflow-wrap: break-word;
+  text-transform: uppercase;
+}
+.w-row dd {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--fi-text);
+  font-size: var(--fi-text-body);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.w-row dd[data-tone="green"] {
+  color: var(--fi-green);
+}
+
+.w-row dd[data-tone="red"] {
+  color: var(--fi-red);
+}
+
+.w-row dd[data-tone="dim"] {
+  color: var(--fi-dim);
+}
+
+/* ----------------------------------------------------------------- fields */
+
+.w-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.w-label {
+  color: var(--fi-muted);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.w-input {
+  min-height: var(--fi-control-height);
+  border: 1px solid var(--fi-line-strong);
+  border-radius: 0;
+  padding: 0 12px;
+  background: var(--fi-input);
+  color: var(--fi-text);
+  font-size: var(--fi-text-data);
+  transition: border-color 100ms steps(2, end);
+}
+
+.w-input:focus {
+  border-color: var(--fi-green);
+  outline: none;
+}
+.w-input[aria-invalid="true"] {
+  border-color: var(--fi-red);
+}
+
+.w-input::placeholder {
+  color: var(--fi-dim);
+}
+
+textarea.w-input {
+  min-height: 84px;
+  padding: 10px 12px;
+  line-height: 1.6;
+  resize: none;
+}
+
+.w-select {
+  min-height: var(--fi-control-height);
+  border: 1px solid var(--fi-line-strong);
+  border-radius: 0;
+  padding: 0 10px;
+  background: var(--fi-input);
+  color: var(--fi-text);
+  font-size: var(--fi-text-body);
+}
+
+.w-hint {
+  color: var(--fi-dim);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+}
+
+.w-hint[data-tone="error"] {
+  color: var(--fi-red);
+}
+
+.w-hint[data-tone="warn"] {
+  color: var(--fi-yellow);
+}
+
+.w-hint[data-tone="ok"] {
+  color: var(--fi-green);
+}
+
+.w-check {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  accent-color: var(--fi-green);
+}
+
+/* ------------------------------------------------------------ amount field */
+
+.w-amount {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--fi-line-strong);
+  background: var(--fi-input);
+  transition: border-color 100ms steps(2, end);
+}
+.w-amount:focus-within {
+  border-color: var(--fi-green);
+}
+
+.w-amount input {
+  min-width: 0;
+  min-height: 52px;
+  flex: 1;
+  border: 0;
+  padding: 0 12px;
+  background: transparent;
+  color: var(--fi-text);
+  font-size: 18px;
+  outline: none;
+}
+
+.w-amount input::placeholder {
+  color: var(--fi-dim);
+}
+
+.w-amount-side {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  border-left: 1px solid var(--fi-line);
+  padding: 0 10px;
+  color: var(--fi-text);
+  font-size: var(--fi-text-body);
+  letter-spacing: 0.04em;
+}
+
+.w-max {
+  min-height: 100%;
+  flex: 0 0 auto;
+  border: 0;
+  border-left: 1px solid var(--fi-line);
+  padding: 0 12px;
+  background: transparent;
+  color: var(--fi-green);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  transition: background-color 100ms steps(2, end), color 100ms steps(2, end);
+}
+
+.w-max:hover,
+.w-max:focus-visible {
+  background: rgba(155, 231, 189, 0.1);
+  color: var(--fi-green-hover);
+}
+/* ------------------------------------------------------------------- pills */
+
+.w-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--fi-line-strong);
+  padding: 2px 7px;
+  color: var(--fi-muted);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.w-pill[data-tone="ok"] {
+  border-color: rgba(142, 233, 184, 0.5);
+  color: var(--fi-green);
+}
+
+.w-pill[data-tone="warn"] {
+  border-color: rgba(216, 201, 141, 0.5);
+  color: var(--fi-yellow);
+}
+
+.w-pill[data-tone="bad"] {
+  border-color: rgba(255, 143, 159, 0.5);
+  color: var(--fi-red);
+}
+
+.w-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* -------------------------------------------------------------- empty/toast */
+
+.w-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 34px var(--w-gutter);
+  color: var(--fi-dim);
+  font-size: var(--fi-text-body);
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+.w-toast {
+  position: absolute;
+  z-index: 70;
+  right: var(--w-gutter);
+  bottom: calc(var(--w-nav-height) + 12px);
+  left: var(--w-gutter);
+  border: 1px solid var(--fi-line-strong);
+  padding: 9px 11px;
+  background: var(--fi-panel-2);
+  color: var(--fi-text);
+  font-size: var(--fi-text-body);
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+}
+
+.w-toast[data-tone="error"] {
+  border-color: rgba(255, 143, 159, 0.55);
+  color: var(--fi-red);
+}
+
+.w-toast[data-tone="ok"] {
+  border-color: rgba(142, 233, 184, 0.55);
+  color: var(--fi-green);
+}
+
+.w-toast a {
+  color: var(--fi-green);
+  text-decoration: underline;
+}
+
+.w-shell {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* --------------------------------------------------------------- NFT / RWA */
+
+.w-nft-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: var(--w-gutter);
+}
+.w-nft {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--fi-line);
+  background: var(--fi-panel);
+  text-align: left;
+  transition: border-color 120ms steps(2, end);
+}
+
+.w-nft:hover {
+  border-color: var(--fi-line-strong);
+}
+
+.w-nft img {
+  width: 100%;
+  aspect-ratio: 1;
+  border-bottom: 1px solid var(--fi-line);
+  background: var(--fi-input);
+  image-rendering: pixelated;
+}
+
+.w-nft-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 8px;
+}
+
+.w-nft-name {
+  overflow: hidden;
+  color: var(--fi-text);
+  font-size: var(--fi-text-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.w-nft-id {
+  color: var(--fi-dim);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+
+/* -------------------------------------------------------------- history rows */
+
+.w-tx {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-bottom: 1px solid var(--fi-line);
+  padding: 10px var(--w-gutter);
+  background: transparent;
+  text-align: left;
+  transition: background-color 120ms steps(2, end);
+}
+
+.w-tx:hover {
+  background: rgba(155, 231, 189, 0.05);
+}
+.w-tx-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.w-tx-summary {
+  overflow: hidden;
+  color: var(--fi-text);
+  font-size: var(--fi-text-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.w-tx-detail {
+  overflow: hidden;
+  color: var(--fi-dim);
+  font-size: var(--fi-text-label);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.w-tx-side {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+/* --------------------------------------------------------------- seed words */
+
+.w-seed {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  border: 1px solid var(--fi-line-strong);
+  padding: 10px;
+  background: var(--fi-input);
+}
+
+.w-word {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 5px;
+  color: var(--fi-text);
+  font-size: var(--fi-text-body);
+}
+.w-word span {
+  color: var(--fi-dim);
+  font-size: 9px;
+}
+
+/* ------------------------------------------------------------------ approve */
+
+.w-approve-origin {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--fi-line-strong);
+  padding: 11px 12px;
+  background: var(--fi-panel-2);
+}
+
+/*
+ * The origin is the one thing on this screen the user has to read in full, so it
+ * wraps to as many lines as it needs. It reuses the asset-row classes for their
+ * type scale, and these two rules undo the clipping those carry: an origin cut
+ * off at the panel edge is exactly how a lookalike host goes unnoticed.
+ */
+.w-approve-origin .w-asset-symbol,
+.w-approve-origin .w-asset-sub {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.w-approve-origin .w-asset-symbol {
+  color: var(--fi-green);
+}
+
+.w-code {
+  max-height: 168px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--fi-line);
+  padding: 10px;
+  background: var(--fi-input);
+  color: var(--fi-blue);
+  font-size: var(--fi-text-label);
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.w-queue {
+  color: var(--fi-yellow);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------------ dapps */
+
+.w-dapp {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-bottom: 1px solid var(--fi-line);
+  padding: 11px var(--w-gutter);
+  background: transparent;
+  text-align: left;
+  transition: background-color 120ms steps(2, end);
+}
+.w-dapp:hover {
+  background: rgba(155, 231, 189, 0.05);
+}
+
+.w-mark {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--fi-line-strong);
+  border-radius: 50%;
+  color: var(--fi-green);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.06em;
+}
+
+/* ------------------------------------------------------ swap token picker */
+
+.w-swap-flow .w-flow-main {
+  gap: 10px;
+}
+
+.w-token-trigger {
+  display: grid;
+  width: 100%;
+  min-height: 60px;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--fi-line-strong);
+  border-radius: 0;
+  padding: 8px 11px;
+  background: var(--fi-input);
+  text-align: left;
+  transition: border-color 100ms steps(2, end), background-color 100ms steps(2, end);
+}
+
+.w-token-trigger:hover:not(:disabled),
+.w-token-trigger:focus-visible {
+  border-color: var(--fi-green);
+  background: var(--fi-panel);
+}
+
+.w-token-trigger-copy,
+.w-token-option-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.w-token-trigger-copy strong,
+.w-token-option-copy strong {
+  overflow: hidden;
+  color: var(--fi-text);
+  font-size: var(--fi-text-data);
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.w-token-trigger-copy span,
+.w-token-option-copy span {
+  overflow: hidden;
+  color: var(--fi-dim);
+  font-size: var(--fi-text-label);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.w-token-symbol {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+}
+
+.w-verified-mark {
+  display: inline-flex;
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  border: 1px solid var(--fi-green);
+  border-radius: 50%;
+  background: var(--fi-green);
+  color: var(--fi-bg);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
+  text-overflow: clip;
+}
+
+.w-token-trigger-caret {
+  color: var(--fi-green);
+  font-size: 16px;
+}
+
+.w-token-sheet {
+  max-height: 88%;
+  overflow: hidden;
+}
+
+.w-token-search {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-bottom: 1px solid var(--fi-line);
+  padding: 10px 12px;
+}
+
+.w-token-options {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.w-token-option {
+  display: grid;
+  width: 100%;
+  min-height: 56px;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-bottom: 1px solid var(--fi-line);
+  padding: 8px 12px;
+  background: transparent;
+  text-align: left;
+  transition: background-color 100ms steps(2, end);
+}
+
+.w-token-option:hover,
+.w-token-option[aria-selected="true"] {
+  background: rgba(155, 231, 189, 0.07);
+}
+
+.w-token-source {
+  max-width: 70px;
+  overflow: hidden;
+  border: 1px solid var(--fi-line-strong);
+  padding: 2px 5px;
+  color: var(--fi-green);
+  font-size: 8px;
+  letter-spacing: 0.05em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.w-token-source[data-core="true"] {
+  border-color: var(--fi-green);
+  background: rgba(142, 233, 184, 0.08);
+}
+
+.w-token-ca {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--fi-line-strong);
+  border-radius: 50%;
+  color: var(--fi-green);
+  font-size: 9px;
+}
+
+.w-swap-flip {
+  display: flex;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  margin: -3px 0;
+}
+
+.w-swap-route {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  border-top: 1px solid var(--fi-line);
+  border-bottom: 1px solid var(--fi-line);
+  padding: 7px 0;
+  color: var(--fi-dim);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.w-swap-route span:first-child {
+  flex: 1 1 100%;
+  color: var(--fi-muted);
+}
+
+.w-swap-review {
+  max-height: 90%;
+}
+
+.w-swap-review-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--fi-line);
+  padding: 16px 12px;
+  background: var(--fi-input);
+}
+
+.w-swap-review-hero > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  text-align: center;
+}
+
+.w-swap-review-hero strong {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: var(--fi-text-body);
+  font-weight: 400;
+}
+
+.w-review-arrow {
+  color: var(--fi-green);
+  font-size: 16px;
+}
+
+/* --------------------------------------------------------------- receive */
+
+.w-receive {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px var(--w-gutter);
+}
+
+.w-receive-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  border: 1px solid var(--fi-line-strong);
+  background: var(--fi-panel);
+}
+
+.w-receive-qr,
+.w-receive-loading {
+  display: flex;
+  min-height: 216px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  background: #ffffff;
+}
+
+.w-receive-loading {
+  background: var(--fi-input);
+}
+
+.w-receive-qr img {
+  display: block;
+  width: 208px;
+  height: 208px;
+}
+
+.w-receive-network {
+  border-top: 1px solid var(--fi-line);
+  border-bottom: 1px solid var(--fi-line);
+  padding: 7px 10px;
+  color: var(--fi-green);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* --------------------------------------------------------------- utilities */
+
+.w-split {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.w-mono-break {
+  overflow-wrap: anywhere;
+  color: var(--fi-text);
+  font-size: var(--fi-text-body);
+  line-height: 1.7;
+}
+
+/* Three rows make the receive address easy to proof-read without truncation. */
+.w-addr-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px 11px;
+  background: var(--fi-input);
+  color: var(--fi-text);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  line-height: 1.45;
+  text-align: center;
+  user-select: all;
+}
+
+.w-center {
+  text-align: center;
+}
+
+.w-spin {
+  display: inline-block;
+  width: 9px;
+  color: var(--fi-green);
+}
+/* ---------------------------------------------------------------- sheet */
+
+.w-sheet {
+  position: absolute;
+  z-index: 50;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border: 0;
+  padding: 0;
+  background: rgba(3, 5, 4, 0.72);
+}
+
+.w-sheet-body {
+  display: flex;
+  max-height: 78%;
+  flex-direction: column;
+  overflow-y: auto;
+  border-top: 1px solid var(--fi-line-strong);
+  background: var(--fi-panel);
+}
+
+.w-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--fi-line);
+  padding: 10px 12px;
+  color: var(--fi-muted);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.w-account {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-bottom: 1px solid var(--fi-line);
+  padding: 11px 12px;
+  background: transparent;
+  text-align: left;
+}
+
+.w-account[aria-current="true"] {
+  background: rgba(155, 231, 189, 0.07);
+}
+
+/* The tappable part of an account row; the rename button sits beside it. */
+.w-account-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  text-align: left;
+}
+/*
+ * Touch surfaces: 44px is the smallest target a thumb hits reliably, so the
+ * Android build grows the controls the popup keeps at 42px.
+ */
+@media (pointer: coarse) {
+  .w-root {
+    --fi-control-height: 44px;
+    --w-nav-height: 58px;
+  }
+
+  .w-asset,
+  .w-dapp,
+  .w-account {
+    min-height: 60px;
+  }
+}
+
+/* Keep the full-page wallet focused instead of stretching task forms across a
+ * desktop viewport. The popup and touch layouts remain pixel-for-pixel on the
+ * same 360px-first grid and use the exact same visual tokens. */
+@media (min-width: 640px) {
+  .w-root[data-surface="full"] {
+    --w-gutter: 18px;
+    align-items: center;
+  }
+
+  .w-root[data-surface="full"] > .w-shell,
+  .w-root[data-surface="full"] > .w-nav {
+    width: min(100%, 560px);
+    border-right: 1px solid var(--fi-line);
+    border-left: 1px solid var(--fi-line);
+  }
+
+  .w-root[data-surface="full"] > .w-toast {
+    right: auto;
+    left: 50%;
+    width: calc(min(100%, 560px) - (2 * var(--w-gutter)));
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .w-root *,
+  .w-root *::before,
+  .w-root *::after {
+    animation: none !important;
+    transition-duration: 0ms !important;
+  }
+}

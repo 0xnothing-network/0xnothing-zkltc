@@ -1,0 +1,4 @@
+Intermediate browser captures only. Their bytes are JPEG despite the temporary .png names.
+
+Upload only files from the sibling folder:
+chrome-web-store-ready

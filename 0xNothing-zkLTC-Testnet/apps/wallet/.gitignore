@@ -1,0 +1,11 @@
+node_modules/
+dist/
+android/
+ios/
+*.zip
+*.tsbuildinfo
+.vite/
+.DS_Store
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

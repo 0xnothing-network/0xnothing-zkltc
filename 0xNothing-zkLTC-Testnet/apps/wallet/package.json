@@ -1,0 +1,40 @@
+{
+  "name": "0xnothing-zkltc-testnet-wallet",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "0xNothing zkLTC testnet wallet — MV3 browser extension and Capacitor Android, sharing one React UI.",
+  "scripts": {
+    "dev": "vite",
+    "build": "node scripts/build-all.mjs",
+    "build:app": "vite build",
+    "build:inject": "node scripts/build-inject.mjs",
+    "build:android": "node scripts/build-all.mjs && cap sync android",
+    "icons": "node scripts/generate-icons.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test --experimental-strip-types tests/*.test.ts"
+  },
+  "dependencies": {
+    "@capacitor/browser": "8.0.4",
+    "@capacitor/clipboard": "8.0.1",
+    "@capacitor/core": "8.5.0",
+    "@capacitor/preferences": "8.0.1",
+    "@types/qrcode": "1.5.6",
+    "qrcode": "1.5.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "viem": "2.55.10"
+  },
+  "devDependencies": {
+    "@capacitor/android": "8.5.0",
+    "@capacitor/cli": "8.5.0",
+    "@types/chrome": "0.2.7",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "typescript": "5.9.3",
+    "vite": "8.2.2"
+  },
+  "overrides": {
+    "uuid": "11.1.1"
+  }
+}
