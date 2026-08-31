@@ -13,6 +13,7 @@ import {
 import { deployment } from "@fi/config/deployment";
 import { erc20Abi } from "@fi/lib/abis/erc20";
 import { createBoundedCache } from "@/lib/boundedCache";
+import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 import { trustedProxyClientKey } from "@/lib/server/clientIp";
 import { readLimitedBytes } from "@/lib/server/readLimitedBytes";
 import type {
@@ -87,6 +88,7 @@ function trustedClientKey(request: Request): string {
     request,
     process.env.FI_TRUSTED_PROXY_CLIENT_IP_HEADER,
     process.env.VERCEL === "1",
+    process.env.TRUSTED_PROXY_SHARED_SECRET,
   );
 }
 
@@ -323,10 +325,13 @@ function json(
   cacheControl: string,
   headers?: Record<string, string>,
 ) {
+  const cacheHeaders = status === 200
+    ? publicCdnCacheHeaders(cacheControl, 60, 120)
+    : { "Cache-Control": cacheControl };
   return NextResponse.json(payload, {
     status,
     headers: {
-      "Cache-Control": cacheControl,
+      ...cacheHeaders,
       "X-Content-Type-Options": "nosniff",
       ...headers,
     },

@@ -29,6 +29,12 @@ and 0xPixel. Its pages, API handlers, and supporting code live in
 `apps/web/app/0xFi` and `apps/web/features/fi`; no proxy or second web service is
 required.
 
+The recommended self-hosted web path is a Cloudflare-proxied custom domain in
+front of one Railway Singapore replica. The repository-root `Dockerfile`,
+legacy `railway.json`, and the app's standalone Next.js output support that topology;
+follow [`docs/CLOUDFLARE_RAILWAY.md`](docs/CLOUDFLARE_RAILWAY.md) for the exact
+DNS, TLS, cache, and trusted-client-IP settings.
+
 For Vercel, deploy one project with Root Directory
 `0xNothing-zkLTC-Testnet/apps/web`. The checked public LitVM testnet values are
 built in, while matching `NEXT_PUBLIC_*` variables can override them when a

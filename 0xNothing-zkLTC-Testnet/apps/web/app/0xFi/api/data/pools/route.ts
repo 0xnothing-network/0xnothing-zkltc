@@ -20,6 +20,7 @@ import { loadPairTail } from "@fi/lib/server/rpcTail";
 import { tokenImageUrl } from "@fi/lib/tokenImage";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { hasPositiveBigInt, nonNegativeBigInt } from "@/lib/integer";
+import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
 type PoolRow = Omit<PoolPoint, "id" | "token0" | "token1" | "totalSupply"> & {
   id: string;
@@ -708,7 +709,7 @@ function loadPoolsOnce(): Promise<DataEnvelope<PoolPoint[]>> {
 function poolsResponse(envelope: DataEnvelope<PoolPoint[]>, cacheStatus: "HIT" | "MISS" | "COALESCED" | "STALE") {
   return NextResponse.json(envelope, {
     headers: {
-      "Cache-Control": POOLS_CACHE_CONTROL,
+      ...publicCdnCacheHeaders(POOLS_CACHE_CONTROL, 10, 30),
       "X-0xFi-Cache": cacheStatus,
     },
   });

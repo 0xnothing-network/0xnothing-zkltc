@@ -3,6 +3,7 @@ import { PixelNFTABI } from "@/lib/abi";
 import { PIXEL_NFT_CONTRACT_ADDRESS, publicClient } from "@/lib/contract";
 import { getPixelImageUrl } from "@/lib/pixelImage";
 import { normalizeUint256TokenId } from "@/lib/tokenId";
+import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
 export const runtime = "nodejs";
 export const revalidate = 60;
@@ -30,11 +31,17 @@ export async function GET(request: Request) {
   return NextResponse.json(
     { tokenId, imageUrl },
     {
-      headers: {
-        "Cache-Control": imageUrl
-          ? "public, s-maxage=31536000, stale-while-revalidate=86400"
-          : "public, s-maxage=60, stale-while-revalidate=60",
-      },
+      headers: imageUrl
+        ? publicCdnCacheHeaders(
+            "public, s-maxage=31536000, stale-while-revalidate=86400",
+            31_536_000,
+            86_400,
+          )
+        : publicCdnCacheHeaders(
+            "public, s-maxage=60, stale-while-revalidate=60",
+            60,
+            60,
+          ),
     },
   );
 }

@@ -3,6 +3,7 @@ import { getAddress, type Address } from "viem";
 import { getPumpHolders } from "@/features/pump/server/data";
 import { withPumpCache } from "@/features/pump/server/cache";
 import { boundedIntegerParam } from "@/features/pump/server/request";
+import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +33,11 @@ export async function GET(request: Request) {
       { ttlMs: 3_000, staleMs: 12_000 },
     );
     return NextResponse.json(payload, {
-      headers: { "Cache-Control": "public, s-maxage=3, stale-while-revalidate=12" },
+      headers: publicCdnCacheHeaders(
+        "public, s-maxage=3, stale-while-revalidate=12",
+        3,
+        12,
+      ),
     });
   } catch (error) {
     console.error("[pump/holders] holder load failed:", error);

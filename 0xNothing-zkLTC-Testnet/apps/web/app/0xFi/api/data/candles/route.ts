@@ -8,6 +8,7 @@ import { diaOracleAdapterAbi } from "@fi/lib/abis/dia";
 import { canonicalOracleMarketForIdentifier } from "@fi/lib/canonicalMarkets";
 import { decimal, isFactoryPair, loadPairTail, pairForTokens, pairTokenMetadata } from "@fi/lib/server/rpcTail";
 import { createBoundedCache } from "@/lib/boundedCache";
+import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
 const PERIODS = { "5m": 300, "1h": 3_600, "4h": 14_400, "1d": 86_400 } as const;
 type CandlePeriod = keyof typeof PERIODS;
@@ -48,7 +49,7 @@ class CandleRouteError extends Error {
 function candlesResponse(envelope: DataEnvelope<CandlePoint[]>, cacheStatus: string): NextResponse {
   return NextResponse.json(envelope, {
     headers: {
-      "Cache-Control": CANDLES_CACHE_CONTROL,
+      ...publicCdnCacheHeaders(CANDLES_CACHE_CONTROL, 10, 30),
       "X-0xFi-Cache": cacheStatus,
     },
   });

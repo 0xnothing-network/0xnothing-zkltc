@@ -15,6 +15,7 @@ import {
 } from "@/lib/marketplaceSubgraph";
 import { fetchValidatedErc721Metadata } from "@/lib/erc721Metadata.server";
 import { createBoundedCache } from "@/lib/boundedCache";
+import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,11 +59,13 @@ const pixelTokenCache = createBoundedCache<TokenDTO | null>({
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const force = searchParams.get("force") === "1";
-  const responseHeaders = {
-    "Cache-Control": force
-      ? "private, no-store, max-age=0, must-revalidate"
-      : "public, max-age=0, s-maxage=2, stale-while-revalidate=8",
-  };
+  const responseHeaders = force
+    ? { "Cache-Control": "private, no-store, max-age=0, must-revalidate" }
+    : publicCdnCacheHeaders(
+        "public, max-age=0, s-maxage=2, stale-while-revalidate=8",
+        2,
+        8,
+      );
   const cached = payloadCache.entry(PAYLOAD_CACHE_KEY);
 
   if (!force && cached && cached.ageMs < LISTING_TTL) {

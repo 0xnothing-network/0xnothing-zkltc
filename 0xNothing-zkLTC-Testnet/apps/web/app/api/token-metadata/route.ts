@@ -8,6 +8,7 @@ import {
 } from "@/lib/marketplaceSubgraph";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { normalizeUint256TokenId } from "@/lib/tokenId";
+import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
 export const runtime = "nodejs";
 export const revalidate = 30;
@@ -72,9 +73,11 @@ export async function GET(request: Request) {
     return NextResponse.json(
       { tokens: result },
       {
-        headers: {
-          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=30",
-        },
+        headers: publicCdnCacheHeaders(
+          "public, s-maxage=30, stale-while-revalidate=30",
+          30,
+          30,
+        ),
       },
     );
   } catch (err) {

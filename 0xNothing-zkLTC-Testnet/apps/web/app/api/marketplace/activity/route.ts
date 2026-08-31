@@ -7,6 +7,7 @@ import {
 } from "@/lib/marketplaceSubgraph";
 import { fetchMarketplaceActivityFromOnchain } from "@/lib/onchainMarketplace";
 import { createBoundedCache } from "@/lib/boundedCache";
+import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,11 +30,13 @@ export async function GET(request: Request) {
   const skip = clampNumber(searchParams.get("skip"), 0, 10_000, 0);
   const eventTypes = parseEventTypes(searchParams.get("type"));
   const force = searchParams.get("force") === "1";
-  const responseHeaders = {
-    "Cache-Control": force
-      ? "private, no-store, max-age=0, must-revalidate"
-      : "public, max-age=0, s-maxage=2, stale-while-revalidate=8",
-  };
+  const responseHeaders = force
+    ? { "Cache-Control": "private, no-store, max-age=0, must-revalidate" }
+    : publicCdnCacheHeaders(
+        "public, max-age=0, s-maxage=2, stale-while-revalidate=8",
+        2,
+        8,
+      );
   const cacheKey = `${limit}:${skip}:${eventTypes.join(",") || "all"}`;
   const cached = activityCache.entry(cacheKey);
 

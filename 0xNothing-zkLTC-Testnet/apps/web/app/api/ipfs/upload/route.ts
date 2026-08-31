@@ -316,6 +316,7 @@ function clientIp(request: Request): string {
     request,
     process.env.UPLOAD_TRUSTED_PROXY_CLIENT_IP_HEADER,
     process.env.VERCEL === "1",
+    process.env.TRUSTED_PROXY_SHARED_SECRET,
   );
 }
 

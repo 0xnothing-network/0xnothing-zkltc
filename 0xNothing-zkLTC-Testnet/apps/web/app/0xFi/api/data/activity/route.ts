@@ -6,6 +6,7 @@ import { queryGoldsky, unconfiguredEnvelope } from "@fi/lib/server/goldsky";
 import { isFactoryPair, loadPairTail, pairForTokens, pairTokenMetadata } from "@fi/lib/server/rpcTail";
 import { deployment } from "@fi/config/deployment";
 import { createBoundedCache } from "@/lib/boundedCache";
+import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
 const QUERY = `
   query Activity($pool: Bytes!, $first: Int!) {
@@ -26,9 +27,11 @@ type Result = { swaps?: SwapRow[]; liquidityEvents?: LiquidityRow[] };
 const CACHE_TTL_MS = 12_000;
 const STALE_TTL_MS = 60_000;
 const MAX_CACHE_ENTRIES = 128;
-const CACHE_HEADERS = {
-  "Cache-Control": "public, s-maxage=10, stale-while-revalidate=30",
-};
+const CACHE_HEADERS = publicCdnCacheHeaders(
+  "public, s-maxage=10, stale-while-revalidate=30",
+  10,
+  30,
+);
 
 type ActivityEnvelope = DataEnvelope<ActivityPoint[]>;
 
