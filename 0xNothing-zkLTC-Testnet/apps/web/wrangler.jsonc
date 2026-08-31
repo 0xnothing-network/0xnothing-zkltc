@@ -5,6 +5,12 @@
   "compatibility_date": "2026-08-31",
   "compatibility_flags": ["nodejs_compat"],
   "keep_vars": true,
+  "routes": [
+    {
+      "pattern": "0xnothing.app",
+      "custom_domain": true
+    }
+  ],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -14,6 +20,7 @@
   },
   "vars": {
     "CLOUDFLARE_WORKERS": "true",
+    "UPLOAD_SIGNING_DOMAIN": "0xnothing.app",
     "UPLOAD_TRUSTED_PROXY_CLIENT_IP_HEADER": "cf-connecting-ip",
     "FI_TRUSTED_PROXY_CLIENT_IP_HEADER": "cf-connecting-ip"
   },
