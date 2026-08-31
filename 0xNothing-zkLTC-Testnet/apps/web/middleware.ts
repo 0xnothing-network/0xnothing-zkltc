@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { trustedProxyRequest } from "@/lib/server/clientIp";
+import { trustedProxyRequest } from "@/lib/server/proxyAuth";
 
 const LEGACY_PUMP_PATH = "/0xpump";
 const CANONICAL_PUMP_PATH = "/0xPump";
@@ -30,7 +30,3 @@ export function middleware(request: NextRequest) {
   url.pathname = `${CANONICAL_PUMP_PATH}${pathname.slice(LEGACY_PUMP_PATH.length)}`;
   return NextResponse.redirect(url, 308);
 }
-
-export const config = {
-  runtime: "nodejs",
-};

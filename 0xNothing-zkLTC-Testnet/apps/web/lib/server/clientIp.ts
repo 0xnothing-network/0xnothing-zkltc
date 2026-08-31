@@ -1,30 +1,19 @@
-import { createHash, timingSafeEqual } from "node:crypto";
 import { isIP } from "node:net";
+import { trustedProxyRequest } from "./proxyAuth.ts";
+
+export { trustedProxyRequest } from "./proxyAuth.ts";
 
 const TRUSTED_HEADER_NAME = /^[a-z0-9-]{1,64}$/;
 const CLOUDFLARE_CLIENT_IP_HEADER = "cf-connecting-ip";
-const TRUSTED_PROXY_SECRET_HEADER = "x-0xnothing-proxy-secret";
-
-export function trustedProxyRequest(
-  request: Request,
-  configuredSecret: string | undefined,
-): boolean {
-  const expected = configuredSecret?.trim();
-  if (!expected) return true;
-
-  const presented = request.headers.get(TRUSTED_PROXY_SECRET_HEADER)?.trim();
-  if (!presented) return false;
-
-  const expectedDigest = createHash("sha256").update(expected, "utf8").digest();
-  const presentedDigest = createHash("sha256").update(presented, "utf8").digest();
-  return timingSafeEqual(expectedDigest, presentedDigest);
-}
-
 function configuredProxyHeaderIsTrusted(
   request: Request,
   configuredHeader: string,
   configuredSecret: string | undefined,
+  trustCloudflareWorkerHeader: boolean,
 ): boolean {
+  if (configuredHeader === CLOUDFLARE_CLIENT_IP_HEADER && trustCloudflareWorkerHeader) {
+    return true;
+  }
   const expected = configuredSecret?.trim();
   if (!expected) return configuredHeader !== CLOUDFLARE_CLIENT_IP_HEADER;
   return trustedProxyRequest(request, expected);
@@ -75,12 +64,18 @@ export function trustedProxyClientKey(
   configuredHeaderValue: string | undefined,
   useVercelHeaders: boolean,
   configuredProxySecret?: string,
+  trustCloudflareWorkerHeader = false,
 ): string {
   const configuredHeader = configuredHeaderValue?.trim().toLowerCase();
   if (
     configuredHeader
     && TRUSTED_HEADER_NAME.test(configuredHeader)
-    && configuredProxyHeaderIsTrusted(request, configuredHeader, configuredProxySecret)
+    && configuredProxyHeaderIsTrusted(
+      request,
+      configuredHeader,
+      configuredProxySecret,
+      trustCloudflareWorkerHeader,
+    )
   ) {
     const value = request.headers.get(configuredHeader);
     const address = configuredHeader.includes("forwarded")

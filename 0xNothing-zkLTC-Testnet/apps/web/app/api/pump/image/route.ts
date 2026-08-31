@@ -2,7 +2,10 @@ import { PUMP_MAX_IMAGE_BYTES, validatePumpImage } from "@/features/pump/imageVa
 import { normalizePumpIpfsPath } from "@/features/pump/config";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { readLimitedBytes } from "@/lib/server/readLimitedBytes";
-import sharp from "sharp";
+import {
+  hasSafeRasterDimensions,
+  readRasterImageMetadata,
+} from "@/lib/server/rasterImageMetadata";
 
 export const runtime = "nodejs";
 
@@ -127,7 +130,7 @@ async function fetchPumpImage(
     const body = bytes.buffer as ArrayBuffer;
     const validationError = await validatePumpImage(new Blob([body], { type: contentType }));
     if (validationError) throw new Error(validationError);
-    await validateImageDimensions(body);
+    validateImageDimensions(body, contentType);
     return { body, contentType };
   } catch (error) {
     controller.abort();
@@ -176,21 +179,9 @@ function assertAllowedGateway(url: URL): void {
   }
 }
 
-async function validateImageDimensions(body: ArrayBuffer): Promise<void> {
-  const metadata = await sharp(Buffer.from(body), {
-    limitInputPixels: MAX_IMAGE_PIXELS,
-    sequentialRead: true,
-  }).metadata();
-  const width = metadata.width ?? 0;
-  const height = metadata.height ?? 0;
-  if (
-    width <= 0
-    || height <= 0
-    || width > MAX_IMAGE_DIMENSION
-    || height > MAX_IMAGE_DIMENSION
-    || width * height > MAX_IMAGE_PIXELS
-    || (metadata.pages ?? 1) > 1
-  ) {
+function validateImageDimensions(body: ArrayBuffer, contentType: string): void {
+  const metadata = readRasterImageMetadata(new Uint8Array(body), contentType);
+  if (!hasSafeRasterDimensions(metadata, MAX_IMAGE_DIMENSION, MAX_IMAGE_PIXELS)) {
     throw new Error("IPFS image dimensions are unsafe");
   }
 }

@@ -62,6 +62,17 @@ test("trustedProxyClientKey never trusts Cloudflare client IPs without origin au
   );
 });
 
+test("trustedProxyClientKey trusts Cloudflare client IPs inside the Worker runtime", () => {
+  const request = new Request("https://example.test", {
+    headers: { "cf-connecting-ip": "203.0.113.8" },
+  });
+
+  assert.equal(
+    trustedProxyClientKey(request, "cf-connecting-ip", false, undefined, true),
+    "cf-connecting-ip:203.0.113.8",
+  );
+});
+
 test("trustedProxyClientKey rejects a configured proxy header without the shared secret", () => {
   const missingSecret = new Request("https://example.test", {
     headers: { "cf-connecting-ip": "203.0.113.9" },
@@ -92,4 +103,14 @@ test("trustedProxyRequest enables the guard only when a secret is configured", (
   assert.equal(trustedProxyRequest(request, "  "), true);
   assert.equal(trustedProxyRequest(request, "expected-secret"), true);
   assert.equal(trustedProxyRequest(request, "different-secret"), false);
+});
+
+test("trustedProxyRequest rejects oversized proxy secrets before comparison", () => {
+  const oversized = "x".repeat(257);
+  const request = new Request("https://example.test", {
+    headers: { "x-0xnothing-proxy-secret": oversized },
+  });
+
+  assert.equal(trustedProxyRequest(request, oversized), false);
+  assert.equal(trustedProxyRequest(request, "expected-secret"), false);
 });

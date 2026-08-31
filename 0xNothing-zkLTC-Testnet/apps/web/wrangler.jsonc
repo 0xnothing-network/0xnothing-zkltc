@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "0xnothing-zkltc",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-08-31",
+  "compatibility_flags": ["nodejs_compat"],
+  "keep_vars": true,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "images": {
+    "binding": "IMAGES"
+  },
+  "vars": {
+    "CLOUDFLARE_WORKERS": "true",
+    "UPLOAD_TRUSTED_PROXY_CLIENT_IP_HEADER": "cf-connecting-ip",
+    "FI_TRUSTED_PROXY_CLIENT_IP_HEADER": "cf-connecting-ip"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

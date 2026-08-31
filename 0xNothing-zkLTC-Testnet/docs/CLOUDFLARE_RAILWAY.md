@@ -1,14 +1,17 @@
 # Cloudflare + Railway web deployment
 
-This runbook keeps the existing Node.js runtime intact:
+This runbook covers the Cloudflare-to-Railway target and keeps its existing
+Node.js runtime intact. A separate direct Workers target is documented in
+[`CLOUDFLARE_WORKERS.md`](./CLOUDFLARE_WORKERS.md); the two targets can coexist.
 
 ```text
 visitor -> Cloudflare DNS/CDN/WAF -> Railway Singapore -> Next.js standalone
 ```
 
-Do not add a Pages or Workers adapter to this app. The web service uses native
-`sharp`, server-side uploads, and process-local replay/rate-limit state. Run one
-Railway replica until that state has moved to shared durable storage.
+Do not use the Workers adapter when starting the Railway service. Railway must
+continue to build the Next.js standalone output and start its generated
+`server.js`. Run one Railway replica until replay/rate-limit state has moved to
+shared durable storage.
 
 ## 1. Deploy the origin
 
