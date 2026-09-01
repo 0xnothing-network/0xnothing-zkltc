@@ -34,16 +34,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Invalid pagination parameters" }, { status: 400 });
   }
   const key = `trades:${token?.toLowerCase() ?? "all"}:${trader?.toLowerCase() ?? "all"}:${limit}:${skip}`;
-  const payload = await withPumpCache(
-    key,
-    () => getPumpTrades({ token, trader, limit, skip }),
-    { ttlMs: 1_000, staleMs: 5_000 },
-  );
-  return NextResponse.json(payload, {
-    headers: publicCdnCacheHeaders(
-      "public, s-maxage=1, stale-while-revalidate=4",
-      1,
-      4,
-    ),
-  });
+  try {
+    const payload = await withPumpCache(
+      key,
+      () => getPumpTrades({ token, trader, limit, skip }),
+      { ttlMs: 1_000, staleMs: 5_000 },
+    );
+    return NextResponse.json(payload, {
+      headers: publicCdnCacheHeaders(
+        "public, s-maxage=1, stale-while-revalidate=4",
+        1,
+        4,
+      ),
+    });
+  } catch (error) {
+    console.error("[pump/trades] trade load failed:", error);
+    return NextResponse.json({ error: "Trade data is temporarily unavailable" }, { status: 503 });
+  }
 }

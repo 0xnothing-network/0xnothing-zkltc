@@ -350,7 +350,13 @@ function normalizeUploadDomain(value: string): string | null {
 function pruneTransientState(now: number) {
   requestRateLimiter.prune(now);
   for (const [signature, timestamp] of consumedSignatures) {
-    if (timestamp <= now - SIGNATURE_TTL_MS) consumedSignatures.delete(signature);
+    // A signature stays valid until `signedAt + SIGNATURE_TTL_MS`, and it may be
+    // consumed up to FUTURE_CLOCK_SKEW_MS *before* `signedAt`. Retaining only
+    // one TTL past the consumption stamp therefore drops the record while the
+    // signature itself is still accepted, reopening it for replay.
+    if (timestamp <= now - SIGNATURE_TTL_MS - FUTURE_CLOCK_SKEW_MS) {
+      consumedSignatures.delete(signature);
+    }
   }
 }
 

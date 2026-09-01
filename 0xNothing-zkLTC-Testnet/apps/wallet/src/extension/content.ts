@@ -8,7 +8,11 @@ import { targetsOrigin, type ContentMessage, isPageMessage, TO_PAGE } from "./pr
  * frame, never from the message body, so a page cannot claim to be another site.
  */
 function reply(message: ContentMessage): void {
-  window.postMessage(message, window.location.origin);
+  // "/" is the same-origin target: identical in effect to the frame's own origin,
+  // but it also holds in a sandboxed frame, where `location.origin` is the string
+  // "null" and postMessage would throw — taking the reply, and the page's pending
+  // request, down with it.
+  window.postMessage(message, "/");
 }
 
 window.addEventListener("message", (event: MessageEvent) => {

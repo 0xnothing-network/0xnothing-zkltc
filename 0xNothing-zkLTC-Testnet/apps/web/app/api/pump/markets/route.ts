@@ -24,21 +24,30 @@ export async function GET(request: Request) {
     }
   }
   const limit = boundedIntegerParam(params, "limit", 60, 1, 200);
-  const skip = boundedIntegerParam(params, "skip", 0, 0, 1_000_000);
+  // Matches the /pump/trades bound. A deeper skip cannot be reached by paging
+  // through 60-row pages, and every distinct value mints its own cache key.
+  const skip = boundedIntegerParam(params, "skip", 0, 0, 10_000);
   if (limit === undefined || skip === undefined) {
     return NextResponse.json({ error: "Invalid pagination parameters" }, { status: 400 });
   }
   const key = `markets:${creator?.toLowerCase() ?? "all"}:${limit}:${skip}:${sort}`;
-  const payload = await withPumpCache(
-    key,
-    () => getPumpMarkets({ limit, skip, creator, sort }),
-    { ttlMs: 2_000, staleMs: 8_000 },
-  );
-  return NextResponse.json(payload, {
-    headers: publicCdnCacheHeaders(
-      "public, s-maxage=2, stale-while-revalidate=8",
-      2,
-      8,
-    ),
-  });
+  try {
+    const payload = await withPumpCache(
+      key,
+      () => getPumpMarkets({ limit, skip, creator, sort }),
+      { ttlMs: 2_000, staleMs: 8_000 },
+    );
+    return NextResponse.json(payload, {
+      headers: publicCdnCacheHeaders(
+        "public, s-maxage=2, stale-while-revalidate=8",
+        2,
+        8,
+      ),
+    });
+  } catch (error) {
+    // Subgraph and RPC failure text names internal hosts and status codes; only
+    // the curated line goes out, as on /pump/holders.
+    console.error("[pump/markets] market load failed:", error);
+    return NextResponse.json({ error: "Market data is temporarily unavailable" }, { status: 503 });
+  }
 }

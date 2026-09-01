@@ -32,16 +32,21 @@ export async function GET(request: Request) {
   if (limit === undefined) {
     return NextResponse.json({ error: "Invalid limit parameter" }, { status: 400 });
   }
-  const payload = await withPumpCache(
-    `candles:${token.toLowerCase()}:${period}:${limit}`,
-    () => getPumpCandles({ token, period, limit }),
-    { ttlMs: 2_000, staleMs: 8_000 },
-  );
-  return NextResponse.json(payload, {
-    headers: publicCdnCacheHeaders(
-      "public, s-maxage=2, stale-while-revalidate=8",
-      2,
-      8,
-    ),
-  });
+  try {
+    const payload = await withPumpCache(
+      `candles:${token.toLowerCase()}:${period}:${limit}`,
+      () => getPumpCandles({ token, period, limit }),
+      { ttlMs: 2_000, staleMs: 8_000 },
+    );
+    return NextResponse.json(payload, {
+      headers: publicCdnCacheHeaders(
+        "public, s-maxage=2, stale-while-revalidate=8",
+        2,
+        8,
+      ),
+    });
+  } catch (error) {
+    console.error("[pump/candles] candle load failed:", error);
+    return NextResponse.json({ error: "Candle data is temporarily unavailable" }, { status: 503 });
+  }
 }

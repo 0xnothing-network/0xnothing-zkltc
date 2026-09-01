@@ -412,8 +412,14 @@ async function switchNetwork(requestedChainId: string): Promise<Answer> {
   return { result: null };
 }
 
-function sameAccount(a: string | undefined, b: string | undefined): boolean {
-  return !!a && !!b && a.toLowerCase() === b.toLowerCase();
+/**
+ * `a` is `unknown` on purpose: the signer slot of `personal_sign` and of the
+ * typed-data methods is shape-checked but not type-checked upstream, so a page
+ * can put an object there. Anything that is not a string simply does not match
+ * the connected account.
+ */
+function sameAccount(a: unknown, b: string | undefined): boolean {
+  return typeof a === "string" && !!b && a.toLowerCase() === b.toLowerCase();
 }
 
 const PROVIDER_EVENTS = new Set(["accountsChanged", "chainChanged"]);

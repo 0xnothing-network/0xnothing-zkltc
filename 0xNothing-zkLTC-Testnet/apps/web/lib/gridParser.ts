@@ -105,9 +105,22 @@ export function pixelDataToJSON(pixelData: string[][], gridSize: number): string
 
 type SvgRun = { x: number; y: number; width: number; color: string };
 
+/**
+ * Ceiling on the raw on-chain blob this renderer will walk, mirroring the
+ * wallet's port of the same function. Valid data cannot reach it: a full 256×256
+ * grid is 786 434 packed characters, and ~1.2 MB in the verbose text form.
+ */
+const MAX_PIXEL_DATA_LENGTH = 2_000_000;
+
 /** Render immutable on-chain pixel data as compact SVG markup. */
 export function pixelDataToSVGMarkup(pixelData: string, gridSize: number): string {
-  if (!pixelData || !Number.isInteger(gridSize) || gridSize <= 0 || gridSize > 256) return "";
+  if (
+    !pixelData
+    || pixelData.length > MAX_PIXEL_DATA_LENGTH
+    || !Number.isInteger(gridSize)
+    || gridSize <= 0
+    || gridSize > 256
+  ) return "";
 
   const runs = /^(0x)?[0-9a-fA-F]+$/.test(pixelData)
     ? packedDataToRuns(pixelData, gridSize)
@@ -131,10 +144,14 @@ function packedDataToRuns(pixelData: string, gridSize: number): SvgRun[] {
   if (clean.length === 0 || clean.length % 12 !== 0) return [];
   const runs: SvgRun[] = [];
   for (let index = 0; index < clean.length; index += 12) {
+    // One run per cell is already the worst case a grid can hold; anything past
+    // that is padding, and walking it only grows the SVG.
+    if (runs.length >= gridSize * gridSize) break;
     const x = parseInt(clean.slice(index, index + 2), 16);
     const y = parseInt(clean.slice(index + 2, index + 4), 16);
     const count = parseInt(clean.slice(index + 4, index + 6), 16);
     const color = `#${clean.slice(index + 6, index + 12).toUpperCase()}`;
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(count)) continue;
     if (x >= gridSize || y >= gridSize || count <= 0) continue;
     runs.push({ x, y, width: Math.min(count, gridSize - x), color });
   }

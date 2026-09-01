@@ -20,6 +20,13 @@ const contentSecurityPolicy = [
 
 const securityHeaders = [
   { key: "Content-Security-Policy", value: contentSecurityPolicy },
+  // The production CSP already upgrades subresources; this closes the remaining
+  // gap — the very first navigation typed as http://. Omitted in development so
+  // a local http://localhost origin is not pinned to HTTPS for two years.
+  // `preload` is deliberately absent: that list is slow to leave.
+  ...(isDevelopment
+    ? []
+    : [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }]),
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
