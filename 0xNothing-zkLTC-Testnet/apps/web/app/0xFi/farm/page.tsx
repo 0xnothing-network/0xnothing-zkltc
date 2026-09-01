@@ -1,18 +1,13 @@
-import { FarmDashboard } from "@fi/components/FarmDashboard";
-import { PageHeading } from "@fi/components/UiStates";
+import { permanentRedirect } from "next/navigation";
 
-export default async function FarmPage({
+export default async function LegacyFarmRoute({
   searchParams,
 }: {
   searchParams: Promise<{ pair?: string | string[] }>;
 }) {
   const query = await searchParams;
-  const initialPair = typeof query.pair === "string" ? query.pair : undefined;
-
-  return (
-    <div className="fi-page">
-      <PageHeading title="Earn" />
-      <FarmDashboard initialPair={initialPair} />
-    </div>
-  );
+  const pair = typeof query.pair === "string" && /^[a-zA-Z0-9-]{1,64}$/.test(query.pair)
+    ? `?pair=${encodeURIComponent(query.pair)}`
+    : "";
+  permanentRedirect(`/0xFi/earn${pair}`);
 }

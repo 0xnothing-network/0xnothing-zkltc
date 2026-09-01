@@ -65,6 +65,10 @@ export const deployment = {
       deploymentOverride(process.env.NEXT_PUBLIC_GAUGE_FACTORY_ADDRESS, process.env.NEXT_PUBLIC_FARM_FACTORY_ADDRESS),
       TESTNET.farmFactory,
     ),
+    nusdPointsStaking: configuredAddress(
+      deploymentOverride(process.env.NEXT_PUBLIC_0XFI_POINTS_STAKING_ADDRESS),
+      TESTNET.nusdPointsStaking,
+    ),
     synthFeeGaugeFactory: configuredAddress(
       deploymentOverride(process.env.NEXT_PUBLIC_SYNTH_FEE_GAUGE_FACTORY_ADDRESS),
       TESTNET.synthFeeGaugeFactory,

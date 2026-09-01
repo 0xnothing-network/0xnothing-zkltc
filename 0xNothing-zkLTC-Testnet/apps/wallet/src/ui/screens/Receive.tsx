@@ -23,7 +23,7 @@ function saveQr(dataUrl: string, address: string): void {
 }
 
 export function Receive(): ReactNode {
-  const { address, network } = useWallet();
+  const { address, network, notify } = useWallet();
   const { copied, copy } = useCopy();
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(address !== null);
@@ -95,7 +95,13 @@ export function Receive(): ReactNode {
             ))}
           </div>
         </section>
-        <Button variant="primary" block onClick={() => void copy(address)}>
+        <Button
+          variant="primary"
+          block
+          onClick={() => void copy(address).then((ok) => {
+            if (!ok) notify(t("common.copyFailed"), "error");
+          })}
+        >
           {copied ? `${t("common.copied")} ✓` : t("recv.copyAddress")}
         </Button>
         {qrDataUrl || network.explorerUrl ? (

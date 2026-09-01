@@ -81,13 +81,22 @@ function validatedBlob(blob: EncryptedBlob): {
   ) {
     throw new Error("Invalid encrypted wallet data");
   }
-  const salt = decodedBase64(value.salt, SALT_BYTES);
-  const iv = decodedBase64(value.iv, IV_BYTES);
-  const data = decodedBase64(value.data, MAX_CIPHERTEXT_BYTES);
-  if (salt.length !== SALT_BYTES || iv.length !== IV_BYTES || data.length < GCM_TAG_BYTES) {
-    throw new Error("Invalid encrypted wallet data");
+  const decoded: Uint8Array[] = [];
+  try {
+    const salt = decodedBase64(value.salt, SALT_BYTES);
+    decoded.push(salt);
+    const iv = decodedBase64(value.iv, IV_BYTES);
+    decoded.push(iv);
+    const data = decodedBase64(value.data, MAX_CIPHERTEXT_BYTES);
+    decoded.push(data);
+    if (salt.length !== SALT_BYTES || iv.length !== IV_BYTES || data.length < GCM_TAG_BYTES) {
+      throw new Error("Invalid encrypted wallet data");
+    }
+    return { blob: value as unknown as EncryptedBlob, salt, iv, data };
+  } catch (error) {
+    for (const bytes of decoded) bytes.fill(0);
+    throw error;
   }
-  return { blob: value as unknown as EncryptedBlob, salt, iv, data };
 }
 
 function randomBytes(length: number): Uint8Array {
@@ -109,49 +118,69 @@ export async function deriveKey(
   ) {
     throw new Error("Invalid key derivation parameters");
   }
-  const material = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(password),
-    "PBKDF2",
-    false,
-    ["deriveKey"],
-  );
-  return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: salt as BufferSource, iterations, hash: "SHA-256" },
-    material,
-    { name: "AES-GCM", length: 256 },
-    // extractable: the raw key is handed to session storage so the wallet can
-    // stay unlocked across popup closes without keeping the password anywhere.
-    true,
-    ["encrypt", "decrypt"],
-  );
+  const passwordBytes = new TextEncoder().encode(password);
+  try {
+    const material = await crypto.subtle.importKey(
+      "raw",
+      passwordBytes,
+      "PBKDF2",
+      false,
+      ["deriveKey"],
+    );
+    return await crypto.subtle.deriveKey(
+      { name: "PBKDF2", salt: salt as BufferSource, iterations, hash: "SHA-256" },
+      material,
+      { name: "AES-GCM", length: 256 },
+      // extractable: the raw key is handed to session storage so the wallet can
+      // stay unlocked across popup closes without keeping the password anywhere.
+      true,
+      ["encrypt", "decrypt"],
+    );
+  } finally {
+    passwordBytes.fill(0);
+  }
 }
 
 export async function encryptJson(value: unknown, password: string): Promise<EncryptedBlob> {
   const salt = randomBytes(SALT_BYTES);
   const iv = randomBytes(IV_BYTES);
-  const key = await deriveKey(password, salt);
   const plaintext = new TextEncoder().encode(JSON.stringify(value));
-  const data = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: iv as BufferSource },
-    key,
-    plaintext,
-  );
-  return {
-    v: 1,
-    kdf: "PBKDF2-SHA256",
-    iterations: PBKDF2_ITERATIONS,
-    salt: bytesToBase64(salt),
-    iv: bytesToBase64(iv),
-    data: bytesToBase64(new Uint8Array(data)),
-  };
+  let ciphertext: Uint8Array | undefined;
+  try {
+    const key = await deriveKey(password, salt);
+    ciphertext = new Uint8Array(await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: iv as BufferSource },
+      key,
+      plaintext,
+    ));
+    return {
+      v: 1,
+      kdf: "PBKDF2-SHA256",
+      iterations: PBKDF2_ITERATIONS,
+      salt: bytesToBase64(salt),
+      iv: bytesToBase64(iv),
+      data: bytesToBase64(ciphertext),
+    };
+  } finally {
+    plaintext.fill(0);
+    ciphertext?.fill(0);
+    salt.fill(0);
+    iv.fill(0);
+  }
 }
 
 /** Throws if the password is wrong — AES-GCM tag verification fails closed. */
 export async function decryptJson<T>(blob: EncryptedBlob, password: string): Promise<T> {
   const checked = validatedBlob(blob);
-  const key = await deriveKey(password, checked.salt, checked.blob.iterations);
-  return decryptValidated<T>(checked, key);
+  try {
+    const key = await deriveKey(password, checked.salt, checked.blob.iterations);
+    return await decryptValidated<T>(checked, key);
+  } catch (error) {
+    checked.salt.fill(0);
+    checked.iv.fill(0);
+    checked.data.fill(0);
+    throw error;
+  }
 }
 
 export async function decryptWithKey<T>(blob: EncryptedBlob, key: CryptoKey): Promise<T> {
@@ -162,32 +191,55 @@ async function decryptValidated<T>(
   checked: ReturnType<typeof validatedBlob>,
   key: CryptoKey,
 ): Promise<T> {
-  const plaintext = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: checked.iv as BufferSource },
-    key,
-    checked.data as BufferSource,
-  );
-  return JSON.parse(new TextDecoder().decode(plaintext)) as T;
+  let plaintext: Uint8Array | undefined;
+  try {
+    plaintext = new Uint8Array(await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: checked.iv as BufferSource },
+      key,
+      checked.data as BufferSource,
+    ));
+    return JSON.parse(new TextDecoder().decode(plaintext)) as T;
+  } finally {
+    plaintext?.fill(0);
+    checked.salt.fill(0);
+    checked.iv.fill(0);
+    checked.data.fill(0);
+  }
 }
 
 /** Re-derives the key for an existing blob so its salt/iterations are reused. */
 export async function keyForBlob(blob: EncryptedBlob, password: string): Promise<CryptoKey> {
   const checked = validatedBlob(blob);
-  return deriveKey(password, checked.salt, checked.blob.iterations);
+  try {
+    return await deriveKey(password, checked.salt, checked.blob.iterations);
+  } finally {
+    checked.salt.fill(0);
+    checked.iv.fill(0);
+    checked.data.fill(0);
+  }
 }
 
 export async function exportKey(key: CryptoKey): Promise<string> {
-  return bytesToBase64(new Uint8Array(await crypto.subtle.exportKey("raw", key)));
+  const bytes = new Uint8Array(await crypto.subtle.exportKey("raw", key));
+  try {
+    return bytesToBase64(bytes);
+  } finally {
+    bytes.fill(0);
+  }
 }
 
 export async function importKey(raw: string): Promise<CryptoKey> {
   const bytes = decodedBase64(raw, AES_KEY_BYTES);
-  if (bytes.length !== AES_KEY_BYTES) throw new Error("Invalid session key");
-  return crypto.subtle.importKey(
-    "raw",
-    bytes as BufferSource,
-    { name: "AES-GCM", length: 256 },
-    true,
-    ["encrypt", "decrypt"],
-  );
+  try {
+    if (bytes.length !== AES_KEY_BYTES) throw new Error("Invalid session key");
+    return await crypto.subtle.importKey(
+      "raw",
+      bytes as BufferSource,
+      { name: "AES-GCM", length: 256 },
+      true,
+      ["encrypt", "decrypt"],
+    );
+  } finally {
+    bytes.fill(0);
+  }
 }

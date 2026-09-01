@@ -6,10 +6,10 @@
   "scripts": {
     "configure": "node ./scripts/configure.mjs",
     "codegen": "npm run configure && graph codegen subgraph.yaml",
-    "build": "npm run configure && graph build subgraph.yaml",
+    "build": "npm run codegen && graph build subgraph.yaml",
     "test:compile": "asc tests/mapping.test.ts --baseDir . --lib node_modules --runtime stub --noEmit",
     "test": "npm run codegen && graph test",
-    "check": "npm run codegen && npm run build && npm run test:compile",
+    "check": "npm run build && npm run test:compile",
     "deploy:check": "node ./scripts/check-deploy-ready.mjs",
     "deploy": "npm run deploy:check && npm run build && goldsky subgraph deploy zeroxpump-testnet/0.1.3 --path . --tag staging"
   },

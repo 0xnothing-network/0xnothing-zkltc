@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ZeroXFiRouter } from "../../src/amm/ZeroXFiRouter.sol";
-import { TestBase } from "../TestBase.sol";
+import { TestBase } from "../helpers/TestBase.sol";
 
 interface ILegacyLivePair {
     function sync() external;

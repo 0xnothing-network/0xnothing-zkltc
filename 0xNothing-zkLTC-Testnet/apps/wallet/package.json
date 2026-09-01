@@ -12,7 +12,7 @@
     "build:android": "node scripts/build-all.mjs && cap sync android",
     "icons": "node scripts/generate-icons.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test --experimental-strip-types tests/*.test.ts"
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test --experimental-strip-types \"tests/**/*.test.ts\""
   },
   "dependencies": {
     "@capacitor/browser": "8.0.4",

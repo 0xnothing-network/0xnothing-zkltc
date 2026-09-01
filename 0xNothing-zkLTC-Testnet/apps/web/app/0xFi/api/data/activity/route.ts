@@ -81,7 +81,8 @@ async function loadActivity(pair: string, dynamicPool?: Address): Promise<Activi
       [],
     );
   } catch (error) {
-    envelope = unconfiguredEnvelope<ActivityPoint[]>([], `Goldsky unavailable: ${error instanceof Error ? error.message : "query failed"}`);
+    console.warn("[0xFi/activity] Goldsky query failed:", error);
+    envelope = unconfiguredEnvelope<ActivityPoint[]>([], "Goldsky is temporarily unavailable.");
   }
 
   try {
@@ -105,8 +106,9 @@ async function loadActivity(pair: string, dynamicPool?: Address): Promise<Activi
     envelope.data = [...merged.values()].sort((a, b) => b.timestamp - a.timestamp || b.logIndex - a.logIndex).slice(0, 50);
     envelope.meta.rpcTail = { status: tail.capped ? "capped" : "merged", fromBlock: Number(tail.fromBlock), toBlock: Number(tail.toBlock), merged: true, eventCount: tailActivity.length };
   } catch (error) {
+    console.warn("[0xFi/activity] RPC tail failed:", error);
     envelope.meta.rpcTail.status = "unavailable";
-    envelope.warning = `${envelope.warning ? `${envelope.warning} ` : ""}RPC tail unavailable: ${error instanceof Error ? error.message : "request failed"}`;
+    envelope.warning = `${envelope.warning ? `${envelope.warning} ` : ""}RPC tail is temporarily unavailable.`;
   }
   return envelope;
 }
@@ -135,16 +137,19 @@ export async function GET(request: NextRequest) {
     } catch (error) {
       const stale = activityCache.entry(pair);
       if (stale?.fresh) {
-        const message = error instanceof Error ? error.message : "refresh failed";
+        console.warn("[0xFi/activity] refresh failed; serving cache:", error);
         return NextResponse.json({
           ...stale.value,
-          warning: `${stale.value.warning ? `${stale.value.warning} ` : ""}Activity refresh failed; showing cached data: ${message}`,
+          warning: `${stale.value.warning ? `${stale.value.warning} ` : ""}Activity refresh failed; showing cached data.`,
         }, { headers: CACHE_HEADERS });
       }
       throw error;
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Indexer query failed";
-    return NextResponse.json({ error: message }, { status: 502 });
+    console.error("[0xFi/activity] request failed:", error);
+    return NextResponse.json(
+      { error: "Activity data is temporarily unavailable" },
+      { status: 502, headers: { "Cache-Control": "no-store" } },
+    );
   }
 }

@@ -11,7 +11,7 @@ offering the action.
 
 ```text
 apps/web/                         unified 0xNothing UI for 0xPixel, 0xPump, and 0xFi
-0xFi/                             AMM, farming, lending, synths, indexer, and operations
+0xFi/                             AMM, NUSD earn, LP gauges, lending, synths, indexer, and operations
 contracts/                        Foundry contracts and tests
   src/0xpixel/reference/          exact source references for live deployments
   src/0xpump/                     bonding-curve launchpad

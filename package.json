@@ -4,6 +4,9 @@
   "private": true,
   "description": "0xPixel, 0xPump, and 0xFi workspace for LitVM testnet and future zkLTC mainnet",
   "scripts": {
+    "clean:generated": "node scripts/clean-generated.mjs",
+    "clean:generated:dry": "node scripts/clean-generated.mjs --dry-run",
+    "test:tooling": "node --test scripts/test/*.test.mjs",
     "dev": "npm --prefix 0xNothing-zkLTC-Testnet/apps/web run dev -- --port 3300",
     "dev:fi": "npm --prefix 0xNothing-zkLTC-Testnet/apps/web run dev -- --port 3300",
     "build:web": "npm --prefix 0xNothing-zkLTC-Testnet/apps/web run build",
@@ -17,7 +20,7 @@
     "test:contracts": "npm run test:contracts:testnet && npm run test:contracts:mainnet",
     "test:contracts:testnet": "forge test --root 0xNothing-zkLTC-Testnet/contracts",
     "test:contracts:mainnet": "forge test --root 0xNothing-zkLTC-Mainnet/contracts",
-    "check:pump-subgraphs": "npm run check:pump-subgraph:testnet && npm run check:pump-subgraph:mainnet",
+    "check:pump-subgraphs": "node scripts/check-pump-subgraph-parity.mjs && npm run check:pump-subgraph:testnet && npm run check:pump-subgraph:mainnet",
     "check:pump-subgraph:testnet": "npm --prefix 0xNothing-zkLTC-Testnet/subgraphs/0xpump run check",
     "check:pump-subgraph:mainnet": "npm --prefix 0xNothing-zkLTC-Mainnet/subgraphs/0xpump run check",
     "build:pump-subgraph": "npm --prefix 0xNothing-zkLTC-Testnet/subgraphs/0xpump run build",
@@ -25,6 +28,6 @@
     "check:fi:scripts": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi run check:scripts",
     "check:fi": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi run build",
     "audit:fi:report": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi run audit:live:report",
-    "verify": "npm run test:web && npm run test:contracts && npm run build:pixel-subgraph && npm run check:pump-subgraphs && npm run check:fi && npm run verify:wallet"
+    "verify": "npm run test:tooling && npm run test:web && npm run test:contracts && npm run build:pixel-subgraph && npm run check:pump-subgraphs && npm run check:fi && npm run verify:wallet"
   }
 }

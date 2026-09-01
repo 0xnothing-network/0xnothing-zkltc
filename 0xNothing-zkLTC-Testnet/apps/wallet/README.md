@@ -23,7 +23,7 @@ testnet (chain **4441**), and reuse the design tokens of the 0xFi surface in
 | `npm run build:inject` | `content.js` + `inpage.js` only, as IIFE with unhashed names. |
 | `npm run build:android` | `npm run build`, then `cap sync android`. |
 | `npm run typecheck` | `tsc --noEmit`. |
-| `npm test` | node's built-in runner over `tests/*.test.ts`. |
+| `npm test` | Node's built-in runner over recursively organized `tests/**/*.test.ts`. |
 | `npm run icons` | Regenerates `public/icons/*`. |
 
 Order matters if you run the two build halves separately: `build:app` empties

@@ -5,6 +5,7 @@ import type { WalletSettings } from "../../core/keyring/vault";
 import { isExtension, platform } from "../../core/platform/env";
 import { Button, Note, Panel, PanelBody, Row, Rows } from "../components/kit";
 import { useActionGate } from "../hooks/useActionGate";
+import { rpcPermissionPattern } from "../lib/rpcPermission";
 import { Screen } from "../components/Screen";
 import { goHome } from "../router";
 import { useWallet } from "../state/WalletContext";
@@ -36,10 +37,21 @@ function themeValue(value: string): "dark" | "light" {
 async function requestRpcPermission(rpcUrl: string): Promise<boolean> {
   if (!isExtension || typeof chrome === "undefined" || !chrome.permissions?.request) return true;
   try {
-    const origin = new URL(rpcUrl).origin;
-    return await chrome.permissions.request({ origins: [`${origin}/*`] });
+    const pattern = rpcPermissionPattern(rpcUrl);
+    return pattern !== null && await chrome.permissions.request({ origins: [pattern] });
   } catch {
     return false;
+  }
+}
+
+async function releaseRpcPermission(rpcUrl: string): Promise<void> {
+  if (!isExtension || typeof chrome === "undefined" || !chrome.permissions?.remove) return;
+  try {
+    const pattern = rpcPermissionPattern(rpcUrl);
+    if (pattern !== null) await chrome.permissions.remove({ origins: [pattern] });
+  } catch {
+    // The profile has already been removed. Permission cleanup is best-effort
+    // and must not make the saved settings appear to have failed.
   }
 }
 
@@ -77,6 +89,22 @@ export function Settings(): ReactNode {
     return true;
   });
 
+  const selectNetwork = async (networkId: string): Promise<void> => {
+    const selected = settings.customNetworks.find((entry) => entry.id === networkId);
+    await runSaving(async () => {
+      // A permission can be revoked from Chrome's extension settings after the
+      // profile was saved. Re-check it from this user gesture before selecting
+      // the RPC, rather than switching to a network that cannot be read.
+      if (selected && !(await requestRpcPermission(selected.rpcUrl))) {
+        setNetworkError(t("set.networkPermission"));
+        return false;
+      }
+      setNetworkError(null);
+      await saveSettings({ networkId });
+      return true;
+    });
+  };
+
   const addNetwork = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     const candidate = sanitizeCustomNetwork({
@@ -107,10 +135,19 @@ export function Settings(): ReactNode {
         return false;
       }
       setNetworkError(null);
-      await saveSettings({
-        customNetworks: [...settings.customNetworks, candidate],
-        networkId: candidate.id,
-      });
+      try {
+        await saveSettings({
+          customNetworks: [...settings.customNetworks, candidate],
+          networkId: candidate.id,
+        });
+      } catch (cause) {
+        const candidatePattern = rpcPermissionPattern(candidate.rpcUrl);
+        const usedBySavedProfile = candidatePattern !== null && settings.customNetworks.some(
+          (entry) => rpcPermissionPattern(entry.rpcUrl) === candidatePattern,
+        );
+        if (!usedBySavedProfile) await releaseRpcPermission(candidate.rpcUrl);
+        throw cause;
+      }
       return true;
     });
     if (!saved) return;
@@ -126,11 +163,18 @@ export function Settings(): ReactNode {
   };
 
   const removeNetwork = async (id: string): Promise<void> => {
+    const removed = settings.customNetworks.find((entry) => entry.id === id);
     const next = settings.customNetworks.filter((entry) => entry.id !== id);
-    await persist({
+    const saved = await persist({
       customNetworks: next,
       networkId: settings.networkId === id ? LITVM_NETWORK.id : settings.networkId,
     });
+    if (!saved || !removed) return;
+    const removedPattern = rpcPermissionPattern(removed.rpcUrl);
+    const stillUsed = removedPattern !== null && next.some(
+      (entry) => rpcPermissionPattern(entry.rpcUrl) === removedPattern,
+    );
+    if (!stillUsed) await releaseRpcPermission(removed.rpcUrl);
   };
 
   return (
@@ -242,8 +286,7 @@ export function Settings(): ReactNode {
                 disabled={saving}
                 aria-busy={saving}
                 onChange={(event) => {
-                  setNetworkError(null);
-                  void persist({ networkId: event.target.value });
+                  void selectNetwork(event.target.value);
                 }}
               >
                 <option value={LITVM_NETWORK.id}>{LITVM_NETWORK.name}</option>
@@ -327,16 +370,35 @@ export function Settings(): ReactNode {
                       />
                     </label>
                   </div>
-                  <label className="w-field">
-                    <span className="w-label">{t("set.nativeName")}</span>
-                    <input
-                      className="w-input"
-                      value={draft.nativeName}
-                      disabled={saving}
-                      autoComplete="off"
-                      onChange={(event) => setDraft((current) => ({ ...current, nativeName: event.target.value }))}
-                    />
-                  </label>
+                  <div className="w-form-grid">
+                    <label className="w-field">
+                      <span className="w-label">{t("set.nativeName")}</span>
+                      <input
+                        className="w-input"
+                        value={draft.nativeName}
+                        disabled={saving}
+                        autoComplete="off"
+                        onChange={(event) => setDraft((current) => ({
+                          ...current,
+                          nativeName: event.target.value,
+                        }))}
+                      />
+                    </label>
+                    <label className="w-field">
+                      <span className="w-label">{t("tok.decimals")}</span>
+                      <input
+                        className="w-input"
+                        value={draft.nativeDecimals}
+                        disabled={saving}
+                        inputMode="numeric"
+                        autoComplete="off"
+                        onChange={(event) => setDraft((current) => ({
+                          ...current,
+                          nativeDecimals: event.target.value,
+                        }))}
+                      />
+                    </label>
+                  </div>
                   <label className="w-field">
                     <span className="w-label">{t("set.explorerUrl")}</span>
                     <input

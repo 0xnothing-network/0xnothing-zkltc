@@ -27,7 +27,7 @@ const ACTIONS: readonly { label: MessageKey; glyph: string; path: string }[] = [
   { label: "home.send", glyph: "↑", path: "#/send" },
   { label: "home.receive", glyph: "↓", path: "#/receive" },
   { label: "home.history", glyph: "≡", path: "#/history" },
-  { label: "home.stake", glyph: "◇", path: "#/lend" },
+  { label: "home.stake", glyph: "◇", path: "#/earn" },
 ];
 
 export function Home(): ReactNode {

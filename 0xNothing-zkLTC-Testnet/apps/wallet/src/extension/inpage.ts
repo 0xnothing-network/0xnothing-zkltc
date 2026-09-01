@@ -132,7 +132,10 @@ class NothingProvider {
   }
 
   removeListener(name: string, listener: Listener): this {
-    listeners.get(name)?.delete(listener);
+    const set = listeners.get(name);
+    if (!set) return this;
+    set.delete(listener);
+    if (set.size === 0) listeners.delete(name);
     return this;
   }
 

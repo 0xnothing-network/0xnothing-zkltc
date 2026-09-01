@@ -1,9 +1,11 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { DAPPS } from "../../config/dapps";
 import { t } from "../../core/i18n";
 import { describeError } from "../../core/lib/errors";
 import { formatTimeAgo, shortenAddress } from "../../core/lib/format";
 import { isExtension, openExternal } from "../../core/platform/env";
+import { persistentStore } from "../../core/platform/storage";
+import { STORAGE_KEYS } from "../../core/platform/storageKeys";
 import { listConnections, revokeConnection } from "../../core/services/dapp";
 import { announceToPages } from "../../core/services/walletEvents";
 import { Button, Note, Panel, PanelBody } from "../components/kit";
@@ -31,6 +33,14 @@ export function Dapps(): ReactNode {
   const actionGate = useActionGate();
   const [actionError, setActionError] = useState<string | null>(null);
   const connections = read.data ?? [];
+
+  // Grants and revocations are often written by a different surface (the
+  // approval popup or another wallet window), so a local React tick is not
+  // enough to keep this list current.
+  useEffect(() => persistentStore.subscribe(
+    STORAGE_KEYS.connections,
+    () => read.reload(),
+  ), [read.reload]);
 
   const revoke = async (origin: string): Promise<void> => {
     if (busy !== null || !actionGate.tryEnter()) return;

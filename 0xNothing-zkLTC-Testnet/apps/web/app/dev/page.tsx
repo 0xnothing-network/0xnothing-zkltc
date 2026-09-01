@@ -41,6 +41,7 @@ import { jitteredPollInterval } from "@/lib/pollJitter";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { ConnectWalletButton } from "@fi/components/ConnectWalletButton";
 import { parseAmount } from "@fi/lib/format";
+import { PointsAdminPanel } from "./PointsAdminPanel";
 import styles from "./dev.module.css";
 
 const WAD = 18;
@@ -135,6 +136,7 @@ export default function DevPage() {
   const [confirmLendingWithdrawal, setConfirmLendingWithdrawal] = useState(false);
   const [actionError, setActionError] = useState<string | undefined>();
   const [actionSuccess, setActionSuccess] = useState<string | undefined>();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
   const [txDomain, setTxDomain] = useState<RefreshDomain | undefined>();
   const txReceipt = useWaitForTransactionReceipt({ chainId: litvm.id, hash: txHash });
@@ -282,8 +284,17 @@ export default function DevPage() {
     refreshTransactionDomain(txDomain);
   }, [refreshTransactionDomain, txDomain, txHash, txReceipt.data, txReceipt.isError]);
 
+  useEffect(() => {
+    setConfirmPumpWithdrawal(false);
+    setConfirmFiWithdrawal(false);
+    setConfirmLendingWithdrawal(false);
+    setActionError(undefined);
+    setActionSuccess(undefined);
+  }, [address, chainId]);
+
   async function submitContractWrite(request: Parameters<typeof writeContractAsync>[0], domain: RefreshDomain) {
     if (!tryAcquireAction(writeLockRef)) return;
+    setIsSubmitting(true);
     setActionError(undefined);
     setActionSuccess(undefined);
     try {
@@ -295,6 +306,8 @@ export default function DevPage() {
     } catch (error) {
       releaseAction(writeLockRef);
       setActionError(friendlyActionError(error));
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -304,7 +317,7 @@ export default function DevPage() {
   const isFiOwner = Boolean(address && fiFactoryOwner.data && sameAddress(address, fiFactoryOwner.data));
   const isLendingOwner = Boolean(address && lendingOwner.data && sameAddress(address, lendingOwner.data));
   const isPixelDev = Boolean(address && pixelDevWallet.data && sameAddress(address, pixelDevWallet.data));
-  const disableControls = !isConnected || !onExpectedChain || isWriting || Boolean(txHash);
+  const disableControls = !isConnected || !onExpectedChain || isSubmitting || isWriting || Boolean(txHash);
   const canonicalFiFeeOptions = useMemo(() => [
     { key: "nusd", label: "NUSD", address: nusd, data: fiNusdFees.data, balance: fiNusdRouterBalance.data, decimals: WAD },
     { key: "wzkltc", label: "wzkLTC", address: deployment.contracts.wzkltc, data: fiWzkLtcFees.data, balance: fiWzkLtcRouterBalance.data, decimals: WAD },
@@ -365,7 +378,7 @@ export default function DevPage() {
         </div>
       </header>
 
-      <main className={styles.main}>
+      <main className={styles.main} aria-busy={isSubmitting || isWriting || Boolean(txHash)}>
         <section className={styles.hero}>
           <div>
             <span className={styles.eyebrow}>Operator surface / testnet</span>
@@ -385,9 +398,11 @@ export default function DevPage() {
           <div className={`${styles.banner} ${styles.bannerError}`}><Warning size={17} weight="bold" /><span>Wrong network. Switch to LitVM LiteForge (chain {litvm.id}) before signing an action. Reads may be unavailable until you switch.</span><button className={styles.button} onClick={() => switchChain.mutate({ chainId: litvm.id })} disabled={switchChain.isPending}>{switchChain.isPending ? "Switching" : "Switch network"}</button></div>
         ) : null}
 
-        {actionError ? <div className={`${styles.banner} ${styles.bannerError}`}><XCircle size={17} weight="bold" /><span>{actionError}</span></div> : null}
-        {actionSuccess ? <div className={styles.banner}><CheckCircle size={17} weight="bold" /><span>{actionSuccess}</span></div> : null}
-        {txHash ? <div className={styles.banner}><CircleNotch size={17} weight="bold" className="animate-spin" /><span>Transaction pending. <a className={styles.monoLink} href={`${deployment.chain.explorerUrl}/tx/${txHash}`} target="_blank" rel="noreferrer">View on explorer <ArrowSquareOut size={12} /></a></span></div> : null}
+        {actionError ? <div className={`${styles.banner} ${styles.bannerError}`} role="alert"><XCircle size={17} weight="bold" /><span>{actionError}</span></div> : null}
+        {actionSuccess ? <div className={styles.banner} role="status" aria-live="polite"><CheckCircle size={17} weight="bold" /><span>{actionSuccess}</span></div> : null}
+        {txHash ? <div className={styles.banner} role="status" aria-live="polite"><CircleNotch size={17} weight="bold" className="animate-spin" /><span>Transaction pending. <a className={styles.monoLink} href={`${deployment.chain.explorerUrl}/tx/${txHash}`} target="_blank" rel="noreferrer">View on explorer <ArrowSquareOut size={12} /></a></span></div> : null}
+
+        <PointsAdminPanel />
 
         <section className={styles.section}>
           <div className={styles.sectionHeader}><div><span className={styles.eyebrow}>Protocol revenue</span><h2>Where fees sit</h2></div><p className={styles.sectionNote}>Only balances and withdrawal methods exposed by the published ABIs appear here.</p></div>
@@ -446,7 +461,7 @@ export default function DevPage() {
           <div className={`${styles.grid} ${styles.gridThree}`}>
             <Metric label="Network" value={onExpectedChain ? "LitVM LiteForge" : "Wrong chain"} note={`Chain ${litvm.id}`} icon={onExpectedChain ? <CheckCircle size={16} /> : <Warning size={16} />} accent={onExpectedChain} />
             <Metric label="Wallet gate" value={isConnected ? "Connected" : "Connect wallet"} note={shortAddress(address)} icon={isConnected ? <Wallet size={16} /> : <LockKey size={16} />} accent={isConnected} />
-            <Metric label="RPC refresh" value="6 seconds" note="Read-only health polling" icon={<ArrowsClockwise size={16} />} />
+            <Metric label="RPC refresh" value="10–13 seconds" note="Read-only health polling" icon={<ArrowsClockwise size={16} />} />
           </div>
         </section>
       </main>

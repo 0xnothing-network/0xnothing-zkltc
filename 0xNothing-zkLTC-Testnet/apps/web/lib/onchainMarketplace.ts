@@ -13,6 +13,7 @@ import {
 } from "@/lib/contract";
 import { getPixelImageUrl } from "@/lib/pixelImage";
 import { createBoundedCache } from "@/lib/boundedCache";
+import { readLimitedJson } from "@/lib/server/readLimitedJson";
 import {
   MARKETPLACE_START_BLOCK as PUBLIC_MARKETPLACE_START_BLOCK,
   PIXEL_START_BLOCK as PUBLIC_PIXEL_START_BLOCK,
@@ -28,6 +29,7 @@ const MARKETPLACE_START_BLOCK = PUBLIC_MARKETPLACE_START_BLOCK;
 const EXPLORER_PAGE_SIZE = 1_000;
 const EXPLORER_MAX_RANGES = 64;
 const EXPLORER_TIMEOUT_MS = 8_000;
+const MAX_EXPLORER_RESPONSE_BYTES = 8 * 1024 * 1024;
 const RAW_CACHE_TTL_MS = 3_000;
 const TOKEN_CACHE_TTL_MS = 60_000;
 const MAX_TOKEN_CACHE_ENTRIES = 4_096;
@@ -218,7 +220,10 @@ async function fetchExplorerLogs(
       throw new Error(`Explorer log request failed: ${response.status}`);
     }
 
-    const payload = (await response.json()) as ExplorerLogsResponse;
+  const payload = await readLimitedJson<ExplorerLogsResponse>(
+    response,
+    MAX_EXPLORER_RESPONSE_BYTES,
+  );
     if (!Array.isArray(payload.result)) {
       if (payload.message === "No logs found") continue;
       throw new Error(payload.message || "Explorer returned invalid log data");

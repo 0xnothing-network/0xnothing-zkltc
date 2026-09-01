@@ -4,9 +4,9 @@ pragma solidity ^0.8.24;
 import { SynthSafetyReserve } from "../../src/synth/SynthSafetyReserve.sol";
 import { SyntheticAsset } from "../../src/synth/SyntheticAsset.sol";
 import { SyntheticVault } from "../../src/synth/SyntheticVault.sol";
-import { TestBase } from "../TestBase.sol";
-import { MockFeeOnTransferToken } from "../mocks/Mocks.sol";
-import { MockMintFeeDistributor, MockNUSD, MockPriceOracle } from "./RiskMocks.sol";
+import { TestBase } from "../helpers/TestBase.sol";
+import { MockMintFeeDistributor, MockNUSD, MockPriceOracle } from "../mocks/RiskMocks.sol";
+import { MockFeeOnTransferToken } from "../mocks/TokenMocks.sol";
 
 contract SyntheticVaultTest is TestBase {
     address private constant ALICE = address(0xA11CE);

@@ -93,13 +93,11 @@ export function PoolDetail({
     query: { enabled: Boolean(pool && address) },
   });
   const lpBalance = lpBalanceRead.data as bigint | undefined;
-  const gauge = marketToken === "zkLTC"
-    ? deployment.contracts.wzkLtcNusdGauge
-    : marketToken === "nBTC"
-      ? deployment.contracts.nbtcNusdGauge
-      : marketToken === "nETH"
-        ? deployment.contracts.nethNusdGauge
-        : undefined;
+  const gauge = marketToken === "nBTC"
+    ? deployment.contracts.nbtcNusdGauge
+    : marketToken === "nETH"
+      ? deployment.contracts.nethNusdGauge
+      : undefined;
   const stakedLpRead = useReadContract({
     address: gauge,
     abi: farmGaugeAbi,
@@ -134,7 +132,8 @@ export function PoolDetail({
     ? (totalSupply ?? 0n) + expectedLiquidity
     : undefined;
   const configured = Boolean(deployment.contracts.dexFactory && dexRouter && pool && addressA && addressB);
-  const farmHref = fiPath(`/farm?pair=${routePairSlug}`);
+  const earnFlowEnabled = fromEarn && marketToken !== "zkLTC";
+  const farmHref = fiPath(`/earn?pair=${routePairSlug}`);
 
   const error = useMemo(() => {
     if (mode === "add") {
@@ -233,7 +232,7 @@ export function PoolDetail({
 
   return (
     <>
-      {fromEarn ? (
+      {earnFlowEnabled ? (
         <section className="fi-earn-flow" aria-label="Liquidity farming setup">
           <div className="fi-earn-flow-step" data-state="active">
             <span>01</span>
@@ -267,8 +266,8 @@ export function PoolDetail({
         </div>
         <section className="fi-panel fi-sticky-panel fi-trade-panel">
           <PanelHeading
-            title={fromEarn ? "Get LP tokens" : "Liquidity"}
-            trailing={fromEarn
+            title={earnFlowEnabled ? "Get LP tokens" : "Liquidity"}
+            trailing={earnFlowEnabled
               ? <Link className="fi-text-link" href={farmHref}>Back to Earn</Link>
               : <Link className="fi-text-link" href={`${fiPath("/swap")}?in=${tokenA}&out=${tokenB}`}>Swap pair</Link>}
           />
@@ -282,7 +281,7 @@ export function PoolDetail({
               <AmountField id="pool-amount-a" label={tokenA} asset={tokenA} value={amountAText} balance={formatAmount(availableA)} onChange={updateAmountA} onMax={availableA && availableA > 0n ? () => updateAmountA(formatUnits(availableA, 18)) : undefined} error={error?.startsWith(tokenA) ? error : undefined} />
               <span className="fi-liquidity-plus" aria-hidden="true">+</span>
               <AmountField id="pool-amount-b" label={tokenB} asset={tokenB} value={amountBText} balance={formatAmount(availableB)} onChange={updateAmountB} onMax={availableB && availableB > 0n ? () => updateAmountB(formatUnits(availableB, 18)) : undefined} error={error?.startsWith(tokenB) || error?.startsWith("Enter") ? error : undefined} />
-              {fromEarn ? (
+              {earnFlowEnabled ? (
                 <nav className="fi-liquidity-shortcuts" aria-label="Get pool assets">
                   <span>Need assets?</span>
                   <Link className="fi-text-link" href={`${fiPath("/swap")}?in=zkLTC&out=NUSD`}>Get NUSD</Link>
@@ -312,7 +311,7 @@ export function PoolDetail({
               </button>
             )}
             <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />
-            {fromEarn && lpBalance !== undefined && lpBalance > 0n ? (
+            {earnFlowEnabled && lpBalance !== undefined && lpBalance > 0n ? (
               <Link className="fi-button fi-button-muted fi-earn-next" href={farmHref}>
                 Stake {formatAmount(lpBalance)} LP
               </Link>

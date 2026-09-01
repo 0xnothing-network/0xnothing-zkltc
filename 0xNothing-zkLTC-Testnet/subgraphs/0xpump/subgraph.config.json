@@ -10,5 +10,10 @@
     "goldskySupported":  true,
     "approvedNetworks":  [
                              "liteforge"
-                         ]
+                         ],
+    "graduationPolicy":  {
+                             "mode":  "controller-active",
+                             "controllerAddress":  "0x2112Cea76b76817626cA58B205b3dC5560F05857",
+                             "adapterAddress":  "0x935e05f60a05110c29eFA7e3a632dfe38123963e"
+                         }
 }

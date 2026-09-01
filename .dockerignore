@@ -1,16 +1,25 @@
 .git
 .gitignore
+.cbmignore
+graft
+standalone
 node_modules
 **/node_modules
 **/.next
 **/.next-dev
+**/.open-next
+**/.wrangler
+**/coverage
+**/*.tsbuildinfo
 **/.env
 **/.env.*
 !**/.env.example
 
 0xNothing-zkLTC-Mainnet
 0xNothing-zkLTC-Testnet/0xFi
+0xNothing-zkLTC-Testnet/apps/wallet
 0xNothing-zkLTC-Testnet/contracts
 0xNothing-zkLTC-Testnet/deployments
 0xNothing-zkLTC-Testnet/docs
+0xNothing-zkLTC-Testnet/graft
 0xNothing-zkLTC-Testnet/subgraphs

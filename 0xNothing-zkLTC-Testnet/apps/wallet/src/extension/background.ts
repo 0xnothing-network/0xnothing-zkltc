@@ -25,6 +25,7 @@ import {
 } from "../core/services/dapp";
 import { isBoundedRpcCall, type RpcCall } from "./protocol";
 import { createRpcIngressGate } from "./rpcIngress";
+import { findApprovalWindowId } from "./approvalWindow";
 
 /**
  * The dapp-facing service worker. It holds no key material and never can: the
@@ -253,6 +254,16 @@ function validMessage(value: unknown): value is string {
  */
 async function focusOrCreateApproval(id: string): Promise<void> {
   const url = chrome.runtime.getURL(`index.html#/approve?id=${encodeURIComponent(id)}`);
+  if (approvalWindowId === undefined) {
+    try {
+      const approvalRouteUrl = chrome.runtime.getURL("index.html#/approve");
+      const windows = await chrome.windows.getAll({ populate: true, windowTypes: ["popup"] });
+      approvalWindowId = findApprovalWindowId(windows, approvalRouteUrl);
+    } catch {
+      // Window discovery is only a de-duplication optimization. Creation below
+      // remains the reliable fallback if the browser refuses enumeration.
+    }
+  }
   if (approvalWindowId !== undefined) {
     try {
       await chrome.windows.update(approvalWindowId, { focused: true, drawAttention: true });

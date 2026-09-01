@@ -17,8 +17,12 @@ import {
   parsePumpUploadMessage,
 } from "@/features/pump/uploadMessage";
 import { publicClient } from "@/lib/contract";
-import { trustedProxyClientKey } from "@/lib/server/clientIp";
+import {
+  trustedClientRateLimitKey,
+  trustedProxyClientKey,
+} from "@/lib/server/clientIp";
 import { readLimitedBytes } from "@/lib/server/readLimitedBytes";
+import { readLimitedJson } from "@/lib/server/readLimitedJson";
 import { createSlidingWindowRateLimiter } from "@/lib/server/slidingWindowRateLimit";
 
 export const runtime = "nodejs";
@@ -33,6 +37,7 @@ const MAX_RATE_LIMIT_KEYS = 8_192;
 // The image limit is 2 MiB; the additional space covers form fields and
 // multipart framing without allowing arbitrarily large request bodies.
 const MAX_UPLOAD_BODY_BYTES = PUMP_MAX_IMAGE_BYTES + 512 * 1024;
+const MAX_PINATA_RESPONSE_BYTES = 64 * 1024;
 
 const requestRateLimiter = createSlidingWindowRateLimiter({
   windowMs: RATE_WINDOW_MS,
@@ -196,7 +201,9 @@ export async function POST(request: Request) {
   }
 
   const ip = clientIp(request);
-  const rateKeys = [`wallet:${submittedAddress}`, `ip:${ip}`];
+  const rateKeys = [`wallet:${submittedAddress}`];
+  const trustedIpRateKey = trustedClientRateLimitKey(ip);
+  if (trustedIpRateKey) rateKeys.push(trustedIpRateKey);
   if (!requestRateLimiter.consume(rateKeys, now)) {
     return NextResponse.json(
       { error: "Upload rate limit reached. Wait before trying again." },
@@ -398,7 +405,10 @@ async function pinJson(
 
 async function pinataCid(response: Response): Promise<string> {
   if (!response.ok) throw new Error(`Pinata returned HTTP ${response.status}`);
-  const payload = (await response.json()) as PinataV3Response;
+  const payload = await readLimitedJson<PinataV3Response>(
+    response,
+    MAX_PINATA_RESPONSE_BYTES,
+  );
   const cid = payload.data?.cid ?? payload.cid;
   if (!cid || !/^[a-zA-Z0-9]+$/.test(cid)) {
     throw new Error("Pinata response did not contain a CID");

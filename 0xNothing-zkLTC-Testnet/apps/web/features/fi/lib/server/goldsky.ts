@@ -2,6 +2,9 @@ import "server-only";
 
 import { deployment } from "@fi/config/deployment";
 import type { DataEnvelope } from "@fi/lib/data";
+import { readLimitedJson } from "@/lib/server/readLimitedJson";
+
+const MAX_GOLDSKY_RESPONSE_BYTES = 8 * 1024 * 1024;
 
 type GraphQlResponse<T> = {
   data?: T;
@@ -49,7 +52,9 @@ export async function queryGoldsky<TData, TResult>(
   });
 
   if (!response.ok) throw new Error(`Goldsky returned HTTP ${response.status}`);
-  const payload = (await response.json()) as GraphQlResponse<TData & { _meta?: { block?: { number?: number } } }>;
+  const payload = await readLimitedJson<
+    GraphQlResponse<TData & { _meta?: { block?: { number?: number } } }>
+  >(response, MAX_GOLDSKY_RESPONSE_BYTES);
   if (payload.errors?.length) {
     throw new Error(payload.errors.map((error) => error.message || "Indexer query failed").join("; "));
   }

@@ -1,4 +1,8 @@
 import { loadConfig, ZERO_ADDRESS } from "./config.mjs";
+import {
+  decodeEvmAddressWord,
+  requestJsonRpc as rpc,
+} from "../../../../scripts/lib/evm-rpc.mjs";
 
 const config = loadConfig();
 const problems = [];
@@ -70,8 +74,8 @@ if (config.goldskySupported && hasDeploymentCoordinates) {
         problems.push("Configured contract does not expose the derived 1,500 NUSD reserve target");
       }
 
-      const routerAddress = `0x${routerHex.slice(-40)}`;
-      if (!/^0x[0-9a-f]{40}$/iu.test(routerAddress) || routerAddress === ZERO_ADDRESS) {
+      const routerAddress = decodeEvmAddressWord(routerHex, "graduation router");
+      if (routerAddress === ZERO_ADDRESS) {
         problems.push("Configured contract does not expose a valid graduation router");
       } else {
         const [routerCode, routerEnabledHex, routerEnableAtHex] = await Promise.all([
@@ -102,19 +106,4 @@ if (problems.length > 0) {
   console.log(
     `Deploy-ready: ${config.deploymentName}/${config.deploymentVersion} (${config.deploymentTag})`,
   );
-}
-
-async function rpc(url, method, params = []) {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!response.ok) throw new Error(`${method} returned HTTP ${response.status}`);
-  const payload = await response.json();
-  if (payload.error || typeof payload.result !== "string") {
-    throw new Error(payload.error?.message || `${method} returned no result`);
-  }
-  return payload.result;
 }

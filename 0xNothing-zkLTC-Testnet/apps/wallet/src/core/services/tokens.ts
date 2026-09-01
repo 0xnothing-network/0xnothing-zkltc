@@ -43,12 +43,27 @@ export interface TokenMetadata {
 const BUILTIN_IDS = new Set(BUILTIN_TOKENS.map((token) => token.id));
 const TOKENS_LOCK = `tokens:${STORAGE_KEYS.tokens}`;
 const METADATA_TTL_MS = 5 * 60_000;
+const MAX_METADATA_CACHE_ENTRIES = 256;
 const MAX_STORED_TOKENS = 256;
 const MAX_SYMBOL_LENGTH = 16;
 const MAX_NAME_LENGTH = 80;
 const MAX_LOGO_LENGTH = 2_048;
 const metadataCache = new Map<string, { value: TokenMetadata; expiresAt: number }>();
 const metadataInFlight = new Map<string, Promise<TokenMetadata>>();
+
+function cacheMetadata(key: string, value: TokenMetadata): void {
+  const now = Date.now();
+  for (const [candidate, entry] of metadataCache) {
+    if (entry.expiresAt <= now) metadataCache.delete(candidate);
+  }
+  metadataCache.delete(key);
+  while (metadataCache.size >= MAX_METADATA_CACHE_ENTRIES) {
+    const oldest = metadataCache.keys().next().value as string | undefined;
+    if (oldest === undefined) break;
+    metadataCache.delete(oldest);
+  }
+  metadataCache.set(key, { value, expiresAt: now + METADATA_TTL_MS });
+}
 
 function cleanText(value: unknown, max: number): string | null {
   if (typeof value !== "string") return null;
@@ -198,7 +213,11 @@ export async function lookupToken(
   const token = trimmed as Address;
   const key = `${network.id}:${network.rpcUrl}:${token.toLowerCase()}`;
   const cached = metadataCache.get(key);
-  if (cached && cached.expiresAt > Date.now()) return cached.value;
+  if (cached && cached.expiresAt > Date.now()) {
+    metadataCache.delete(key);
+    metadataCache.set(key, cached);
+    return cached.value;
+  }
   if (cached) metadataCache.delete(key);
 
   const running = metadataInFlight.get(key);
@@ -206,7 +225,7 @@ export async function lookupToken(
 
   const request = readTokenMetadata(token, network, client)
     .then((value) => {
-      metadataCache.set(key, { value, expiresAt: Date.now() + METADATA_TTL_MS });
+      cacheMetadata(key, value);
       return value;
     })
     .finally(() => {

@@ -1,5 +1,10 @@
 import { type Address, createPublicClient, createWalletClient, http } from "viem";
-import { LITVM_NETWORK, type WalletNetwork, viemChainFor } from "../../config/networks";
+import {
+  LITVM_NETWORK,
+  networkIdentity,
+  type WalletNetwork,
+  viemChainFor,
+} from "../../config/networks";
 import { signerFor } from "../keyring/vault";
 
 /**
@@ -29,7 +34,7 @@ export let activeNetwork: WalletNetwork = LITVM_NETWORK;
 export let publicClient = clientFor(LITVM_NETWORK);
 
 export function configureRpcClient(network: WalletNetwork): void {
-  if (activeNetwork.id === network.id && activeNetwork.rpcUrl === network.rpcUrl) return;
+  if (networkIdentity(activeNetwork) === networkIdentity(network)) return;
   activeNetwork = network;
   publicClient = clientFor(network);
 }

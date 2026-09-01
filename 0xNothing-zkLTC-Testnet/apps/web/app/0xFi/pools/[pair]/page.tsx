@@ -15,7 +15,7 @@ export default async function PoolPage({
   const [{ pair: slug }, query] = await Promise.all([params, searchParams]);
   const pair = parsePairSlug(slug);
   const pool = isAddress(slug) ? getAddress(slug) : undefined;
-  const fromEarn = query.from === "earn";
+  const fromEarn = query.from === "earn" && pair?.includes("zkLTC") === false;
   const initialMode = query.action === "remove" ? "remove" : "add";
   if (!pair && !pool) notFound();
   const displayPair = pair
@@ -28,7 +28,7 @@ export default async function PoolPage({
           <PageHeading
             title={`${displayPair![0]} / ${displayPair![1]}`}
             action={fromEarn
-              ? <RouteLink href={`/farm?pair=${slug}`}>Back to Earn</RouteLink>
+              ? <RouteLink href={`/earn?pair=${slug}`}>Back to Earn</RouteLink>
               : <RouteLink href="/pools">Back to pools</RouteLink>}
           />
           <PoolDetail pair={pair} fromEarn={fromEarn} initialMode={initialMode} />

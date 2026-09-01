@@ -32,7 +32,7 @@ import {
 } from "../lib/public-environment.mjs";
 
 const addresses = Array.from(
-  { length: 25 },
+  { length: 27 },
   (_, index) => `0x${(index + 1).toString(16).padStart(40, "0")}`,
 );
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -251,6 +251,8 @@ test("public environment uses the canonical gauge key and clears an absent contr
     ethOracle: addresses[12],
     pumpGraduationAdapter: addresses[13],
     pump: addresses[14],
+    lpLocker: addresses[25],
+    tokenMetadataRegistry: addresses[26],
     wzkLtcNusdPair: addresses[15],
     nBTCNusdPair: addresses[16],
     nETHNusdPair: addresses[17],
@@ -270,6 +272,8 @@ test("public environment uses the canonical gauge key and clears an absent contr
   assert.equal(values.NEXT_PUBLIC_SYNTH_RISK_ACTIONS_ENABLED, "false");
   assert.equal(values.NEXT_PUBLIC_LENDING_RISK_ACTIONS_ENABLED, "false");
   assert.equal(values.NEXT_PUBLIC_PUMP_GRADUATION_CONTROLLER_ADDRESS, null);
+  assert.equal(values.NEXT_PUBLIC_LP_LOCKER_ADDRESS?.toLowerCase(), addresses[25]);
+  assert.equal(values.NEXT_PUBLIC_TOKEN_METADATA_REGISTRY_ADDRESS?.toLowerCase(), addresses[26]);
   assert.equal("NEXT_PUBLIC_FARM_FACTORY_ADDRESS" in values, false);
   const legacyValues = publicEnvironmentValues({
     deployment: { ...deployment, synthSafetyReserve: undefined },
@@ -301,6 +305,8 @@ test("tracked testnet configuration publishes typed staged and active lending ga
     ethOracle: addresses[12],
     pumpGraduationAdapter: addresses[13],
     pump: addresses[14],
+    lpLocker: addresses[25],
+    tokenMetadataRegistry: addresses[26],
     wzkLtcNusdPair: addresses[15],
     nBTCNusdPair: addresses[16],
     nETHNusdPair: addresses[17],
@@ -325,6 +331,8 @@ test("tracked testnet configuration publishes typed staged and active lending ga
   assert.equal(staged.synthSafetyReserve, null);
   assert.equal(staged.synthRiskActionsEnabled, false);
   assert.equal(staged.pumpGraduationController, null);
+  assert.equal(staged.lpLocker?.toLowerCase(), addresses[25]);
+  assert.equal(staged.tokenMetadataRegistry?.toLowerCase(), addresses[26]);
   assert.equal(typeof staged.lendingRiskActionsEnabled, "boolean");
 
   const active = publicTestnetConfiguration({
@@ -494,6 +502,18 @@ test("direct-governance resume bypasses the initial topology preflight", () => {
     source,
     /if \(mode !== "--resume"\) \{\s+await run\(process\.execPath, \[path\.join\(root, "scripts", "preflight\.mjs"\)\]\);/,
   );
+});
+
+test("points deployment freshness cannot be denial-of-serviced after submission", () => {
+  const source = fs.readFileSync(path.join(root, "scripts", "deploy-nusd-points.mjs"), "utf8");
+  assert.match(source, /verifySignerSafety\(\{ requireFresh: !existing && !pendingHash \}\)/);
+  assert.match(source, /Recorded NUSD points deployment transaction hash is invalid/);
+  assert.match(source, /Recorded NUSD points staking address is invalid/);
+  assert.match(source, /if \(requireFresh && \(balance !== 0n \|\| transactionCount !== 0\)\)/);
+  const existingBranch = source.indexOf("if (existing) {");
+  const persistSigner = source.indexOf("persistSignerEnvironment();", existingBranch);
+  const deployTransaction = source.indexOf("const hash = await walletClient.deployContract", persistSigner);
+  assert.ok(existingBranch > -1 && persistSigner > existingBranch && deployTransaction > persistSigner);
 });
 
 test("lending implementation health fails closed for legacy or unrecorded deployments", () => {

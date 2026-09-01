@@ -1,7 +1,28 @@
 import { loadConfig, ZERO_ADDRESS } from "./config.mjs";
+import {
+  decodeEvmAddressWord,
+  requestJsonRpc as rpc,
+} from "../../../../scripts/lib/evm-rpc.mjs";
 
 const config = loadConfig();
 const problems = [];
+const graduationPolicy = config.graduationPolicy;
+const graduationMode = graduationPolicy?.mode;
+let expectedController = null;
+let expectedAdapter = null;
+
+if (graduationMode === "controller-active") {
+  expectedController = configuredAddress(
+    graduationPolicy.controllerAddress,
+    "graduation controller",
+  );
+  expectedAdapter = configuredAddress(
+    graduationPolicy.adapterAddress,
+    "graduation adapter",
+  );
+} else if (graduationMode !== "disabled") {
+  problems.push("graduationPolicy.mode must be 'disabled' or 'controller-active'");
+}
 
 if (config.contractAddress.toLowerCase() === ZERO_ADDRESS) {
   problems.push("PUMP_CONTRACT_ADDRESS is still the zero-address placeholder");
@@ -70,8 +91,8 @@ if (config.goldskySupported && hasDeploymentCoordinates) {
         problems.push("Configured contract does not expose the derived 1,500 NUSD reserve target");
       }
 
-      const routerAddress = `0x${routerHex.slice(-40)}`;
-      if (!/^0x[0-9a-f]{40}$/iu.test(routerAddress) || routerAddress === ZERO_ADDRESS) {
+      const routerAddress = decodeEvmAddressWord(routerHex, "graduation router");
+      if (routerAddress === ZERO_ADDRESS) {
         problems.push("Configured contract does not expose a valid graduation router");
       } else {
         const [routerCode, routerEnabledHex, routerEnableAtHex] = await Promise.all([
@@ -82,8 +103,76 @@ if (config.goldskySupported && hasDeploymentCoordinates) {
         if (routerCode === "0x") {
           problems.push("Configured graduation router has no deployed bytecode");
         }
-        if (BigInt(routerEnabledHex) !== 0n || BigInt(routerEnableAtHex) !== 0n) {
-          problems.push("Testnet graduation router must remain disabled and unscheduled");
+        if (graduationMode === "disabled") {
+          if (BigInt(routerEnabledHex) !== 0n || BigInt(routerEnableAtHex) !== 0n) {
+            problems.push("Graduation router must remain disabled and unscheduled");
+          }
+        } else if (expectedController && expectedAdapter) {
+          const [
+            pumpAdminHex,
+            pumpPendingAdminHex,
+            routerAdminHex,
+            routerPendingAdminHex,
+            adapterAllowedHex,
+            adapterActivationHex,
+            controllerCode,
+            adapterCode,
+            controllerPumpHex,
+            controllerRouterHex,
+            controllerAdapterHex,
+            graduationsPausedHex,
+          ] = await Promise.all([
+            rpc(config.rpcUrl, "eth_call", [{ to: config.contractAddress, data: "0xf851a440" }, "latest"]),
+            rpc(config.rpcUrl, "eth_call", [{ to: config.contractAddress, data: "0x26782247" }, "latest"]),
+            rpc(config.rpcUrl, "eth_call", [{ to: routerAddress, data: "0xf851a440" }, "latest"]),
+            rpc(config.rpcUrl, "eth_call", [{ to: routerAddress, data: "0x26782247" }, "latest"]),
+            rpc(config.rpcUrl, "eth_call", [{
+              to: routerAddress,
+              data: callWithAddress("0xe219bbf6", expectedAdapter),
+            }, "latest"]),
+            rpc(config.rpcUrl, "eth_call", [{
+              to: routerAddress,
+              data: callWithAddress("0xedb90871", expectedAdapter),
+            }, "latest"]),
+            rpc(config.rpcUrl, "eth_getCode", [expectedController, "latest"]),
+            rpc(config.rpcUrl, "eth_getCode", [expectedAdapter, "latest"]),
+            rpc(config.rpcUrl, "eth_call", [{ to: expectedController, data: "0x395ea61b" }, "latest"]),
+            rpc(config.rpcUrl, "eth_call", [{ to: expectedController, data: "0xf887ea40" }, "latest"]),
+            rpc(config.rpcUrl, "eth_call", [{ to: expectedController, data: "0x03eadcfc" }, "latest"]),
+            rpc(config.rpcUrl, "eth_call", [{ to: expectedController, data: "0xe845e50b" }, "latest"]),
+          ]);
+
+          if (BigInt(routerEnabledHex) !== 1n || BigInt(routerEnableAtHex) !== 0n) {
+            problems.push("Graduation router is not active and unscheduled as recorded");
+          }
+          if (
+            decodeEvmAddressWord(pumpAdminHex, "Pump admin") !== expectedController
+            || decodeEvmAddressWord(routerAdminHex, "router admin") !== expectedController
+          ) {
+            problems.push("Graduation controller does not own both Pump and router administration");
+          }
+          if (
+            decodeEvmAddressWord(pumpPendingAdminHex, "Pump pending admin") !== ZERO_ADDRESS
+            || decodeEvmAddressWord(routerPendingAdminHex, "router pending admin") !== ZERO_ADDRESS
+          ) {
+            problems.push("Pump or graduation router has an unexpected pending admin handover");
+          }
+          if (controllerCode === "0x" || adapterCode === "0x") {
+            problems.push("Configured graduation controller or adapter has no deployed bytecode");
+          }
+          if (BigInt(adapterAllowedHex) !== 1n || BigInt(adapterActivationHex) !== 0n) {
+            problems.push("Pinned graduation adapter is not active and unscheduled");
+          }
+          if (
+            decodeEvmAddressWord(controllerPumpHex, "controller Pump") !== config.contractAddress.toLowerCase()
+            || decodeEvmAddressWord(controllerRouterHex, "controller router") !== routerAddress
+            || decodeEvmAddressWord(controllerAdapterHex, "controller adapter") !== expectedAdapter
+          ) {
+            problems.push("Graduation controller bindings do not match the reviewed topology");
+          }
+          if (BigInt(graduationsPausedHex) !== 0n) {
+            problems.push("Graduation controller is paused");
+          }
         }
       }
     } catch (error) {
@@ -102,17 +191,19 @@ if (problems.length > 0) {
   );
 }
 
-async function rpc(url, method, params = []) {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!response.ok) throw new Error(`${method} returned HTTP ${response.status}`);
-  const payload = await response.json();
-  if (payload.error || typeof payload.result !== "string") {
-    throw new Error(payload.error?.message || `${method} returned no result`);
+function configuredAddress(value, label) {
+  if (typeof value !== "string" || !/^0x[0-9a-f]{40}$/iu.test(value)) {
+    problems.push(`Configured ${label} must be a 20-byte EVM address`);
+    return null;
   }
-  return payload.result;
+  const address = value.toLowerCase();
+  if (address === ZERO_ADDRESS) {
+    problems.push(`Configured ${label} must not be the zero address`);
+    return null;
+  }
+  return address;
+}
+
+function callWithAddress(selector, address) {
+  return `${selector}${address.slice(2).padStart(64, "0")}`;
 }

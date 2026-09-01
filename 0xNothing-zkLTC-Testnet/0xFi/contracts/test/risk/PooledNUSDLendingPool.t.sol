@@ -2,9 +2,9 @@
 pragma solidity ^0.8.24;
 
 import { PooledNUSDLendingPool } from "../../src/lending/PooledNUSDLendingPool.sol";
-import { TestBase } from "../TestBase.sol";
-import { MockFeeOnTransferToken } from "../mocks/Mocks.sol";
-import { MockCollateralToken, MockNUSD, MockPriceOracle } from "./RiskMocks.sol";
+import { TestBase } from "../helpers/TestBase.sol";
+import { MockCollateralToken, MockNUSD, MockPriceOracle } from "../mocks/RiskMocks.sol";
+import { MockFeeOnTransferToken } from "../mocks/TokenMocks.sol";
 
 contract PooledNUSDLendingPoolTest is TestBase {
     address private constant SUPPLIER = address(0x5150);

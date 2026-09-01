@@ -76,7 +76,7 @@ export const zeroXPumpAbi = parseAbi([
   "function paused() view returns (bool)",
 ]);
 
-/** "STAKE NUSD" in the wireframe = supply()/withdraw() here. */
+/** 0xFi lending pool; distinct from fixed-duration points staking. */
 export const lendingPoolAbi = parseAbi([
   "function supply(uint256 amount, address onBehalfOf) returns (uint256 shares)",
   "function withdraw(uint256 amount, address recipient) returns (uint256 assets)",
@@ -89,6 +89,27 @@ export const lendingPoolAbi = parseAbi([
   "function totalBorrowed() view returns (uint256)",
   "function supplyPaused() view returns (bool)",
   "function activated() view returns (bool)",
+]);
+
+/** Public/user surface of the deployed NUSD points staking contract. */
+export const nusdPointsStakingAbi = parseAbi([
+  "function totalLockedByUser(address account) view returns (uint256)",
+  "function earnedPointCredits(address account) view returns (uint256)",
+  "function spentPointCredits(address account) view returns (uint256)",
+  "function availablePointCredits(address account) view returns (uint256)",
+  "function userPositionCount(address account) view returns (uint256)",
+  "function userPositionIds(address account, uint256 offset, uint256 limit) view returns (uint256[] ids)",
+  "function getPosition(uint256 positionId) view returns ((address account, uint256 amount, uint256 pointCredits, uint64 unlockTime, uint32 lockDuration, bool withdrawn))",
+  "function stakingPaused() view returns (bool)",
+  "function redemptionsPaused() view returns (bool)",
+  "function redemptionEnabled() view returns (bool)",
+  "function nusdPerXPointWad() view returns (uint256)",
+  "function redemptionReserve() view returns (uint256)",
+  "function isSolvent() view returns (bool)",
+  "function quoteRedemption(uint256 pointCredits) view returns (uint256)",
+  "function stake(uint256 amount, uint32 lockDuration) returns (uint256 positionId)",
+  "function withdraw(uint256 positionId)",
+  "function redeemPoints(uint256 pointCredits) returns (uint256 nusdOut)",
 ]);
 
 export const diaOracleAdapterAbi = parseAbi([

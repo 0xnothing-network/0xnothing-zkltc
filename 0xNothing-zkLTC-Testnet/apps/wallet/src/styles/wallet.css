@@ -721,6 +721,103 @@ body {
   color: var(--fi-text);
 }
 
+/* Earn keeps the shared terminal language while fitting four lock choices cleanly. */
+.w-earn-flow .w-flow-main {
+  gap: 10px;
+}
+
+.w-earn-locks {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--fi-line-strong);
+  background: var(--fi-line);
+}
+
+.w-earn-lock-option {
+  display: grid;
+  min-width: 0;
+  min-height: 46px;
+  place-content: center;
+  gap: 3px;
+  border: 0;
+  border-right: 1px solid var(--fi-line);
+  border-bottom: 2px solid transparent;
+  padding: 5px 3px 3px;
+  background: var(--fi-input);
+  color: var(--fi-dim);
+  font: inherit;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+  transition: background 120ms steps(2, end), color 120ms steps(2, end), border-color 120ms steps(2, end);
+}
+
+.w-earn-lock-option:last-child {
+  border-right: 0;
+}
+
+.w-earn-lock-option > span {
+  font-size: var(--fi-text-body);
+}
+
+.w-earn-lock-option > strong {
+  font-size: var(--fi-text-label);
+  font-weight: 400;
+}
+
+.w-earn-lock-option:hover:not(:disabled),
+.w-earn-lock-option:focus-visible {
+  background: rgba(155, 231, 189, 0.06);
+  color: var(--fi-muted);
+}
+
+.w-earn-lock-option[aria-pressed="true"] {
+  border-bottom-color: var(--fi-green);
+  background: rgba(155, 231, 189, 0.08);
+  color: var(--fi-text);
+}
+
+.w-earn-estimate {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid var(--fi-line-strong);
+  background: var(--fi-line);
+}
+
+.w-earn-estimate > div {
+  display: grid;
+  min-width: 0;
+  align-content: center;
+  gap: 5px;
+  min-height: 54px;
+  padding: 9px 10px;
+  background: var(--fi-panel);
+}
+
+.w-earn-estimate dt {
+  color: var(--fi-muted);
+  font-size: var(--fi-text-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.w-earn-estimate dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--fi-text);
+  font-size: var(--fi-text-body);
+  line-height: 1.35;
+}
+
+.w-earn-estimate dd[data-tone="green"] {
+  color: var(--fi-green);
+}
+
 /* ---------------------------------------------------------------- asset list */
 
 .w-list {

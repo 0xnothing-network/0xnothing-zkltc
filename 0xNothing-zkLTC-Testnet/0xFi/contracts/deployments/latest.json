@@ -150,7 +150,8 @@
     "0xa515289f330edd0c5d51cab8d7cb2f4d8deb5d99bfb009ca829c046a9a0bfb90",
     "0x042c9a5bb8bd3f4c729ebd71a76eee51ab2766eb464b0314bf555703a1546821",
     "0x08e2e7e0853f50f1b846ab6399e181794a5d496ea6b98ea7a7eadd6eda8772c2",
-    "0xaf6154ffcce8d0cc8479be0465a26c8e172593a13badfb1d1847df9e6e0bd189"
+    "0xaf6154ffcce8d0cc8479be0465a26c8e172593a13badfb1d1847df9e6e0bd189",
+    "0x84d82a782ea5bd01facc2bdcb6258e22c28abf881f68e30c6e9127612dba8fb7"
   ],
   "pumpGraduationController": "0x2112Cea76b76817626cA58B205b3dC5560F05857",
   "pumpGraduationControllerDeploymentBlock": "36095543",
@@ -441,5 +442,11 @@
     "block": "37983632",
     "activatedAt": "2026-08-08T08:35:52.000Z",
     "transactionHash": "0xaf6154ffcce8d0cc8479be0465a26c8e172593a13badfb1d1847df9e6e0bd189"
-  }
+  },
+  "nusdPointsStaking": "0xDf009d9c2Bc0C2f8ee55A047074edB166C1D3282",
+  "nusdPointsStakingDeploymentBlock": "46064665",
+  "nusdPointsStakingDeploymentHash": "0x84d82a782ea5bd01facc2bdcb6258e22c28abf881f68e30c6e9127612dba8fb7",
+  "nusdPointsStakingStatus": "deployed-redemption-disabled",
+  "lpLocker": "0x7d105ecfc67cb288f2dbdf94f7aa2057d3b3fd9a",
+  "tokenMetadataRegistry": "0xd1087b62922263c10a251ffca6ee27c2b1368089"
 }

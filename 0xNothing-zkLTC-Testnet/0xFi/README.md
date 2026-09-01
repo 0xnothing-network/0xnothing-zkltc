@@ -7,7 +7,7 @@ and connects the existing 0xPump graduation flow to a canonical NUSD-paired AMM.
 
 - Swap and shared constant-product liquidity pools
 - One canonical LP token per unordered pair
-- One farming gauge per LP token, with time-weighted rewards per share
+- NUSD fixed-lock staking for on-chain xPoints, plus LP gauges for the remaining pairs
 - NUSD lending and borrowing with pooled supplier liquidity
 - DIA-priced nBTC and nETH debt with isolated user and safety-reserve collateral
 - Goldsky history and candles with direct-RPC quotes, balances, positions, and a
@@ -58,6 +58,12 @@ npm.cmd run pump:keeper:check
 The 0xFi frontend is part of the unified app at `../apps/web` and is served at
 `/0xFi`. `check:web` validates that app directly; there is no standalone 0xFi
 Next.js service.
+
+The public earn route is `/0xFi/earn`, and `/0xFi/farm` permanently redirects
+there. The legacy zkLTC/NUSD gauge route and controls are no longer exposed;
+nBTC/NUSD and nETH/NUSD remain available as separate LP programs. See
+`docs/NUSD_POINTS.md` for xPoints units, security boundaries, key separation,
+tests, and the non-broadcast deployment check.
 
 Only run `npm.cmd run deploy:testnet` after every local gate passes and the
 printed chain, deployer, existing NUSD, DIA oracle, and Pump addresses are exact.

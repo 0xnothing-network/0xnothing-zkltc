@@ -25,6 +25,38 @@ export function formatAmount(
   }).format(formatted);
 }
 
+/**
+ * Formats fixed-point integers without converting through Number. Values are
+ * rounded half-up and retain exactly the requested display precision.
+ */
+export function formatFixedAmount(
+  value: bigint | undefined,
+  decimals = 18,
+  fractionDigits = 2,
+): string {
+  if (value === undefined) return "--";
+  if (!Number.isInteger(decimals) || decimals < 0) return "--";
+  if (!Number.isInteger(fractionDigits) || fractionDigits < 0) return "--";
+
+  const negative = value < 0n;
+  const magnitude = negative ? -value : value;
+  const displayScale = 10n ** BigInt(fractionDigits);
+  let rounded: bigint;
+
+  if (decimals > fractionDigits) {
+    const roundingScale = 10n ** BigInt(decimals - fractionDigits);
+    rounded = (magnitude + roundingScale / 2n) / roundingScale;
+  } else {
+    rounded = magnitude * (10n ** BigInt(fractionDigits - decimals));
+  }
+
+  const whole = (rounded / displayScale).toString().replace(/\B(?=(\d{3})+(?!\d))/gu, ",");
+  const fraction = fractionDigits > 0
+    ? `.${(rounded % displayScale).toString().padStart(fractionDigits, "0")}`
+    : "";
+  return `${negative && rounded > 0n ? "-" : ""}${whole}${fraction}`;
+}
+
 export function formatTokenAmount(value: bigint | undefined, decimals = 18): string {
   if (value === undefined) return "--";
   const formatted = Number(formatUnits(value, decimals));

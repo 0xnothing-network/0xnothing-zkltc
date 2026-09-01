@@ -43,6 +43,8 @@
     "synth:safety-reserve:activate": "node scripts/activate-synth-safety-reserve.mjs --broadcast",
     "liquidity:bootstrap:check": "node scripts/bootstrap-canonical-liquidity.mjs",
     "liquidity:bootstrap": "node scripts/bootstrap-canonical-liquidity.mjs --broadcast",
+    "points:deploy:check": "node scripts/deploy-nusd-points.mjs",
+    "points:deploy:testnet": "node scripts/deploy-nusd-points.mjs --broadcast",
     "pump:prepare": "node scripts/prepare-graduation.mjs",
     "pump:prepare:broadcast": "node scripts/prepare-graduation.mjs --broadcast",
     "pump:controller:check": "node scripts/deploy-graduation-controller.mjs",

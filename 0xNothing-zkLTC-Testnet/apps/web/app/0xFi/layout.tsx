@@ -8,7 +8,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "0xFi | LitVM DeFi", template: "%s | 0xFi" },
-  description: "Swap, pooled liquidity, farming, lending, borrowing, and DIA-priced synthetic assets on LitVM.",
+  description: "Swap, pooled liquidity, NUSD staking, lending, borrowing, and DIA-priced synthetic assets on LitVM.",
 };
 
 export default function FiLayout({ children }: Readonly<{ children: React.ReactNode }>) {

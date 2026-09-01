@@ -1,4 +1,5 @@
 import { activeNetwork, publicClient } from "./client";
+import { networkIdentity } from "../../config/networks";
 
 /**
  * One shared block poller for the whole UI.
@@ -21,7 +22,17 @@ let latest = 0n;
 let inFlight = false;
 let running = false;
 let failures = 0;
-let networkKey = activeNetwork.id;
+let networkKey = networkIdentity(activeNetwork);
+
+function syncNetwork(): string {
+  const current = networkIdentity(activeNetwork);
+  if (networkKey !== current) {
+    networkKey = current;
+    latest = 0n;
+    failures = 0;
+  }
+  return current;
+}
 
 function hidden(): boolean {
   return typeof document !== "undefined" && document.hidden;
@@ -49,14 +60,14 @@ function schedule(): void {
 
 async function poll(): Promise<void> {
   if (!running || listeners.size === 0 || inFlight || hidden()) return;
-  if (networkKey !== activeNetwork.id) {
-    networkKey = activeNetwork.id;
-    latest = 0n;
-    failures = 0;
-  }
+  const pollNetworkKey = syncNetwork();
+  const readClient = publicClient;
   inFlight = true;
   try {
-    const next = await publicClient.getBlockNumber({ cacheTime: 0 });
+    const next = await readClient.getBlockNumber({ cacheTime: 0 });
+    // Switching networks cannot cancel an RPC already on the wire. Ignore its
+    // eventual result instead of publishing a height from the previous chain.
+    if (networkIdentity(activeNetwork) !== pollNetworkKey) return;
     failures = 0;
     if (next > latest) {
       latest = next;
@@ -72,20 +83,19 @@ async function poll(): Promise<void> {
   } catch {
     // Offline or throttled. Back off rather than amplifying pressure on the
     // endpoint, then return to the foreground cadence after a success.
-    failures = Math.min(failures + 1, 4);
+    if (networkIdentity(activeNetwork) === pollNetworkKey) {
+      failures = Math.min(failures + 1, 4);
+    }
   } finally {
     inFlight = false;
+    syncNetwork();
     schedule();
   }
 }
 
 /** The last height seen, or 0n before the first poll returns. */
 export function latestBlock(): bigint {
-  if (networkKey !== activeNetwork.id) {
-    networkKey = activeNetwork.id;
-    latest = 0n;
-    failures = 0;
-  }
+  syncNetwork();
   return latest;
 }
 

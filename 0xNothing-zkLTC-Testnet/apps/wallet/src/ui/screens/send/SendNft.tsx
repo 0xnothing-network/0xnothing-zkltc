@@ -142,6 +142,8 @@ export function SendNft({ tokenId }: { tokenId: string }): ReactNode {
                 loading="lazy"
                 decoding="async"
                 onError={(event) => {
+                  if (event.currentTarget.dataset.fallback === "true") return;
+                  event.currentTarget.dataset.fallback = "true";
                   event.currentTarget.src = FALLBACK_TOKEN_LOGO;
                 }}
               />

@@ -50,8 +50,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    console.warn(`[pixel-image] token ${tokenId} unavailable:`, error);
     return Response.json(
-      { error: (error as Error).message || "Pixel image unavailable" },
+      { error: "Pixel image unavailable" },
       { status: 404, headers: { "Cache-Control": "no-store" } },
     );
   }

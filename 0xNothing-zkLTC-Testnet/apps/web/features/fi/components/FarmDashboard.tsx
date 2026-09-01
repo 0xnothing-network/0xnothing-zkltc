@@ -53,13 +53,11 @@ function FarmRow({
     },
   });
   const pool = poolRead.data && poolRead.data !== zeroAddress ? poolRead.data : undefined;
-  const configuredGauge = tokenA === "zkLTC"
-    ? deployment.contracts.wzkLtcNusdGauge
-    : tokenA === "nBTC"
-      ? deployment.contracts.nbtcNusdGauge
-      : tokenA === "nETH"
-        ? deployment.contracts.nethNusdGauge
-        : undefined;
+  const configuredGauge = tokenA === "nBTC"
+    ? deployment.contracts.nbtcNusdGauge
+    : tokenA === "nETH"
+      ? deployment.contracts.nethNusdGauge
+      : undefined;
   const gaugeRead = useReadContract({
     address: deployment.contracts.farmFactory,
     abi: farmFactoryAbi,
@@ -355,7 +353,11 @@ function FarmRow({
   );
 }
 
-export function FarmDashboard({ initialPair }: { initialPair?: string } = {}) {
+export function FarmDashboard({
+  initialPair,
+}: {
+  initialPair?: string;
+} = {}) {
   const [nowSeconds, setNowSeconds] = useState<number>();
 
   useEffect(() => {
@@ -366,11 +368,12 @@ export function FarmDashboard({ initialPair }: { initialPair?: string } = {}) {
   }, []);
 
   if (!deployment.contracts.dexFactory || !deployment.contracts.farmFactory) return <NotDeployed feature="LP farming" />;
+  const visiblePairs = canonicalPairs.filter(([tokenA]) => tokenA !== "zkLTC");
   return (
     <section className="fi-section-stack" aria-label="Liquidity farms">
       <div className="fi-panel fi-earn-guide" aria-label="How liquidity farming works">
         <div className="fi-earn-guide-heading">
-          <span className="fi-label">How to earn</span>
+          <span className="fi-label">Other LP farms</span>
           <strong>LP to NUSD in 3 steps</strong>
         </div>
         <ol className="fi-earn-steps">
@@ -379,7 +382,7 @@ export function FarmDashboard({ initialPair }: { initialPair?: string } = {}) {
           <li><span>03</span><strong>Claim NUSD</strong><small>Withdraw anytime</small></li>
         </ol>
       </div>
-      {canonicalPairs.map((pair) => {
+      {visiblePairs.map((pair) => {
         const slug = pairSlug(pair[0], pair[1]);
         return <FarmRow pair={pair} nowSeconds={nowSeconds} expandRequested={initialPair?.toLowerCase() === slug} key={slug} />;
       })}

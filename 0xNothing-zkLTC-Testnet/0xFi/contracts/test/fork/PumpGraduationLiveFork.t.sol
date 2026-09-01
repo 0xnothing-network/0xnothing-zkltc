@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { IControlledZeroXPump, PumpGraduationController } from "../../src/graduation/PumpGraduationController.sol";
-import { TestBase } from "../TestBase.sol";
+import { TestBase } from "../helpers/TestBase.sol";
 
 interface ILivePumpGraduation {
     function admin() external view returns (address);

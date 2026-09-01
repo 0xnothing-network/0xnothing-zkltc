@@ -9,6 +9,7 @@ import { canonicalOracleMarketForIdentifier } from "@fi/lib/canonicalMarkets";
 import { decimal, isFactoryPair, loadPairTail, pairForTokens, pairTokenMetadata } from "@fi/lib/server/rpcTail";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
+import { PublicRouteError, publicErrorMessage } from "@/lib/server/publicError";
 
 const PERIODS = { "5m": 300, "1h": 3_600, "4h": 14_400, "1d": 86_400 } as const;
 type CandlePeriod = keyof typeof PERIODS;
@@ -40,7 +41,7 @@ const candlesCache = createBoundedCache<DataEnvelope<CandlePoint[]>>({
   maxInFlight: MAX_CANDLES_CACHE_ENTRIES,
 });
 
-class CandleRouteError extends Error {
+class CandleRouteError extends PublicRouteError {
   constructor(readonly status: number, message: string) {
     super(message);
   }
@@ -189,7 +190,8 @@ async function loadCandles(
         [],
       );
     } catch (error) {
-      envelope = unconfiguredEnvelope<CandlePoint[]>([], `Goldsky unavailable: ${error instanceof Error ? error.message : "query failed"}`);
+      console.warn("[0xFi/candles] Goldsky query failed:", error);
+      envelope = unconfiguredEnvelope<CandlePoint[]>([], "Goldsky is temporarily unavailable.");
     }
     try {
       const [tail, metadata] = await Promise.all([
@@ -255,8 +257,9 @@ async function loadCandles(
       envelope.data = [...byBucket.values()].sort((a, b) => a.time - b.time).slice(-500);
       envelope.meta.rpcTail = { status: tail.capped ? "capped" : "merged", fromBlock: Number(tail.fromBlock), toBlock: Number(tail.toBlock), merged: true, eventCount: tailTrades };
     } catch (error) {
+      console.warn("[0xFi/candles] RPC tail failed:", error);
       envelope.meta.rpcTail.status = "unavailable";
-      envelope.warning = `${envelope.warning ? `${envelope.warning} ` : ""}RPC tail unavailable: ${error instanceof Error ? error.message : "request failed"}`;
+      envelope.warning = `${envelope.warning ? `${envelope.warning} ` : ""}RPC tail is temporarily unavailable.`;
     }
     envelope.data = normalizeCandles(envelope.data).slice(-500);
     envelope.meta.priceSource = "dex";
@@ -296,15 +299,18 @@ export async function GET(request: NextRequest) {
       && stale.ageMs < CANDLES_STALE_TTL_MS
       && (!(error instanceof CandleRouteError) || error.status >= 500)
     ) {
-      const warning = error instanceof Error ? error.message : "RPC request failed";
+      console.warn("[0xFi/candles] refresh failed; serving cache:", error);
       return candlesResponse({
         ...stale.value,
         meta: { ...stale.value.meta, generatedAt: new Date().toISOString() },
-        warning: `${stale.value.warning ? `${stale.value.warning} ` : ""}Serving cached candles after refresh failed: ${warning}`,
+        warning: `${stale.value.warning ? `${stale.value.warning} ` : ""}Serving cached candles after refresh failed.`,
       }, "STALE");
     }
     const status = error instanceof CandleRouteError ? error.status : 502;
-    const message = error instanceof Error ? error.message : "Indexer query failed";
+    if (!(error instanceof CandleRouteError)) {
+      console.error("[0xFi/candles] request failed:", error);
+    }
+    const message = publicErrorMessage(error, "Candle data is temporarily unavailable");
     return NextResponse.json(
       { error: message },
       { status, headers: { "Cache-Control": "no-store" } },

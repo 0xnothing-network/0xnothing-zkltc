@@ -14,10 +14,18 @@ node_modules/
 .pnp.js
 .yarn/install-state.gz
 
+# --- Generated subgraph bindings ---
+0xNothing-zkLTC-Testnet/0xFi/subgraph/generated/
+0xNothing-zkLTC-Testnet/subgraphs/*/generated/
+0xNothing-zkLTC-Mainnet/subgraphs/*/generated/
+
 # --- Testing & coverage ---
 coverage/
 *.lcov
 .nyc_output
+test-results/
+playwright-report/
+.vitest/
 
 # --- Next.js ---
 .next*/
@@ -27,6 +35,14 @@ dist/
 
 # --- Misc ---
 .DS_Store
+*.log
+*.tmp
+*.bak
+*.orig
+*.rej
+.eslintcache
+.cache/
+.turbo/
 *.pem
 .env
 .env.*

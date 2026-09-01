@@ -13,6 +13,7 @@ import {
   hasMarketplaceSubgraph,
 } from "@/lib/marketplaceSubgraph";
 import { createBoundedCache } from "@/lib/boundedCache";
+import { publicErrorMessage } from "@/lib/server/publicError";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -145,8 +146,9 @@ export async function GET(request: Request) {
       { headers: responseHeaders },
     );
   } catch (err) {
+    console.error("[user-nfts] request failed:", err);
     return NextResponse.json(
-      { error: (err as Error).message || "Unknown error" },
+      { error: publicErrorMessage(err, "NFT data is temporarily unavailable") },
       { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }

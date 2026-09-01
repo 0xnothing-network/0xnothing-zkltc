@@ -4,6 +4,7 @@ import { createPublicClient, getAddress, http, type Address } from "viem";
 import { litvm, LITVM_RPC_URL } from "@/config/wagmi";
 import { marketplaceNftKey } from "@/lib/marketplaceAbi";
 import { createBoundedCache } from "@/lib/boundedCache";
+import { isUnsafeRemoteHostname } from "@/lib/server/networkAddress";
 import { readLimitedBytes } from "@/lib/server/readLimitedBytes";
 import { normalizeUint256TokenId } from "@/lib/tokenId";
 
@@ -200,7 +201,7 @@ function normalizeAssetUri(value: string): string {
   }
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && !isPrivateHostname(url.hostname)
+    return url.protocol === "https:" && !isUnsafeRemoteHostname(url.hostname)
       ? url.toString()
       : "";
   } catch {
@@ -220,40 +221,10 @@ function metadataFetchUrl(value: string): string | null {
   try {
     const url = new URL(candidate);
     if (url.protocol !== "https:" || url.username || url.password) return null;
-    return isPrivateHostname(url.hostname) ? null : url.toString();
+    return isUnsafeRemoteHostname(url.hostname) ? null : url.toString();
   } catch {
     return null;
   }
-}
-
-function isPrivateHostname(hostname: string): boolean {
-  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  if (
-    host === "localhost" ||
-    host.endsWith(".localhost") ||
-    host.endsWith(".local") ||
-    host.endsWith(".internal") ||
-    host === "::1" ||
-    host.startsWith("fc") ||
-    host.startsWith("fd") ||
-    host.startsWith("fe80:")
-  ) {
-    return true;
-  }
-
-  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
-  if (!ipv4) return false;
-  const parts = ipv4.slice(1).map(Number);
-  if (parts.some((part) => part > 255)) return true;
-  return (
-    parts[0] === 0 ||
-    parts[0] === 10 ||
-    parts[0] === 127 ||
-    (parts[0] === 169 && parts[1] === 254) ||
-    (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
-    (parts[0] === 192 && parts[1] === 168) ||
-    parts[0] >= 224
-  );
 }
 
 async function mapWithConcurrency<T>(

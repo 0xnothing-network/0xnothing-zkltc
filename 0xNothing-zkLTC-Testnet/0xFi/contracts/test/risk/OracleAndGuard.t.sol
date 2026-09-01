@@ -2,8 +2,8 @@
 pragma solidity ^0.8.24;
 
 import { DIAOracleV2Adapter } from "../../src/oracle/DIAOracleV2Adapter.sol";
-import { TestBase } from "../TestBase.sol";
-import { MockDIAAggregatorV3 } from "./RiskMocks.sol";
+import { TestBase } from "../helpers/TestBase.sol";
+import { MockDIAAggregatorV3 } from "../mocks/RiskMocks.sol";
 
 contract OracleAdapterTest is TestBase {
     MockDIAAggregatorV3 private feed;

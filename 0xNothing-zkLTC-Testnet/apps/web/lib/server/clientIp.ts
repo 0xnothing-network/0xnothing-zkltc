@@ -5,6 +5,16 @@ export { trustedProxyRequest } from "./proxyAuth.ts";
 
 const TRUSTED_HEADER_NAME = /^[a-z0-9-]{1,64}$/;
 const CLOUDFLARE_CLIENT_IP_HEADER = "cf-connecting-ip";
+export const UNIDENTIFIED_CLIENT_KEY = "unidentified-client";
+
+/**
+ * An absent trusted proxy identity must not collapse every visitor into one
+ * shared rate-limit bucket. Callers should keep their authenticated identity
+ * key and add this optional network key only when the proxy supplied one.
+ */
+export function trustedClientRateLimitKey(clientKey: string): string | null {
+  return clientKey === UNIDENTIFIED_CLIENT_KEY ? null : `ip:${clientKey}`;
+}
 function configuredProxyHeaderIsTrusted(
   request: Request,
   configuredHeader: string,
@@ -91,5 +101,5 @@ export function trustedProxyClientKey(
     if (address) return `vercel:${address}`;
   }
 
-  return "unidentified-client";
+  return UNIDENTIFIED_CLIENT_KEY;
 }

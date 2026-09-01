@@ -1,9 +1,11 @@
 import { PIXEL_NFT_CONTRACT_ADDRESS } from "@/lib/contract";
 import { getPixelImageUrl } from "@/lib/pixelImage";
 import { MARKETPLACE_SUBGRAPH_URL } from "@/lib/publicConfig";
+import { readLimitedJson } from "@/lib/server/readLimitedJson";
 
 const PIXEL_COLLECTION = PIXEL_NFT_CONTRACT_ADDRESS.toLowerCase();
 const SUBGRAPH_TOKEN_BATCH_SIZE = 500;
+const MAX_SUBGRAPH_RESPONSE_BYTES = 16 * 1024 * 1024;
 
 export interface SubgraphTokenMetadata {
   tokenId: string;
@@ -605,7 +607,10 @@ async function graphFetch<T>(
     throw new Error(`Marketplace subgraph request failed: ${response.status}`);
   }
 
-  const json = (await response.json()) as GraphQLResponse<T>;
+  const json = await readLimitedJson<GraphQLResponse<T>>(
+    response,
+    MAX_SUBGRAPH_RESPONSE_BYTES,
+  );
   if (json.errors?.length) {
     throw new Error(json.errors[0]?.message || "Marketplace subgraph query error");
   }

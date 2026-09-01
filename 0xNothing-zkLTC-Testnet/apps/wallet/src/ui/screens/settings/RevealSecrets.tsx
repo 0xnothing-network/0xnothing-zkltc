@@ -22,7 +22,7 @@ const TITLE: Record<Target, MessageKey> = {
 };
 
 export function RevealSecrets(): ReactNode {
-  const { address } = useWallet();
+  const { address, notify } = useWallet();
   const [target, setTarget] = useState<Target | null>(null);
   const [password, setPassword] = useState("");
   const [secret, setSecret] = useState<string | null>(null);
@@ -155,7 +155,12 @@ export function RevealSecrets(): ReactNode {
                   <p className="w-code w-mono-break">{secret}</p>
                 )}
                 <div className="w-btn-row">
-                  <Button data-copied={copied ? "true" : "false"} onClick={() => void copy(secret)}>
+                  <Button
+                    data-copied={copied ? "true" : "false"}
+                    onClick={() => void copy(secret).then((ok) => {
+                      if (!ok) notify(t("common.copyFailed"), "error");
+                    })}
+                  >
                     {copied ? `${t("common.copied")} ✓` : t("common.copy")}
                   </Button>
                   <Button variant="primary" block onClick={close}>

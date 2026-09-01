@@ -4,12 +4,13 @@ import {
   LITVM_EXPLORER_URL,
   LITVM_RPC_URL,
   litvm,
-} from "./chain";
+} from "./chain.ts";
 
 const MAX_NAME_LENGTH = 48;
 const MAX_SYMBOL_LENGTH = 12;
 const MAX_RPC_LENGTH = 2_048;
 const MAX_CUSTOM_NETWORKS = 32;
+const MAX_CHAIN_CACHE_ENTRIES = MAX_CUSTOM_NETWORKS * 2;
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 export interface NetworkCurrency {
@@ -58,6 +59,25 @@ export function isLitvmNetwork(network: WalletNetwork): boolean {
   return network.id === LITVM_NETWORK.id;
 }
 
+/**
+ * Full profile identity for caches and in-flight work. The short persisted id
+ * is convenient for settings, but it must not be the only cache boundary for
+ * user-controlled network metadata.
+ */
+export function networkIdentity(network: WalletNetwork): string {
+  return JSON.stringify([
+    network.id,
+    network.chainId,
+    network.rpcUrl,
+    network.explorerUrl,
+    network.name,
+    network.nativeCurrency.name,
+    network.nativeCurrency.symbol,
+    network.nativeCurrency.decimals,
+    network.builtin,
+  ]);
+}
+
 export function customNetworkId(chainId: number, rpcUrl: string): string {
   const normalized = normalizeRpcUrl(rpcUrl) ?? rpcUrl.trim();
   let hash = 2166136261;
@@ -81,6 +101,7 @@ export function normalizeRpcUrl(value: string): string | null {
     const local = LOOPBACK_HOSTS.has(url.hostname.toLowerCase());
     if (
       (url.protocol !== "https:" && !(url.protocol === "http:" && local))
+      || url.hostname.includes("*")
       || url.username
       || url.password
       || url.hash
@@ -99,6 +120,7 @@ export function normalizeExplorerUrl(value: string): string {
     const local = LOOPBACK_HOSTS.has(url.hostname.toLowerCase());
     if (
       (url.protocol !== "https:" && !(url.protocol === "http:" && local))
+      || url.hostname.includes("*")
       || url.username
       || url.password
       || url.hash
@@ -157,10 +179,9 @@ export function sanitizeCustomNetwork(input: unknown): WalletNetwork | null {
     || chainId === LITVM_CHAIN_ID
   ) return null;
 
-  const suppliedId = safeText(value.id, 96);
-  const id = suppliedId && /^custom-[0-9]+-[0-9a-f]+$/u.test(suppliedId)
-    ? suppliedId
-    : customNetworkId(chainId, rpcUrl);
+  // Persisted settings are untrusted input. Recompute the id so a crafted or
+  // stale profile cannot alias another network's cached viem chain.
+  const id = customNetworkId(chainId, rpcUrl);
   const explorerUrl = typeof value.explorerUrl === "string"
     ? normalizeExplorerUrl(value.explorerUrl)
     : "";
@@ -200,7 +221,8 @@ const chainCache = new Map<string, Chain>();
 /** Builds a viem chain only after the profile has passed the validator above. */
 export function viemChainFor(network: WalletNetwork): Chain {
   if (isLitvmNetwork(network)) return litvm;
-  const cached = chainCache.get(network.id);
+  const cacheKey = networkIdentity(network);
+  const cached = chainCache.get(cacheKey);
   if (cached) return cached;
   const chain = defineChain({
     id: network.chainId,
@@ -211,6 +233,11 @@ export function viemChainFor(network: WalletNetwork): Chain {
       ? { blockExplorers: { default: { name: `${network.name} Explorer`, url: network.explorerUrl } } }
       : {}),
   });
-  chainCache.set(network.id, chain);
+  while (chainCache.size >= MAX_CHAIN_CACHE_ENTRIES) {
+    const oldest = chainCache.keys().next().value as string | undefined;
+    if (oldest === undefined) break;
+    chainCache.delete(oldest);
+  }
+  chainCache.set(cacheKey, chain);
   return chain;
 }

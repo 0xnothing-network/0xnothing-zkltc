@@ -91,6 +91,9 @@ export function publicEnvironmentValues({ deployment, network, rpcUrl, appUrl, g
     NEXT_PUBLIC_DEX_FACTORY_ADDRESS: publicAddress(deployment.dexFactory, "DEX factory"),
     NEXT_PUBLIC_DEX_ROUTER_ADDRESS: publicAddress(deployment.dexRouter, "DEX router"),
     NEXT_PUBLIC_GAUGE_FACTORY_ADDRESS: publicAddress(deployment.gaugeFactory, "gauge factory"),
+    NEXT_PUBLIC_0XFI_POINTS_STAKING_ADDRESS: deployment.nusdPointsStaking
+      ? publicAddress(deployment.nusdPointsStaking, "NUSD points staking")
+      : undefined,
     NEXT_PUBLIC_SYNTH_FEE_GAUGE_FACTORY_ADDRESS: deployment.synthFeeGaugeFactory
       ? publicAddress(deployment.synthFeeGaugeFactory, "synth fee gauge factory")
       : undefined,
@@ -117,6 +120,12 @@ export function publicEnvironmentValues({ deployment, network, rpcUrl, appUrl, g
     ),
     NEXT_PUBLIC_PUMP_GRADUATION_CONTROLLER_ADDRESS: controller,
     NEXT_PUBLIC_PUMP_ADDRESS: publicAddress(deployment.pump, "Pump"),
+    NEXT_PUBLIC_LP_LOCKER_ADDRESS: deployment.lpLocker
+      ? publicAddress(deployment.lpLocker, "LP locker")
+      : undefined,
+    NEXT_PUBLIC_TOKEN_METADATA_REGISTRY_ADDRESS: deployment.tokenMetadataRegistry
+      ? publicAddress(deployment.tokenMetadataRegistry, "token metadata registry")
+      : undefined,
     NEXT_PUBLIC_WZKLTC_NUSD_PAIR_ADDRESS: publicAddress(deployment.wzkLtcNusdPair, "WzkLTC/NUSD pair"),
     NEXT_PUBLIC_NBTC_NUSD_PAIR_ADDRESS: publicAddress(deployment.nBTCNusdPair, "nBTC/NUSD pair"),
     NEXT_PUBLIC_NETH_NUSD_PAIR_ADDRESS: publicAddress(deployment.nETHNusdPair, "nETH/NUSD pair"),
@@ -147,6 +156,9 @@ export function publicTestnetConfiguration({ deployment, network, appUrl, goldsk
     dexFactory: publicAddress(deployment.dexFactory, "DEX factory"),
     dexRouter: publicAddress(deployment.dexRouter, "DEX router"),
     farmFactory: publicAddress(deployment.gaugeFactory, "gauge factory"),
+    nusdPointsStaking: deployment.nusdPointsStaking
+      ? publicAddress(deployment.nusdPointsStaking, "NUSD points staking")
+      : null,
     synthFeeGaugeFactory: deployment.synthFeeGaugeFactory
       ? publicAddress(deployment.synthFeeGaugeFactory, "synth fee gauge factory")
       : null,
@@ -182,6 +194,12 @@ export function publicTestnetConfiguration({ deployment, network, appUrl, goldsk
     ),
     pumpGraduationController: controller,
     pump: publicAddress(deployment.pump, "Pump"),
+    lpLocker: deployment.lpLocker
+      ? publicAddress(deployment.lpLocker, "LP locker")
+      : null,
+    tokenMetadataRegistry: deployment.tokenMetadataRegistry
+      ? publicAddress(deployment.tokenMetadataRegistry, "token metadata registry")
+      : null,
   };
 }
 

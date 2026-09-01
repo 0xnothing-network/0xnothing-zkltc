@@ -80,6 +80,11 @@ const nextConfig: NextConfig = {
         destination: "/0xPump/stats",
         permanent: true,
       },
+      {
+        source: "/0xFi/farm",
+        destination: "/0xFi/earn",
+        permanent: true,
+      },
     ];
   },
   async headers() {

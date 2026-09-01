@@ -57,7 +57,10 @@ function memoryStore(): KeyValueStore {
       const set = watchers.get(key) ?? new Set();
       set.add(handler);
       watchers.set(key, set);
-      return () => set.delete(handler);
+      return () => {
+        set.delete(handler);
+        if (set.size === 0) watchers.delete(key);
+      };
     },
   };
 }
@@ -169,7 +172,10 @@ function preferencesStore(): KeyValueStore {
       const set = watchers.get(key) ?? new Set();
       set.add(handler);
       watchers.set(key, set);
-      return () => set.delete(handler);
+      return () => {
+        set.delete(handler);
+        if (set.size === 0) watchers.delete(key);
+      };
     },
   };
 }

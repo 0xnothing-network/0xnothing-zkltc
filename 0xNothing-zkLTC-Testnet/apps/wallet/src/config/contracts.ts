@@ -16,8 +16,10 @@ export const CONTRACTS = {
   neth: "0xD504bB9430d94ccFF87e12e94fd6C0074D0E8aCb",
   dexFactory: "0xe33fE815c2e12DC83b69397CeD12b09849Fa9C0D",
   dexRouter: "0x7b17035A4aC3A32f2A18a16e2F43A5f8C66275b0",
-  /** "STAKE NUSD" in the wallet = supply()/withdraw() on this pool. */
+  /** 0xFi lending remains separate from fixed-duration NUSD points staking. */
   lendingPool: "0x7CB638F8e10f1bd200A3c5C3fD014C3FD97BA914",
+  /** Locks NUSD for fixed terms and accounts xPoints on-chain. */
+  nusdPointsStaking: "0xDf009d9c2Bc0C2f8ee55A047074edB166C1D3282",
   /**
    * The DIA LTC/USD adapter NUSD itself is bound to — every mint and redeem is
    * priced through this contract, so it is also what the wallet shows. Used as

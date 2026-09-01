@@ -2,8 +2,8 @@ import type { Address, Hex } from "viem";
 import { lendingPoolAbi } from "../../abis";
 import { CONTRACTS } from "../../config/contracts";
 import { formatAmount } from "../lib/format";
-import { publicClient } from "../rpc/client";
-import { ensureAllowance, writeCall } from "./tx";
+import { activeNetwork, publicClient } from "../rpc/client";
+import { ensureAllowance, type TxExecutionContext, writeCall } from "./tx";
 
 /**
  * "STAKE NUSD" in the wireframe is the 0xFi lending pool: supply() earns the
@@ -61,13 +61,16 @@ export async function loadLendState(account: Address): Promise<LendState> {
 }
 
 export async function supplyNusd(params: { from: Address; amount: bigint }): Promise<Hex> {
+  // Approval and supply are one user action. Pin both reads/writes to the same
+  // network even if another wallet surface changes the selection mid-flight.
+  const context = { network: activeNetwork, client: publicClient } satisfies TxExecutionContext;
   await ensureAllowance({
     from: params.from,
     token: CONTRACTS.nusd,
     spender: CONTRACTS.lendingPool,
     amount: params.amount,
     symbol: "NUSD",
-  });
+  }, context);
   return writeCall({
     from: params.from,
     address: CONTRACTS.lendingPool,
@@ -76,7 +79,7 @@ export async function supplyNusd(params: { from: Address; amount: bigint }): Pro
     args: [params.amount, params.from],
     kind: "supply",
     label: { key: "tx.supply", params: { amount: formatAmount(params.amount, 18, 2) } },
-  });
+  }, context);
 }
 
 export async function withdrawNusd(params: { from: Address; amount: bigint }): Promise<Hex> {

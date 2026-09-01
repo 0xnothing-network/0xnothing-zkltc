@@ -13,6 +13,7 @@ export type RouteName =
   | "receive"
   | "history"
   | "mint"
+  | "earn"
   | "lend"
   | "swap"
   | "dapps"
@@ -30,6 +31,7 @@ const ROUTES = new Set<string>([
   "receive",
   "history",
   "mint",
+  "earn",
   "lend",
   "swap",
   "dapps",

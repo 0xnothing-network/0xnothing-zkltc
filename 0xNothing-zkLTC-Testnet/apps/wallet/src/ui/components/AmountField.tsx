@@ -1,12 +1,13 @@
 import { type ReactNode, useId } from "react";
 import { t } from "../../core/i18n";
+import { normalizeDecimalInput } from "../lib/decimalInput";
 
 /**
  * The amount input, shaped like the site's: a wide numeric field, the symbol on
- * the right, MAX at the end. Typing is filtered to a decimal number so the
- * caller never has to defend against letters, and the value stays a string all
- * the way to `parseAmount` — parsing a partially typed "0." must not round-trip
- * through a float.
+ * the right, MAX at the end. A locale decimal comma is normalized, while
+ * malformed pasted text stays visible so `parseAmount` can reject it instead
+ * of silently joining digit groups. The value remains a string all the way
+ * through — a partially typed "0." must not round-trip through a float.
  */
 export function AmountField({
   label,
@@ -38,12 +39,7 @@ export function AmountField({
         <input
           id={inputId}
           value={value}
-          onChange={(event) => {
-            const next = event.target.value.replace(/[^\d.]/gu, "");
-            // One decimal point only, however much the user pastes.
-            const parts = next.split(".");
-            onChange(parts.length > 2 ? `${parts[0]}.${parts.slice(1).join("")}` : next);
-          }}
+          onChange={(event) => onChange(normalizeDecimalInput(event.target.value))}
           inputMode="decimal"
           autoComplete="off"
           spellCheck={false}

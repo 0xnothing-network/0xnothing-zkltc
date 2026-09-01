@@ -7,6 +7,7 @@ import {
   hasMarketplaceSubgraph,
 } from "@/lib/marketplaceSubgraph";
 import { createBoundedCache } from "@/lib/boundedCache";
+import { publicErrorMessage } from "@/lib/server/publicError";
 import { normalizeUint256TokenId } from "@/lib/tokenId";
 import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
@@ -81,8 +82,9 @@ export async function GET(request: Request) {
       },
     );
   } catch (err) {
+    console.error("[token-metadata] request failed:", err);
     return NextResponse.json(
-      { error: (err as Error).message || "Unknown error" },
+      { error: publicErrorMessage(err, "Token metadata is temporarily unavailable") },
       { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }

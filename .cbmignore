@@ -1,0 +1,27 @@
+# Generated artifacts and local caches do not describe the maintained source.
+**/node_modules/**
+**/.next/**
+**/.next-dev/**
+**/.open-next/**
+**/.wrangler/**
+**/.gradle/**
+**/dist/**
+**/build/**
+**/out/**
+**/cache/**
+**/broadcast/**
+**/coverage/**
+
+# Foundry dependencies are vendored upstream code. Audit them through the lock/
+# remapping boundary and direct source reads when needed, not as project code.
+0xNothing-zkLTC-Testnet/0xFi/contracts/lib/**
+
+# Capacitor copies the compiled web bundle into this Android assets directory.
+0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/main/assets/public/**
+
+# Store screenshots and generated promotion assets contain no runtime symbols.
+0xNothing-zkLTC-Testnet/apps/wallet/store-assets/**
+
+# Local graph/cache outputs are reproducible tooling artifacts.
+graft/**
+standalone/**

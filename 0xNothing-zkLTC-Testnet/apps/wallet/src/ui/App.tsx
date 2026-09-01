@@ -27,6 +27,7 @@ function ProtocolOnly({ title, children }: { title: string; children: ReactNode 
 const Approve = lazy(() => import("./screens/Approve").then((module) => ({ default: module.Approve })));
 const Dapps = lazy(() => import("./screens/Dapps").then((module) => ({ default: module.Dapps })));
 const History = lazy(() => import("./screens/History").then((module) => ({ default: module.History })));
+const Earn = lazy(() => import("./screens/Earn").then((module) => ({ default: module.Earn })));
 const Lend = lazy(() => import("./screens/Lend").then((module) => ({ default: module.Lend })));
 const MintNusd = lazy(() => import("./screens/MintNusd").then((module) => ({ default: module.MintNusd })));
 const Receive = lazy(() => import("./screens/Receive").then((module) => ({ default: module.Receive })));
@@ -54,6 +55,8 @@ function screenFor(name: RouteName): ReactNode {
       return <History />;
     case "mint":
       return <ProtocolOnly title={t("mint.title")}><MintNusd /></ProtocolOnly>;
+    case "earn":
+      return <ProtocolOnly title={t("earn.title")}><Earn /></ProtocolOnly>;
     case "lend":
       return <ProtocolOnly title={t("lend.title")}><Lend /></ProtocolOnly>;
     case "swap":

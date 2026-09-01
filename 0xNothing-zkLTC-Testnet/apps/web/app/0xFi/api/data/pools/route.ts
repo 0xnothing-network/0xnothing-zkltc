@@ -517,9 +517,10 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
         [],
       );
     } catch (error) {
+      console.warn("[0xFi/pools] Goldsky query failed:", error);
       envelope = unconfiguredEnvelope<PoolPoint[]>(
         [],
-        `Goldsky unavailable: ${error instanceof Error ? error.message : "query failed"}`,
+        "Goldsky is temporarily unavailable.",
       );
     }
 
@@ -527,7 +528,8 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
       try {
         envelope.data = await loadFactoryPools();
       } catch (error) {
-        envelope.warning = `${envelope.warning ? `${envelope.warning} ` : ""}Factory discovery unavailable: ${error instanceof Error ? error.message : "request failed"}`;
+        console.warn("[0xFi/pools] factory discovery failed:", error);
+        envelope.warning = `${envelope.warning ? `${envelope.warning} ` : ""}Factory discovery is temporarily unavailable.`;
       }
     } else {
       // Ensure reserves/supply are current even for indexed pools
@@ -548,7 +550,8 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
             if (!merged.has(key)) merged.set(key, pool);
           }
         } catch (error) {
-          envelope.warning = `${envelope.warning ? `${envelope.warning} ` : ""}Factory discovery unavailable while the RPC tail is capped: ${error instanceof Error ? error.message : "request failed"}`;
+          console.warn("[0xFi/pools] capped-tail factory discovery failed:", error);
+          envelope.warning = `${envelope.warning ? `${envelope.warning} ` : ""}Factory discovery is temporarily unavailable while the RPC tail is capped.`;
         }
       }
       for (const pool of tail.pools) merged.set(pool.id.toLowerCase(), pool);
@@ -561,8 +564,9 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
         eventCount: tail.pools.length,
       };
     } catch (error) {
+      console.warn("[0xFi/pools] RPC tail failed:", error);
       envelope.meta.rpcTail.status = "unavailable";
-      envelope.warning = `${envelope.warning ? `${envelope.warning} ` : ""}RPC tail unavailable: ${error instanceof Error ? error.message : "request failed"}`;
+      envelope.warning = `${envelope.warning ? `${envelope.warning} ` : ""}RPC tail is temporarily unavailable.`;
     }
 
     const visible = await visibleDeploymentPools(envelope.data);
@@ -740,8 +744,9 @@ export async function GET() {
         warning: `${stale.value.warning ? `${stale.value.warning} ` : ""}Live refresh failed; serving the last successful market snapshot.`,
       }, "STALE");
     }
+    console.error("[0xFi/pools] request failed:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Indexer query failed" },
+      { error: "Pool data is temporarily unavailable" },
       { status: 502, headers: { "Cache-Control": "no-store" } },
     );
   }

@@ -2,6 +2,7 @@ import "server-only";
 
 import type { Hex } from "viem";
 import { PUMP_SUBGRAPH_URL } from "@/features/pump/config";
+import { readLimitedJson } from "@/lib/server/readLimitedJson";
 import {
   emptyPumpMarket,
   type PumpCandle,
@@ -32,6 +33,8 @@ interface GraphResponse<T> {
   data?: T;
   errors?: Array<{ message?: string }>;
 }
+
+const MAX_GRAPH_RESPONSE_BYTES = 8 * 1024 * 1024;
 
 export interface GraphMeta {
   block: { number: number | string };
@@ -146,7 +149,10 @@ export async function graphFetch<T>(
     signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok) throw new Error(`Pump subgraph returned HTTP ${response.status}`);
-  const payload = (await response.json()) as GraphResponse<T>;
+  const payload = await readLimitedJson<GraphResponse<T>>(
+    response,
+    MAX_GRAPH_RESPONSE_BYTES,
+  );
   if (payload.errors?.length || !payload.data) {
     throw new Error(payload.errors?.[0]?.message || "Pump subgraph returned no data");
   }
