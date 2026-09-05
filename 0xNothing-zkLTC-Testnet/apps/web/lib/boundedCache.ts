@@ -79,7 +79,7 @@ export function createBoundedCache<T>(options: BoundedCacheOptions): BoundedCach
   const values = new Map<string, StoredEntry<T>>();
   const inFlight = new Map<string, Promise<T>>();
 
-  function set(key: string, value: T, ttlMs = options.ttlMs): void {
+  function store(key: string, value: T, ttlMs = options.ttlMs): void {
     values.delete(key);
     // A non-positive ttl means "do not retain". Callers use it for answers that
     // must be recomputed on the next request, such as an upstream outage.
@@ -95,6 +95,13 @@ export function createBoundedCache<T>(options: BoundedCacheOptions): BoundedCach
       if (oldestKey === undefined) return;
       values.delete(oldestKey);
     }
+  }
+
+  function set(key: string, value: T, ttlMs = options.ttlMs): void {
+    // A forced result supersedes any older load of the same key. Existing
+    // callers may finish, but their result must not replace this newer value.
+    inFlight.delete(key);
+    store(key, value, ttlMs);
   }
 
   function touch(key: string, stored: StoredEntry<T>): void {
@@ -113,14 +120,19 @@ export function createBoundedCache<T>(options: BoundedCacheOptions): BoundedCach
     const pending = inFlight.get(key);
     if (pending) return pending;
 
-    const request = loader();
-    if (inFlight.size >= maxInFlight) return request;
-    inFlight.set(key, request);
-    void request
-      .then((value) => set(key, value, typeof ttl === "function" ? ttl(value) : ttl), () => undefined)
+    const loaded = Promise.resolve().then(loader);
+    if (inFlight.size >= maxInFlight) return loaded;
+    const request = loaded
+      .then((value) => {
+        if (inFlight.get(key) === request) {
+          store(key, value, typeof ttl === "function" ? ttl(value) : ttl);
+        }
+        return value;
+      })
       .finally(() => {
         if (inFlight.get(key) === request) inFlight.delete(key);
       });
+    inFlight.set(key, request);
     return request;
   }
 
@@ -148,6 +160,7 @@ export function createBoundedCache<T>(options: BoundedCacheOptions): BoundedCach
     },
     delete(key) {
       values.delete(key);
+      inFlight.delete(key);
     },
     pending(key) {
       return inFlight.get(key);

@@ -79,13 +79,23 @@ export function useVisibilityRefresh({
       if (timer !== undefined) window.clearTimeout(timer);
       timer = undefined;
     };
+    const canRefresh = () =>
+      enabledRef.current
+      && document.visibilityState === "visible"
+      && !isFetchingRef.current
+      && Date.now() - dataUpdatedAtRef.current >= maxAgeMs;
+    const refreshIfStale = async () => {
+      timer = undefined;
+      // A normal poll or another observer may have refreshed the query during
+      // the jitter delay. Avoid cancelling/restarting that work on tab return.
+      if (!canRefresh()) return;
+      await refetchRef.current();
+    };
     const onVisibilityChange = () => {
       clearTimer();
-      if (!enabledRef.current) return;
-      if (document.visibilityState !== "visible" || isFetchingRef.current) return;
-      if (Date.now() - dataUpdatedAtRef.current < maxAgeMs) return;
+      if (!canRefresh()) return;
       timer = window.setTimeout(
-        () => void refetchRef.current(),
+        () => void refreshIfStale().catch(() => undefined),
         pollOffset(key, VISIBILITY_JITTER_RANGE),
       );
     };

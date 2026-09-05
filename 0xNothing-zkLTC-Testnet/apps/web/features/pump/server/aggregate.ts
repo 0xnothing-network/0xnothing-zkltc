@@ -52,9 +52,12 @@ export function mergeLiveTradesIntoCandles(
       continue;
     }
 
-    const previous = [...candles.values()]
-      .filter((candle) => candle.bucket < bucket)
-      .sort((left, right) => right.bucket - left.bucket)[0];
+    let previous: PumpCandle | undefined;
+    for (const candle of candles.values()) {
+      if (candle.bucket < bucket && (!previous || candle.bucket > previous.bucket)) {
+        previous = candle;
+      }
+    }
     const open = previous?.close
       ?? (Number(indexedPrice) > 0 ? indexedPrice : trade.priceNusd);
     candles.set(bucket, {

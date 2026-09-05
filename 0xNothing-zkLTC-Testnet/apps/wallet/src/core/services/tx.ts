@@ -108,8 +108,9 @@ export async function previewRaw(params: {
   data?: Hex;
   gas?: bigint;
 }): Promise<RawPreview> {
-  const fees = await publicClient.estimateFeesPerGas().catch(async () => ({
-    maxFeePerGas: await publicClient.getGasPrice(),
+  const readClient = publicClient;
+  const fees = await readClient.estimateFeesPerGas().catch(async () => ({
+    maxFeePerGas: await readClient.getGasPrice(),
     maxPriorityFeePerGas: 0n,
   }));
   const maxFeePerGas = fees.maxFeePerGas ?? 0n;
@@ -117,7 +118,7 @@ export async function previewRaw(params: {
   let estimated: bigint | null = null;
   let revert: string | null = null;
   try {
-    const raw = await publicClient.estimateGas({
+    const raw = await readClient.estimateGas({
       account: params.from,
       to: params.to,
       value: params.value,
@@ -209,7 +210,8 @@ export async function ensureAllowance(params: {
   amount: bigint;
   symbol: string;
 }, context?: TxExecutionContext): Promise<Hex | null> {
-  const { client: readClient } = executionContext(context);
+  const pinnedContext = executionContext(context);
+  const { client: readClient } = pinnedContext;
   return withNamedLock(
     `allowance:${params.from.toLowerCase()}:${params.token.toLowerCase()}:${params.spender.toLowerCase()}`,
     async () => {
@@ -228,7 +230,7 @@ export async function ensureAllowance(params: {
         args: [params.spender, params.amount],
         kind: "approve",
         label: { key: "tx.approve", params: { symbol: params.symbol } },
-      }, context);
+      }, pinnedContext);
       const receipt = await readClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
       if (receipt.status !== "success") throw new Error(t("err.txReverted"));
       return hash;

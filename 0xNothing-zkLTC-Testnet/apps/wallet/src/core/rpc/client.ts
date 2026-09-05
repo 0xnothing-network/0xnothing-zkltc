@@ -39,6 +39,13 @@ export function configureRpcClient(network: WalletNetwork): void {
   publicClient = clientFor(network);
 }
 
+/** Resolve a profile's read client without changing the selected network. */
+export function publicClientFor(network: WalletNetwork) {
+  return networkIdentity(activeNetwork) === networkIdentity(network)
+    ? publicClient
+    : clientFor(network);
+}
+
 /** A signing client for one account. Built per use; nothing is cached. */
 export async function walletClientFor(address: Address, network: WalletNetwork = activeNetwork) {
   return createWalletClient({

@@ -116,13 +116,19 @@ export function useImportedSwapAsset(value: string, enabled = true) {
       setState({ status: "unsupported", candidateKey: cacheKey, error: "Token scan limit reached for this session." });
       return;
     }
-    SCANNED_ADDRESSES.add(cacheKey);
-
     let cancelled = false;
     const controller = new AbortController();
+    let requestTimeout: number | undefined;
     setState({ status: "loading", candidateKey: cacheKey });
-    const requestTimeout = window.setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
     const debounceTimer = window.setTimeout(() => {
+      // Only actual lookups consume the session budget. Another picker may
+      // have started a scan while this candidate was waiting to debounce.
+      if (!SCANNED_ADDRESSES.has(cacheKey) && SCANNED_ADDRESSES.size >= MAX_SESSION_IMPORTS) {
+        setState({ status: "unsupported", candidateKey: cacheKey, error: "Token scan limit reached for this session." });
+        return;
+      }
+      SCANNED_ADDRESSES.add(cacheKey);
+      requestTimeout = window.setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
       void (async () => {
         try {
           const response = await fetch(fiPath(`/api/token/${candidate}`), {
@@ -184,6 +190,8 @@ export function useImportedSwapAsset(value: string, enabled = true) {
               ? error.message
               : "Token verification is temporarily unavailable.",
           });
+        } finally {
+          window.clearTimeout(requestTimeout);
         }
       })();
     }, 280);

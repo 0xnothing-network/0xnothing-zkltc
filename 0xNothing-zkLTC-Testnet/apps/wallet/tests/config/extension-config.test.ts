@@ -14,9 +14,13 @@ const manifest = JSON.parse(
   minimum_chrome_version?: string;
   name?: string;
   short_name?: string;
+  version?: string;
   host_permissions?: string[];
   action?: { default_title?: string };
 };
+const pkg = JSON.parse(
+  readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+) as { version?: string };
 const viteConfig = readFileSync(new URL("../../vite.config.ts", import.meta.url), "utf8");
 const injectBuild = readFileSync(new URL("../../scripts/build-inject.mjs", import.meta.url), "utf8");
 
@@ -24,6 +28,20 @@ test("the extension minimum Chrome matches both production bundle targets", () =
   assert.equal(manifest.minimum_chrome_version, "120");
   assert.match(viteConfig, /target:\s*["']chrome120["']/u);
   assert.match(injectBuild, /target:\s*["']chrome120["']/u);
+});
+
+test("the extension ships one version number, in a form the Web Store accepts", () => {
+  // Two hand-maintained copies of the same number: the Web Store reads
+  // public/manifest.json, while vite.config.ts stamps package.json's version into
+  // __WALLET_VERSION__ for the Settings screen. Let them drift and the installed
+  // extension reports a version it was never published under.
+  assert.equal(manifest.version, pkg.version);
+  // Chrome accepts one to four dot-separated integers, no leading zeroes and no
+  // pre-release suffix — a plain semver tag like "1.0.1-rc.1" is refused at upload
+  // time, which is far too late to find out.
+  const version = manifest.version ?? "";
+  assert.match(version, /^(?:0|[1-9]\d*)(?:\.(?:0|[1-9]\d*)){0,3}$/u);
+  for (const part of version.split(".")) assert.ok(Number(part) <= 65_535);
 });
 
 test("extension branding and market API permission stay explicit", () => {

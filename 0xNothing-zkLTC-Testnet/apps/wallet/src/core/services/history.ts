@@ -4,7 +4,7 @@ import { LITVM_NETWORK, type WalletNetwork } from "../../config/networks";
 import { persistentStore } from "../platform/storage";
 import { STORAGE_KEYS } from "../platform/storageKeys";
 import { withNamedLock } from "../platform/locks";
-import { activeNetwork, publicClient } from "../rpc/client";
+import { activeNetwork, publicClientFor } from "../rpc/client";
 
 /**
  * Local transaction log.
@@ -94,7 +94,10 @@ export async function addRecord(record: TxRecord): Promise<void> {
     const book = await readBook();
     const key = record.account.toLowerCase();
     const existing = book[key] ?? [];
-    const next = [record, ...existing.filter((entry) => entry.hash !== record.hash)].slice(
+    const networkId = record.networkId ?? LITVM_NETWORK.id;
+    const next = [record, ...existing.filter((entry) => (
+      entry.hash !== record.hash || (entry.networkId ?? LITVM_NETWORK.id) !== networkId
+    ))].slice(
       0,
       KEEP_PER_ACCOUNT,
     );
@@ -147,14 +150,11 @@ export async function listSettled(
   account: Address,
   network: WalletNetwork = activeNetwork,
 ): Promise<TxRecord[]> {
+  // Capture before storage yields, including explicitly requested profiles.
+  const client = publicClientFor(network);
   const records = await listRecords(account, network);
   const unsettled = records.filter((entry) => entry.status === "pending");
   if (unsettled.length === 0) return records;
-
-  // Keep the RPC client paired with the profile used to select the rows. A
-  // settings change while receipts are loading must not settle against a
-  // different chain.
-  const client = publicClient;
 
   const settled = await Promise.all(
     unsettled.map(async (entry) => {

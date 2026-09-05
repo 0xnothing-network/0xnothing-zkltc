@@ -31,15 +31,14 @@ type TokenData = readonly [string, bigint, string, Address, bigint, Hex];
 
 export async function loadPixelNfts(owner: Address): Promise<PixelNft[]> {
   if (!activeNetwork.builtin) return [];
+  const readClient = publicClient;
   const nft = { address: CONTRACTS.pixelNft, abi: pixelNftAbi } as const;
-  const balance = await publicClient
-    .readContract({ ...nft, functionName: "balanceOf", args: [owner] })
-    .catch(() => 0n);
+  const balance = await readClient.readContract({ ...nft, functionName: "balanceOf", args: [owner] });
   const count = Number(balance > BigInt(MAX_LISTED) ? BigInt(MAX_LISTED) : balance);
   if (count <= 0) return [];
   const start = balance - BigInt(count);
 
-  const ids = await publicClient.multicall({
+  const ids = await readClient.multicall({
     allowFailure: true,
     contracts: Array.from({ length: count }, (_, index) => ({
       ...nft,
@@ -47,12 +46,15 @@ export async function loadPixelNfts(owner: Address): Promise<PixelNft[]> {
       args: [owner, start + BigInt(index)] as const,
     })),
   });
-  const tokenIds = ids
-    .map((entry) => (entry.status === "success" ? (entry.result as bigint) : null))
-    .filter((id): id is bigint => id !== null);
+  // A failed read is not an empty/partial inventory: let useLiveRead retain
+  // the last successful snapshot until the RPC can return a complete one.
+  const tokenIds = ids.map((entry) => {
+    if (entry.status === "failure") throw entry.error;
+    return entry.result as bigint;
+  });
   if (tokenIds.length === 0) return [];
 
-  const data = await publicClient.multicall({
+  const data = await readClient.multicall({
     allowFailure: true,
     contracts: tokenIds.map((tokenId) => ({
       ...nft,
@@ -64,6 +66,7 @@ export async function loadPixelNfts(owner: Address): Promise<PixelNft[]> {
   const rows: PixelNft[] = [];
   tokenIds.forEach((tokenId, index) => {
     const entry = data[index];
+    if (entry?.status === "failure") throw entry.error;
     if (entry?.status !== "success") return;
     const [name, gridSize, pixelData, creator, mintedAt] = entry.result as TokenData;
     const size = Number(gridSize);

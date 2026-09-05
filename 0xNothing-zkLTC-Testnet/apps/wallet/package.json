@@ -1,6 +1,6 @@
 {
   "name": "0xnothing-zkltc-testnet-wallet",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "0xNothing zkLTC testnet wallet — MV3 browser extension and Capacitor Android, sharing one React UI.",

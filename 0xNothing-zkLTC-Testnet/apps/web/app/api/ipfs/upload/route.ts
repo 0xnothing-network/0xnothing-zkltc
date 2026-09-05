@@ -249,6 +249,12 @@ export async function POST(request: Request) {
   }
 
   const contentKey = `${submittedAddress}:${submittedContentHash}`;
+  // Validation and the reservation RPC yielded after the first replay check.
+  // Recheck immediately before acquiring both locks: another request may have
+  // completed the same authorization while this one was waiting.
+  if (consumedSignatures.has(signatureKey) || inFlightSignatures.has(signatureKey)) {
+    return jsonError("This upload authorization has already been used", 409);
+  }
   if (inFlightContentHashes.has(contentKey)) {
     return jsonError("This reserved content is already being uploaded", 409);
   }
