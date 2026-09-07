@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAccount, usePublicClient } from "wagmi";
 import { getAddress, isAddress, type Address } from "viem";
 import { pumpTokenAbi } from "@/features/pump/abis";
+import { PUMP_CHAIN_ID } from "@/features/pump/config";
 import { fetchJson } from "@/lib/http";
 import { STEADY_LIVE_MS } from "@/lib/liveData";
 import {
@@ -375,7 +376,7 @@ export function usePumpCandles(
 
 export function usePumpPortfolio() {
   const { address } = useAccount();
-  const publicClient = usePublicClient();
+  const publicClient = usePublicClient({ chainId: PUMP_CHAIN_ID });
   const marketsQuery = useQuery({
     queryKey: ["pump-portfolio-markets"],
     queryFn: ({ signal }) => fetchAllMarkets(undefined, signal),
@@ -408,9 +409,10 @@ export function usePumpPortfolio() {
   const tokensKey = marketsHash;
 
   const balancesKey = address ? `pump-portfolio:balances:${address.toLowerCase()}:${tokensKey || "empty"}` : "pump-portfolio:balances:empty";
+  const balancesEnabled = Boolean(address && publicClient && markets.length);
   const balancesQuery = useQuery({
-    queryKey: ["pump-portfolio-balances", address, tokensKey],
-    enabled: Boolean(address && publicClient && markets.length),
+    queryKey: ["pump-portfolio-balances", address, tokensKey, PUMP_CHAIN_ID],
+    enabled: balancesEnabled,
     queryFn: async ({ signal }) => {
       if (!address || !publicClient) return { balances: new Map<string, bigint>(), failed: 0 };
       const balances = new Map<string, bigint>();
@@ -459,10 +461,14 @@ export function usePumpPortfolio() {
     refetchInterval: pumpPollInterval(balancesKey, STEADY_LIVE_MS),
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
-    placeholderData: (prev) => prev,
+    placeholderData: (prev, previousQuery) =>
+      address && previousQuery?.queryKey[1] === address && previousQuery.queryKey[3] === PUMP_CHAIN_ID
+        ? prev
+        : undefined,
   });
   usePumpVisibilityRefresh({
     key: balancesKey,
+    enabled: balancesEnabled,
     dataUpdatedAt: balancesQuery.dataUpdatedAt,
     isFetching: balancesQuery.isFetching,
     refetch: balancesQuery.refetch,
@@ -475,7 +481,7 @@ export function usePumpPortfolio() {
       : EMPTY_MARKETS,
     [address, markets],
   );
-  const balances = balancesQuery.data?.balances ?? EMPTY_BALANCES;
+  const balances = address ? balancesQuery.data?.balances ?? EMPTY_BALANCES : EMPTY_BALANCES;
   const held = useMemo(
     () => markets.filter(
       (market) => (balances.get(market.tokenAddress.toLowerCase()) ?? 0n) > 0n,

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Address } from "viem";
-import { useAccount, usePublicClient, useReadContract, useSwitchChain, useWriteContract } from "wagmi";
+import { useAccount, useConfig, usePublicClient, useReadContract, useSwitchChain, useWriteContract } from "wagmi";
 import { pumpGraduationControllerAbi, pumpGraduationRouterAbi, zeroXPumpAbi } from "@/features/pump/abis";
 import { usePumpMarket } from "@/features/pump/hooks/usePumpData";
 import {
@@ -27,6 +27,7 @@ import { TokenHolders } from "@/features/pump/components/TokenHolders";
 import { PumpConfigNotice, PumpErrorState, PumpInlineLoading } from "@/features/pump/components/PumpStates";
 import { useToast } from "@/components/Toast";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
+import { createPumpWalletGuard } from "@/features/pump/walletSession";
 
 interface TokenMetadata {
   description?: string;
@@ -34,21 +35,40 @@ interface TokenMetadata {
   properties?: { website?: string; twitter?: string };
 }
 
+function parseTokenMetadata(value: unknown): TokenMetadata {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const metadata = value as Record<string, unknown>;
+  const properties = metadata.properties && typeof metadata.properties === "object" && !Array.isArray(metadata.properties)
+    ? metadata.properties as Record<string, unknown>
+    : {};
+  return {
+    description: typeof metadata.description === "string" ? metadata.description : undefined,
+    external_url: typeof metadata.external_url === "string" ? metadata.external_url : undefined,
+    properties: {
+      website: typeof properties.website === "string" ? properties.website : undefined,
+      twitter: typeof properties.twitter === "string" ? properties.twitter : undefined,
+    },
+  };
+}
+
 function GraduationAction({ market, onComplete }: { market: PumpMarket; onComplete: () => void }) {
   const toast = useToast();
   const { address, isConnected, chainId } = useAccount();
+  const walletConfig = useConfig();
   const publicClient = usePublicClient({ chainId: PUMP_CHAIN_ID });
   const { switchChain } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
   const submitLockRef = useRef(false);
   const [pending, setPending] = useState(false);
   const pumpAdmin = useReadContract({
+    chainId: PUMP_CHAIN_ID,
     address: PUMP_FACTORY_ADDRESS,
     abi: zeroXPumpAbi,
     functionName: "admin",
     query: { enabled: market.status === "READY" },
   });
   const pumpRouter = useReadContract({
+    chainId: PUMP_CHAIN_ID,
     address: PUMP_FACTORY_ADDRESS,
     abi: zeroXPumpAbi,
     functionName: "graduationRouter",
@@ -57,42 +77,49 @@ function GraduationAction({ market, onComplete }: { market: PumpMarket; onComple
   const controllerAddress = pumpAdmin.data;
   const controllerReadEnabled = market.status === "READY" && Boolean(controllerAddress);
   const controllerPaused = useReadContract({
+    chainId: PUMP_CHAIN_ID,
     address: controllerAddress,
     abi: pumpGraduationControllerAbi,
     functionName: "graduationsPaused",
     query: { enabled: controllerReadEnabled },
   });
   const controllerPump = useReadContract({
+    chainId: PUMP_CHAIN_ID,
     address: controllerAddress,
     abi: pumpGraduationControllerAbi,
     functionName: "pump",
     query: { enabled: controllerReadEnabled, staleTime: Infinity },
   });
   const controllerRouter = useReadContract({
+    chainId: PUMP_CHAIN_ID,
     address: controllerAddress,
     abi: pumpGraduationControllerAbi,
     functionName: "router",
     query: { enabled: controllerReadEnabled, staleTime: Infinity },
   });
   const controllerAdapter = useReadContract({
+    chainId: PUMP_CHAIN_ID,
     address: controllerAddress,
     abi: pumpGraduationControllerAbi,
     functionName: "adapter",
     query: { enabled: controllerReadEnabled, staleTime: Infinity },
   });
   const routerAdmin = useReadContract({
+    chainId: PUMP_CHAIN_ID,
     address: PUMP_GRADUATION_ROUTER_ADDRESS,
     abi: pumpGraduationRouterAbi,
     functionName: "admin",
     query: { enabled: market.status === "READY" },
   });
   const routerEnabled = useReadContract({
+    chainId: PUMP_CHAIN_ID,
     address: PUMP_GRADUATION_ROUTER_ADDRESS,
     abi: pumpGraduationRouterAbi,
     functionName: "enabled",
     query: { enabled: market.status === "READY" },
   });
   const adapterAllowed = useReadContract({
+    chainId: PUMP_CHAIN_ID,
     address: PUMP_GRADUATION_ROUTER_ADDRESS,
     abi: pumpGraduationRouterAbi,
     functionName: "isAdapterAllowed",
@@ -131,6 +158,8 @@ function GraduationAction({ market, onComplete }: { market: PumpMarket; onComple
     if (!tryAcquireAction(submitLockRef)) return;
     try {
       setPending(true);
+      const assertWalletUnchanged = createPumpWalletGuard(walletConfig, address);
+      assertWalletUnchanged();
       await publicClient.simulateContract({
         account: address,
         address: controllerAddress,
@@ -138,7 +167,10 @@ function GraduationAction({ market, onComplete }: { market: PumpMarket; onComple
         functionName: "graduateReady",
         args: [market.tokenAddress],
       });
+      assertWalletUnchanged();
       const hash = await writeContractAsync({
+        account: address,
+        chainId: PUMP_CHAIN_ID,
         address: controllerAddress,
         abi: pumpGraduationControllerAbi,
         functionName: "graduateReady",
@@ -179,7 +211,7 @@ export function TokenDetail({ token }: { token: Address }) {
     queryFn: async ({ signal }) => {
       const response = await fetch(metadataUrl, { signal });
       if (!response.ok) throw new Error("Metadata unavailable");
-      return response.json() as Promise<TokenMetadata>;
+      return parseTokenMetadata(await response.json());
     },
     staleTime: 60 * 60 * 1000,
   });

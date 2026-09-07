@@ -55,7 +55,7 @@ library MathX {
         if (value == 0) return 0;
 
         result = value;
-        uint256 candidate = (value / 2) + 1;
+        uint256 candidate = (value / 2) + (value % 2);
         while (candidate < result) {
             result = candidate;
             candidate = ((value / candidate) + candidate) / 2;

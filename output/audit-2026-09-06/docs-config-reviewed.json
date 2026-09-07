@@ -1,0 +1,590 @@
+{
+  "files": [
+    {
+      "path": ".cbmignore",
+      "bytes": 828,
+      "lines": 27,
+      "sha256": "ef275928e73702200e0457900393b8fc2b2ad2c574e2cc409e827b2565d7a184",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          27
+        ]
+      ],
+      "current_sha256": "ef275928e73702200e0457900393b8fc2b2ad2c574e2cc409e827b2565d7a184",
+      "unchanged_from_inventory": true,
+      "current_bytes": 828,
+      "current_lines": 27
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 984,
+      "lines": 67,
+      "sha256": "e0cfb6e5d4eaefadaa75c5ac0eb3458b540335ec7595f0bc763b567dae59609f",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          67
+        ]
+      ],
+      "current_sha256": "e0cfb6e5d4eaefadaa75c5ac0eb3458b540335ec7595f0bc763b567dae59609f",
+      "unchanged_from_inventory": true,
+      "current_bytes": 984,
+      "current_lines": 67
+    },
+    {
+      "path": ".ignore",
+      "bytes": 180,
+      "lines": 5,
+      "sha256": "5b345696ac9daf0b07ce5b9c56d5ec914815e395286f4c9f9ac3ec8ec83bf507",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "current_sha256": "5b345696ac9daf0b07ce5b9c56d5ec914815e395286f4c9f9ac3ec8ec83bf507",
+      "unchanged_from_inventory": true,
+      "current_bytes": 180,
+      "current_lines": 5
+    },
+    {
+      "path": "0xNothing-zkLTC-Mainnet/apps/web-release/README.md",
+      "bytes": 1106,
+      "lines": 20,
+      "sha256": "bacc66ba12d7f011a6bf3bb3243b62d66a717a9f412c1eb412122d692cff0432",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          20
+        ]
+      ],
+      "current_sha256": "bacc66ba12d7f011a6bf3bb3243b62d66a717a9f412c1eb412122d692cff0432",
+      "unchanged_from_inventory": true,
+      "current_bytes": 1106,
+      "current_lines": 20
+    },
+    {
+      "path": "0xNothing-zkLTC-Mainnet/config/networks/zkltc-mainnet.json",
+      "bytes": 972,
+      "lines": 38,
+      "sha256": "e03ba999ee24f18dccdb2d2ea4947ece551be363a913c2ca017fe0e8f658efa2",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          38
+        ]
+      ],
+      "current_sha256": "e03ba999ee24f18dccdb2d2ea4947ece551be363a913c2ca017fe0e8f658efa2",
+      "unchanged_from_inventory": true,
+      "current_bytes": 972,
+      "current_lines": 38
+    },
+    {
+      "path": "0xNothing-zkLTC-Mainnet/deployments/zkltc-mainnet/deployments.json",
+      "bytes": 1071,
+      "lines": 35,
+      "sha256": "7241aa6ee2fd4135463b4f6911caa976e7ab9b79985d0894647ee8327c07e41d",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          35
+        ]
+      ],
+      "current_sha256": "7241aa6ee2fd4135463b4f6911caa976e7ab9b79985d0894647ee8327c07e41d",
+      "unchanged_from_inventory": true,
+      "current_bytes": 1071,
+      "current_lines": 35
+    },
+    {
+      "path": "0xNothing-zkLTC-Mainnet/docs/MAINNET_PLAN.md",
+      "bytes": 6732,
+      "lines": 92,
+      "sha256": "251dfaed17f328cfcb1f8b0047de8c168a614f66a65ef96d30acd7cf89bf4608",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          92
+        ]
+      ],
+      "current_sha256": "251dfaed17f328cfcb1f8b0047de8c168a614f66a65ef96d30acd7cf89bf4608",
+      "unchanged_from_inventory": true,
+      "current_bytes": 6732,
+      "current_lines": 92
+    },
+    {
+      "path": "0xNothing-zkLTC-Mainnet/README.md",
+      "bytes": 1329,
+      "lines": 23,
+      "sha256": "80fb4f0ff6e7ec2f11e4936f6af4b3141d75e1a9f81517aba0c1e9c2a0ca493d",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          23
+        ]
+      ],
+      "current_sha256": "80fb4f0ff6e7ec2f11e4936f6af4b3141d75e1a9f81517aba0c1e9c2a0ca493d",
+      "unchanged_from_inventory": true,
+      "current_bytes": 1329,
+      "current_lines": 23
+    },
+    {
+      "path": "0xNothing-zkLTC-Mainnet/scripts/README.md",
+      "bytes": 1001,
+      "lines": 17,
+      "sha256": "e9632957bfb49c999929da639c35c01b95315362fbba2266541f6224ca2e7027",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          17
+        ]
+      ],
+      "current_sha256": "e9632957bfb49c999929da639c35c01b95315362fbba2266541f6224ca2e7027",
+      "unchanged_from_inventory": true,
+      "current_bytes": 1001,
+      "current_lines": 17
+    },
+    {
+      "path": "0xNothing-zkLTC-Mainnet/tests/README.md",
+      "bytes": 578,
+      "lines": 10,
+      "sha256": "7d930eeb0fcee4417d873325acb7474aa7c17b5b07d4626ceb9c8c514c69f7ba",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          10
+        ]
+      ],
+      "current_sha256": "7d930eeb0fcee4417d873325acb7474aa7c17b5b07d4626ceb9c8c514c69f7ba",
+      "unchanged_from_inventory": true,
+      "current_bytes": 578,
+      "current_lines": 10
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/.gitignore",
+      "bytes": 88,
+      "lines": 2,
+      "sha256": "1179f5ae4ef80779c93e8d38addb12f5c1ea2f5975d354b54b0f1f1e83160c70",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          2
+        ]
+      ],
+      "current_sha256": "1179f5ae4ef80779c93e8d38addb12f5c1ea2f5975d354b54b0f1f1e83160c70",
+      "unchanged_from_inventory": true,
+      "current_bytes": 88,
+      "current_lines": 2
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/.ignore",
+      "bytes": 180,
+      "lines": 5,
+      "sha256": "5b345696ac9daf0b07ce5b9c56d5ec914815e395286f4c9f9ac3ec8ec83bf507",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "current_sha256": "5b345696ac9daf0b07ce5b9c56d5ec914815e395286f4c9f9ac3ec8ec83bf507",
+      "unchanged_from_inventory": true,
+      "current_bytes": 180,
+      "current_lines": 5
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/.env.example",
+      "bytes": 1434,
+      "lines": 30,
+      "sha256": "744d9295f9115454a6eb2be5d8bce9ed8144e71cabc43f6a174bf8e109b8a840",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          30
+        ]
+      ],
+      "current_sha256": "744d9295f9115454a6eb2be5d8bce9ed8144e71cabc43f6a174bf8e109b8a840",
+      "unchanged_from_inventory": true,
+      "current_bytes": 1434,
+      "current_lines": 30
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/.gitignore",
+      "bytes": 179,
+      "lines": 10,
+      "sha256": "ed7ea319560fdc0eaec1441d1f7818b85ca96abcdf73fb11a8150a8a6d532d6f",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          10
+        ]
+      ],
+      "current_sha256": "ed7ea319560fdc0eaec1441d1f7818b85ca96abcdf73fb11a8150a8a6d532d6f",
+      "unchanged_from_inventory": true,
+      "current_bytes": 179,
+      "current_lines": 10
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/config/liteforge-testnet.json",
+      "bytes": 15055,
+      "lines": 293,
+      "sha256": "045f8d1408317a6dc9952a45d1b714c1809428dd23a1a0d0731ffaaeea055b66",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          293
+        ]
+      ],
+      "current_sha256": "045f8d1408317a6dc9952a45d1b714c1809428dd23a1a0d0731ffaaeea055b66",
+      "unchanged_from_inventory": true,
+      "current_bytes": 15055,
+      "current_lines": 293
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/docs/ARCHITECTURE.md",
+      "bytes": 6814,
+      "lines": 122,
+      "sha256": "a7acae54f8f3c0bfe444bed2d8d68e7b117c130f41097f8d6ac170152daf29a4",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          122
+        ]
+      ],
+      "current_sha256": "a7acae54f8f3c0bfe444bed2d8d68e7b117c130f41097f8d6ac170152daf29a4",
+      "unchanged_from_inventory": true,
+      "current_bytes": 6814,
+      "current_lines": 122
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/docs/DEPLOYMENT.md",
+      "bytes": 10105,
+      "lines": 212,
+      "sha256": "43af1766b41d849e70a9f11ef9d230c9c65b97358a1b95a2cb224ea2960ee322",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          212
+        ]
+      ],
+      "current_sha256": "43af1766b41d849e70a9f11ef9d230c9c65b97358a1b95a2cb224ea2960ee322",
+      "unchanged_from_inventory": true,
+      "current_bytes": 10105,
+      "current_lines": 212
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/docs/NUSD_POINTS.md",
+      "bytes": 6061,
+      "lines": 131,
+      "sha256": "b7409100688c4de2aabc084fd897a1c208a6e8895ebaf87afed30cc16b4f661d",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          131
+        ]
+      ],
+      "current_sha256": "b7409100688c4de2aabc084fd897a1c208a6e8895ebaf87afed30cc16b4f661d",
+      "unchanged_from_inventory": true,
+      "current_bytes": 6061,
+      "current_lines": 131
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/docs/SECURITY.md",
+      "bytes": 6231,
+      "lines": 99,
+      "sha256": "caa2899f5f7287c704d37ebad95cce1be9cdf652e941fd10f9a7c240889793b6",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          99
+        ]
+      ],
+      "current_sha256": "caa2899f5f7287c704d37ebad95cce1be9cdf652e941fd10f9a7c240889793b6",
+      "unchanged_from_inventory": true,
+      "current_bytes": 6231,
+      "current_lines": 99
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/package.json",
+      "bytes": 4066,
+      "lines": 62,
+      "sha256": "1a0b577ce7e76c5353b1f2f6c5794723a778dabdcf5866076b64c12d0e277c42",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          62
+        ]
+      ],
+      "current_sha256": "1a0b577ce7e76c5353b1f2f6c5794723a778dabdcf5866076b64c12d0e277c42",
+      "unchanged_from_inventory": true,
+      "current_bytes": 4066,
+      "current_lines": 62
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/README.md",
+      "bytes": 5180,
+      "lines": 103,
+      "sha256": "078343dabe33386f24770847e799c6ae7eaedc3e6706c49269d0da8a7d872539",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          103
+        ]
+      ],
+      "current_sha256": "078343dabe33386f24770847e799c6ae7eaedc3e6706c49269d0da8a7d872539",
+      "unchanged_from_inventory": true,
+      "current_bytes": 5180,
+      "current_lines": 103
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/config/networks/liteforge-testnet.json",
+      "bytes": 1517,
+      "lines": 44,
+      "sha256": "6adbf25de7f7ad0fd7a7b655ee5bbf41783d0f43c775c848897f9bf61e1c69c0",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          44
+        ]
+      ],
+      "current_sha256": "6adbf25de7f7ad0fd7a7b655ee5bbf41783d0f43c775c848897f9bf61e1c69c0",
+      "unchanged_from_inventory": true,
+      "current_bytes": 1517,
+      "current_lines": 44
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/deployments/liteforge-testnet/deployments.json",
+      "bytes": 4306,
+      "lines": 102,
+      "sha256": "1afc64fa5ad96d7dcd0e09303955c16446bb8d24d7ad3d511f36bde76d80a5c4",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          102
+        ]
+      ],
+      "current_sha256": "1afc64fa5ad96d7dcd0e09303955c16446bb8d24d7ad3d511f36bde76d80a5c4",
+      "unchanged_from_inventory": true,
+      "current_bytes": 4306,
+      "current_lines": 102
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/docs/ARCHITECTURE.md",
+      "bytes": 5777,
+      "lines": 87,
+      "sha256": "6b979057284bcf59a2b464073bd4babd735b602860b7ec02c2c5aac407cc1184",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          87
+        ]
+      ],
+      "current_sha256": "6b979057284bcf59a2b464073bd4babd735b602860b7ec02c2c5aac407cc1184",
+      "unchanged_from_inventory": true,
+      "current_bytes": 5777,
+      "current_lines": 87
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/docs/AUDIT_2026-09-05.md",
+      "bytes": 10875,
+      "lines": 93,
+      "sha256": "5c8b5e75ee35f390c47988eea16dce33c997cbd76a427df2875069f81ac6f2a3",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          93
+        ]
+      ],
+      "current_sha256": "5c8b5e75ee35f390c47988eea16dce33c997cbd76a427df2875069f81ac6f2a3",
+      "unchanged_from_inventory": true,
+      "current_bytes": 10875,
+      "current_lines": 93
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/docs/CLOUDFLARE_RAILWAY.md",
+      "bytes": 9934,
+      "lines": 236,
+      "sha256": "2849962795caa52b0406c049562f56a111956a458f7fdec714e95ee580eacbfb",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          236
+        ]
+      ],
+      "current_sha256": "2849962795caa52b0406c049562f56a111956a458f7fdec714e95ee580eacbfb",
+      "unchanged_from_inventory": true,
+      "current_bytes": 9934,
+      "current_lines": 236
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/docs/CLOUDFLARE_WORKERS.md",
+      "bytes": 3582,
+      "lines": 99,
+      "sha256": "aafcf2d5a0bd655a3d8a2934df5056801ee2c4034933035efb1de44e70d314be",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          99
+        ]
+      ],
+      "current_sha256": "aafcf2d5a0bd655a3d8a2934df5056801ee2c4034933035efb1de44e70d314be",
+      "unchanged_from_inventory": true,
+      "current_bytes": 3582,
+      "current_lines": 99
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/docs/DEPLOYMENT.md",
+      "bytes": 3217,
+      "lines": 64,
+      "sha256": "7114661242967256b1b5cec07949e5d7afb7de62f3e73139c9e5b603ad7159a9",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          64
+        ]
+      ],
+      "current_sha256": "7114661242967256b1b5cec07949e5d7afb7de62f3e73139c9e5b603ad7159a9",
+      "unchanged_from_inventory": true,
+      "current_bytes": 3217,
+      "current_lines": 64
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/docs/SECURITY.md",
+      "bytes": 6385,
+      "lines": 62,
+      "sha256": "32eb6774cad6141bc7b4f7783d595ff69bafebe890b8f75e90c645d64c8d071b",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          62
+        ]
+      ],
+      "current_sha256": "32eb6774cad6141bc7b4f7783d595ff69bafebe890b8f75e90c645d64c8d071b",
+      "unchanged_from_inventory": true,
+      "current_bytes": 6385,
+      "current_lines": 62
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 2333,
+      "lines": 41,
+      "sha256": "5c0eb4f464f0516dcb0f527c59c4e052ed8b8c8150dba3c05b38d760c8f26f75",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          41
+        ]
+      ],
+      "current_sha256": "5c0eb4f464f0516dcb0f527c59c4e052ed8b8c8150dba3c05b38d760c8f26f75",
+      "unchanged_from_inventory": true,
+      "current_bytes": 2333,
+      "current_lines": 41
+    },
+    {
+      "path": "package.json",
+      "bytes": 2467,
+      "lines": 33,
+      "sha256": "e0303db5f10b69c78b1bba80d27e2c4a3f4b008c40dc2f4f69fc852828975f60",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          33
+        ]
+      ],
+      "current_sha256": "15404731479b0037d82eb5c0b95daf9fdef78f186d99f0104a37c8a11e3d77d3",
+      "unchanged_from_inventory": false,
+      "current_bytes": 2575,
+      "current_lines": 34,
+      "parent_change_reviewed": {
+        "method": "Baseline was read in full; the exact git diff was reviewed after the parent added marketplace check to root verify.",
+        "change": "Added check:pixel-subgraph and replaced build:pixel-subgraph with check:pixel-subgraph in verify.",
+        "baseline_lines": 33,
+        "current_lines": 34,
+        "root_verify_executed_by_this_agent": false
+      }
+    },
+    {
+      "path": "TESTING.md",
+      "bytes": 1679,
+      "lines": 39,
+      "sha256": "2d57788d63df020d2a24da7835baa031200af43043fa6073b7c64180335957a0",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          39
+        ]
+      ],
+      "current_sha256": "2d57788d63df020d2a24da7835baa031200af43043fa6073b7c64180335957a0",
+      "unchanged_from_inventory": true,
+      "current_bytes": 1679,
+      "current_lines": 39
+    }
+  ],
+  "summary": {
+    "review_date": "2026-09-07",
+    "files": 32,
+    "baseline_lines": 2303,
+    "current_lines": 2304,
+    "baseline_bytes": 122246,
+    "read_status_counts": {
+      "fully_read": 32
+    },
+    "pending": 0,
+    "source_edits_by_this_agent": 0,
+    "unchanged_from_inventory": 31,
+    "coverage_basis": "Complete source reads with explicit line ranges; inventory hashes preserved and current hashes rechecked."
+  },
+  "review": {
+    "finding": "Root verify built marketplace subgraph but omitted its new regression tests; parent integrated check:pixel-subgraph and the exact diff was reviewed.",
+    "resolved_by": "parent",
+    "json_syntax_validation": {
+      "files": [
+        "0xNothing-zkLTC-Mainnet/config/networks/zkltc-mainnet.json",
+        "0xNothing-zkLTC-Mainnet/deployments/zkltc-mainnet/deployments.json",
+        "0xNothing-zkLTC-Testnet/0xFi/config/liteforge-testnet.json",
+        "0xNothing-zkLTC-Testnet/0xFi/package.json",
+        "0xNothing-zkLTC-Testnet/config/networks/liteforge-testnet.json",
+        "0xNothing-zkLTC-Testnet/deployments/liteforge-testnet/deployments.json",
+        "package.json"
+      ],
+      "exit_code": 0
+    },
+    "limits": [
+      "Deployment records and readiness claims reviewed as repository records; no live chain or external deployment verification.",
+      "Only the empty .env.example was read; private.env and real credential files were not read.",
+      "No root verify execution by this agent."
+    ]
+  }
+}

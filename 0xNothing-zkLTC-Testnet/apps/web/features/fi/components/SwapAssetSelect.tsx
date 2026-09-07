@@ -64,6 +64,8 @@ export function SwapAssetSelect({
   }, []);
 
   function close(restoreTrigger = false) {
+    typeaheadRef.current = "";
+    if (typeaheadTimerRef.current) clearTimeout(typeaheadTimerRef.current);
     setOpen(false);
     if (restoreTrigger) requestAnimationFrame(() => triggerRef.current?.focus());
   }
@@ -120,22 +122,31 @@ export function SwapAssetSelect({
       return;
     }
     if (event.key === "Tab") {
-      setOpen(false);
+      triggerRef.current?.focus();
+      close();
       return;
     }
     if (event.key.length !== 1 || event.ctrlKey || event.metaKey || event.altKey) return;
 
+    event.preventDefault();
     typeaheadRef.current += event.key.toLowerCase();
     if (typeaheadTimerRef.current) clearTimeout(typeaheadTimerRef.current);
     typeaheadTimerRef.current = setTimeout(() => {
       typeaheadRef.current = "";
     }, 600);
-    const matchIndex = assets.findIndex((asset) => optionLabel(asset).startsWith(typeaheadRef.current));
-    if (matchIndex >= 0) setActiveIndex(matchIndex);
+    const typed = typeaheadRef.current;
+    const repeated = [...typed].every((character) => character === typed[0]);
+    const search = repeated ? typed[0] : typed;
+    const start = repeated ? activeIndex + 1 : activeIndex;
+    const matchIndex = Array.from({ length: assets.length }, (_, offset) => (start + offset) % assets.length)
+      .find((index) => optionLabel(assets[index]).startsWith(search));
+    if (matchIndex !== undefined) setActiveIndex(matchIndex);
   }
 
   return (
-    <div className="fi-swap-asset-select" ref={rootRef}>
+    <div className="fi-swap-asset-select" ref={rootRef} onBlur={(event) => {
+      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) close();
+    }}>
       <button
         ref={triggerRef}
         id={id}

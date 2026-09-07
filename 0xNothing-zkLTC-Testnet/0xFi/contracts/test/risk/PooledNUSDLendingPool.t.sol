@@ -283,6 +283,66 @@ contract PooledNUSDLendingPoolTest is TestBase {
         assertApproxEqAbs(pool.collateralBalance(ALICE, address(wzklTC)), 475 ether, 2, "remaining collateral");
     }
 
+    function testLiquidationRejectsDustThatCannotPurchaseOneCollateralUnit() public {
+        MockCollateralToken wholeToken = _createLiquidatableWholeTokenPosition();
+        uint256 debtBefore = pool.debtBalance(ALICE);
+
+        vm.expectRevert(PooledNUSDLendingPool.InsufficientCollateral.selector);
+        vm.prank(LIQUIDATOR);
+        pool.liquidate(ALICE, address(wholeToken), 1, 0, LIQUIDATOR);
+
+        assertEq(pool.collateralBalance(ALICE, address(wholeToken)), 100, "dust cannot seize whole tokens");
+        assertEq(pool.debtBalance(ALICE), debtBefore, "failed dust liquidation preserves debt");
+    }
+
+    function testLiquidationRoundsLowDecimalCollateralPayoutDown() public {
+        MockCollateralToken wholeToken = _createLiquidatableWholeTokenPosition();
+
+        vm.prank(LIQUIDATOR);
+        (uint256 repaid, uint256 collateralOut) = pool.liquidate(ALICE, address(wholeToken), 100 ether, 1, LIQUIDATOR);
+
+        assertEq(repaid, 100 ether, "requested repayment paid");
+        assertEq(collateralOut, 1, "105 NUSD buys only one whole collateral token at 70 NUSD");
+        assertEq(wholeToken.balanceOf(LIQUIDATOR), 1, "recipient receives bounded payout");
+    }
+
+    function testFuzzLiquidationCannotOverpayAcrossCollateralDecimals(uint8 rawDecimals, uint96 rawRepayment) public {
+        _seedLiquidity();
+        uint8 assetDecimals = rawDecimals % 19;
+        uint256 scale = 10 ** assetDecimals;
+        MockCollateralToken collateral = new MockCollateralToken("Decimal Collateral", "DEC", assetDecimals);
+        pool.configureCollateral(address(collateral), address(ltcOracle), 1000 * scale, 8000, 8500, 9000, 500, true);
+        collateral.mint(ALICE, 100 * scale);
+        vm.startPrank(ALICE);
+        collateral.approve(address(pool), type(uint256).max);
+        pool.depositCollateral(address(collateral), 100 * scale, ALICE);
+        pool.borrow(7000 ether, ALICE);
+        vm.stopPrank();
+        ltcOracle.setPrice(70 ether);
+
+        uint256 repayment = bound(rawRepayment, 1, 3500 ether);
+        uint256 payoutLimit = ((repayment * 10_500) / 10_000) * scale / (70 ether);
+        if (payoutLimit == 0) vm.expectRevert(PooledNUSDLendingPool.InsufficientCollateral.selector);
+        vm.prank(LIQUIDATOR);
+        (uint256 repaid, uint256 collateralOut) = pool.liquidate(ALICE, address(collateral), repayment, 0, LIQUIDATOR);
+        if (payoutLimit == 0) return;
+        assertEq(repaid, repayment, "repayment follows exact debt shares before interest");
+        assertLe(collateralOut, payoutLimit, "collateral payout does not exceed repayment plus configured bonus");
+    }
+
+    function _createLiquidatableWholeTokenPosition() private returns (MockCollateralToken wholeToken) {
+        _seedLiquidity();
+        wholeToken = new MockCollateralToken("Whole Collateral", "WHOLE", 0);
+        pool.configureCollateral(address(wholeToken), address(ltcOracle), 1000, 8000, 8500, 9000, 500, true);
+        wholeToken.mint(ALICE, 100);
+        vm.startPrank(ALICE);
+        wholeToken.approve(address(pool), type(uint256).max);
+        pool.depositCollateral(address(wholeToken), 100, ALICE);
+        pool.borrow(7000 ether, ALICE);
+        vm.stopPrank();
+        ltcOracle.setPrice(70 ether);
+    }
+
     function testGuardianCanOnlyPauseRiskWhileRepayLiquidationAndExitsStayOpen() public {
         _seedLiquidity();
         vm.startPrank(ALICE);

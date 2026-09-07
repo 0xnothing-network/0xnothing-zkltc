@@ -147,6 +147,7 @@ function MarketplaceBody({ userAddress }: BodyProps) {
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const body = (await r.json()) as ListingsResponse;
+      if (ctrl.signal.aborted || requestRef.current?.controller !== ctrl) return;
       const entry = { data: body, timestamp: Date.now() };
       cacheRef.current = entry;
       writeListingsSessionCache(entry);
@@ -434,6 +435,7 @@ function MarketplaceActivity({ refreshKey = 0 }: { refreshKey?: number }) {
   const fetchActivity = useCallback(async (skip = 0, force = false, background = false) => {
     if (skip === 0) {
       abortRef.current?.abort();
+      setLoadingMore(false);
     }
 
     const ctrl = new AbortController();
@@ -463,6 +465,7 @@ function MarketplaceActivity({ refreshKey = 0 }: { refreshKey?: number }) {
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const body = (await r.json()) as ActivityResponse;
+      if (ctrl.signal.aborted || abortRef.current !== ctrl) return;
       setError(null);
 
       setEvents((prev) => {
@@ -478,11 +481,12 @@ function MarketplaceActivity({ refreshKey = 0 }: { refreshKey?: number }) {
       else if (!background) loadedCountRef.current = body.events.length;
       if (!background) setHasMore(body.events.length === ACTIVITY_PAGE_SIZE);
     } catch (err) {
-      if ((err as { name?: string }).name === "AbortError") return;
+      if (ctrl.signal.aborted || abortRef.current !== ctrl || (err as { name?: string }).name === "AbortError") return;
       console.error("[marketplace] activity load failed:", err);
       if (!background) setError("Couldn't load marketplace history.");
     } finally {
-      if (abortRef.current === ctrl) abortRef.current = null;
+      if (abortRef.current !== ctrl) return;
+      abortRef.current = null;
       if (ctrl.signal.aborted) return;
       if (skip === 0) setLoading(false);
       else setLoadingMore(false);

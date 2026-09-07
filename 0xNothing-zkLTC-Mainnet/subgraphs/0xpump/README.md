@@ -105,7 +105,7 @@ for every subsequent deployment.
 
 The stable entities are `markets`, `tokenBalances`, `trades`, and `candles`.
 Holder, trade, and candle queries use `market { id }`; BigInt and BigDecimal
-fields cross the GraphQL API as decimal strings. Candle periods are `15`, `60`,
+fields cross the GraphQL API as decimal strings. Candle periods are `1`, `15`, `60`,
 `240`, and `1440` minutes.
 Market queries expose both `graduationThresholdNusd` (the market-cap target) and
 `graduationReserveThresholdNusd` (the derived real-reserve target).

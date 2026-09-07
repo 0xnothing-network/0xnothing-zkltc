@@ -1,4 +1,4 @@
-import { BigInt, Bytes, Address } from '@graphprotocol/graph-ts';
+import { BigInt, Bytes, Address, ethereum } from '@graphprotocol/graph-ts';
 import {
   Account,
   Listing,
@@ -16,6 +16,7 @@ import {
   Listed,
   Bought,
   ListingCancelled,
+  ListingInvalidated,
 } from '../generated/Marketplace/Marketplace';
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -391,7 +392,15 @@ export function handleBought(event: Bought): void {
 }
 
 export function handleListingCancelled(event: ListingCancelled): void {
-  const listingId = event.params.listingId.toString();
+  closeListing(event, event.params.listingId);
+}
+
+export function handleListingInvalidated(event: ListingInvalidated): void {
+  closeListing(event, event.params.listingId);
+}
+
+function closeListing(event: ethereum.Event, onchainListingId: BigInt): void {
+  const listingId = onchainListingId.toString();
   const listing = Listing.load(listingId);
   if (listing === null) return;
 
@@ -427,7 +436,7 @@ export function handleListingCancelled(event: ListingCancelled): void {
 
   const marketEvent = new MarketEvent(eventId(event.transaction.hash, event.logIndex));
   marketEvent.listing = listing.id;
-  marketEvent.listingId = event.params.listingId;
+  marketEvent.listingId = onchainListingId;
   marketEvent.collection = listing.collection;
   marketEvent.tokenId = listing.tokenId;
   marketEvent.seller = listing.seller;

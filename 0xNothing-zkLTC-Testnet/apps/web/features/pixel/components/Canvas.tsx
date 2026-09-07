@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { downloadAsPNG, downloadAsJSON, pixelDataToJSON } from "@/lib/gridParser";
+import { useToast } from "@/components/Toast";
 
 interface CanvasProps {
   gridSize: number;
@@ -255,28 +256,21 @@ export function Canvas({
       pctx.strokeRect(drawX + 0.5, drawY + 0.5, cs * zoom - 1, cs * zoom - 1);
     };
 
-    const paintBrush = (cx: number, cy: number) => {
-      for (let dy = -half; dy < brushSizeRef.current - half; dy++) {
-        for (let dx = -half; dx < brushSizeRef.current - half; dx++) {
-          paintPixel(cx + dx, cy + dy);
-        }
-      }
-    };
-
-    paintBrush(gridX, gridY);
-
     const sym = symmetryRef.current;
-    if (sym !== "none") {
-      const mirrorH = gridSize - 1 - gridX;
-      const mirrorV = gridSize - 1 - gridY;
-      if (sym === "horizontal" || sym === "both") {
-        paintBrush(mirrorH, gridY);
-      }
-      if (sym === "vertical" || sym === "both") {
-        paintBrush(gridX, mirrorV);
-      }
-      if (sym === "both") {
-        paintBrush(mirrorH, mirrorV);
+    for (let dy = -half; dy < brushSizeRef.current - half; dy++) {
+      for (let dx = -half; dx < brushSizeRef.current - half; dx++) {
+        const px = gridX + dx;
+        const py = gridY + dy;
+        paintPixel(px, py);
+        if (sym === "horizontal" || sym === "both") {
+          paintPixel(gridSize - 1 - px, py);
+        }
+        if (sym === "vertical" || sym === "both") {
+          paintPixel(px, gridSize - 1 - py);
+        }
+        if (sym === "both") {
+          paintPixel(gridSize - 1 - px, gridSize - 1 - py);
+        }
       }
     }
   }, [gridSize, zoom, pan]);
@@ -821,6 +815,7 @@ function UndoIcon() {
 }
 
 function ExportMenu({ pixelData, gridSize }: { pixelData: string[][]; gridSize: number }) {
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 12 });
   const ref = useRef<HTMLDivElement>(null);
@@ -888,7 +883,14 @@ function ExportMenu({ pixelData, gridSize }: { pixelData: string[][]; gridSize: 
     {
       label: "COPY GRID DATA",
       icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>,
-      onClick: () => { navigator.clipboard.writeText(pixelDataToJSON(pixelData, gridSize)); setOpen(false); },
+      onClick: async () => {
+        try {
+          await navigator.clipboard.writeText(pixelDataToJSON(pixelData, gridSize));
+          setOpen(false);
+        } catch {
+          toast.error("Couldn't copy", "Your browser blocked clipboard access.");
+        }
+      },
     },
     {
       label: "PNG IMAGE",

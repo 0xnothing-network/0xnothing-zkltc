@@ -13,12 +13,11 @@ export interface NormalizedError {
 }
 
 interface MaybeError {
-  shortMessage?: string;
-  message?: string;
-  details?: string;
-  reason?: string;
-  code?: number | string;
-  name?: string;
+  shortMessage?: unknown;
+  message?: unknown;
+  details?: unknown;
+  reason?: unknown;
+  code?: unknown;
   cause?: unknown;
 }
 
@@ -54,10 +53,6 @@ const RPC_PATTERNS = [
   "connection refused",
   "etimedout",
   "econnrefused",
-  "503",
-  "504",
-  "502",
-  "500",
 ];
 
 /** Patterns for insufficient funds. */
@@ -111,8 +106,20 @@ const CONTRACT_PATTERNS: { pattern: RegExp; title: string; description: string }
   },
 ];
 
-function pickLower(...sources: (string | undefined | null)[]): string {
-  return sources.filter(Boolean).join(" ").toLowerCase();
+function errorText(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function errorChain(error: unknown): MaybeError[] {
+  const chain: MaybeError[] = [];
+  const seen = new Set<unknown>();
+  let current = error;
+  while (current && typeof current === "object" && !seen.has(current) && chain.length < 8) {
+    seen.add(current);
+    chain.push(current as MaybeError);
+    current = (current as MaybeError).cause;
+  }
+  return chain;
 }
 
 export function normalizeError(err: unknown): NormalizedError {
@@ -121,17 +128,15 @@ export function normalizeError(err: unknown): NormalizedError {
   }
 
   // Extract the most useful string from the error and its cause chain.
-  const e = err as MaybeError;
-  const haystack = pickLower(
-    e.shortMessage,
-    e.message,
-    e.details,
-    e.reason,
-    typeof err === "string" ? err : null
-  );
+  const chain = errorChain(err);
+  const messages = chain.flatMap((e) => [e.shortMessage, e.message, e.details, e.reason])
+    .map(errorText).filter((value): value is string => value !== undefined);
+  if (typeof err === "string") messages.push(err);
+  const haystack = messages.join(" ").toLowerCase();
+  const hasCode = (code: number) => chain.some((e) => e.code === code || e.code === String(code));
 
   // User rejection — calm, not scary. Don't call it an "error".
-  if (REJECT_PATTERNS.some((p) => haystack.includes(p))) {
+  if (hasCode(4001) || REJECT_PATTERNS.some((p) => haystack.includes(p))) {
     return {
       title: "Request canceled",
       description: "No transaction was sent.",
@@ -149,7 +154,9 @@ export function normalizeError(err: unknown): NormalizedError {
   }
 
   // Connectivity.
-  if (RPC_PATTERNS.some((p) => haystack.includes(p))) {
+  if (hasCode(4900) || hasCode(4901)
+    || RPC_PATTERNS.some((p) => haystack.includes(p))
+    || /\b(?:http(?:\s+status)?|status(?:\s+code)?)\s*[:=]?\s*50[0-4]\b/.test(haystack)) {
     return {
       title: "Network unreachable",
       description: "Couldn't reach the LitVM RPC — check your connection and retry.",
@@ -174,7 +181,11 @@ export function normalizeError(err: unknown): NormalizedError {
   }
 
   // Fallback: pick the most concise raw string we have.
-  const raw = e.shortMessage || e.reason || e.message || e.details || String(err);
+  const e = chain[0];
+  let fallback = "Something went wrong";
+  try { fallback = String(err); } catch { /* Keep a usable message for non-coercible errors. */ }
+  const raw = errorText(e?.shortMessage) || errorText(e?.reason)
+    || errorText(e?.message) || errorText(e?.details) || fallback;
   const trimmed = raw.replace(/^Error:\s*/i, "").split("\n")[0].slice(0, 140);
   return {
     title: trimmed || "Something went wrong",

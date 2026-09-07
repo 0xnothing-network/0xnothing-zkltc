@@ -12,6 +12,7 @@ import {
 } from "viem";
 import {
   useAccount,
+  useConfig,
   usePublicClient,
   useReadContract,
   useSwitchChain,
@@ -34,6 +35,7 @@ import { PUMP_MAX_IMAGE_BYTES, validatePumpImage } from "@/features/pump/imageVa
 import { useToast } from "@/components/Toast";
 import { PumpConfigNotice } from "@/features/pump/components/PumpStates";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
+import { createPumpWalletGuard } from "@/features/pump/walletSession";
 
 type CreateStage = "idle" | "switching" | "hashing" | "approving" | "reserving" | "uploading" | "creating" | "confirming";
 
@@ -44,6 +46,7 @@ export function CreateTokenForm() {
   const router = useRouter();
   const toast = useToast();
   const { address, isConnected, chainId } = useAccount();
+  const walletConfig = useConfig();
   const publicClient = usePublicClient({ chainId: PUMP_CHAIN_ID });
   const { switchChainAsync } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
@@ -126,10 +129,12 @@ export function CreateTokenForm() {
     let contentHash: Hex | undefined;
     let reservationReady = false;
     try {
+      const assertWalletUnchanged = createPumpWalletGuard(walletConfig, address);
       if (chainId !== PUMP_CHAIN_ID) {
         setStage("switching");
         await switchChainAsync({ chainId: PUMP_CHAIN_ID });
       }
+      assertWalletUnchanged();
       setStage("hashing");
       const imageError = await validatePumpImage(file);
       if (imageError) {
@@ -147,6 +152,7 @@ export function CreateTokenForm() {
         twitter,
         file,
       });
+      assertWalletUnchanged();
       const readCreatedToken = async (): Promise<Address | null> => {
         if (!contentHash) return null;
         const token = await publicClient.readContract({
@@ -204,7 +210,10 @@ export function CreateTokenForm() {
         }
         if (currentAllowance < fee) {
           setStage("approving");
+          assertWalletUnchanged();
           const approvalHash = await writeContractAsync({
+            account: address,
+            chainId: PUMP_CHAIN_ID,
             address: PUMP_NUSD_ADDRESS,
             abi: nusdAbi,
             functionName: "approve",
@@ -227,6 +236,7 @@ export function CreateTokenForm() {
         });
         if (!reservationReady) {
           setStage("reserving");
+          assertWalletUnchanged();
           await publicClient.simulateContract({
             account: address,
             address: PUMP_FACTORY_ADDRESS,
@@ -234,7 +244,10 @@ export function CreateTokenForm() {
             functionName: "reserveMarket",
             args: [contentHash],
           });
+          assertWalletUnchanged();
           const reservationHash = await writeContractAsync({
+            account: address,
+            chainId: PUMP_CHAIN_ID,
             address: PUMP_FACTORY_ADDRESS,
             abi: zeroXPumpAbi,
             functionName: "reserveMarket",
@@ -253,6 +266,7 @@ export function CreateTokenForm() {
       }
 
       setStage("uploading");
+      assertWalletUnchanged();
       const metadata = await upload({
         file,
         name: name.trim(),
@@ -261,6 +275,7 @@ export function CreateTokenForm() {
         website: website.trim(),
         twitter: twitter.trim(),
       }, contentHash);
+      assertWalletUnchanged();
 
       const recoveredBeforeCreate = await readCreatedToken();
       if (recoveredBeforeCreate) {
@@ -269,6 +284,7 @@ export function CreateTokenForm() {
       }
 
       setStage("creating");
+      assertWalletUnchanged();
       await publicClient.simulateContract({
         account: address,
         address: PUMP_FACTORY_ADDRESS,
@@ -276,7 +292,10 @@ export function CreateTokenForm() {
         functionName: "createMarket",
         args: [name.trim(), symbol.trim().toUpperCase(), metadata.metadataURI, metadata.imageURI, contentHash],
       });
+      assertWalletUnchanged();
       const hash = await writeContractAsync({
+        account: address,
+        chainId: PUMP_CHAIN_ID,
         address: PUMP_FACTORY_ADDRESS,
         abi: zeroXPumpAbi,
         functionName: "createMarket",

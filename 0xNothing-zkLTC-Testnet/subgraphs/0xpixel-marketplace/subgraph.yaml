@@ -57,3 +57,5 @@ dataSources:
           handler: handleBought
         - event: ListingCancelled(indexed uint256)
           handler: handleListingCancelled
+        - event: ListingInvalidated(indexed uint256)
+          handler: handleListingInvalidated

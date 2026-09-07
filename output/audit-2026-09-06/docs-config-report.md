@@ -1,0 +1,7 @@
+# Root, deployment and protocol documentation/config audit — 2026-09-07
+
+All 32 assigned files were read in full, covering 2,303 baseline lines across root instructions/ignore files/package scripts/testing docs, Mainnet root/release/config/deployment/docs/script/test records, Testnet root/config/deployment/docs, and 0xFi root/config/docs. docs-config-reviewed.json records exact reviewed ranges, original hashes and current hashes. No assigned files remain pending. All scoped JSON files also parse successfully.
+
+The root verify script originally built the marketplace subgraph without executing its new regression tests. The finding was sent to the parent, who added check:pixel-subgraph and made verify invoke it. The exact parent diff was reviewed and recorded separately from the original full-file read. The current root package has one additional line; all other assigned files are unchanged from their inventory. This agent made no source edits in the CSS/docs/config extension scope and did not execute root verify.
+
+Deployment JSON, activation/configuration policy and readiness statements were reviewed as repository records. They do not establish present chain state or live deployment readiness. No external links or chain state were verified in this bounded audit. Only the empty .env.example was inspected; real private environment/credential files were not read. Vendored libraries are excluded from this coverage and remain reported separately in contracts-vendor-hashes.json.

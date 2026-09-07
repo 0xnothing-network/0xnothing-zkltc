@@ -95,9 +95,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
     }, DEBOUNCE_MS);
   }, [gridSize, hasDrawing, pixelData]);
 
-  const isCheckingOriginal = (debouncedPackedBytes === "0x" || isCanvasUpdating) && hasDrawing;
-
-  const { data: isOriginal } = useReadContract({
+  const { data: isOriginal, isError: originalCheckFailed, refetch: retryOriginalCheck } = useReadContract({
     address: PIXEL_NFT_CONTRACT_ADDRESS,
     abi: PixelNFTABI,
     functionName: "checkOriginal",
@@ -106,6 +104,9 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
       enabled: debouncedPackedBytes !== "0x",
     },
   });
+  const isCheckingOriginal = hasDrawing && (
+    debouncedPackedBytes === "0x" || isCanvasUpdating || (isOriginal === undefined && !originalCheckFailed)
+  );
 
   // Once tx confirms, decode the Minted event from the receipt to get the
   // real tokenId. Calling onMintSuccess with a hard-coded 0n used to break
@@ -376,21 +377,21 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
                   <span className="w-2.5 h-2.5 border border-indigo-400/50 border-t-indigo-400 rounded-full animate-spin" />
                   CHECKING
                 </span>
-              ) : isOriginal === false ? (
+              ) : isOriginal === false || originalCheckFailed ? (
                 <span
                   className="text-[9px] px-2 py-1 rounded-md bg-red-500/20 text-red-300 border border-red-500/30 font-bold"
                   style={{ fontFamily: "var(--font-departure)" }}
                 >
-                  TAKEN
+                  {originalCheckFailed ? "CHECK FAILED" : "TAKEN"}
                 </span>
-              ) : (
+              ) : isOriginal === true ? (
                 <span
                   className="text-[9px] px-2 py-1 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold"
                   style={{ fontFamily: "var(--font-departure)" }}
                 >
                   ORIGINAL
                 </span>
-              )}
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -458,8 +459,8 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
 
             <PixelButton
               variant="indigo"
-              onClick={handleMint}
-              disabled={!canMint}
+              onClick={originalCheckFailed ? () => { void retryOriginalCheck(); } : handleMint}
+              disabled={!canMint && !originalCheckFailed}
               loading={isLoading || isConfirming || isCheckingOriginal}
               className="w-full justify-center py-3"
             >
@@ -467,6 +468,8 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
                 ? "CONFIRMING..."
                 : isCheckingOriginal
                 ? "CHECKING..."
+                : originalCheckFailed
+                ? "RETRY CHECK"
                 : isOriginal === false
                 ? "ALREADY MINTED"
                 : !hasDrawing

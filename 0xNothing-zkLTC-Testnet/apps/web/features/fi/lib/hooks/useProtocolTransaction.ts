@@ -5,10 +5,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { Abi, Address, Hash } from "viem";
 import {
   useAccount,
+  useConfig,
   usePublicClient,
   useSwitchChain,
   useWalletClient,
 } from "wagmi";
+import { getAccount } from "wagmi/actions";
 import { erc20Abi } from "@fi/lib/abis/erc20";
 import { deployment } from "@fi/config/deployment";
 import { readableError } from "@fi/lib/errors";
@@ -70,6 +72,7 @@ function approvalList(
 }
 
 export function useProtocolTransaction() {
+  const config = useConfig();
   const queryClient = useQueryClient();
   const { address, chainId, isConnected } = useAccount();
   const publicClient = usePublicClient({ chainId: deployment.chain.id });
@@ -115,6 +118,9 @@ export function useProtocolTransaction() {
       });
 
       inFlightRef.current = true;
+      const connectorUid = getAccount(config).connector?.uid;
+      let submittedHash: Hash | undefined;
+      let confirmedStep = false;
       setState({ phase: "simulating", message: "Preparing latest on-chain state" });
       try {
         let wallet = walletClient;
@@ -127,6 +133,26 @@ export function useProtocolTransaction() {
         }
 
         if (!wallet) throw new Error("Wallet client is not ready");
+        const activeWallet = wallet;
+        const assertAccountUnchanged = () => {
+          const current = getAccount(config);
+          if (!current.isConnected || current.address?.toLowerCase() !== address.toLowerCase()
+            || current.connector?.uid !== connectorUid) {
+            throw new Error("Wallet changed. Review the transaction with your current account and try again.");
+          }
+        };
+        const assertWalletReady = async () => {
+          assertAccountUnchanged();
+          const [walletChainId, accounts] = await Promise.all([
+            activeWallet.getChainId(), activeWallet.getAddresses(),
+          ]);
+          assertAccountUnchanged();
+          if (walletChainId !== deployment.chain.id) throw new Error("Wrong network. Switch to LitVM LiteForge and try again.");
+          if (accounts[0]?.toLowerCase() !== address.toLowerCase()
+            || activeWallet.account?.address.toLowerCase() !== address.toLowerCase()) {
+            throw new Error("Wallet changed. Review the transaction with your current account and try again.");
+          }
+        };
 
         let step = 0;
         let delivered = 0n;
@@ -152,9 +178,12 @@ export function useProtocolTransaction() {
                 functionName: "approve",
                 args: [item.spender, amount],
               });
-              const approvalHash = await wallet.writeContract(approvalSimulation.request);
+              await assertWalletReady();
+              const approvalHash = await activeWallet.writeContract(approvalSimulation.request);
+              submittedHash = approvalHash;
               const approvalReceipt = await publicClient.waitForTransactionReceipt({ hash: approvalHash });
               if (approvalReceipt.status !== "success") throw new Error("Token approval reverted");
+              confirmedStep = true;
             }
           }
 
@@ -173,30 +202,33 @@ export function useProtocolTransaction() {
 
           step += 1;
           setState({ phase: "confirming", message: `Step ${step}/${totalSteps} · Confirm transaction` });
-          const hash = await wallet.writeContract(simulation.request);
+          await assertWalletReady();
+          const hash = await activeWallet.writeContract(simulation.request);
+          submittedHash = hash;
           setState({ phase: "confirming", message: "Submitted · Confirming on-chain", hash });
           const receipt = await publicClient.waitForTransactionReceipt({ hash });
           if (receipt.status !== "success") throw new Error("Transaction reverted");
+          confirmedStep = true;
           lastHash = hash;
           if (stage.deliveredToken) {
             delivered = (await readBalance(stage.deliveredToken)) - balanceBefore;
           }
         }
 
-        void queryClient.invalidateQueries({
-          predicate: (query) => isBlockSyncedQueryKey(query.queryKey),
-        });
         setState({ phase: "success", message: "Confirmed on LitVM", hash: lastHash });
         return lastHash;
 
       } catch (error) {
-        setState({ phase: "error", message: readableError(error) });
+        setState({ phase: "error", message: readableError(error), hash: submittedHash });
         return undefined;
       } finally {
+        if (confirmedStep) void queryClient.invalidateQueries({
+          predicate: (query) => isBlockSyncedQueryKey(query.queryKey),
+        });
         inFlightRef.current = false;
       }
     },
-    [address, chainId, isConnected, publicClient, queryClient, refetchWalletClient, switchChainAsync, walletClient],
+    [address, chainId, config, isConnected, publicClient, queryClient, refetchWalletClient, switchChainAsync, walletClient],
   );
 
   return {

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -114,6 +114,30 @@ test("generated cleanup refuses an allowlisted path that is not a directory", as
     findTrackedFiles: async () => [],
   }), /non-directory target/);
   assert.equal(await readFile(generated, "utf8"), "not a directory");
+});
+
+test("generated cleanup rejects junctions in parent paths before deleting any target", async (t) => {
+  const fixture = await temporaryDirectory(t, "0xn-cleanup-junction-");
+  const workspaceRoot = path.join(fixture, "workspace");
+  const outside = path.join(fixture, "outside");
+  await mkdir(path.join(workspaceRoot, "safe", "build"), { recursive: true });
+  await mkdir(path.join(outside, "build"), { recursive: true });
+  const sentinel = path.join(outside, "build", "keep.txt");
+  const safeSentinel = path.join(workspaceRoot, "safe", "build", "keep.txt");
+  await writeFile(sentinel, "outside workspace");
+  await writeFile(safeSentinel, "preflight must finish first");
+  await symlink(outside, path.join(workspaceRoot, "linked"), process.platform === "win32" ? "junction" : "dir");
+  for (const dryRun of [true, false]) {
+    await assert.rejects(cleanGeneratedDirectories({
+      workspaceRoot,
+      dryRun,
+      directories: ["safe/build", "linked/build"],
+      findTrackedFiles: async () => [],
+      log: () => {},
+    }), /symbolic link|junction/);
+    assert.equal(await readFile(sentinel, "utf8"), "outside workspace");
+    assert.equal(await readFile(safeSentinel, "utf8"), "preflight must finish first");
+  }
 });
 
 test("subgraph manifest rendering rejects unresolved and injectable values", () => {

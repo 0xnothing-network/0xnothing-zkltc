@@ -1,0 +1,101 @@
+{
+  "brand": "0xNothing",
+  "slogan": "nothing to everything",
+  "campaign": "0xWallet — browser extension and Android app preview",
+  "created": "2026-09-05",
+  "videoContents": "Logo, brand name and nothing to everything slogan; no products",
+  "imageMethod": "Built-in image generation with canonical logo and public demo UI references",
+  "videoMethod": "Deterministic vector animation, original synthesized sound, FFmpeg H.264/AAC",
+  "files": [
+    {
+      "file": "images/01-extension-social.png",
+      "bytes": 1152654,
+      "sha256": "0a318474ff88b6823ee8cfd0f02fc46facca281969d0addd680a432f8d0de48f",
+      "format": "png",
+      "width": 1672,
+      "height": 941
+    },
+    {
+      "file": "images/02-android-app-social.png",
+      "bytes": 1157097,
+      "sha256": "ab0f9c4384b12276c6241c7b216d4c727c356626bc2eeab90f4d0903d5af7028",
+      "format": "png",
+      "width": 1003,
+      "height": 1568
+    },
+    {
+      "file": "images/03-wallet-platforms-social.png",
+      "bytes": 1351131,
+      "sha256": "cbb82e5ad0e7ee2457043c49b6439d0537327c8aeb452c6535534b98b43574b8",
+      "format": "png",
+      "width": 1672,
+      "height": 941
+    },
+    {
+      "file": "video/nothing-logo-16x9-1080p.mp4",
+      "bytes": 6255852,
+      "sha256": "485b109c59ae24ee2bde2bd7b9e8cfec909f889d1d575f8ab5532d450b869ff0",
+      "format": "mp4",
+      "durationSeconds": 10,
+      "streams": [
+        {
+          "codec_name": "h264",
+          "width": 1920,
+          "height": 1080,
+          "r_frame_rate": "30/1"
+        },
+        {
+          "codec_name": "aac",
+          "sample_rate": "48000",
+          "channels": 2,
+          "r_frame_rate": "0/0"
+        }
+      ]
+    },
+    {
+      "file": "video/nothing-logo-9x16-1080p.mp4",
+      "bytes": 6310540,
+      "sha256": "c3f8eca10ff04cc5a5b2e3f9fed14548f94bd9f512c48e15894024043b2e299e",
+      "format": "mp4",
+      "durationSeconds": 10,
+      "streams": [
+        {
+          "codec_name": "h264",
+          "width": 1080,
+          "height": 1920,
+          "r_frame_rate": "30/1"
+        },
+        {
+          "codec_name": "aac",
+          "sample_rate": "48000",
+          "channels": 2,
+          "r_frame_rate": "0/0"
+        }
+      ]
+    },
+    {
+      "file": "previews/logo-storyboard.png",
+      "bytes": 75351,
+      "sha256": "186da3ceaa19dd91821ad5c53940ce31e149bb0c9896ffd5a783260efa170875",
+      "format": "png",
+      "width": 1440,
+      "height": 540
+    },
+    {
+      "file": "previews/nothing-logo-poster.png",
+      "bytes": 858781,
+      "sha256": "6dab0782a8ead2d71a4e7c700ad875c011ef9dc731e625db19415e13dfbd2580",
+      "format": "png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "file": "previews/nothing-logo-vertical-poster.png",
+      "bytes": 860259,
+      "sha256": "f1403a0b48a75f77e471fdcbb17238cb0519d953d0c74f682a7285f480eb3f8d",
+      "format": "png",
+      "width": 1080,
+      "height": 1920
+    }
+  ]
+}

@@ -274,7 +274,7 @@ export async function GET(request: NextRequest) {
   const requestedPeriod = request.nextUrl.searchParams.get("period") || "1h";
   const validPairs = canonicalPairs.map(([token0, token1]) => pairSlug(token0, token1));
   const dynamicPool = isAddress(pair) ? getAddress(pair) : undefined;
-  if ((!dynamicPool && !validPairs.includes(pair)) || !(requestedPeriod in PERIODS)) {
+  if ((!dynamicPool && !validPairs.includes(pair)) || !Object.hasOwn(PERIODS, requestedPeriod)) {
     return NextResponse.json(
       { error: "Unsupported pair or period." },
       { status: 400, headers: { "Cache-Control": "no-store" } },

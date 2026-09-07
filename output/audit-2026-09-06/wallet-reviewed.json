@@ -1,0 +1,1316 @@
+[
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/vite.config.ts",
+    "lines": 63,
+    "bytes": 2423,
+    "reviewed": true,
+    "sha256": "FE10C96AB2702B3F2053CE2779A67FC7BDDD958240B17BDD864D7BEA75FE9A4B"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tsconfig.json",
+    "lines": 28,
+    "bytes": 749,
+    "reviewed": true,
+    "sha256": "C79F2ABD983E2EADCCBC44DA4DCF1BC5615F7ED071960C6C44A679EB3AFC61B6"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/ui/uiActions.test.ts",
+    "lines": 81,
+    "bytes": 2846,
+    "reviewed": true,
+    "sha256": "BD0B6F9157C8329FCB30EDCB79D42ABC4024807350C2054D7541B20863412782"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/ui/tokens.test.ts",
+    "lines": 65,
+    "bytes": 2927,
+    "reviewed": true,
+    "sha256": "30AD82C0DD2BF5A327DB969086D97AD7610B17CE8BDD1291226CDC9266B7C175"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/ui/i18n.test.ts",
+    "lines": 260,
+    "bytes": 10158,
+    "reviewed": true,
+    "sha256": "9EC14A924DD681A63E4F659BE3D5DBC3EAAF2FE3C3B660B684081C00283CB244"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/security/securityFlows.test.ts",
+    "lines": 76,
+    "bytes": 3565,
+    "reviewed": true,
+    "sha256": "B1C1612B94C170AA2CDC756B4FCAA77FF1A1A7FF2A749782FA26D43D5A3C5DA6"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/README.md",
+    "lines": 13,
+    "bytes": 628,
+    "reviewed": true,
+    "sha256": "96DF835281C3769AE2DDE99E4433003C6C37E9F51FD180E50A5034CA6C65D792"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/extension/rpcIngress.test.ts",
+    "lines": 33,
+    "bytes": 1272,
+    "reviewed": true,
+    "sha256": "982B2577A7B21F2C0DDC0476B561E8FF902652EC9E3C6357398DD84205602C6A"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/extension/protocol.test.ts",
+    "lines": 93,
+    "bytes": 3835,
+    "reviewed": true,
+    "sha256": "1947A50C82DDF499F2B3C30892B2A766A7D4D16D9B15FBD152B4DDDEB2D39BCA"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/extension/dapp.test.ts",
+    "lines": 154,
+    "bytes": 5174,
+    "reviewed": true,
+    "sha256": "5C6632A24ED59667AD12037503460F54036E6CA7B06552D8A89FA30E3E1136E3"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/extension/approvalWindow.test.ts",
+    "lines": 23,
+    "bytes": 842,
+    "reviewed": true,
+    "sha256": "DBD5BB0FA1D5C80DD7A4E11247545FE1434CE36FE0EB5D843D3CAC4B74EDF5CA"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/core/vault.test.ts",
+    "lines": 89,
+    "bytes": 3478,
+    "reviewed": true,
+    "sha256": "788813B6170820D21B8CD1264FA8FE4BDB7AB1FE135EFF9808CA4F4AF926703D"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/core/swap.test.ts",
+    "lines": 85,
+    "bytes": 3194,
+    "reviewed": true,
+    "sha256": "AB0FE6232AAA5800CF3C1CBA20DC752E370F41F92C176FCF5CA6F1066C28EBBA"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/core/pumpImage.test.ts",
+    "lines": 24,
+    "bytes": 858,
+    "reviewed": true,
+    "sha256": "BAD1E0841D720E48656BA399BE5C90329FAE000EEC8EAE97AD3F09FC743C9501"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/core/points.test.ts",
+    "lines": 169,
+    "bytes": 6157,
+    "reviewed": true,
+    "sha256": "423B22319DD0A67BF11F78EAA1B8830048B56D7F6FE2F1ADD397BA904F0A7E3E"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/core/networkReads.test.ts",
+    "lines": 304,
+    "bytes": 12694,
+    "reviewed": true,
+    "sha256": "E13A62F7DD38544685B4DAF3781F8AC84B555A21EC1223811DF7232ACFFC84D2"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/core/marketCatalog.test.ts",
+    "lines": 43,
+    "bytes": 1174,
+    "reviewed": true,
+    "sha256": "70B69EE8F95D055C3F98F35CAE26B05D00910EAB0289B1BFDC75BB2F12DB4FDD"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/core/format.test.ts",
+    "lines": 93,
+    "bytes": 3815,
+    "reviewed": true,
+    "sha256": "E7E343C225E4C2A6B627CBE1AC6CAB995420629B0D3AD1FE76009595B236F0A5"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/core/crypto.test.ts",
+    "lines": 29,
+    "bytes": 1387,
+    "reviewed": true,
+    "sha256": "07A8A839513791FB57A4F7626678795C0E0AF5AAF198277506272B1732E93260"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/core/coreServices.test.ts",
+    "lines": 51,
+    "bytes": 3171,
+    "reviewed": true,
+    "sha256": "BAFC130A446D0D1B46358CE6AB0AD5D9E315D7AF9C6571D9A728AA707A94E1D0"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/config/extension-config.test.ts",
+    "lines": 103,
+    "bytes": 4085,
+    "reviewed": true,
+    "sha256": "6D2D441A5A11B36C0845F9162D979D82903DE6DA8422DD8504A0CBEC535CF68E"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/config/addresses.test.ts",
+    "lines": 74,
+    "bytes": 3114,
+    "reviewed": true,
+    "sha256": "1D501F262F39B10EB5D70D0178C3519F00A594401BCD1CDE26FA0A87F8C50CE3"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/store-assets/source/showcase.html",
+    "lines": 1352,
+    "bytes": 39355,
+    "reviewed": true,
+    "sha256": "C5939CF2DBD6E4F9D25BC48CF1C4D1F0F2EBC9984355B5C9DF588C47291D280F"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/store-assets/chrome-web-store-ready/UPLOAD.md",
+    "lines": 44,
+    "bytes": 1147,
+    "reviewed": true,
+    "sha256": "FE74EC27C31E513D3D086A4FBF99BE16CA8C78821756A904B793868894F776F2"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/store-assets/chrome-web-store/DO-NOT-UPLOAD.txt",
+    "lines": 4,
+    "bytes": 158,
+    "reviewed": true,
+    "sha256": "F97DF7E0D6510F3794CBCC103CA68025D5D992598BB78633F6A39D4929C40AEC"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/state/WalletContext.tsx",
+    "lines": 366,
+    "bytes": 12309,
+    "reviewed": true,
+    "sha256": "5D73F6953737FE0E4005AC3908894278C45BD38CB5897DEE90152F76C0E13EFC"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/Unlock.tsx",
+    "lines": 171,
+    "bytes": 5676,
+    "reviewed": true,
+    "sha256": "1C1333A514060A8816E57CF846480AAF5884DF5C45EBB30405AD92FD6B7C7D73"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/Swap.tsx",
+    "lines": 554,
+    "bytes": 18796,
+    "reviewed": true,
+    "sha256": "17E4C91742A04CF0FC6FB817C51C25DE4F87AE520A90FFDD3F54171287A6863F"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/Settings.tsx",
+    "lines": 448,
+    "bytes": 17211,
+    "reviewed": true,
+    "sha256": "17ADF4AD67774F9B67B97784C8C4207CA9F91942F6A295DADB3E775CBFF2FA46"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/settings/TokenManager.tsx",
+    "lines": 184,
+    "bytes": 5969,
+    "reviewed": true,
+    "sha256": "9B2AE858781FE196FF1AEDA473ABB932FE23009F27FE091078D6553C600D4DF8"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/settings/RevealSecrets.tsx",
+    "lines": 178,
+    "bytes": 6297,
+    "reviewed": true,
+    "sha256": "344A7A22066624DD740C4DE9AF67FF7966670C7694655BF63ED89B929F523751"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/settings/ImportAccount.tsx",
+    "lines": 148,
+    "bytes": 4863,
+    "reviewed": true,
+    "sha256": "2683E6697C09CABBA5B3A73B23BC6B433103A5BE1C450C5E1063A32F81FA58DC"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/settings/DangerZone.tsx",
+    "lines": 115,
+    "bytes": 3758,
+    "reviewed": true,
+    "sha256": "71D00890AABEFFD77F79C8922FD2168C07953F4D421C67B9617F8FC37D84C94A"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/settings/ChangePassword.tsx",
+    "lines": 149,
+    "bytes": 4842,
+    "reviewed": true,
+    "sha256": "E7F06842B4C5C606208A0E9DC8267BE9A85D3E82CD1939DDB23ABF806BE6F705"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/Send.tsx",
+    "lines": 321,
+    "bytes": 11172,
+    "reviewed": true,
+    "sha256": "F781086D9A3FF9502B36393165AAB7A4E7AAAFD6C7ED36D621C9F5169427C8CF"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/send/SendNft.tsx",
+    "lines": 216,
+    "bytes": 7322,
+    "reviewed": true,
+    "sha256": "D348943EC463B8DC95CDC4C201DF84F67FB3805210CD54EA79D20F616960A1F8"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/Receive.tsx",
+    "lines": 125,
+    "bytes": 4021,
+    "reviewed": true,
+    "sha256": "A96BFE54AC535DC188821B8482D67B44F82A3698F5132757C4C84F576529232D"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/Onboarding.tsx",
+    "lines": 322,
+    "bytes": 10288,
+    "reviewed": true,
+    "sha256": "F63D8855DE5D0C70934B89E5D8F7EECDE9FE34F2195904E9369B3E4F3272E5F5"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/MintNusd.tsx",
+    "lines": 396,
+    "bytes": 13995,
+    "reviewed": true,
+    "sha256": "636180196D38B8E2F81E80C84F0A2ABA176A837930A4FAC92D260149F33A1122"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/Lend.tsx",
+    "lines": 341,
+    "bytes": 11990,
+    "reviewed": true,
+    "sha256": "F14DC0928F657EA731B726848F4F425FCBD1DBF4BE6030C560C025A7A139B370"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/Home.tsx",
+    "lines": 184,
+    "bytes": 6067,
+    "reviewed": true,
+    "sha256": "4DC3FB5FC0024537D8C422DA48F2F85231239FF1318DC0491F0EF9C62DC4370B"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/home/NftGrid.tsx",
+    "lines": 80,
+    "bytes": 2703,
+    "reviewed": true,
+    "sha256": "95AAE847AB5F0CAADCC19E21C8F8CFBCB4FED3C6C991E3A1B55C23AAA8ECC306"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/home/AssetList.tsx",
+    "lines": 76,
+    "bytes": 2589,
+    "reviewed": true,
+    "sha256": "7FB98FBCCA72E552F71FB35EF24F69AA136F47C217DDC0941A645B33812FD8AD"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/History.tsx",
+    "lines": 137,
+    "bytes": 4678,
+    "reviewed": true,
+    "sha256": "71E13B4FDC7606A1F443097537E4C3E0395FF5CE84895A268975114CF5D99982"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/Earn.tsx",
+    "lines": 623,
+    "bytes": 21470,
+    "reviewed": true,
+    "sha256": "B3A5A8A4081356D227E1DD98DB8248C3227CEC89124282E344839501D044EA33"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/Dapps.tsx",
+    "lines": 131,
+    "bytes": 5103,
+    "reviewed": true,
+    "sha256": "55D635834FB8D32A477686CC3AB2E8EA6C232B2C4E1E84EBEF77E9CD1F0AD2D2"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/Approve.tsx",
+    "lines": 487,
+    "bytes": 17412,
+    "reviewed": true,
+    "sha256": "0EC5E57516DF4C20F81355451BC5888BE49DCDF83B647AC41B45058931263EF8"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/router.ts",
+    "lines": 70,
+    "bytes": 1697,
+    "reviewed": true,
+    "sha256": "6627F9B06206CEFD6D08B3495ABD82C5F5A0224383A35283D4D655551DEB08B1"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/main.tsx",
+    "lines": 26,
+    "bytes": 904,
+    "reviewed": true,
+    "sha256": "D9D724442BA0FD40983768ACC93109C4E453E0533FF8BB433A043603E7BC2F92"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/lib/rpcPermission.ts",
+    "lines": 20,
+    "bytes": 656,
+    "reviewed": true,
+    "sha256": "563D0F79F61330E1AB31F40F687FC38619DF3D671CC1C36E916B68FF0F6A2BFA"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/lib/reviewKey.ts",
+    "lines": 13,
+    "bytes": 508,
+    "reviewed": true,
+    "sha256": "C058516EE28BB8C5FF6987CF62E94671CD984C0678F9BC36FE5C7C6C4DD0BEF7"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/lib/decimalInput.ts",
+    "lines": 13,
+    "bytes": 627,
+    "reviewed": true,
+    "sha256": "1D201C6B0538F31B6386EFDAE6DA6DCBC261BE48C97A9F834EAF6D35FA03369A"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/lib/actionGate.ts",
+    "lines": 24,
+    "bytes": 533,
+    "reviewed": true,
+    "sha256": "A538C546EA909867CC45281A54C9355598F11FC5A9DD39BB59228C8DAD21A96C"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/hooks/usePortfolio.ts",
+    "lines": 85,
+    "bytes": 2870,
+    "reviewed": true,
+    "sha256": "2EDA26A216EEB1E8B943757D87E5C5309FD39B7CADEBD2F20148A454E9EA104B",
+    "prior_sha256": "5AEA3921193A0EA2D9145289F50EA5D88DFDDA69A3D3F27D3F77881B54BDB9A6",
+    "followup": "Root reviewed network snapshot isolation; wallet verify 105 tests, typecheck and build exit 0."
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/hooks/useLiveRead.ts",
+    "lines": 215,
+    "bytes": 6726,
+    "reviewed": true,
+    "sha256": "15FC5547C6A97715256535BF20FD22EC24D751DCDA6B8C4752B78F13E99A4733"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/hooks/useCopy.ts",
+    "lines": 45,
+    "bytes": 1509,
+    "reviewed": true,
+    "sha256": "3E131F0790A96C64AF5F8C1ACAECD6283FBDDA31AF1A0CC9F81A237052B3F490"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/hooks/useActionGate.ts",
+    "lines": 10,
+    "bytes": 378,
+    "reviewed": true,
+    "sha256": "1C9FFE3165DF3ED53D50D5CBFA5846479C8EE308F7625ECFE3356A5EFB5972AA"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/components/VerifiedMark.tsx",
+    "lines": 8,
+    "bytes": 307,
+    "reviewed": true,
+    "sha256": "D03BEBF6BFD996CDC33177672F28F8A11AF2CC49DE67FC59583FB3881FBBCD41"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/components/TransactionReview.tsx",
+    "lines": 82,
+    "bytes": 2044,
+    "reviewed": true,
+    "sha256": "6D11905698CA8AC9B6A5E8E98BBC5F505FE82AB476A9FD2A3D6A214ED0BACC8D"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/components/TokenSelect.tsx",
+    "lines": 45,
+    "bytes": 1187,
+    "reviewed": true,
+    "sha256": "146481328ADBA81F63CBE94EEB10FDE1290D85F1BBB5C18541214BAB959B12E8"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/components/TokenLogo.tsx",
+    "lines": 44,
+    "bytes": 1572,
+    "reviewed": true,
+    "sha256": "F6414A2D90F1549DC479F9FEC35A9B659D0DC4AFBEC0BCF39F4AB78E6D58723E"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/components/ToastBar.tsx",
+    "lines": 35,
+    "bytes": 980,
+    "reviewed": true,
+    "sha256": "83AF9AD39F4547E5A0EDA2FCF07C7D3E38B3A71F846C3D1B6DB7E70D6EC350A3"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/components/SwapTokenPicker.tsx",
+    "lines": 228,
+    "bytes": 8148,
+    "reviewed": true,
+    "sha256": "E723506F1CA982C74B88817BEFCA410F8F6D6E6387EACC1F85F18AE6649230EF"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/components/Screen.tsx",
+    "lines": 36,
+    "bytes": 907,
+    "reviewed": true,
+    "sha256": "344EC42A4C28C98D178C48A2FD409369A22ED693286E100AE161B5AC82C7A881"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/components/kit.tsx",
+    "lines": 116,
+    "bytes": 2592,
+    "reviewed": true,
+    "sha256": "EED21F2158A392FE4F10E217D230973E806ACC0F7F22181B87EB7F172DA7E51A"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/components/BottomNav.tsx",
+    "lines": 47,
+    "bytes": 1456,
+    "reviewed": true,
+    "sha256": "F20068E0B36745E1BF0EAB71D56165993C7ABF461AC418815F7B2D42C141969D"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/components/AmountField.tsx",
+    "lines": 63,
+    "bytes": 1938,
+    "reviewed": true,
+    "sha256": "14584BEA1BD4B931B5483191FD6AE2634D581D456A6F9BB0105156B23C808CA3"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/components/AccountSheet.tsx",
+    "lines": 207,
+    "bytes": 6601,
+    "reviewed": true,
+    "sha256": "F52C410DE952BC89F3A6B3D773F94DFC780D784E2C4D51DCE1BBE4A62AD00395"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/App.tsx",
+    "lines": 112,
+    "bytes": 4495,
+    "reviewed": true,
+    "sha256": "DEE8AC2D4A110F07AD95AB9A6B9D66C4AF9C65653DE9CB876FE24F9594DBB972"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/styles/wallet.css",
+    "lines": 1896,
+    "bytes": 39549,
+    "reviewed": true,
+    "sha256": "BBCB8A760BF7E50725C19765C6EB1E80E8098E54D18405BAB263B5C72A485EBD"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/global.d.ts",
+    "lines": 8,
+    "bytes": 258,
+    "reviewed": true,
+    "sha256": "B3439D7AFA19284C743C61D8939D3F64BED966238A91BCE737294C69C217B2F5"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/extension/rpcIngress.ts",
+    "lines": 41,
+    "bytes": 1329,
+    "reviewed": true,
+    "sha256": "00F04F29A02081F83328657D3A8896D81B2EA7429429F976AD92140567430915"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/extension/protocol.ts",
+    "lines": 225,
+    "bytes": 7692,
+    "reviewed": true,
+    "sha256": "4ACF4EBD13120B1DC1B59DD7FFF9D6FBF3B46D28782B1F14D20F1982533731B5"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/extension/inpage.ts",
+    "lines": 209,
+    "bytes": 5989,
+    "reviewed": true,
+    "sha256": "C8D4DCF682284CAD780DB2EDF04AA772A9EC04B8F32B70123792F1EE61E3B22D"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/extension/content.ts",
+    "lines": 52,
+    "bytes": 2168,
+    "reviewed": true,
+    "sha256": "A98EA4C380F4E7112E6691E534DA9538EBB804F12C3261B552C05B919A949C63"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/extension/background.ts",
+    "lines": 660,
+    "bytes": 23960,
+    "reviewed": true,
+    "sha256": "2F23AE29551752268F76B72751738B748BCE0FF1511129981C3E5FD4E82FB252"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/extension/approvalWindow.ts",
+    "lines": 24,
+    "bytes": 910,
+    "reviewed": true,
+    "sha256": "BA8DFF7479E54E6D71CA2248863E0F3CB133A0C34D6BECB9E284596CA024FF0A"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/services/walletEvents.ts",
+    "lines": 19,
+    "bytes": 833,
+    "reviewed": true,
+    "sha256": "0B38BF720F897DC7CB580A93D2EADDF79464985E107EA37A929B3EB0B655BE0F"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/services/tx.ts",
+    "lines": 239,
+    "bytes": 7777,
+    "reviewed": true,
+    "sha256": "5E4B11C49870B2734911CA224514DA073F5606A481DB053101BE8F700C28A807"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/services/transfer.ts",
+    "lines": 81,
+    "bytes": 2423,
+    "reviewed": true,
+    "sha256": "5B3D793D4F8A8111633D2EB5BCBF84D55B3BA35508781155250872DCF64C41D3"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/services/tokens.ts",
+    "lines": 279,
+    "bytes": 9845,
+    "reviewed": true,
+    "sha256": "9F2692C89CD05B617BE0A4CF6C7A7FEF926D2C417BBF972BB88DEE515B8D4623"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/services/swap.ts",
+    "lines": 720,
+    "bytes": 22746,
+    "reviewed": true,
+    "sha256": "843C4E5BE2A772BE92E49703DF4132EF134F8EFA784E00FF20D829632152CE93"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/services/prices.ts",
+    "lines": 303,
+    "bytes": 11161,
+    "reviewed": true,
+    "sha256": "F1F18B31C70CD997577E038B53035E73050D33A951D70E33E65F271761AC5A76"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/services/portfolio.ts",
+    "lines": 267,
+    "bytes": 8971,
+    "reviewed": true,
+    "sha256": "CCA67AA26D361F22967AF4C5B195FE92336AC9B36F69915A10142C7D5C5231E4",
+    "prior_sha256": "B43428CBA0FF15138E6C621A0B41E5966F355E652C2B71F14C4580FE5A0891A2",
+    "followup": "Root reviewed network snapshot isolation; wallet verify 105 tests, typecheck and build exit 0."
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/services/points.ts",
+    "lines": 291,
+    "bytes": 9654,
+    "reviewed": true,
+    "sha256": "4974F6891ACCB8ECDDEED7EF81DEF10276919D3DE554363795BEC2936DE49977"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/services/oracle.ts",
+    "lines": 123,
+    "bytes": 4498,
+    "reviewed": true,
+    "sha256": "87C93B7DD2E908B79ABF0702A12BE72992258965F2B2A9156329B344B880A54C"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/services/nusdOracle.ts",
+    "lines": 66,
+    "bytes": 2705,
+    "reviewed": true,
+    "sha256": "8322777D285B19063900A45C908F6F220C7DA14BD7FAB37F231CA15431F238DA"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/services/nfts.ts",
+    "lines": 109,
+    "bytes": 3737,
+    "reviewed": true,
+    "sha256": "86B1E22BAF01FE641E5D05EA896D2E9395856522515071930532AEBBCAEFF03F"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/services/marketCatalog.ts",
+    "lines": 621,
+    "bytes": 23017,
+    "reviewed": true,
+    "sha256": "86BE95BE014B5CB65B190F46B365BD655400161B44868904CCC35736F22FBD3F"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/services/lend.ts",
+    "lines": 95,
+    "bytes": 3532,
+    "reviewed": true,
+    "sha256": "ED118D134F262D8BC1E4CE9E7BA70686DB9D3647E9E3CF51B56705B269F536DD"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/services/history.ts",
+    "lines": 194,
+    "bytes": 6366,
+    "reviewed": true,
+    "sha256": "AF456DA07C2AC28D4E8243437C96D624DB150A60C0EB908F02018AB6940C5E71"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/services/dapp.ts",
+    "lines": 613,
+    "bytes": 21062,
+    "reviewed": true,
+    "sha256": "4B1BEE5AB811C6890342B808BE61DCDDA015CB8E21472BDDCC313753AAC69C13"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/rpc/client.ts",
+    "lines": 87,
+    "bytes": 2752,
+    "reviewed": true,
+    "sha256": "EF6A8A50D506971D9F51E26F3354D03569FC1CD3689CD42CF33B9D51CAC06CFF"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/rpc/blockTicker.ts",
+    "lines": 129,
+    "bytes": 3738,
+    "reviewed": true,
+    "sha256": "BD2EA3EFACA95F2A819151C044E6219316E96DBAAB8645557B41CFEB4F70AA51"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/platform/storageKeys.ts",
+    "lines": 30,
+    "bytes": 1359,
+    "reviewed": true,
+    "sha256": "A3DD354F10CB2E12FE77A476415DA24ADE15CC5370B1D4A021C0A252AA7F05CC"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/platform/storage.ts",
+    "lines": 196,
+    "bytes": 6488,
+    "reviewed": true,
+    "sha256": "C79CFDB0A6DB41D3AF68286B31ADAD9AA8BB1D337881500FE887B49DC4A3317F"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/platform/locks.ts",
+    "lines": 34,
+    "bytes": 1185,
+    "reviewed": true,
+    "sha256": "D4CDE6A6A128D918618A1F8CE51BB3C69DD476F7ED3A8D704CD1CD912582C143"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/platform/env.ts",
+    "lines": 97,
+    "bytes": 2932,
+    "reviewed": true,
+    "sha256": "CA3A84B793C4D60EBE44A058FDF804DEB69752DB0670280E739F4D877521559E"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/platform/chromeStore.ts",
+    "lines": 63,
+    "bytes": 2020,
+    "reviewed": true,
+    "sha256": "086F23D7AC88510ECF5784A0EE7B40E6EC27A800F34A52CB1981551F53A30FB4"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/lib/swapMath.ts",
+    "lines": 65,
+    "bytes": 2417,
+    "reviewed": true,
+    "sha256": "6A6C5E5638CED75F6CAE93782001C0792EE154B85FEB931DA010B8D1D1BFD00E"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/lib/pumpImage.ts",
+    "lines": 117,
+    "bytes": 4167,
+    "reviewed": true,
+    "sha256": "09CBAEB7428049E5DC0F35E8C8EC5D575B2EF3044E9148FF68E18CEBA54983F3"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/lib/portfolioChange.ts",
+    "lines": 32,
+    "bytes": 1388,
+    "reviewed": true,
+    "sha256": "C4EBA878557679E0E424E7E358FF4DC1178031922C7478E68515E733B401C93B"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/lib/pixelSvg.ts",
+    "lines": 107,
+    "bytes": 4212,
+    "reviewed": true,
+    "sha256": "A7115FC2BDA13CD93D1AF12477ED381649C5F5673AA6FA5C27DDEB9F0A42EE93"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/lib/format.ts",
+    "lines": 84,
+    "bytes": 3565,
+    "reviewed": true,
+    "sha256": "A9ABF669DF326A2AFD4DE32A2ED2827C9D73450F93D8CF4CB169958C40AC0A1F"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/lib/errors.ts",
+    "lines": 54,
+    "bytes": 2243,
+    "reviewed": true,
+    "sha256": "09BD5A66560F94EB247FF0B06D98E94EC6AE79C6EE7E75769E4870C7E677AB29"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/keyring/vault.ts",
+    "lines": 540,
+    "bytes": 19803,
+    "reviewed": true,
+    "sha256": "C841990A7BE3AB5AF5F9C83DF41C9D035B3D7B03223F6FB5A1613080EB8C6F1C"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/keyring/mnemonic.ts",
+    "lines": 72,
+    "bytes": 2666,
+    "reviewed": true,
+    "sha256": "B11C534BC1B3A3CC064B0A127F26BCC6A91CD311A0DEEA5399406C062DDD9ECD"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/keyring/crypto.ts",
+    "lines": 245,
+    "bytes": 7228,
+    "reviewed": true,
+    "sha256": "5EDDAF40CCC6723FAC2015F003EFA6DA9F9088FF9BF463B01925D44DF1A8EC9E"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/i18n/locales/zh.ts",
+    "lines": 356,
+    "bytes": 15157,
+    "reviewed": true,
+    "sha256": "E669EA0AEA35219FC389440FF4801963AE748C7307307718FCE0685B8B9C1D3B"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/i18n/locales/vi.ts",
+    "lines": 425,
+    "bytes": 21271,
+    "reviewed": true,
+    "sha256": "DDCE16A32F2BE6D50E8E09B974BEE7494576D2F9B253FF8E7D33C4463EC669A9"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/i18n/locales/ru.ts",
+    "lines": 368,
+    "bytes": 21923,
+    "reviewed": true,
+    "sha256": "3789665344874C3538EE2CCA7D4102FDA148D7535719D45FB0A66FC162356ED2"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/i18n/locales/ko.ts",
+    "lines": 358,
+    "bytes": 17881,
+    "reviewed": true,
+    "sha256": "02446014DDB57563441F1F071EFB9E21F7293671B6762372321CD40A58168163"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/i18n/locales/ja.ts",
+    "lines": 364,
+    "bytes": 19499,
+    "reviewed": true,
+    "sha256": "3530D7F4EBD50BAD04DB14C21F81F5D60CD4DF563C3AA5F6136EBC1A55EF00D3"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/i18n/locales/fr.ts",
+    "lines": 362,
+    "bytes": 16922,
+    "reviewed": true,
+    "sha256": "FE30CBFB512D41B2F88DA027CFFA510F4C265BA742922F260697F7F993569855"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/i18n/locales/es.ts",
+    "lines": 362,
+    "bytes": 16591,
+    "reviewed": true,
+    "sha256": "A44B520E6B6CB38BBCB96D0A4A4A0EAD04B3645B1311FA8632803A60A99E6086"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/i18n/locales/de.ts",
+    "lines": 360,
+    "bytes": 16733,
+    "reviewed": true,
+    "sha256": "6D5FF8763F75D046F1BE900E32DE6067901A62B5661B66E298845A4B1AC430B1"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/i18n/index.ts",
+    "lines": 114,
+    "bytes": 4035,
+    "reviewed": true,
+    "sha256": "6BDE203FFA96BB2AF223351E5935E3B40C8B48C90EBD4BE8C53BFD2FEBA05C08"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/core/i18n/catalog.ts",
+    "lines": 499,
+    "bytes": 25531,
+    "reviewed": true,
+    "sha256": "C53D48A04237FCEF5EA232E9B2D1B1E221005FE1BB512B41DEF3C2A02B512BBF"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/config/networks.ts",
+    "lines": 243,
+    "bytes": 7951,
+    "reviewed": true,
+    "sha256": "56B51EEC3DE003FBBBE1C9AF74ED73642191240DC7A32110D7E91158E0021348"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/config/dapps.ts",
+    "lines": 77,
+    "bytes": 2216,
+    "reviewed": true,
+    "sha256": "463F707EA726AED44B631376EB77B019DFAD8CD718F2BF857319BB9B974B364E"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/config/contracts.ts",
+    "lines": 39,
+    "bytes": 1857,
+    "reviewed": true,
+    "sha256": "7504692819FEB7889AC5283A51F6D7E24ADADF50DB0F13DE1343A8D961818736"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/config/chain.ts",
+    "lines": 37,
+    "bytes": 1555,
+    "reviewed": true,
+    "sha256": "0611B01A94D839E0A592C3611C77B0335C3C60562585D032EDFC29096F80E83E"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/config/assets.ts",
+    "lines": 132,
+    "bytes": 3509,
+    "reviewed": true,
+    "sha256": "9E11E6982022C540A479865E8006C5E68AA810D18E61C976FC92FA01E40F373F"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/abis/index.ts",
+    "lines": 131,
+    "bytes": 7115,
+    "reviewed": true,
+    "sha256": "D877DA0ADC36DE9234BAFEFD4BC48E2B8FE2045983F37E803292B631B4445F80"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/scripts/generate-icons.mjs",
+    "lines": 64,
+    "bytes": 2299,
+    "reviewed": true,
+    "sha256": "95E9C16F4D9AEFA6DE5FCE04A18FD1AC8B4A79983EF26F2F4F703CD03DFD6A1C"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/scripts/build-inject.mjs",
+    "lines": 48,
+    "bytes": 1644,
+    "reviewed": true,
+    "sha256": "8A808DE905143363F4B17FCC69BEE9B7B0C78BC3F33589A3BC82C4552F25DE95"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/scripts/build-all.mjs",
+    "lines": 41,
+    "bytes": 1701,
+    "reviewed": true,
+    "sha256": "ADB97B0414E8653D0AF522B8BC688BE9A83833C148854C1201D9BD900CF719DB"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/README.md",
+    "lines": 267,
+    "bytes": 13847,
+    "reviewed": true,
+    "sha256": "06CC4ABB09DD18D6EBE355AD4CEEBD2FBF468E6DF3F2073950F416C0087616A7"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/public/_locales/zh_CN/messages.json",
+    "lines": 5,
+    "bytes": 64,
+    "reviewed": true,
+    "sha256": "0C0283CE108613C4C8336EF1552FFB169EA83B30738E2C61AD58DF9BB96975D6"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/public/_locales/vi/messages.json",
+    "lines": 5,
+    "bytes": 64,
+    "reviewed": true,
+    "sha256": "0C0283CE108613C4C8336EF1552FFB169EA83B30738E2C61AD58DF9BB96975D6"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/public/_locales/ru/messages.json",
+    "lines": 5,
+    "bytes": 64,
+    "reviewed": true,
+    "sha256": "0C0283CE108613C4C8336EF1552FFB169EA83B30738E2C61AD58DF9BB96975D6"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/public/_locales/ko/messages.json",
+    "lines": 5,
+    "bytes": 64,
+    "reviewed": true,
+    "sha256": "0C0283CE108613C4C8336EF1552FFB169EA83B30738E2C61AD58DF9BB96975D6"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/public/_locales/ja/messages.json",
+    "lines": 5,
+    "bytes": 64,
+    "reviewed": true,
+    "sha256": "0C0283CE108613C4C8336EF1552FFB169EA83B30738E2C61AD58DF9BB96975D6"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/public/_locales/fr/messages.json",
+    "lines": 5,
+    "bytes": 64,
+    "reviewed": true,
+    "sha256": "0C0283CE108613C4C8336EF1552FFB169EA83B30738E2C61AD58DF9BB96975D6"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/public/_locales/es/messages.json",
+    "lines": 5,
+    "bytes": 64,
+    "reviewed": true,
+    "sha256": "0C0283CE108613C4C8336EF1552FFB169EA83B30738E2C61AD58DF9BB96975D6"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/public/_locales/en/messages.json",
+    "lines": 6,
+    "bytes": 118,
+    "reviewed": true,
+    "sha256": "321D1B52B188078B241753593D620397CB4591231CDE0674EB15966462A74465"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/public/_locales/de/messages.json",
+    "lines": 5,
+    "bytes": 64,
+    "reviewed": true,
+    "sha256": "0C0283CE108613C4C8336EF1552FFB169EA83B30738E2C61AD58DF9BB96975D6"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/public/theme-boot.js",
+    "lines": 10,
+    "bytes": 290,
+    "reviewed": true,
+    "sha256": "B683C5A9F23FA2FEC0D093190F435CF9A5DF12DBEB64D2CB37DDA0F70CF448DA"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/public/manifest.json",
+    "lines": 51,
+    "bytes": 1478,
+    "reviewed": true,
+    "sha256": "22350139CAFC5100BFC67887F5A1460EE425E86172ED6958D3D9F9304B98E2E0"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/package.json",
+    "lines": 42,
+    "bytes": 1424,
+    "reviewed": true,
+    "sha256": "092FA108F4DFCAB3A9EFAAD0C91AFB4B459B74A62FC7B4AFF1D5352B9C56CF40"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/index.html",
+    "lines": 47,
+    "bytes": 1361,
+    "reviewed": true,
+    "sha256": "36F29D3970499126CCF5470C71CFF35A96979527EC261B61DACF5AAA7F46C9DC"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/capacitor.config.ts",
+    "lines": 26,
+    "bytes": 675,
+    "reviewed": true,
+    "sha256": "FCC8843F3197D671FC2470CCF601AB7AE5F39341418D28107A7E66F1309EB068"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/.ignore",
+    "lines": 5,
+    "bytes": 180,
+    "reviewed": true,
+    "sha256": "5B345696AC9DAF0B07CE5B9C56D5EC914815E395286F4C9F9AC3EC8EC83BF507"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/.gitignore",
+    "lines": 11,
+    "bytes": 161,
+    "reviewed": true,
+    "sha256": "1A921E64E755ECFE9DC421C5B28C9A57D18E8738897E82FAE697A5619C76A14D"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/variables.gradle",
+    "lines": 16,
+    "bytes": 498,
+    "reviewed": true,
+    "sha256": "83D502C9ED8FCF1DD4791482067ABEEDBEBAE49FAFE9CD14A8A1F5891DEB0D88"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/settings.gradle",
+    "lines": 5,
+    "bytes": 208,
+    "reviewed": true,
+    "sha256": "6CE098D15EBD69B44C4ECD786BCA1BDC366340D2459B2AF4D7BB0AB317AA9669"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/gradlew.bat",
+    "lines": 94,
+    "bytes": 2937,
+    "reviewed": true,
+    "sha256": "1D297E00BD21DE3ACE22B4D7F2DE1F9DFA858883D66BBF7C1CCBECCCEC8F4F3B"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/gradlew",
+    "lines": 251,
+    "bytes": 8733,
+    "reviewed": true,
+    "sha256": "B187B4C52E749F5760AFDD6FADC31B2A98AD35FB249BF0DFF03B72650F320409"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/gradle.properties",
+    "lines": 22,
+    "bytes": 987,
+    "reviewed": true,
+    "sha256": "3BAB15C5B8BC4C2F4B6CF525497D15AD4ABCA53A460E6DD2EB0F0135817D31E6"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/gradle/wrapper/gradle-wrapper.properties",
+    "lines": 7,
+    "bytes": 253,
+    "reviewed": true,
+    "sha256": "9A479A85AA879BB55284FC16D0DE5B81A745C3854F4E2D88C42E7DEBAF007435"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/capacitor.settings.gradle",
+    "lines": 12,
+    "bytes": 609,
+    "reviewed": true,
+    "sha256": "647F354FAB564C06A5FA1E6B3473039FA534F6C56FD37138D9CD984A971D5B13"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/build.gradle",
+    "lines": 29,
+    "bytes": 637,
+    "reviewed": true,
+    "sha256": "46ADE7DB7AFEB8049CCEA59FCE83095DCA736CEB8C9ACD79CC944E988C3357D9"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/capacitor-cordova-android-plugins/src/main/res/.gitkeep",
+    "lines": 1,
+    "bytes": 1,
+    "reviewed": true,
+    "sha256": "01BA4719C80B6FE911B091A7C05124B64EEECE964E09C058EF8F9805DACA546B"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/capacitor-cordova-android-plugins/src/main/java/.gitkeep",
+    "lines": 0,
+    "bytes": 0,
+    "reviewed": true,
+    "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/capacitor-cordova-android-plugins/src/main/AndroidManifest.xml",
+    "lines": 8,
+    "bytes": 210,
+    "reviewed": true,
+    "sha256": "2E3E383475F0E6CB76F0A7B46017A546663FBA8E5BD1EF2A537412AFAC2EE9B5"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/capacitor-cordova-android-plugins/cordova.variables.gradle",
+    "lines": 7,
+    "bytes": 312,
+    "reviewed": true,
+    "sha256": "B13104B34F7738ABCEEC358AE8226BA5E64855E97BABDE54A115880E9B9BD47B"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/capacitor-cordova-android-plugins/build.gradle",
+    "lines": 59,
+    "bytes": 1668,
+    "reviewed": true,
+    "sha256": "28E3FA281F4D1E388BF98ABC7F5BB31E672516E385C165C719D201ED54B8236E"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/proguard-rules.pro",
+    "lines": 21,
+    "bytes": 751,
+    "reviewed": true,
+    "sha256": "1CF8C57E8F79C250B0AF9C1A5A4EDAD71A5C348A79AB70243B6BAE086C150AD2"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/build.gradle",
+    "lines": 54,
+    "bytes": 2144,
+    "reviewed": true,
+    "sha256": "F0F3B3BC45BE7941F91F2EC0872AC1621304D388FBA380796B7DE83543F24700"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/capacitor.build.gradle",
+    "lines": 21,
+    "bytes": 522,
+    "reviewed": true,
+    "sha256": "0C19A5170F2A80FE539FC287DCE5D2A700E828581D01A6A77C6A91CE6C922AD9"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/.gitignore",
+    "lines": 101,
+    "bytes": 1824,
+    "reviewed": true,
+    "sha256": "065E4A92A240FE11A0EA230491AD9DABEF143F5FD5A3E6884AD6F0395666A971"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/.gitignore",
+    "lines": 2,
+    "bytes": 26,
+    "reviewed": true,
+    "sha256": "99C54E51EE601A60FBDE8016B2CBF717483BC2E92773BE86C9247D02A7FA6EA4"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/test/java/com/getcapacitor/myapp/ExampleUnitTest.java",
+    "lines": 18,
+    "bytes": 402,
+    "reviewed": true,
+    "sha256": "D4045AE8FAC1F0807E6B24EB34E68409A9A235DF9D1A3F896FB8C9A49424363D"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/main/res/xml/file_paths.xml",
+    "lines": 5,
+    "bytes": 213,
+    "reviewed": true,
+    "sha256": "A46ED43EF65C90CB6778F4581DECF3556E3F0055AAD8F36D69DAE16F9A0E99AA"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/androidTest/java/com/getcapacitor/myapp/ExampleInstrumentedTest.java",
+    "lines": 26,
+    "bytes": 777,
+    "reviewed": true,
+    "sha256": "9232D8D68A740EB14DCEEC5ACA622E88013C45A38AAB0FAB3C527959023F7755"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/main/res/xml/config.xml",
+    "lines": 6,
+    "bytes": 185,
+    "reviewed": true,
+    "sha256": "E9DCDA493E663C5C4DB9E3CB3BD968477A6E90AA8840BCBBA40D72ED54B767CE"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/main/assets/capacitor.config.json",
+    "lines": 19,
+    "bytes": 331,
+    "reviewed": true,
+    "sha256": "F58DD08E0268BE635046A28C4C1E981036BED5BB0279DF560A55F5E0A10FB5FB"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/main/AndroidManifest.xml",
+    "lines": 40,
+    "bytes": 1647,
+    "reviewed": true,
+    "sha256": "71D04025CD0507E73B70F17D6D9FB4E7FBE133C8447AB25B93D40377AE451BD0"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/main/assets/capacitor.plugins.json",
+    "lines": 14,
+    "bytes": 324,
+    "reviewed": true,
+    "sha256": "0DAE01396814583B48CE3A823221454E1EA42603D11B730EAA864EF53DD0951B"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/main/res/values/styles.xml",
+    "lines": 22,
+    "bytes": 823,
+    "reviewed": true,
+    "sha256": "18EBBA36575E9461347EE67361B23CAF095F158EE85DBEFE1B83A4669BA5BD6C"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/main/res/values/strings.xml",
+    "lines": 7,
+    "bytes": 318,
+    "reviewed": true,
+    "sha256": "063735E1420FE8CBE8E8CEB7E3FA5DADD8C05722D4CDFD8BAD68E2FCA1CBC8E5"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/main/res/values/ic_launcher_background.xml",
+    "lines": 4,
+    "bytes": 120,
+    "reviewed": true,
+    "sha256": "CD40BAFE618FF506F4088778B135CB4FAA15F25E0C9B475E22D730C74B7BE115"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/main/java/xyz/zeroxnothing/wallet/MainActivity.java",
+    "lines": 5,
+    "bytes": 127,
+    "reviewed": true,
+    "sha256": "B57FDC4FAB0B70849B15C52FB6D105B7CE9FFC0C39E680601C3B706FD0C89962"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml",
+    "lines": 5,
+    "bytes": 265,
+    "reviewed": true,
+    "sha256": "9C3A7E0A6515C6E1A7AE834A9AE430311EBC3241F7B2E5E7F0460AA690709A7C"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+    "lines": 5,
+    "bytes": 265,
+    "reviewed": true,
+    "sha256": "9C3A7E0A6515C6E1A7AE834A9AE430311EBC3241F7B2E5E7F0460AA690709A7C"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/main/res/drawable-v24/ic_launcher_foreground.xml",
+    "lines": 34,
+    "bytes": 1880,
+    "reviewed": true,
+    "sha256": "A8514094F754B099D3E55CE1D6E0B2DE79DB418B2EEACB0FC2A6BB0BFADEF221"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/main/res/layout/activity_main.xml",
+    "lines": 12,
+    "bytes": 535,
+    "reviewed": true,
+    "sha256": "5D770FEB791313B947020CBFC57E5C733C556DAC5E9E49261A1190E527073253"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/main/res/drawable/ic_launcher_background.xml",
+    "lines": 170,
+    "bytes": 5606,
+    "reviewed": true,
+    "sha256": "718BA51ADF166BB55C3E9936BB8199A0148457F7F0191AAA2F37A94F3159D6EC"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/lib/typedData.ts",
+    "lines": 37,
+    "bytes": 1350,
+    "reviewed": true,
+    "sha256": "DB241B9AFD5227AE0EAF6D77359CD15C603F27D17092A0F404E76E0787693B2C"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/ui/typedData.test.ts",
+    "lines": 29,
+    "bytes": 1241,
+    "reviewed": true,
+    "sha256": "E8CD0D1C5690D0681D3B8F94DD6AAFBE913A445EA779BB1FF2C6634780676C33"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/scripts/configure-android.ts",
+    "lines": 64,
+    "bytes": 3208,
+    "reviewed": true,
+    "sha256": "015E5B480187A6E4C4EBD199AE1D3B5212169DDFABEA4F22F01B9EBC07C24C69"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/native/android/res/xml/wallet_backup_rules.xml",
+    "lines": 13,
+    "bytes": 573,
+    "reviewed": true,
+    "sha256": "7E1410F42FEA1118F74B3A0957A5F455F4C55886C2AD92636F0EF19F23C3711F"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/native/android/res/xml/wallet_data_extraction_rules.xml",
+    "lines": 26,
+    "bytes": 1129,
+    "reviewed": true,
+    "sha256": "39DAC23A0D80CDBEB54FD90C010F4EC4DAA2C53DE3973D16724D52A6F17C29A6"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/config/android-config.test.ts",
+    "lines": 57,
+    "bytes": 3412,
+    "reviewed": true,
+    "sha256": "A59938064740B214E8FA7DAABC906B08FFF76CE041028C7839008AC58441C396"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/main/res/xml/wallet_backup_rules.xml",
+    "lines": 13,
+    "bytes": 573,
+    "reviewed": true,
+    "sha256": "7E1410F42FEA1118F74B3A0957A5F455F4C55886C2AD92636F0EF19F23C3711F"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/android/app/src/main/res/xml/wallet_data_extraction_rules.xml",
+    "lines": 26,
+    "bytes": 1129,
+    "reviewed": true,
+    "sha256": "39DAC23A0D80CDBEB54FD90C010F4EC4DAA2C53DE3973D16724D52A6F17C29A6"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/wallet/tests/core/portfolioSnapshots.test.ts",
+    "reviewed": true,
+    "sha256": "53AB9CBC5CE4FD4E8DF67B0D42D095B5CE912B444FCB14E7D77C41B54188544C",
+    "bytes": 2785,
+    "lines": 48,
+    "followup": "Root reviewed network snapshot isolation; wallet verify 105 tests, typecheck and build exit 0."
+  }
+]

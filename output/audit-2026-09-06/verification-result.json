@@ -1,0 +1,31 @@
+{
+  "command": "npm run verify",
+  "exitCode": 0,
+  "sessionId": 52436,
+  "completionChunk": "be0bf3",
+  "log": "final-verify.log",
+  "counts": {
+    "tooling": 11,
+    "web": 108,
+    "contractsTestnet": 70,
+    "contractsMainnet": 72,
+    "contractsFi": 142,
+    "marketplaceMapping": 4,
+    "fiOperations": 28,
+    "wallet": 102
+  },
+  "note": "Passed after all integrated patches except the later wallet network-scoped portfolio snapshot fix, which has separate wallet-followup-verify.log validation. Fork tests can return early when their RPC environment variable is unset; passing suite counts do not prove live fork execution.",
+  "walletFollowup": {
+    "command": "npm run verify:wallet",
+    "exitCode": 0,
+    "tests": 105,
+    "sessionId": 96445,
+    "completionChunk": "a634c4",
+    "log": "wallet-followup-verify.log"
+  },
+  "productionSmoke": {
+    "routes": 6,
+    "allStatus": 200,
+    "log": "production-http-smoke.json"
+  }
+}

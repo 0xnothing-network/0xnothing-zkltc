@@ -9,7 +9,7 @@ export function evaluateModule<T>(
   globals: Record<string, unknown> = {},
 ): T {
   const code = ts.transpileModule(readFileSync(file, "utf8"), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
     fileName: file.pathname,
   }).outputText;
   const exports = {};

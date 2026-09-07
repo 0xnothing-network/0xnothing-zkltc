@@ -2,10 +2,15 @@ import { formatUnits, parseUnits, type Address } from "viem";
 
 export function parseAmount(value: string, decimals = 18): bigint | undefined {
   const normalized = value.trim();
+  if (!Number.isInteger(decimals) || decimals < 0 || decimals > 255) return undefined;
   if (!/^(?:\d+|\d*\.\d+)$/.test(normalized)) return undefined;
+  // parseUnits rounds excess precision. A wallet action must spend the exact
+  // amount entered, so reject meaningful digits below the token's base unit.
+  const fraction = normalized.split(".")[1]?.replace(/0+$/, "") ?? "";
+  if (fraction.length > decimals) return undefined;
   try {
     const amount = parseUnits(normalized, decimals);
-    return amount > 0n ? amount : undefined;
+    return amount > 0n && amount <= (1n << 256n) - 1n ? amount : undefined;
   } catch {
     return undefined;
   }
@@ -100,6 +105,17 @@ export function priceImpactBps(
 
 export function transactionDeadline(minutes = 20): bigint {
   return BigInt(Math.floor(Date.now() / 1000) + minutes * 60);
+}
+
+export function formatUnlockTime(value: bigint | undefined): string {
+  if (value === undefined) return "--";
+  // The locker accepts uint64 timestamps, which can exceed JavaScript's Date range.
+  if (value < 0n || value > 8_640_000_000_000n) return `Unix ${value.toString()} seconds`;
+  return `${new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(new Date(Number(value) * 1_000))} UTC`;
 }
 
 export function percentageShare(balance: bigint | undefined, total: bigint | undefined): string {

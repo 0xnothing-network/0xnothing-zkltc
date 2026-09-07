@@ -5,11 +5,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { formatUnits, maxUint256, parseUnits } from "viem";
 import {
   useAccount,
+  useConfig,
   usePublicClient,
   useReadContract,
   useSwitchChain,
   useWriteContract,
 } from "wagmi";
+import { createPumpWalletGuard } from "@/features/pump/walletSession";
 import { nusdAbi, pumpTokenAbi, zeroXPumpAbi } from "@/features/pump/abis";
 import {
   NUSD_CONFIGURED,
@@ -43,7 +45,8 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
   const toast = useToast();
   const queryClient = useQueryClient();
   const { address, isConnected, chainId } = useAccount();
-  const publicClient = usePublicClient();
+  const walletConfig = useConfig();
+  const publicClient = usePublicClient({ chainId: PUMP_CHAIN_ID });
   const { switchChain } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
   const submitLockRef = useRef(false);
@@ -55,6 +58,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
   const configured = PUMP_CONFIGURED && NUSD_CONFIGURED;
 
   const buyQuote = useReadContract({
+    chainId: PUMP_CHAIN_ID,
     address: PUMP_FACTORY_ADDRESS,
     abi: zeroXPumpAbi,
     functionName: "quoteBuy",
@@ -62,6 +66,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
     query: { enabled: configured && mode === "buy" && amountWei > 0n && market.status === "TRADING" },
   });
   const sellQuote = useReadContract({
+    chainId: PUMP_CHAIN_ID,
     address: PUMP_FACTORY_ADDRESS,
     abi: zeroXPumpAbi,
     functionName: "quoteSell",
@@ -69,6 +74,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
     query: { enabled: configured && mode === "sell" && amountWei > 0n && market.status !== "GRADUATED" },
   });
   const nusdBalance = useReadContract({
+    chainId: PUMP_CHAIN_ID,
     address: PUMP_NUSD_ADDRESS,
     abi: nusdAbi,
     functionName: "balanceOf",
@@ -76,6 +82,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
     query: { enabled: Boolean(configured && address) },
   });
   const tokenBalance = useReadContract({
+    chainId: PUMP_CHAIN_ID,
     address: market.tokenAddress,
     abi: pumpTokenAbi,
     functionName: "balanceOf",
@@ -83,6 +90,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
     query: { enabled: Boolean(configured && address) },
   });
   const nusdAllowance = useReadContract({
+    chainId: PUMP_CHAIN_ID,
     address: PUMP_NUSD_ADDRESS,
     abi: nusdAbi,
     functionName: "allowance",
@@ -90,6 +98,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
     query: { enabled: Boolean(configured && address) },
   });
   const tokenAllowance = useReadContract({
+    chainId: PUMP_CHAIN_ID,
     address: market.tokenAddress,
     abi: pumpTokenAbi,
     functionName: "allowance",
@@ -164,10 +173,12 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
 
     try {
       setPending(true);
+      const assertWalletUnchanged = createPumpWalletGuard(walletConfig, address);
+      assertWalletUnchanged();
       if (needsApproval) {
         const hash = mode === "buy"
-          ? await writeContractAsync({ address: PUMP_NUSD_ADDRESS, abi: nusdAbi, functionName: "approve", args: [PUMP_FACTORY_ADDRESS, maxUint256] })
-          : await writeContractAsync({ address: market.tokenAddress, abi: pumpTokenAbi, functionName: "approve", args: [PUMP_FACTORY_ADDRESS, maxUint256] });
+          ? await writeContractAsync({ account: address, chainId: PUMP_CHAIN_ID, address: PUMP_NUSD_ADDRESS, abi: nusdAbi, functionName: "approve", args: [PUMP_FACTORY_ADDRESS, maxUint256] })
+          : await writeContractAsync({ account: address, chainId: PUMP_CHAIN_ID, address: market.tokenAddress, abi: pumpTokenAbi, functionName: "approve", args: [PUMP_FACTORY_ADDRESS, maxUint256] });
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
         if (receipt.status !== "success") throw new Error("Token approval reverted");
         toast.info("Approval confirmed", "Confirm the trade transaction in your wallet.");
@@ -175,14 +186,19 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
 
       const minimumOutput = (quoteOutput * (PUMP_BPS_DENOMINATOR - slippageBps)) / PUMP_BPS_DENOMINATOR;
       const deadline = BigInt(Math.floor(Date.now() / 1000) + 20 * 60);
+      assertWalletUnchanged();
       const hash = mode === "buy"
         ? await writeContractAsync({
+            account: address,
+            chainId: PUMP_CHAIN_ID,
             address: PUMP_FACTORY_ADDRESS,
             abi: zeroXPumpAbi,
             functionName: "buy",
             args: [market.tokenAddress, amountWei, minimumOutput, deadline],
           })
         : await writeContractAsync({
+            account: address,
+            chainId: PUMP_CHAIN_ID,
             address: PUMP_FACTORY_ADDRESS,
             abi: zeroXPumpAbi,
             functionName: "sell",

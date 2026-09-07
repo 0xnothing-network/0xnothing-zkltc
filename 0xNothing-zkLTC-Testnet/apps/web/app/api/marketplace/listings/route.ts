@@ -292,7 +292,10 @@ async function fetchPixelTokensForListings(
   const missingPixelIds = pixelIds.filter((tokenId) => !subgraphTokens[tokenId]?.imageUrl);
   const onchainPixelTokens = await fetchPixelTokensOnchain(missingPixelIds);
   for (const listing of pixelListings) {
-    const metadata = subgraphTokens[listing.tokenId] ?? onchainPixelTokens[listing.tokenId] ?? null;
+    const indexed = subgraphTokens[listing.tokenId];
+    const metadata = indexed?.imageUrl
+      ? indexed
+      : onchainPixelTokens[listing.tokenId] ?? indexed ?? null;
     output[marketplaceNftKey(listing.collection, listing.tokenId)] = metadata;
   }
 

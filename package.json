@@ -25,9 +25,10 @@
     "check:pump-subgraph:mainnet": "npm --prefix 0xNothing-zkLTC-Mainnet/subgraphs/0xpump run check",
     "build:pump-subgraph": "npm --prefix 0xNothing-zkLTC-Testnet/subgraphs/0xpump run build",
     "build:pixel-subgraph": "npm --prefix 0xNothing-zkLTC-Testnet/subgraphs/0xpixel-marketplace run build",
+    "check:pixel-subgraph": "npm --prefix 0xNothing-zkLTC-Testnet/subgraphs/0xpixel-marketplace run check",
     "check:fi:scripts": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi run check:scripts",
     "check:fi": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi run build",
     "audit:fi:report": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi run audit:live:report",
-    "verify": "npm run test:tooling && npm run test:web && npm run test:contracts && npm run build:pixel-subgraph && npm run check:pump-subgraphs && npm run check:fi && npm run verify:wallet"
+    "verify": "npm run test:tooling && npm run test:web && npm run test:contracts && npm run check:pixel-subgraph && npm run check:pump-subgraphs && npm run check:fi && npm run verify:wallet"
   }
 }

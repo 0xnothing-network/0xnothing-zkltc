@@ -51,9 +51,9 @@ export function usePortfolio(): PortfolioView {
       : { address, networkId: network.id, value: null, loading: true });
     void (async () => {
       try {
-        await recordSnapshot(address, total);
+        await recordSnapshot(address, total, network);
         const market = await loadPortfolioMarketChange24h(portfolio, network).catch(() => null);
-        const next = market ?? await change24h(address, total);
+        const next = market ?? await change24h(address, total, network);
         if (!cancelled) {
           setChangeState({ address, networkId: network.id, value: next, loading: false });
         }

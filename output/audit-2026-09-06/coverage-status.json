@@ -1,0 +1,63 @@
+{
+  "ledgers": [
+    "asset-structure-reviewed.json",
+    "contracts-reviewed.json",
+    "docs-config-reviewed.json",
+    "frontend-reviewed.json",
+    "operations-reviewed.json",
+    "pixel-components-reviewed.json",
+    "production-vendor-reviewed.json",
+    "pump-reviewed.json",
+    "styles-reviewed.json",
+    "wallet-reviewed.json"
+  ],
+  "firstPartyBaseline": 674,
+  "missing": [],
+  "css": [
+    {
+      "path": "0xNothing-zkLTC-Testnet/apps/wallet/src/styles/wallet.css",
+      "hash": "BBCB8A760BF7E50725C19765C6EB1E80E8098E54D18405BAB263B5C72A485EBD",
+      "unchanged": true
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/globals.css",
+      "hash": "BC43565055BA1AE9FB2EE12F25628446B4E3EBBEE9F5AFDD6A1423D8093B9F94",
+      "unchanged": true
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/shared.css",
+      "hash": "01E10031C525074A5D0D778C9FA45C8937C3C5746AE5861F0CB370EE8916E269",
+      "unchanged": true
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xPump/globals.css",
+      "hash": "E3A20DC043E7B383BE06E97A636D6F5CF89DAE134FB60CB3F49A3CFEEB6A3CD1",
+      "unchanged": true
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xpixel/globals.css",
+      "hash": "CD329BB920074A7FBC262B2F88F65FE4BDABF7E1E951ED74EAF61B9FF06F79A2",
+      "unchanged": true
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/apps/web/app/dev/dev.module.css",
+      "hash": "6378675AE7B552944F676D237FCB023048885585C7F2B74845A38F2C2654B23A",
+      "unchanged": true
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/apps/web/app/docs/docs.css",
+      "hash": "BFA0D562EBFA1FEA7A1E36213856D77B49097C9D352AD9E15FC4AF5E5A339901",
+      "unchanged": true
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/apps/web/app/globals.css",
+      "hash": "1E0184F6E2BA3CBF5609BB3D5FEF9F6B283920786CEE6B7F175233854DE6B1DE",
+      "unchanged": true
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/apps/web/app/home.css",
+      "hash": "45D016728526F38367D65199900152EA36E554FAEBF4D2F64415288281B156AA",
+      "unchanged": true
+    }
+  ]
+}

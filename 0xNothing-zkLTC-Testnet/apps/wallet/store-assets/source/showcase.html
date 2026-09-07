@@ -991,11 +991,15 @@
     <div id="app"></div>
     <script type="module">
       import QRCode from "qrcode";
+      import { LITVM_CHAIN_ID } from "../../src/config/chain";
+      import walletPackage from "../../package.json";
 
       const params = new URLSearchParams(location.search);
       const locale = params.get("locale") === "vi" ? "vi" : "en";
       const shot = params.get("shot") ?? "home";
       const asset = params.get("asset") ?? "screen";
+      const demoAddress = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
+      const shortDemoAddress = `${demoAddress.slice(0, 10)}…${demoAddress.slice(-6)}`;
       document.documentElement.lang = locale;
 
       const copy = {
@@ -1175,7 +1179,7 @@
         return `
           <div class="wallet">
             <header class="w-head">
-              <div class="w-head-copy"><span class="w-head-title">${copy.ui.imported} ▾</span><span class="w-address">0xf39F2266…b92266 ⧉</span></div>
+              <div class="w-head-copy"><span class="w-head-title">${copy.ui.imported} ▾</span><span class="w-address">${shortDemoAddress} ⧉</span></div>
               <span class="icon-btn">⚙</span>
             </header>
             <div class="w-body">
@@ -1242,12 +1246,12 @@
       function receiveScreen() {
         return `
           <div class="wallet">
-            <header class="w-head"><div class="w-head-copy"><span class="w-head-title">← ${copy.ui.receive}</span><span class="w-address">0xf39F2266…b92266</span></div><span class="icon-btn">◇</span></header>
+            <header class="w-head"><div class="w-head-copy"><span class="w-head-title">← ${copy.ui.receive}</span><span class="w-address">${shortDemoAddress}</span></div><span class="icon-btn">◇</span></header>
             <div class="receive-body">
               <section class="receive-card">
                 <div class="qr-frame"><img id="demo-qr" alt="Demo QR" /></div>
                 <span class="network">LitVM LiteForge</span>
-                <div class="address-grid"><span>0xf39F2266</span><span>6E51aad8</span><span>8F6F4CE6</span><span>aB882727</span><span>9cffFb92</span><span>266</span></div>
+                <div class="address-grid">${demoAddress.match(/.{1,8}/g).map((part) => `<span>${part}</span>`).join("")}</div>
               </section>
               <div class="receive-actions"><button>${copy.ui.saveQr}</button><button>${copy.ui.copyAddress}</button></div>
               <div class="notice" style="margin:0">Only send assets that live on LitVM LiteForge to this address.</div>
@@ -1258,14 +1262,14 @@
       function settingsScreen() {
         return `
           <div class="wallet">
-            <header class="w-head"><div class="w-head-copy"><span class="w-head-title">← ${copy.ui.settings}</span><span class="w-address">0xWallet 1.0.0</span></div><span class="icon-btn">⚙</span></header>
+            <header class="w-head"><div class="w-head-copy"><span class="w-head-title">← ${copy.ui.settings}</span><span class="w-address">0xWallet ${walletPackage.version}</span></div><span class="icon-btn">⚙</span></header>
             <div class="setting-stack">
               <div class="local-note">✓ ${copy.ui.localNote}</div>
               <div class="setting-row"><span>${copy.ui.language}</span><span>${locale === "vi" ? "Tiếng Việt" : "English"} ⌄</span></div>
               <div class="setting-row"><span>${copy.ui.background}</span><span>${copy.ui.dark} ◐</span></div>
               <div class="setting-row"><span>${copy.ui.autoLock}</span><span>${copy.ui.minutes}</span></div>
               <span class="field-label" style="margin:3px 0 -3px">${copy.ui.network}</span>
-              <div class="network-card"><strong>LitVM LiteForge <span class="verified">✓</span> <span class="core">CORE</span></strong><small>Chain ID 504 • zkLTC</small></div>
+              <div class="network-card"><strong>LitVM LiteForge <span class="verified">✓</span> <span class="core">CORE</span></strong><small>Chain ID ${LITVM_CHAIN_ID} • zkLTC</small></div>
               <span class="field-label" style="margin:3px 0 -3px">${copy.ui.customNetworks}</span>
               <div class="network-card"><strong>Local EVM</strong><small>http://127.0.0.1:8545 • Chain ID 31337</small></div>
               <button class="setting-add">${copy.ui.addNetwork}</button>
@@ -1333,7 +1337,7 @@
 
       const qr = document.querySelector("#demo-qr");
       if (qr) {
-        qr.src = await QRCode.toDataURL("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266", {
+        qr.src = await QRCode.toDataURL(demoAddress, {
           errorCorrectionLevel: "M",
           margin: 1,
           width: 208,

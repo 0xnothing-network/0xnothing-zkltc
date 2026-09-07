@@ -72,6 +72,19 @@ export async function findGitTrackedFiles({ workspaceRoot, relativePath }) {
   return stdout.split("\0").filter(Boolean);
 }
 
+async function assertNoLinkedAncestors(workspaceRoot, absolutePath) {
+  const root = path.resolve(workspaceRoot);
+  // lstat(target) only detects a link at the last component. A parent junction
+  // can otherwise redirect a lexically safe path outside the repository, or
+  // into tracked files hidden from the Git check at the original path.
+  for (let ancestor = path.dirname(absolutePath); path.relative(root, ancestor); ancestor = path.dirname(ancestor)) {
+    const status = await lstat(ancestor);
+    if (status.isSymbolicLink()) {
+      throw new Error(`Refusing to clean through a symbolic link or junction: ${ancestor}`);
+    }
+  }
+}
+
 export async function cleanGeneratedDirectories({
   workspaceRoot,
   dryRun = false,
@@ -94,6 +107,7 @@ export async function cleanGeneratedDirectories({
     if (!status.isDirectory()) {
       throw new Error(`Refusing to clean a non-directory target: ${relativePath}`);
     }
+    await assertNoLinkedAncestors(workspaceRoot, absolutePath);
     const trackedFiles = await findTrackedFiles({ workspaceRoot, relativePath });
     if (trackedFiles.length > 0) {
       throw new Error(
@@ -106,6 +120,7 @@ export async function cleanGeneratedDirectories({
   for (const { absolutePath, relativePath } of targets) {
     if (dryRun) log(`would remove: ${relativePath}`);
     else {
+      await assertNoLinkedAncestors(workspaceRoot, absolutePath);
       await rm(absolutePath, { recursive: true, force: true });
       log(`removed: ${relativePath}`);
     }

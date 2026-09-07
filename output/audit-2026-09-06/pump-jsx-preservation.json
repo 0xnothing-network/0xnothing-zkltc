@@ -1,0 +1,27 @@
+[
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/TradePanel.tsx",
+    "jsxRoots": 1,
+    "unchanged": true
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/CreateTokenForm.tsx",
+    "jsxRoots": 1,
+    "unchanged": true
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/NusdOraclePanel.tsx",
+    "jsxRoots": 1,
+    "unchanged": true
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/TokenDetail.tsx",
+    "jsxRoots": 6,
+    "unchanged": true
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/PumpStatsDashboard.tsx",
+    "jsxRoots": 3,
+    "unchanged": true
+  }
+]

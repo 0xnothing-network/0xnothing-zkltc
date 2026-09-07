@@ -1,0 +1,264 @@
+{
+  "roots": [
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/access/EmergencyGuardian.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/amm/WzkLTC.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/amm/ZeroXFiFactory.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/amm/ZeroXFiPair.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/amm/ZeroXFiRouter.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/farming/GaugeFactory.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/farming/LiquidityGauge.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/graduation/PumpGraduationController.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/graduation/ZeroXFiGraduationAdapter.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/interfaces/IGraduationAdapter.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/interfaces/IWzkLTC.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/interfaces/IZeroXFiFactory.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/interfaces/IZeroXFiPair.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/lending/PooledNUSDLendingPool.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/locking/CommunityLiquidityLocker.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/metadata/TokenMetadataRegistry.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/oracle/DIAOracleV2Adapter.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/oracle/LitVMDIAFeeds.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/rewards/NusdPointsStaking.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/synth/SyntheticAsset.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/synth/SyntheticVault.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/synth/SynthSafetyReserve.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/oracle/interfaces/IDIAAggregatorV3.sol",
+    "0xNothing-zkLTC-Testnet/0xFi/contracts/src/oracle/interfaces/IPriceOracle.sol"
+  ],
+  "files": [
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/contracts/lib/openzeppelin-contracts/contracts/access/Ownable.sol",
+      "bytes": 3102,
+      "lines": 101,
+      "sha256": "38578bd71c0a909840e67202db527cc6b4e6b437e0f39f0c909da32c1e30cb81",
+      "status": "full-source-read",
+      "reviewedRanges": [
+        [
+          1,
+          101
+        ]
+      ]
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/contracts/lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol",
+      "bytes": 2476,
+      "lines": 68,
+      "sha256": "c75345d7b9feef17ae29f2a800ca2f65f8021cf80436a41d6ec00f57f5180f36",
+      "status": "full-source-read",
+      "reviewedRanges": [
+        [
+          1,
+          68
+        ]
+      ]
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/contracts/lib/openzeppelin-contracts/contracts/interfaces/IERC1363.sol",
+      "bytes": 4454,
+      "lines": 87,
+      "sha256": "9c3a75a925a6dac9e88b03cddc58d42fe3131b0aaaad84408521f3f7af2f991b",
+      "status": "full-source-read",
+      "reviewedRanges": [
+        [
+          1,
+          87
+        ]
+      ]
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/contracts/lib/openzeppelin-contracts/contracts/interfaces/IERC165.sol",
+      "bytes": 193,
+      "lines": 7,
+      "sha256": "dfb3f56fa928a7c6cae41a7ce2c86b9210fa18d33fa26389099d66a0fa790368",
+      "status": "full-source-read",
+      "reviewedRanges": [
+        [
+          1,
+          7
+        ]
+      ]
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/contracts/lib/openzeppelin-contracts/contracts/interfaces/IERC20.sol",
+      "bytes": 182,
+      "lines": 7,
+      "sha256": "0158e2d3e0e28bedd99eec13dcf1a8aa3a70a5b7e4bb2ad709609c95fcc740d1",
+      "status": "full-source-read",
+      "reviewedRanges": [
+        [
+          1,
+          7
+        ]
+      ]
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/contracts/lib/openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol",
+      "bytes": 6540,
+      "lines": 163,
+      "sha256": "fa7068f56bc180571a6095be6eaef06d51dbe81e30cb128397d993c9599ecc30",
+      "status": "full-source-read",
+      "reviewedRanges": [
+        [
+          1,
+          163
+        ]
+      ]
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/contracts/lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol",
+      "bytes": 10800,
+      "lines": 306,
+      "sha256": "50f34ae16a067a41c2c1091445d11d63788e54c717677cb6d6b0e4cdea2ad21d",
+      "status": "full-source-read",
+      "reviewedRanges": [
+        [
+          1,
+          306
+        ]
+      ]
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/contracts/lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol",
+      "bytes": 2781,
+      "lines": 80,
+      "sha256": "01b6f5c4fa45fd38822b286ecef6daf983d27306dd6362496fa71b3e4600b72c",
+      "status": "full-source-read",
+      "reviewedRanges": [
+        [
+          1,
+          80
+        ]
+      ]
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/contracts/lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol",
+      "bytes": 684,
+      "lines": 27,
+      "sha256": "0b7132f17d14d1d84b41b0bb429be62dafdff00fd3470f68724d8018eb07f57a",
+      "status": "full-source-read",
+      "reviewedRanges": [
+        [
+          1,
+          27
+        ]
+      ]
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/contracts/lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol",
+      "bytes": 13314,
+      "lines": 281,
+      "sha256": "c2394cb2a327f234711da34884947f4aa0f6dd2791d1d6303a0c7acfaf81bca3",
+      "status": "full-source-read",
+      "reviewedRanges": [
+        [
+          1,
+          281
+        ]
+      ]
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/contracts/lib/openzeppelin-contracts/contracts/utils/Context.sol",
+      "bytes": 963,
+      "lines": 29,
+      "sha256": "847fda5460fee70f56f4200f59b82ae622bb03c79c77e67af010e31b7e2cc5b6",
+      "status": "full-source-read",
+      "reviewedRanges": [
+        [
+          1,
+          29
+        ]
+      ]
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/contracts/lib/openzeppelin-contracts/contracts/utils/Panic.sol",
+      "bytes": 1973,
+      "lines": 58,
+      "sha256": "270fc8401c1a13fae6a7a4a2dd6e381b95d658896701e51f0d3e2688acab3dec",
+      "status": "full-source-read",
+      "reviewedRanges": [
+        [
+          1,
+          58
+        ]
+      ]
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/contracts/lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol",
+      "bytes": 4766,
+      "lines": 120,
+      "sha256": "94e409e8f6e3184236651a6cc2b1a6a3ea0f0a25eb85b71e524ad5791bb2fbc8",
+      "status": "full-source-read",
+      "reviewedRanges": [
+        [
+          1,
+          120
+        ]
+      ]
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/contracts/lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
+      "bytes": 4182,
+      "lines": 144,
+      "sha256": "75704538dcb223239280c6726d9a31cf769a7816718517c997fc7d63bdb70778",
+      "status": "full-source-read",
+      "reviewedRanges": [
+        [
+          1,
+          144
+        ]
+      ]
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/contracts/lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol",
+      "bytes": 12152,
+      "lines": 285,
+      "sha256": "ba7c2d314fcd61c9783e0b3f0c664d004b76b408fda6a84edc8267d17c5012d6",
+      "status": "full-source-read",
+      "reviewedRanges": [
+        [
+          1,
+          285
+        ]
+      ]
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/contracts/lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol",
+      "bytes": 871,
+      "lines": 26,
+      "sha256": "9055c2994b37dea1a41b7b7926dcb510f05dbe2540b0aafc5fbee9558fffd0ca",
+      "status": "full-source-read",
+      "reviewedRanges": [
+        [
+          1,
+          26
+        ]
+      ]
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/contracts/lib/openzeppelin-contracts/contracts/utils/math/Math.sol",
+      "bytes": 32664,
+      "lines": 764,
+      "sha256": "bdfdbe133991c0c78042957ff5cd97167926fcaf6d15664f3835a076cb066457",
+      "status": "full-source-read",
+      "reviewedRanges": [
+        [
+          1,
+          764
+        ]
+      ]
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/0xFi/contracts/lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol",
+      "bytes": 34940,
+      "lines": 1163,
+      "sha256": "5779bc848bde39f1ad7bc02b4f708a0040888e0083b1a33f119cd94639350134",
+      "status": "full-source-read",
+      "reviewedRanges": [
+        [
+          1,
+          1163
+        ]
+      ]
+    }
+  ]
+}

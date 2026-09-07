@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { formatUnits, parseUnits } from "viem";
 import {
   useAccount,
+  useConfig,
   useBalance,
   usePublicClient,
   useReadContract,
@@ -23,6 +24,7 @@ import {
   formatRelativeTime,
 } from "@/features/pump/format";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
+import { createPumpWalletGuard } from "@/features/pump/walletSession";
 
 type OracleMode = "mint" | "redeem";
 
@@ -60,6 +62,7 @@ function displayUsdWad(value: bigint | undefined, pending: boolean, digits = 2):
 export function NusdOraclePanel() {
   const toast = useToast();
   const { address, isConnected, chainId } = useAccount();
+  const walletConfig = useConfig();
   const publicClient = usePublicClient({ chainId: PUMP_CHAIN_ID });
   const { switchChain } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
@@ -271,6 +274,8 @@ export function NusdOraclePanel() {
 
     try {
       setIsSubmitting(true);
+      const assertWalletUnchanged = createPumpWalletGuard(walletConfig, address);
+      assertWalletUnchanged();
       const hash = mode === "mint"
         ? await (async () => {
             await publicClient.simulateContract({
@@ -281,7 +286,10 @@ export function NusdOraclePanel() {
               args: [minOut, address],
               value: collateralWei,
             });
+            assertWalletUnchanged();
             return writeContractAsync({
+              account: address,
+              chainId: PUMP_CHAIN_ID,
               address: PUMP_NUSD_ADDRESS,
               abi: nusdAbi,
               functionName: "mintAtOracle",
@@ -297,7 +305,10 @@ export function NusdOraclePanel() {
               functionName: "redeemAtOracle",
               args: [nusdWei, minOut, address],
             });
+            assertWalletUnchanged();
             return writeContractAsync({
+              account: address,
+              chainId: PUMP_CHAIN_ID,
               address: PUMP_NUSD_ADDRESS,
               abi: nusdAbi,
               functionName: "redeemAtOracle",

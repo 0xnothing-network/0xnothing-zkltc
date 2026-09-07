@@ -1,0 +1,1055 @@
+[
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/canonicalMarkets.ts",
+    "status": "full-source-read",
+    "bytes": 966,
+    "current_sha256": "ee8339b9f5d9c55cc485359b18c51e34b8eae83d245d171ba96c04127bfc8471",
+    "current_bytes": 966
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/data.ts",
+    "status": "full-source-read",
+    "bytes": 2071,
+    "current_sha256": "9899fe650397a2311d6502d866acc2e262650826d2ba732ef35b3f64594ab1c1",
+    "current_bytes": 2071
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/errors.ts",
+    "status": "full-source-read",
+    "bytes": 868,
+    "current_sha256": "4cac094eb7a315bc4d0fc48de0dce0a1d243586bc65e7942c061a963b994e22a",
+    "current_bytes": 868
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/format.ts",
+    "status": "full-source-read",
+    "bytes": 4309,
+    "current_sha256": "7140e097841c8118e26b8e2b5de69faeb512c33ab4bee085329f5b8c2a74ecf8",
+    "current_bytes": 5164
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/hooks/useActiveDexRouter.ts",
+    "status": "full-source-read",
+    "bytes": 415,
+    "current_sha256": "22989e64537a7c6e4beb1a8b139c824e3fef1ef2fbc8339639f73e398ece69ce",
+    "current_bytes": 415
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/hooks/useAssetBalance.ts",
+    "status": "full-source-read",
+    "bytes": 848,
+    "current_sha256": "0ab04f5885229b6a94eec5da6d371f3607fe5e157ee8fb7aa396715480aa0299",
+    "current_bytes": 848
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/hooks/useDexFeeSchedule.ts",
+    "status": "full-source-read",
+    "bytes": 1372,
+    "current_sha256": "c6b08e78d7cbef8cd773e68bc5f218eb4b475821c32d75708602ef127d4f8c7e",
+    "current_bytes": 1372
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/hooks/useFiPolling.ts",
+    "status": "full-source-read",
+    "bytes": 522,
+    "current_sha256": "63fa5b16fdca8e957798c5a71277acb207735ebbde3fd0ca989d99e94e0c1765",
+    "current_bytes": 522
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/hooks/useImportedSwapAsset.ts",
+    "status": "full-source-read",
+    "bytes": 8436,
+    "current_sha256": "3f9b5a58f60ba9ca5ce52bf3fcaa34c77995a873f2b5ae02c8d508b2c601674c",
+    "current_bytes": 8436
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/hooks/useLendingPoolStatus.ts",
+    "status": "full-source-read",
+    "bytes": 9048,
+    "current_sha256": "aef6858b3d78142a291a1845625ab97b6ccd0fa9c741d1526b34eef5476808e7",
+    "current_bytes": 9048
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/hooks/usePools.ts",
+    "status": "full-source-read",
+    "bytes": 1264,
+    "current_sha256": "811ef971bc605f3ba3556beb7540542d11e8d1f62eea2a99a3dbda166ee50c1a",
+    "current_bytes": 1264
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/hooks/useProtocolTransaction.ts",
+    "status": "full-source-read",
+    "bytes": 7601,
+    "current_sha256": "bbe80b5602fde7b59a97d05b32f92871fdbfef16797b0ee605c1ca7372c1c910",
+    "current_bytes": 9211
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/hooks/useSwapAssets.ts",
+    "status": "full-source-read",
+    "bytes": 2294,
+    "current_sha256": "59e9258c535ec7079725dfe3479b47ab8938211f3bbf0bd329c7d14f89594e2b",
+    "current_bytes": 2294
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/hooks/useSwapRoute.ts",
+    "status": "full-source-read",
+    "bytes": 13645,
+    "current_sha256": "adb748b8dfcd09ccf3ecc6bd010017161ef0a0a947a69f7712594d3145cc8acf",
+    "current_bytes": 13645
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/hooks/useSwapRouteGuards.ts",
+    "status": "full-source-read",
+    "bytes": 3974,
+    "current_sha256": "c656d73bf6e2feca60159cc8537dc4d6564d3073244c8be1271ff04eb53f3001",
+    "current_bytes": 3974
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/hooks/useSynthVaultStatus.ts",
+    "status": "full-source-read",
+    "bytes": 2813,
+    "current_sha256": "04cfdc2b20ad3fb1690f7bace395f54d3a1710268647a4ba2f388e18c022939e",
+    "current_bytes": 2813
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/hooks/useTokenBalance.ts",
+    "status": "full-source-read",
+    "bytes": 529,
+    "current_sha256": "daaa5ceefc619c893ada56980a281b96c3f494469539b5b8ddacc798fc12318a",
+    "current_bytes": 529
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/importedToken.ts",
+    "status": "full-source-read",
+    "bytes": 815,
+    "current_sha256": "a6e9a6f244870b05c83923576520e21b017cb71073f6b2834c6ea45579968944",
+    "current_bytes": 815
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/points.ts",
+    "status": "full-source-read",
+    "bytes": 1102,
+    "current_sha256": "d1e5c91243f4a09fe7b9c40ca2ad31c912e515cb172e8916e5591c918ccd2b30",
+    "current_bytes": 1102
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/pointsVoucher.ts",
+    "status": "full-source-read",
+    "bytes": 1810,
+    "current_sha256": "9ea6abc415e4e448962bb98cd72c76b60088c6026cede89a183f1750ec4cc929",
+    "current_bytes": 1810
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/swap.ts",
+    "status": "full-source-read",
+    "bytes": 9908,
+    "current_sha256": "efe6ba8e939056de1b1cd7c12e155e4872988fc291673d80ae6029a4980d2fe9",
+    "current_bytes": 9908
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/tokenImage.ts",
+    "status": "full-source-read",
+    "bytes": 3015,
+    "current_sha256": "905b19c31db63882a51e629a24a64a55a5ab08e5e1b1770926b65e7d94e3c995",
+    "current_bytes": 3015
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/lib/actionLock.ts",
+    "status": "full-source-read",
+    "bytes": 272,
+    "current_sha256": "0e9e011f7d4c86c61f130b59c6e69149cff98df3cf9b86c70afe93a7136824f7",
+    "current_bytes": 272
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/lib/chainSwitch.ts",
+    "status": "full-source-read",
+    "bytes": 36,
+    "current_sha256": "c1adb7364f0ec7c61a890cba811c1071a71931b45e2936e15309f9277703ec04",
+    "current_bytes": 36
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/lib/chartTheme.ts",
+    "status": "full-source-read",
+    "bytes": 694,
+    "current_sha256": "c03d6ea390543ceb42a706f453038cf9bf5b11235c8fa333af1308933f15c2cc",
+    "current_bytes": 694
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/lib/contract.ts",
+    "status": "full-source-read",
+    "bytes": 5365,
+    "current_sha256": "b932acb989261752544fb655adc134ac639d779c4e03b4368524cc05a6cc3253",
+    "current_bytes": 5365
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/lib/errors.ts",
+    "status": "full-source-read",
+    "bytes": 5308,
+    "current_sha256": "1928c80ff8ae286c1f49c7bd8329ee6841784739c7e1eace6d2b6e7c32e6adc0",
+    "current_bytes": 6202
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/lib/explorer.ts",
+    "status": "full-source-read",
+    "bytes": 703,
+    "current_sha256": "3249a044adc4aba243e31f0c3ef0ec2f11227bec10b5c70ef8d4928aa128dd2c",
+    "current_bytes": 703
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/lib/gridParser.ts",
+    "status": "full-source-read",
+    "bytes": 7718,
+    "current_sha256": "98a0f5971952f2cf50c47fc1c1c7443b10a29b8b6dd6ff05b52ae44bf24990a2",
+    "current_bytes": 7718
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/lib/http.ts",
+    "status": "full-source-read",
+    "bytes": 884,
+    "current_sha256": "f957252b18846a6597eea153f7051d62a5c4c0df83e37777188217566ca0c339",
+    "current_bytes": 884
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/lib/integer.ts",
+    "status": "full-source-read",
+    "bytes": 713,
+    "current_sha256": "c82932f5818beddd0d0360f46f05631c87b3652e00bd686cebd2f9b50a13687f",
+    "current_bytes": 713
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/lib/liveData.ts",
+    "status": "full-source-read",
+    "bytes": 3507,
+    "current_sha256": "9203769878aded9ca4c87f496f929056f0cd884b05d67fc2cb59b3e4feeac975",
+    "current_bytes": 3507
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/lib/marketplaceAbi.ts",
+    "status": "full-source-read",
+    "bytes": 3188,
+    "current_sha256": "c3641417b117bfcb198237471cf2774fe9d87bfe768db529ca89bdf417c8c1ea",
+    "current_bytes": 3188
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/lib/pixelImage.ts",
+    "status": "full-source-read",
+    "bytes": 139,
+    "current_sha256": "3ef9ca8e69ba66e5e218bd9c93b26b193112fccab66febbbf22273571fff4a38",
+    "current_bytes": 139
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/lib/pollJitter.ts",
+    "status": "full-source-read",
+    "bytes": 3462,
+    "current_sha256": "7735cc208bce5b3d1302493a458932678bde34819a0ae08a4e0b997598879f25",
+    "current_bytes": 3462
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts",
+    "status": "full-source-read",
+    "bytes": 1639,
+    "current_sha256": "ea17c810b55dfc18feac27203f1a60fc6aaabe470963622100123012510b0cfb",
+    "current_bytes": 1639
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/lib/tokenId.ts",
+    "status": "full-source-read",
+    "bytes": 489,
+    "current_sha256": "a84a86dd16d9268eacff4b8a584956d679c19f03320abac324c778d7da019f1b",
+    "current_bytes": 489
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/lib/wagmi.ts",
+    "status": "full-source-read",
+    "bytes": 570,
+    "current_sha256": "3a714afdb9ab22a58572216d7468c6383de250e4004b8ba3f2cdc41c7e110b72",
+    "current_bytes": 570
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/components/PageLoader.tsx",
+    "status": "full-source-read",
+    "bytes": 1120,
+    "current_sha256": "4b854997510da8c734358c4c4b6ef33e51d3014f1a4775116ff315f735a4cb6c",
+    "current_bytes": 1120
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/components/PixelMist.tsx",
+    "status": "full-source-read",
+    "bytes": 9313,
+    "current_sha256": "930cc14ba21eb79e02d0f2583600d2c346105abbb351180dce5a9fa3c03a3816",
+    "current_bytes": 9313
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/components/Toast.tsx",
+    "status": "full-source-read",
+    "bytes": 8570,
+    "current_sha256": "408b99f6937a49c9f07a6994772fa99f5e43a0d69952a0a6b8551bb5f226c8c2",
+    "current_bytes": 8570
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/docs/DocsCodeBlock.tsx",
+    "status": "full-source-read",
+    "bytes": 1585,
+    "current_sha256": "49ac4b918a316bb14d8de22aa0b7f13fe10d3a1d1860f6775372be159af8aaa1",
+    "current_bytes": 1585
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/SwapAssetSelect.tsx",
+    "status": "full-source-read",
+    "bytes": 6947,
+    "current_sha256": "23f1c6e73a4c5d18b458903cb5706a30288b114eec4cefae20d3bbba6384256c",
+    "current_bytes": 7535
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/PumpHeader.tsx",
+    "status": "full-source-read",
+    "bytes": 6566,
+    "current_sha256": "6dcd18b0e8a289b7065ee16ea1b9cf28dbaae06274ee8611c23031d0d5909cdd",
+    "current_bytes": 7575
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/providers.tsx",
+    "status": "full-source-read",
+    "bytes": 2188,
+    "current_sha256": "7899bcab156065b5a7c719cdc278bf7801adc9f525e486da01465beccc1e7b7c",
+    "current_bytes": 2188
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/layout.tsx",
+    "status": "full-source-read",
+    "bytes": 1988,
+    "current_sha256": "7cec9585234a8859898b2ef34f34c8d661960e390ae5573a1062f6b6908ef946",
+    "current_bytes": 1988
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/AmountField.tsx",
+    "status": "full-source-read",
+    "bytes": 2141,
+    "current_sha256": "6d3d480b00b8f24ed6cddb96ba94a838a6ef8ac728fe81142deef803bd85839d",
+    "current_bytes": 2141
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/AssetSelect.tsx",
+    "status": "full-source-read",
+    "bytes": 1217,
+    "current_sha256": "d4ae94b7a808c766f47592de6b552c7c54f833066cf393d8afa262bbf50d6757",
+    "current_bytes": 1217
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/BorrowWorkspace.tsx",
+    "status": "full-source-read",
+    "bytes": 18980,
+    "current_sha256": "6801777cd0b3000f48734cc7c3b8d4aa9f9557b3f3faa70b2a8ecac5363ab787",
+    "current_bytes": 18980
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/ConnectWalletButton.tsx",
+    "status": "full-source-read",
+    "bytes": 2397,
+    "current_sha256": "8d833b57b14d55e0709f29b2738e262810e4374d1dee9990c6fc367f18297636",
+    "current_bytes": 2397
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/CreatePoolForm.tsx",
+    "status": "full-source-read",
+    "bytes": 8387,
+    "current_sha256": "d557bce0fdea6d997d423f0b819a9222eb4c9022fade05051c1a2e93973070fd",
+    "current_bytes": 9145
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/EarnDashboard.tsx",
+    "status": "full-source-read",
+    "bytes": 19787,
+    "current_sha256": "7dadb97c494b7e34db283e24808615f5723b2dba3f0833a67419dc16a7ce8fe1",
+    "current_bytes": 19787
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/FarmDashboard.tsx",
+    "status": "full-source-read",
+    "bytes": 17563,
+    "current_sha256": "ccda66469a7f766adb805cbf05dd3c99cb73b906cf959ec9ea568108d304953d",
+    "current_bytes": 17563
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/FiHeader.tsx",
+    "status": "full-source-read",
+    "bytes": 11525,
+    "current_sha256": "24c887f47fbd3428cc76679cfd5451f8185b58a6805170c38560cbd12cad9789",
+    "current_bytes": 11525
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/LazyMarketChart.tsx",
+    "status": "full-source-read",
+    "bytes": 972,
+    "current_sha256": "8958efaa22ae06551422d4d2c83ad0c7b7803802735805bdb2e58b0e204cd3f7",
+    "current_bytes": 972
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/LegacySynthRecovery.tsx",
+    "status": "full-source-read",
+    "bytes": 5581,
+    "current_sha256": "2ecf42cc4f6dd0730373a971ed8a9c09b186522b7f0395e5722a84c03237de53",
+    "current_bytes": 5581
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/LendingWorkspace.tsx",
+    "status": "full-source-read",
+    "bytes": 7240,
+    "current_sha256": "3e72816c072ffba1ca29e03cfe932a0c4f1dbedca942323f148f4f24a18a3dc6",
+    "current_bytes": 7240
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/OracleFeedTable.tsx",
+    "status": "full-source-read",
+    "bytes": 3339,
+    "current_sha256": "bbe6fca25a1eed9d6a75c8a44ac79f19c0359149a6fb48e07ab45ac11f1de8c9",
+    "current_bytes": 3339
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/PoolDetail.tsx",
+    "status": "full-source-read",
+    "bytes": 17768,
+    "current_sha256": "c31f122dacac84bec5e729af0e22408487302ac3cff06231bec8f5938be15176",
+    "current_bytes": 17768
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/PoolDirectory.tsx",
+    "status": "full-source-read",
+    "bytes": 10691,
+    "current_sha256": "84beb2a83bfa68e21c6ea95572238385ca19f11e30c3d3843774c0c87681445a",
+    "current_bytes": 10691
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/RecentActivity.tsx",
+    "status": "full-source-read",
+    "bytes": 3820,
+    "current_sha256": "b04c1234d859c9b379e489723836dc3557b366769e776a5b19d4856d81e1c1aa",
+    "current_bytes": 3820
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/SlippageControl.tsx",
+    "status": "full-source-read",
+    "bytes": 603,
+    "current_sha256": "62985942600a8d950cc91a454c9777e805f4584ed5e55ae2281f91fa0538b846",
+    "current_bytes": 603
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/SwapAmountField.tsx",
+    "status": "full-source-read",
+    "bytes": 2581,
+    "current_sha256": "cff178723304d9631a377fe6b13efcb38af51dc3ae45440e0da196542f530128",
+    "current_bytes": 2581
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/Toast.tsx",
+    "status": "full-source-read",
+    "bytes": 3241,
+    "current_sha256": "7b8a711c4438f86be965115f284801de592c4a6bded5bf90beef714d3c8e7c70",
+    "current_bytes": 3241
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/TokenLogo.tsx",
+    "status": "full-source-read",
+    "bytes": 3406,
+    "current_sha256": "21af764f37a7ba9d5cdd792d5ef835d394a4cb47b483da7b7bf5218475e6d9d5",
+    "current_bytes": 3406
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/UiStates.tsx",
+    "status": "full-source-read",
+    "bytes": 4214,
+    "current_sha256": "41d67ba29ebbdb0be099c28ab61cf90130c0fe4c07c3bf0bb66bec5a189d346d",
+    "current_bytes": 4214
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/borrow/page.tsx",
+    "status": "full-source-read",
+    "bytes": 375,
+    "current_sha256": "a244cc0fef3da20f8c67a5c93bde8ad357adaf82f6845dc189ef20880501eba5",
+    "current_bytes": 375
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/earn/page.tsx",
+    "status": "full-source-read",
+    "bytes": 662,
+    "current_sha256": "e6fa6012d08e8c4209321292b3426bdf4adfd4361d01338a6c1d8d30ee74abf1",
+    "current_bytes": 662
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/error.tsx",
+    "status": "full-source-read",
+    "bytes": 259,
+    "current_sha256": "cf222e4918a4bcfb7edf2d99b7490ed923044db0bb258f2c039609ca89eb175e",
+    "current_bytes": 259
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/farm/page.tsx",
+    "status": "full-source-read",
+    "bytes": 410,
+    "current_sha256": "04e5a0790f8acd0c9272df546867c44779dbf3573ec1c598c55a5a278493d0d0",
+    "current_bytes": 410
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/layout.tsx",
+    "status": "full-source-read",
+    "bytes": 943,
+    "current_sha256": "baa05340cc47bab13853b05175406d7ef06158bddbd906980afa60274b8e68df",
+    "current_bytes": 943
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/lend/page.tsx",
+    "status": "full-source-read",
+    "bytes": 282,
+    "current_sha256": "17d6b99eeb5c127b71efda48a3c207ee15cf785ed72f30b8112dbb79a6704c4c",
+    "current_bytes": 282
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/loading.tsx",
+    "status": "full-source-read",
+    "bytes": 204,
+    "current_sha256": "1c545c17806e7312f22945db0ef51673a64c5b6650346afc1a489b66ec09b4dd",
+    "current_bytes": 204
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/not-found.tsx",
+    "status": "full-source-read",
+    "bytes": 419,
+    "current_sha256": "1c41c7ea20be58792bf2b1d1fac1484876d09ca6e594796b9ee06e6872d1aa41",
+    "current_bytes": 419
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/page.tsx",
+    "status": "full-source-read",
+    "bytes": 288,
+    "current_sha256": "e029c81dc34c8b2a99225aeb450f3095e0275ee60643fbe85bceb60cd7322092",
+    "current_bytes": 288
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/pools/[pair]/page.tsx",
+    "status": "full-source-read",
+    "bytes": 1521,
+    "current_sha256": "76b9f36081d72d8b9f25f70a0e28ee13aee3c76c8512f588d732b738ad4382f7",
+    "current_bytes": 1521
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/pools/create/page.tsx",
+    "status": "full-source-read",
+    "bytes": 396,
+    "current_sha256": "c500ddfdadd5d4ca697f506088eb9b395240f401e626bf7bdde74a48956b4efb",
+    "current_bytes": 396
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/pools/page.tsx",
+    "status": "full-source-read",
+    "bytes": 629,
+    "current_sha256": "ca6d7bba9251c9d6b61665de9db2c0655621d723da7f9af618cb9bae6a7af2b6",
+    "current_bytes": 629
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/swap/loading.tsx",
+    "status": "full-source-read",
+    "bytes": 1021,
+    "current_sha256": "43b0c45cb5e81fdeac6a36cfa605135332aa81d54ab9f17b8100c2a52b0d7c0d",
+    "current_bytes": 1021
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/swap/page.tsx",
+    "status": "full-source-read",
+    "bytes": 130,
+    "current_sha256": "424dfd0a1dc44d979ab03b57be4d68476bb7eb23d352ca0a2c641314484d79ff",
+    "current_bytes": 130
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/synth/page.tsx",
+    "status": "full-source-read",
+    "bytes": 690,
+    "current_sha256": "22553a5f5cd5cd4ef8a9bd6c50abf3a6a09ea019dd32a182bbb1dea06d4935e3",
+    "current_bytes": 690
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xPump/create/page.tsx",
+    "status": "full-source-read",
+    "bytes": 580,
+    "current_sha256": "abcc6f58f819afcd9cf297eef2d8d9782a3b8fc183feaaaa168c1ee8a852df9e",
+    "current_bytes": 580
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xPump/layout.tsx",
+    "status": "full-source-read",
+    "bytes": 508,
+    "current_sha256": "bd7ce87dc94113986079cd471bab7aa75a61e0039c018c6655a20bde72cb4793",
+    "current_bytes": 508
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xPump/loading.tsx",
+    "status": "full-source-read",
+    "bytes": 140,
+    "current_sha256": "878428d3e9048c7aaa43a89389435082cc3e90da3535ded70507300a26a1ce5d",
+    "current_bytes": 140
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xPump/nusd/page.tsx",
+    "status": "full-source-read",
+    "bytes": 399,
+    "current_sha256": "58664502f85ab5a4c516e74b6a720a454dacd0df475e0f61acbbc2a06be4792a",
+    "current_bytes": 399
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xPump/page.tsx",
+    "status": "full-source-read",
+    "bytes": 376,
+    "current_sha256": "44940322dc5d2e0278670117ca7c6381bdca844da91bbc44794b9d01ffc70b85",
+    "current_bytes": 376
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xPump/portfolio/page.tsx",
+    "status": "full-source-read",
+    "bytes": 320,
+    "current_sha256": "7b6f1b677243a98eb9c0dc96bd0018c03fc519a2acbdfcfbbc0f4b297a3e4c0b",
+    "current_bytes": 320
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xPump/stats/page.tsx",
+    "status": "full-source-read",
+    "bytes": 365,
+    "current_sha256": "10539637a7bd4422e98d3f9113b7282a65148cda5d0b0827e6001cf42a8ff36c",
+    "current_bytes": 365
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xPump/token/[token]/page.tsx",
+    "status": "full-source-read",
+    "bytes": 556,
+    "current_sha256": "499ae1bdba2c78737ad3c1ed480796b42dd6df6841717f10162d7e8a24faa405",
+    "current_bytes": 556
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xpixel/gallery/loading.tsx",
+    "status": "full-source-read",
+    "bytes": 131,
+    "current_sha256": "791f8fac05ea47b2851cb79be206661a7659fee74f630cb62bbd6d62e7b23c92",
+    "current_bytes": 131
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/decimal.ts",
+    "status": "full-source-read",
+    "bytes": 1710,
+    "current_sha256": "6c6339554ead9caf289de7e5aa8da52117df4a81cef4ff6a0046d6e751b45724",
+    "current_bytes": 1710
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/tests/data/format.test.ts",
+    "status": "full-source-read",
+    "bytes": 921,
+    "current_sha256": "65396446cacc52fbfa005d708a6b123b4e6ed99ce7098b2c471d8f3c36a18ee6",
+    "current_bytes": 2183
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/tests/helpers/evaluateModule.ts",
+    "status": "full-source-read",
+    "bytes": 821,
+    "current_sha256": "6a883d657bbc7c29b9d083874ddc5cbdd426e7c384ceb0d30039fd3998abf99c",
+    "current_bytes": 847
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/SwapDashboard.tsx",
+    "status": "full-source-read",
+    "bytes": 303,
+    "current_sha256": "365dbf147097da6d98221a490b4a3262ba74d637ce6e453a06cff65300196fbc",
+    "current_bytes": 303
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/SwapWorkspace.tsx",
+    "status": "full-source-read",
+    "bytes": 31853,
+    "current_sha256": "9381cb095b1376f924a969c0ee78210599d32d9d8b7651bdb26677f4e0bbf5af",
+    "current_bytes": 31853
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/SynthWorkspace.tsx",
+    "status": "full-source-read",
+    "bytes": 19484,
+    "current_sha256": "cb8211dd262e73e67994cd36d42d84afa1a5ad3cc4c0620ec7f818fe01e05fa5",
+    "current_bytes": 19484
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/DynamicPoolDetail.tsx",
+    "status": "full-source-read",
+    "bytes": 45664,
+    "current_sha256": "a73384ac08a21b818c880581d2020fe89c4dbc608cb87bdb14576307003c291f",
+    "current_bytes": 45405
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/components/MarketChart.tsx",
+    "status": "full-source-read",
+    "bytes": 23036,
+    "current_sha256": "7d0bd50cc5e12eb84b8743a7b6573f0feb3442ee424e2e679870a94afe63033f",
+    "current_bytes": 23036
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pixel/components/MintPanel.tsx",
+    "status": "full-source-read",
+    "bytes": 17566,
+    "current_sha256": "98aed0f26cfd2d16686c1a25c3099a47a9d31692b1f97299b9a972fae0bb704b",
+    "current_bytes": 17936
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pixel/components/OwnedNftCard.tsx",
+    "status": "full-source-read",
+    "bytes": 10803,
+    "current_sha256": "6c860e217af60f5ba18530532ef5994f15bec941f1328276698b48dcf750070e",
+    "current_bytes": 11000
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pixel/components/PixelButton.tsx",
+    "status": "full-source-read",
+    "bytes": 1621,
+    "current_sha256": "133476399fcef760b4da3e952ab66e3c6123be1487e098a43d536d6dea5a0580",
+    "current_bytes": 1621
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xpixel/marketplace/page.tsx",
+    "status": "full-source-read",
+    "bytes": 36869,
+    "current_sha256": "307b884f61d7bad2f8c8ea9960ded2f4263b98ba9081b4b82875b2ad511525c5",
+    "current_bytes": 37114
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xpixel/page.tsx",
+    "status": "full-source-read",
+    "bytes": 6674,
+    "current_sha256": "5c1faff5cc5727a2fc91b6b142d4404fdebd3360ee62c60636c7b1c76bb4c765",
+    "current_bytes": 6674
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/dev/PointsAdminPanel.tsx",
+    "status": "full-source-read",
+    "bytes": 33517,
+    "current_sha256": "cc61027377db4fb513f039344d9aabb1784a39ff3375c7c86294f8294b662d61",
+    "current_bytes": 33517
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/dev/layout.tsx",
+    "status": "full-source-read",
+    "bytes": 526,
+    "current_sha256": "0db286048f6a98eabc28cb16fd948333882d5030e5fd7e1e1e9cc69905add60b",
+    "current_bytes": 526
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/dev/page.tsx",
+    "status": "full-source-read",
+    "bytes": 39221,
+    "current_sha256": "e2fff621467ed9297c0c12f61bf70857b9fa8ee51863ad32667275ab2a193e80",
+    "current_bytes": 39221
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xpixel/gallery/page.tsx",
+    "status": "full-source-read",
+    "bytes": 9027,
+    "current_sha256": "ba7fd4c556c1de84bce4dad707c2e6fa2cc48d6e1b89243082a963aae983bca9",
+    "current_bytes": 9027
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/abis/dex.ts",
+    "status": "full-source-read",
+    "bytes": 6998,
+    "current_sha256": "660823c7bbb0c03517d09cbffaeee65e3ef846a31ad07f9104bc4c33e969c56f",
+    "current_bytes": 6998
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/abis/dia.ts",
+    "status": "full-source-read",
+    "bytes": 1250,
+    "current_sha256": "5c9cdd6316d82e60cfea25942a7947a2cb8d324e64e35a65be260f6ec365cc40",
+    "current_bytes": 1250
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/abis/erc20.ts",
+    "status": "full-source-read",
+    "bytes": 1496,
+    "current_sha256": "f0b00a7f358bb42b4f26e8017fdec216fbbab9ed3af37f28bbb25ef51977d76b",
+    "current_bytes": 1496
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/abis/farm.ts",
+    "status": "full-source-read",
+    "bytes": 2610,
+    "current_sha256": "e0d7869d86b655c1190b36bc97654e2beaa33c7f3c7da01266a572c12c079286",
+    "current_bytes": 2610
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/abis/lending.ts",
+    "status": "full-source-read",
+    "bytes": 6275,
+    "current_sha256": "d8f2ae3603c8c57d08a0d7f45f4f48193a8db6f07b79cc19c9731a3a730d580a",
+    "current_bytes": 6275
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/abis/locker.ts",
+    "status": "full-source-read",
+    "bytes": 2448,
+    "current_sha256": "8e42dc352372384a2ab4e173f541712385612d029002ab973a2df72b6f295686",
+    "current_bytes": 2448
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/abis/metadata.ts",
+    "status": "full-source-read",
+    "bytes": 1776,
+    "current_sha256": "b88915bc52d7b7834343b7bfed8c3b962ee5274c9257e7eff1339f8966fa10ef",
+    "current_bytes": 1776
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/abis/nusd.ts",
+    "status": "full-source-read",
+    "bytes": 1769,
+    "current_sha256": "d88814799830523959040b85f2f924bc2ff2903870e9d553ee6f2b92953fdc88",
+    "current_bytes": 1769
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/abis/points.ts",
+    "status": "full-source-read",
+    "bytes": 6697,
+    "current_sha256": "46145290710488391b7dffe62c9ef14b0de4d8631611231a9277d19e9ad9d2a0",
+    "current_bytes": 6697
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/lib/abis/synth.ts",
+    "status": "full-source-read",
+    "bytes": 6491,
+    "current_sha256": "e3e8e87ac57d944cb50e2642eeb08875b6630002cc69a933345fd294c54ee054",
+    "current_bytes": 6491
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/tests/README.md",
+    "status": "full-source-read",
+    "bytes": 519,
+    "current_sha256": "68238fd7a4f69a60b6dc4bb75939b10bb8c486735f9a5284882d8d42940ad0f0",
+    "current_bytes": 519
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/tests/client/actionLock.test.ts",
+    "status": "full-source-read",
+    "bytes": 646,
+    "current_sha256": "c99e8135fd874cc8f959facff0a561d3f66096cd56fb4a908cf5ec44c57be060",
+    "current_bytes": 646
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/tests/client/importedSwapAsset.test.ts",
+    "status": "full-source-read",
+    "bytes": 4403,
+    "current_sha256": "ddb77ea17032f259347f283ee929da5e708e90b17b44c9f1bc54a88beab6e180",
+    "current_bytes": 4403
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/tests/client/pollJitter.test.ts",
+    "status": "full-source-read",
+    "bytes": 3620,
+    "current_sha256": "2ec9a948f3d109759ea035842fba3b0c5df92893689e39ed10287791cfe204d8",
+    "current_bytes": 3620
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/tests/data/decimal.test.ts",
+    "status": "full-source-read",
+    "bytes": 1033,
+    "current_sha256": "ec05495016e9afa74f14089dd1ef3838ad173ef1629033d68708da681c5b66d1",
+    "current_bytes": 1033
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/tests/data/integer.test.ts",
+    "status": "full-source-read",
+    "bytes": 839,
+    "current_sha256": "c5292b3ec3fb958889b52cd19921acd5abef5eb046833f80aaaee322c458068f",
+    "current_bytes": 839
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/tests/data/points.test.ts",
+    "status": "full-source-read",
+    "bytes": 1943,
+    "current_sha256": "7124db6811e8bba410a87cfdba4515a94be0dc5c104b03c8e233ae0a2a1ebb47",
+    "current_bytes": 1943
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/tests/data/pumpAggregation.test.ts",
+    "status": "full-source-read",
+    "bytes": 2568,
+    "current_sha256": "69a4652daee075aab369c27e7a3972b67d6931d7126479125ec85339e3e661ed",
+    "current_bytes": 2568
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/tests/data/tokenId.test.ts",
+    "status": "full-source-read",
+    "bytes": 702,
+    "current_sha256": "bf538c616649658267cae0c77136124e48e10764c12563efce8c104b8eaa1216",
+    "current_bytes": 702
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/config/assets.ts",
+    "status": "full-source-read",
+    "bytes": 2226,
+    "current_sha256": "6882e5275cbe45066faff2654ebfd333644b74684acfa722d3d1ae10c4ff54a2",
+    "current_bytes": 2226
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/config/deployment.ts",
+    "status": "full-source-read",
+    "bytes": 6924,
+    "current_sha256": "6079a4728a6e1912308b39f292c916b58c38e066cfe105e3339e424ab84e7dfd",
+    "current_bytes": 6924
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/config/paths.ts",
+    "status": "full-source-read",
+    "bytes": 167,
+    "current_sha256": "3826a498f9a233fbae0d06c93ad7d68b3578cb5b0aa8a979545f9f9ecdc716b7",
+    "current_bytes": 167
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/config/wagmi.ts",
+    "status": "full-source-read",
+    "bytes": 619,
+    "current_sha256": "400f5f4f123cdb7ed6ddfc60e8939c1b45aa233a4dc349993381d14ed2a71e80",
+    "current_bytes": 619
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/lib/abi.ts",
+    "status": "full-source-read",
+    "bytes": 8616,
+    "current_sha256": "40e97ec25c1ab05b9bba5e2322c2ca1d1efaa285aaba598fe41cfb5db996bac3",
+    "current_bytes": 8616
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/docs/page.tsx",
+    "status": "full-source-read",
+    "bytes": 33855,
+    "current_sha256": "4f11c4545491aff58d83b49f08f42e0471d526b64f01982e6ec1ae494e6cd2e9",
+    "current_bytes": 33855
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xpixel/layout.tsx",
+    "status": "full-source-read",
+    "bytes": 320,
+    "current_sha256": "75a338354c7a5afbfb4229f3c767184127e3a1fe77743e79e38577e4428c7f9a",
+    "current_bytes": 320
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xpixel/loading.tsx",
+    "status": "full-source-read",
+    "bytes": 131,
+    "current_sha256": "791f8fac05ea47b2851cb79be206661a7659fee74f630cb62bbd6d62e7b23c92",
+    "current_bytes": 131
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xpixel/marketplace/loading.tsx",
+    "status": "full-source-read",
+    "bytes": 131,
+    "current_sha256": "791f8fac05ea47b2851cb79be206661a7659fee74f630cb62bbd6d62e7b23c92",
+    "current_bytes": 131
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/loading.tsx",
+    "status": "full-source-read",
+    "bytes": 123,
+    "current_sha256": "70f4536a95d45f14262c751a744e00a58a79d850f47747ff1099368caed31876",
+    "current_bytes": 123
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/page.tsx",
+    "status": "full-source-read",
+    "bytes": 3684,
+    "current_sha256": "fe50950ad4639ed7437bd84712ea5c5356c87fbd7affa89c593d50b539c2eb94",
+    "current_bytes": 3684
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/app/privacy/page.tsx",
+    "status": "full-source-read",
+    "bytes": 9857,
+    "current_sha256": "4a142e8323778bc5d204200531c0657d9c2ccd31ec0008697c8dfcf30c77af4c",
+    "current_bytes": 9857
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/docs/PROGRESS.md",
+    "status": "full-source-read",
+    "bytes": 33323,
+    "current_sha256": "48a9a8353e74b986ac3205e79255984a2620cabaefd8527582f4d69b81d1e012",
+    "current_bytes": 33323
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/.env.example",
+    "status": "full-source-read",
+    "sha256": "533CF2DA90D60980C8AFBC6787971564803BF62B828C926CE6A0A3EB613A10CE",
+    "current_sha256": "533cf2da90d60980c8afbc6787971564803bf62b828c926ce6a0a3eb613a10ce",
+    "current_bytes": 4791
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/.gitignore",
+    "status": "full-source-read",
+    "sha256": "9FA3525FEFBE76B855266EE3131C38AA5ACA12510BBCC591C7D95607FD768FB8",
+    "current_sha256": "9fa3525fefbe76b855266ee3131c38aa5aca12510bbcc591c7d95607fd768fb8",
+    "current_bytes": 879
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/eslint.config.mjs",
+    "status": "full-source-read",
+    "sha256": "2C57F37ECB1EC5490FDB5CF915D530E980EADAD818C5BF3DD3B18F219561724D",
+    "current_sha256": "2c57f37ecb1ec5490fdb5cf915d530e980eadad818c5bf3dd3b18f219561724d",
+    "current_bytes": 639
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/fi/config/testnet.generated.json",
+    "status": "full-source-read",
+    "sha256": "B81689CE8A9961E67D759BE7691C36184EDE19C42D8B03737296DA3A0ADE32EC",
+    "current_sha256": "b81689ce8a9961e67d759be7691c36184ede19c42d8b03737296da3a0ade32ec",
+    "current_bytes": 2320
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/package.json",
+    "status": "full-source-read",
+    "sha256": "878F4CA1CA7D0C474F3B68B60DCFCA3FF147EA012402143DE39E9B44DEB4C692",
+    "current_sha256": "878f4ca1ca7d0c474f3b68b60dcfca3ff147ea012402143de39e9b44deb4c692",
+    "current_bytes": 1378
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/postcss.config.mjs",
+    "status": "full-source-read",
+    "sha256": "DFAC7AC2D86D326A0E5ADB024E7943C181393ED17A5FCB8F0315B24C7DA6DDDE",
+    "current_sha256": "dfac7ac2d86d326a0e5adb024e7943c181393ed17a5fcb8f0315b24c7da6ddde",
+    "current_bytes": 94
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/public/_headers",
+    "status": "full-source-read",
+    "sha256": "EB8B7097B471AC793170870EABAB3804DDDB14EE48F6C74522F155768EF5DE15",
+    "current_sha256": "eb8b7097b471ac793170870eabab3804dddb14ee48f6c74522f155768ef5de15",
+    "current_bytes": 202
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/tsconfig.json",
+    "status": "full-source-read",
+    "sha256": "EF5519E9259E4E83C43D0A7D81F301623D9AAD8541E28E37BAEE528E5DFD4A56",
+    "current_sha256": "ef5519e9259e4e83c43d0a7d81f301623d9aad8541e28e37baee528e5dfd4a56",
+    "current_bytes": 866
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/tests/client/errors.test.ts",
+    "status": "authored-and-reviewed",
+    "current_sha256": "17d30d61c3fb89dc29000bb9f8b53f9f47424ace5f49d0497d9e4e2ffbd4b190",
+    "current_bytes": 1210
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/tests/client/marketplaceRefresh.test.ts",
+    "status": "authored-and-reviewed",
+    "current_sha256": "401fe79679a7c000efddfcb6e106e600c67b94abdf3fd346ac22e182909a5274",
+    "current_bytes": 2914
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/tests/client/pixelControls.test.ts",
+    "status": "authored-and-reviewed",
+    "current_sha256": "135ceba9e97c30de2de6faabd7cf17523c163c585a74a3d689a7ade9b7f7a19a",
+    "current_bytes": 5763
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/tests/client/protocolTransaction.test.ts",
+    "status": "authored-and-reviewed",
+    "current_sha256": "8c66fe857e691e15f195483338f86d13ab6020f04889c56152ab96fe30328eb8",
+    "current_bytes": 3934
+  }
+]

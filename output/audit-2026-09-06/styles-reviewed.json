@@ -1,0 +1,198 @@
+{
+  "files": [
+    {
+      "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/globals.css",
+      "bytes": 75273,
+      "lines": 3558,
+      "sha256": "bc43565055ba1ae9fb2ee12f25628446b4e3ebbee9f5afdd6a1423d8093b9f94",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          1000
+        ],
+        [
+          1001,
+          2200
+        ],
+        [
+          2201,
+          3193
+        ],
+        [
+          3194,
+          3558
+        ]
+      ],
+      "current_sha256": "bc43565055ba1ae9fb2ee12f25628446b4e3ebbee9f5afdd6a1423d8093b9f94",
+      "unchanged_from_inventory": true,
+      "current_bytes": 75273,
+      "current_lines": 3558
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/shared.css",
+      "bytes": 3630,
+      "lines": 143,
+      "sha256": "01e10031c525074a5d0d778c9fa45c8937c3c5746ae5861f0cb370ee8916e269",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          143
+        ]
+      ],
+      "current_sha256": "01e10031c525074a5d0d778c9fa45c8937c3c5746ae5861f0cb370ee8916e269",
+      "unchanged_from_inventory": true,
+      "current_bytes": 3630,
+      "current_lines": 143
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xPump/globals.css",
+      "bytes": 68898,
+      "lines": 1991,
+      "sha256": "e3a20dc043e7b383be06e97a636d6f5cf89dae134fb60cb3f49a3cfeeb6a3cd1",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          1150
+        ],
+        [
+          1151,
+          1991
+        ]
+      ],
+      "current_sha256": "e3a20dc043e7b383be06e97a636d6f5cf89dae134fb60cb3f49a3cfeeb6a3cd1",
+      "unchanged_from_inventory": true,
+      "current_bytes": 68898,
+      "current_lines": 1991
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xpixel/globals.css",
+      "bytes": 39250,
+      "lines": 1590,
+      "sha256": "cd329bb920074a7fbc262b2f88f65fe4bdabf7e1e951ed74eaf61b9ff06f79a2",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          850
+        ],
+        [
+          851,
+          1590
+        ]
+      ],
+      "current_sha256": "cd329bb920074a7fbc262b2f88f65fe4bdabf7e1e951ed74eaf61b9ff06f79a2",
+      "unchanged_from_inventory": true,
+      "current_bytes": 39250,
+      "current_lines": 1590
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/apps/web/app/dev/dev.module.css",
+      "bytes": 8698,
+      "lines": 546,
+      "sha256": "6378675ae7b552944f676d237fcb023048885585c7f2b74845a38f2c2654b23a",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          546
+        ]
+      ],
+      "current_sha256": "6378675ae7b552944f676d237fcb023048885585c7f2b74845a38f2c2654b23a",
+      "unchanged_from_inventory": true,
+      "current_bytes": 8698,
+      "current_lines": 546
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/apps/web/app/docs/docs.css",
+      "bytes": 24924,
+      "lines": 1320,
+      "sha256": "bfa0d562ebfa1fea7a1e36213856d77b49097c9d352ad9e15fc4af5e5a339901",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          1320
+        ]
+      ],
+      "current_sha256": "bfa0d562ebfa1fea7a1e36213856d77b49097c9d352ad9e15fc4af5e5a339901",
+      "unchanged_from_inventory": true,
+      "current_bytes": 24924,
+      "current_lines": 1320
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/apps/web/app/globals.css",
+      "bytes": 42610,
+      "lines": 1818,
+      "sha256": "1e0184f6e2ba3cbf5609bb3d5fef9f6b283920786cee6b7f175233854de6b1de",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          950
+        ],
+        [
+          951,
+          1818
+        ]
+      ],
+      "current_sha256": "1e0184f6e2ba3cbf5609bb3d5fef9f6b283920786cee6b7f175233854de6b1de",
+      "unchanged_from_inventory": true,
+      "current_bytes": 42610,
+      "current_lines": 1818
+    },
+    {
+      "path": "0xNothing-zkLTC-Testnet/apps/web/app/home.css",
+      "bytes": 20829,
+      "lines": 926,
+      "sha256": "45d016728526f38367d65199900152ea36e554faebf4d2f64415288281b156aa",
+      "read_status": "fully_read",
+      "reviewed_line_ranges": [
+        [
+          1,
+          926
+        ]
+      ],
+      "current_sha256": "45d016728526f38367d65199900152ea36e554faebf4d2f64415288281b156aa",
+      "unchanged_from_inventory": true,
+      "current_bytes": 20829,
+      "current_lines": 926
+    }
+  ],
+  "summary": {
+    "review_date": "2026-09-07",
+    "files": 8,
+    "baseline_lines": 11892,
+    "current_lines": 11892,
+    "baseline_bytes": 284112,
+    "read_status_counts": {
+      "fully_read": 8
+    },
+    "pending": 0,
+    "source_edits_by_this_agent": 0,
+    "unchanged_from_inventory": 8,
+    "coverage_basis": "Complete source reads with explicit line ranges; inventory hashes preserved and current hashes rechecked."
+  },
+  "review": {
+    "areas": [
+      "cascade",
+      "selector scope",
+      "responsive breakpoints",
+      "overflow",
+      "sizing",
+      "focus",
+      "disabled states",
+      "reduced motion"
+    ],
+    "finding": "No actionable layout defect established by source review; all eight CSS files preserved byte for byte.",
+    "validation": {
+      "parser": "existing apps/web PostCSS",
+      "files_parsed": 8,
+      "exit_code": 0,
+      "log": "styles-parse.log"
+    },
+    "limit": "Source review and syntax parsing do not establish rendered browser layout correctness. No visual/browser validation performed by this agent."
+  }
+}

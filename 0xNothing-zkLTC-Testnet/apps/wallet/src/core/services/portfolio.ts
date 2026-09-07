@@ -1,6 +1,7 @@
 import type { Address } from "viem";
 import { erc20Abi, lendingPoolAbi } from "../../abis";
 import type { WalletToken } from "../../config/assets";
+import { networkIdentity, type WalletNetwork } from "../../config/networks";
 import { CONTRACTS } from "../../config/contracts";
 import { usdValueWad } from "../lib/format";
 import { persistentStore } from "../platform/storage";
@@ -226,10 +227,10 @@ const SNAPSHOT_LOCK = `portfolio:${STORAGE_KEYS.snapshots}`;
  * These local samples are the fallback for a portfolio that market candles do
  * not cover. They also keep 24h useful on custom networks without an indexer.
  */
-export async function recordSnapshot(address: Address, totalWad: bigint): Promise<void> {
+export async function recordSnapshot(address: Address, totalWad: bigint, network: WalletNetwork): Promise<void> {
+  const key = JSON.stringify([networkIdentity(network), address.toLowerCase()]);
   await withNamedLock(SNAPSHOT_LOCK, async () => {
     const book = (await persistentStore.get<SnapshotBook>(STORAGE_KEYS.snapshots)) ?? {};
-    const key = address.toLowerCase();
     const series = book[key] ?? [];
     const last = series[series.length - 1];
     const now = Date.now();
@@ -240,9 +241,11 @@ export async function recordSnapshot(address: Address, totalWad: bigint): Promis
 }
 
 /** Fractional change (0.0125 = +1.25%), or null when there is no baseline yet. */
-export async function change24h(address: Address, totalWad: bigint): Promise<number | null> {
+export async function change24h(address: Address, totalWad: bigint, network: WalletNetwork): Promise<number | null> {
+  // Legacy address-only samples have no provable network and cannot be reused.
+  const key = JSON.stringify([networkIdentity(network), address.toLowerCase()]);
   const book = await persistentStore.get<SnapshotBook>(STORAGE_KEYS.snapshots);
-  const series = book?.[address.toLowerCase()];
+  const series = book?.[key];
   if (!series || series.length === 0) return null;
 
   const target = Date.now() - DAY_MS;

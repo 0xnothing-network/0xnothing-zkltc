@@ -63,14 +63,13 @@ export function CreatePoolForm() {
   const tokenName = tokenMetadata.data?.[1]?.result as string | undefined;
   const decimals = (tokenMetadata.data?.[2]?.result as number | undefined) ?? 18;
   const tokenReadFailed =
-    tokenMetadata.data?.some((result) => result.status === "failure") ?? false;
+    tokenMetadata.isError || (tokenMetadata.data?.some((result) => result.status === "failure") ?? false);
   const tokenMetadataLoading =
-    tokenMetadata.isPending ||
-    (normalizedAddress !== undefined &&
+    normalizedAddress !== undefined &&
       !isNusdSelf &&
       !isZero &&
       tokenMetadata.data === undefined &&
-      !tokenReadFailed);
+      !tokenReadFailed;
 
   const existingPair = useReadContract({
     address: factoryAddress,
@@ -99,6 +98,8 @@ export function CreatePoolForm() {
     existingPair.data && existingPair.data !== zeroAddress
       ? (existingPair.data as Address)
       : undefined;
+  const pairVerifiedAbsent = !existingPair.isError && existingPair.data === zeroAddress;
+  const pairChecking = !existingPair.isError && existingPair.data === undefined;
 
   const inputError = useMemo(() => {
     if (!trimmedInput) return undefined;
@@ -116,7 +117,7 @@ export function CreatePoolForm() {
     !isZero &&
     !tokenReadFailed &&
     !tokenMetadataLoading &&
-    !existingPairAddress &&
+    pairVerifiedAbsent &&
     !inputError;
 
   async function submitCreate() {
@@ -221,9 +222,19 @@ export function CreatePoolForm() {
           </div>
         ) : null}
 
-        {!existingPairAddress && !inputError && normalizedAddress ? (
+        {pairVerifiedAbsent && !inputError && normalizedAddress ? (
           <div className="fi-inline-state" role="status">
             <span>No existing pool found for this token.</span>
+          </div>
+        ) : null}
+
+        {normalizedAddress && !inputError && !tokenMetadataLoading && pairChecking ? (
+          <div className="fi-inline-state" role="status"><span>Checking for an existing pool...</span></div>
+        ) : null}
+        {normalizedAddress && !inputError && existingPair.isError ? (
+          <div className="fi-inline-state fi-inline-warning" role="status">
+            <span>Pool verification is temporarily unavailable.</span>
+            <button type="button" className="fi-button fi-button-muted" onClick={() => void existingPair.refetch()}>Retry</button>
           </div>
         ) : null}
 

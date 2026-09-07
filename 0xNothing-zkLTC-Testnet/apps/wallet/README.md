@@ -9,8 +9,8 @@ testnet (chain **4441**), and reuse the design tokens of the 0xFi surface in
 
 - **Node 22.6+** (Node 24 recommended). `npm test` runs TypeScript through
   node's own type stripping; Vite 8 needs a modern runtime anyway.
-- **Chrome 111+** for the extension — `minimum_chrome_version` in the manifest,
-  set by the MAIN-world content script.
+- **Chrome 120+** for the extension — `minimum_chrome_version` in the manifest,
+  matching the JavaScript build target.
 - **Android Studio + JDK 21** for the Android build.
 
 ## Commands
@@ -22,6 +22,7 @@ testnet (chain **4441**), and reuse the design tokens of the 0xFi surface in
 | `npm run build:app` | `vite build` only — `index.html`, `assets/`, `background.js`. Empties `dist/`. |
 | `npm run build:inject` | `content.js` + `inpage.js` only, as IIFE with unhashed names. |
 | `npm run build:android` | `npm run build`, then `cap sync android`. |
+| `npm run android:configure` | Reapply the tracked Android backup policy and scaffold package assertion. Also runs after every Capacitor sync. |
 | `npm run typecheck` | `tsc --noEmit`. |
 | `npm test` | Node's built-in runner over recursively organized `tests/**/*.test.ts`. |
 | `npm run icons` | Regenerates `public/icons/*`. |
@@ -67,6 +68,14 @@ npx cap open android
 keyring) and storage behave exactly as they do in the extension. `cleartext` and
 `allowMixedContent` are off, and the `CapacitorHttp` plugin is disabled so
 `fetch` stays the browser's rather than a native bridge.
+
+The tracked `capacitor:sync:after` hook applies `scripts/configure-android.ts`
+and the XML policies in `native/android/res/xml/` to each regenerated Android
+project. Android cloud backup and device-to-device transfer exclude wallet data:
+the vault is encrypted in Capacitor Preferences, but it still must not be copied
+by the operating system. Recover on another device with the seed phrase and
+separate backups of imported private keys. The hook also aligns the generated
+instrumented test with `appId` in `capacitor.config.ts`.
 
 ## Security model
 
@@ -114,7 +123,7 @@ rather than forwarded. `wallet_switchEthereumChain` and
 window. It re-estimates gas even when the page dictates a limit, names the four
 selectors worth naming (`transfer`, `approve`, `transferFrom`,
 `safeTransferFrom`) and shows raw calldata for everything else, flags a
-typed-data `chainId` that is not 4441, flags a request belonging to an account
+typed-data `chainId` that differs from the selected network, flags a request belonging to an account
 other than the one on screen, and disables Approve when a parameter does not
 parse.
 
@@ -199,7 +208,7 @@ key cannot be rendered. The eight files in `locales/` are `Partial` overlays: a
 key they omit falls back to English rather than breaking the build. That fallback
 is used deliberately for terms that carry no language (`NFT`, `Dapp`, `Swap`,
 `{amount} {symbol}`, the four ERC-20 selector names) instead of restating them
-nine times. `tests/i18n.test.ts` keeps every gap declared, so an accidental
+nine times. `tests/ui/i18n.test.ts` keeps every gap declared, so an accidental
 omission fails a test while an intentional one is a line in a list.
 
 No dependency and no async: all nine catalogs are bundled, `t()` is a plain
@@ -223,7 +232,7 @@ literal because they are brand.
 
 `src/styles/wallet.css` reproduces the palette, spacing and type scale of
 `apps/web/app/0xFi/globals.css` value for value: the `.fi-root` custom properties
-become `.w-root` ones. `tests/tokens.test.ts` pins that, so drift in either file
+become `.w-root` ones. `tests/ui/tokens.test.ts` pins that, so drift in either file
 fails a test instead of being noticed by eye later. Only `--w-gutter` and
 `--w-nav-height` are the wallet's own. There are no inline styles anywhere;
 variants ride on data attributes.
@@ -243,10 +252,11 @@ directory too deep.
 ## Tests
 
 `npm test` runs node's built-in runner straight over TypeScript — no Vite, no
-jsdom. 40 tests in eleven files: number formatting and parsing, swap math (the
-native gas reserve, slippage flooring and clamping), the dapp protocol constants
-and the chain-ID hex, the nine translation catalogs, and the token duplication
-above.
+jsdom. The recursively discovered suite covers number formatting, swap math,
+network reads, vault integrity and signing, dapp admission and approval, RPC
+ingress, Android configuration, translation catalogs, and design-token parity.
+The runner prints the current test count so this document does not become a
+second test inventory.
 
 With no bundler in the loop, a test can only import a module whose own imports
 are bare package specifiers or carry an explicit `.ts` — node will not resolve the

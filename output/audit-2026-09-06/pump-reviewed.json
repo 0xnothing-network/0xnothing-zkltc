@@ -1,0 +1,458 @@
+[
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/abis.ts",
+    "lines": 96,
+    "sha256": "798b7a77fe4d51adf936d4291fc0c03bfdc98494a2770cfd1416378e6caddf14",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        96
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/CreateTokenForm.tsx",
+    "lines": 411,
+    "sha256": "4adc16ae3564672ee2a6ac09c81b14a7becee3195795aa65eb198d5a8c93c650",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        411
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/LazyPumpChart.tsx",
+    "lines": 21,
+    "sha256": "45129d4bc2860c88ca0642af12d6a290ec679dbbbcf9aa34881fa81513be4bbb",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        21
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/NusdOraclePanel.tsx",
+    "lines": 420,
+    "sha256": "6d893722146f536fd220686c6efabe40f798cccebcf334adf1ec9e0853219dfd",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        420
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/PumpChart.tsx",
+    "lines": 379,
+    "sha256": "c5df6f45a07b0e4c65dd5bb9cd297694432404b631e35682e92be8218e3df75d",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        379
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/PumpDiscover.tsx",
+    "lines": 156,
+    "sha256": "7de833afc24dc2e08823f023122bf29370c91480642daebab08bb0437283f696",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        156
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/PumpPortfolio.tsx",
+    "lines": 137,
+    "sha256": "03fc3742acc2ae94f2313583f5b96f0a9d13e3cf9b06d5eb091ec16a349db18a",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        137
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/PumpStates.tsx",
+    "lines": 85,
+    "sha256": "c7a962b5540a3ffad17066087f8bb0f290e0d3c11e0956d0f73466d0442104aa",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        85
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/PumpStatsDashboard.tsx",
+    "lines": 402,
+    "sha256": "2ad6e55142c154bbaf1b43d8706e704c0a56ac6f0d125ab60b3cad6b30ab11c2",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        402
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/PumpTokenLogo.tsx",
+    "lines": 76,
+    "sha256": "8b426affdd9c5236fcce073a0438a1185d73de97bc6a006d01de6668998d69b7",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        76
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/TokenCard.tsx",
+    "lines": 103,
+    "sha256": "3f3a5236bdccd3164079b5fec6a434ff970481a6ede4c5a2c52dc3430535d161",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        103
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/TokenDetail.tsx",
+    "lines": 299,
+    "sha256": "e5c0a8f61f2850df851fb66174562812d14e46a461d41bcfed340e56d6ed593b",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        299
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/TokenHolders.tsx",
+    "lines": 97,
+    "sha256": "bf47476d42ee0fed22d9266b47661380cf80ffeb258f37f172da7ff90f068177",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        97
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/TradeHistory.tsx",
+    "lines": 42,
+    "sha256": "39da6c07f74e07cf43f5787bb09f2d018f5cc787725bd916d90a70720a7de5e3",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        42
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/TradePanel.tsx",
+    "lines": 260,
+    "sha256": "08a72305d6c2e2161e30ba1954e7ef739a840eed7de184951056ec67d42cbc39",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        260
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/config.ts",
+    "lines": 119,
+    "sha256": "175a8749ddad51d41ffd3d6fc690c09e0c24c95242c8bd10013468416574727e",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        119
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/contentHash.ts",
+    "lines": 73,
+    "sha256": "b5c0f9566e45a24c197fbb5f1dcf445ae6447745536d12802749ba94a06381d5",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        73
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/decimal.ts",
+    "lines": 45,
+    "sha256": "6c6339554ead9caf289de7e5aa8da52117df4a81cef4ff6a0046d6e751b45724",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        45
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/format.ts",
+    "lines": 121,
+    "sha256": "626c47f105a8fdda7561683ff7f6101a654fd33af722b552d5847df27bbbea60",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        121
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/hooks/useIpfsUpload.ts",
+    "lines": 83,
+    "sha256": "8cca868dad884c1d3f046d75bded4ae2be38f02f3b043612802a41e79a3388be",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        83
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/hooks/usePumpData.ts",
+    "lines": 546,
+    "sha256": "46b38ff008fd45195fbc438cebe249eb2534d3ee04cb8e57a9da43e0341883ba",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        546
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/hooks/usePumpPolling.ts",
+    "lines": 19,
+    "sha256": "8944c42242922452a33e7229002c39333b7bb10ed388b20fd34cac958363d41e",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        19
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/imageValidation.ts",
+    "lines": 42,
+    "sha256": "f624207644bac178c97e84f6ae7591704cefd3a8eec3b56e105dae265b93321b",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        42
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/server/aggregate.ts",
+    "lines": 116,
+    "sha256": "90d4ee8bd831f6024c8c4e69aef3b0b1387312ad613f43745c61987b829bbfd5",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        116
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/server/cache.ts",
+    "lines": 39,
+    "sha256": "747409d749f6d11c147cf5eaeee9a92626a22c46ad07736f80d5fbfab4415f5f",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        39
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/server/constants.ts",
+    "lines": 21,
+    "sha256": "54c3c9f8ea686c9b5fd67a269b7adae4cbffeb72a8b8f6458457dab3461aaff0",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        21
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/server/data.ts",
+    "lines": 520,
+    "sha256": "120ab536f15562a75b06381ca46d0a4d13ecdd0445e521bd0e3ec1d71429e254",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        520
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/server/graph.ts",
+    "lines": 267,
+    "sha256": "4c421c271a934975f522751150e898f13ede80cdbeb4a2d89c9c59c64c75a822",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        267
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/server/holders.ts",
+    "lines": 50,
+    "sha256": "6b3dec9e5e1b0a4642a1e32c9dd4303fdf44c8830a7f01075e8dec78730e4323",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        50
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/server/request.ts",
+    "lines": 17,
+    "sha256": "08194c307295807751dce50038d39dc599ad73fd696c6931d309e3f3d61825ff",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        17
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/server/rpcHolders.ts",
+    "lines": 183,
+    "sha256": "0ddfa4d7b9b39397dbc833212fce7e2f63fb29b6cad48793c6854ee6e7863df4",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        183
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/server/rpcMarkets.ts",
+    "lines": 191,
+    "sha256": "72ffb55e9558ffc784284fd09af1afdc927f4c7f7730da9c8745a18ff1e9a9e0",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        191
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/server/rpcTrades.ts",
+    "lines": 179,
+    "sha256": "d1f5faa997d1ad500c4adf07e64aa02ecee755895a8c96f46168e9db15bb9174",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        179
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/server/values.ts",
+    "lines": 89,
+    "sha256": "6a838ef6874f543087de39a2588288368e7889ad2c095544b5a23b86d85dd073",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        89
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/types.ts",
+    "lines": 183,
+    "sha256": "ed012f6ac750506cce38317c1c8e798f51acf97489d45de6a74fe15c47a62678",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        183
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/uploadMessage.ts",
+    "lines": 55,
+    "sha256": "f030b13171f4d0ee99c4852b821bcfab687f6b716a5d33603cce49a2178465b0",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        55
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/walletSession.ts",
+    "lines": 16,
+    "sha256": "de1e0bd4cbbd40a4bed1a34d7bdf749deb4f32f4e1ee3bfbd8430d6f3a5fac0e",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        16
+      ]
+    ]
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/tests/client/pumpSafety.test.ts",
+    "lines": 391,
+    "sha256": "ff142de0213c18e4029e21d5e941cfa4f0fa7294aa9ba627d3ce2c230a7dc6fe",
+    "mode": "full_semantic_read",
+    "reviewedRanges": [
+      [
+        1,
+        391
+      ]
+    ]
+  }
+]

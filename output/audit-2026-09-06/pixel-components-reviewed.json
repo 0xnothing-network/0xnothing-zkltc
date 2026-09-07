@@ -1,0 +1,37 @@
+[
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pixel/components/AIPromptGenerator.tsx",
+    "lines": 108,
+    "bytes": 3775,
+    "reviewed": true,
+    "sha256": "BEDC9A1E91AE695F624EB7CF2E1B1F4BA73B2E599C41BB1A2C9EA4C22FCF9D23"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pixel/components/Canvas.tsx",
+    "lines": 1019,
+    "bytes": 38856,
+    "reviewed": true,
+    "sha256": "1A868CC90C6560B19E83FCD1DF643CA118CFBF0AABB4A6B36E4B8A398949438D"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pixel/components/PixelHeader.tsx",
+    "lines": 497,
+    "bytes": 19586,
+    "reviewed": true,
+    "sha256": "659550BD433C55B070AFE6B44AD5DE312E0B36C56DBF8252BB7B67F30E1D27A0"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pixel/components/Skeleton.tsx",
+    "lines": 32,
+    "bytes": 1314,
+    "reviewed": true,
+    "sha256": "1A221B3A2A63221277C58160C66BCD4CA6BBF2B4A2E4CEBC77EB486CA4EA5B9A"
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/features/pixel/components/Toolbar.tsx",
+    "lines": 227,
+    "bytes": 7656,
+    "reviewed": true,
+    "sha256": "785ED0F8863CB73DFB48E2AEBC2B6E02E359870390972D37A59EB3A6D64E12A1"
+  }
+]

@@ -676,19 +676,39 @@ contract PooledNUSDLendingPool is ERC20, EmergencyGuardian, ReentrancyGuard {
         if (availableCollateral == 0) revert InsufficientCollateral();
 
         (uint256 priceWad,,) = IPriceOracle(config.oracle).readPriceWad();
-        uint256 closeLimit = Math.mulDiv(accountDebt, CLOSE_FACTOR_BPS, BPS_DENOMINATOR);
-        if (closeLimit == 0) closeLimit = accountDebt;
-        uint256 repaymentBudget = _min(maximumRepayNusd, closeLimit);
+        uint256 repaymentBudget;
+        {
+            uint256 closeLimit = Math.mulDiv(accountDebt, CLOSE_FACTOR_BPS, BPS_DENOMINATOR);
+            if (closeLimit == 0) closeLimit = accountDebt;
+            repaymentBudget = _min(maximumRepayNusd, closeLimit);
+        }
+        uint256 collateralRepaymentLimit = _mulDivUp(
+            _mulDivUp(availableCollateral, priceWad, 10 ** config.decimals),
+            BPS_DENOMINATOR,
+            BPS_DENOMINATOR + config.liquidationBonusBps
+        );
 
-        uint256 collateralValueNusd = Math.mulDiv(availableCollateral, priceWad, 10 ** config.decimals);
-        uint256 collateralRepaymentLimit =
-            Math.mulDiv(collateralValueNusd, BPS_DENOMINATOR, BPS_DENOMINATOR + config.liquidationBonusBps);
+        // Exhaust collateral only after paying its full value, including debt-share rounding.
+        // This also lets the existing bad-debt accounting clear positions without leaving dust.
+        if (repaymentBudget >= collateralRepaymentLimit) {
+            quote.debtSharesToBurn = _mulDivUp(collateralRepaymentLimit, WAD, borrowIndexWad);
+            quote.debtSharesToBurn = _min(quote.debtSharesToBurn, debtSharesOf[account]);
+            quote.amountRepaidNusd = _debtAtShares(quote.debtSharesToBurn, borrowIndexWad);
+            if (quote.amountRepaidNusd <= repaymentBudget) {
+                quote.collateralOut = availableCollateral;
+                return quote;
+            }
+        }
+
         repaymentBudget = _min(repaymentBudget, collateralRepaymentLimit);
         if (repaymentBudget == 0) revert InsufficientCollateral();
 
         (quote.debtSharesToBurn, quote.amountRepaidNusd) = _debtBurnQuote(account, repaymentBudget);
-        uint256 baseCollateral = _mulDivUp(quote.amountRepaidNusd, 10 ** config.decimals, priceWad);
-        quote.collateralOut = _mulDivUp(baseCollateral, BPS_DENOMINATOR + config.liquidationBonusBps, BPS_DENOMINATOR);
+        // Rounding either conversion upward can award whole low-decimal tokens for dust NUSD.
+        uint256 repaymentWithBonus =
+            Math.mulDiv(quote.amountRepaidNusd, BPS_DENOMINATOR + config.liquidationBonusBps, BPS_DENOMINATOR);
+        quote.collateralOut = Math.mulDiv(repaymentWithBonus, 10 ** config.decimals, priceWad);
+        if (quote.collateralOut == 0) revert InsufficientCollateral();
         if (quote.collateralOut > availableCollateral) quote.collateralOut = availableCollateral;
     }
 

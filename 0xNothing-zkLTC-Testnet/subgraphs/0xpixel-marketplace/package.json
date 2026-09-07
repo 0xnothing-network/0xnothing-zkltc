@@ -6,7 +6,8 @@
   "scripts": {
     "codegen": "graph codegen",
     "build": "npm run codegen && graph build",
-    "check": "npm run build",
+    "test": "node --test tests/*.test.mjs",
+    "check": "npm test && npm run build",
     "deploy": "npx goldsky subgraph deploy marketplace/1.0.1 --path .",
     "create-local": "graph create --node http://127.0.0.1:8020 marketplace-subgraph",
     "remove-local": "graph remove --node http://127.0.0.1:8020 marketplace-subgraph",

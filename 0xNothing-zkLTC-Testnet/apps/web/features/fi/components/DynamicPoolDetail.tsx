@@ -20,7 +20,7 @@ import { dexFactoryAbi, dexPoolAbi, dexRouterAbi } from "@fi/lib/abis/dex";
 import { communityLiquidityLockerAbi } from "@fi/lib/abis/locker";
 import { erc20Abi } from "@fi/lib/abis/erc20";
 import { canonicalOracleMarketForIdentifier } from "@fi/lib/canonicalMarkets";
-import { formatAmount, minimumAfterSlippage, parseAmount, percentageShare, priceImpactBps, transactionDeadline } from "@fi/lib/format";
+import { formatAmount, formatUnlockTime, minimumAfterSlippage, parseAmount, percentageShare, priceImpactBps, transactionDeadline } from "@fi/lib/format";
 import { useActiveDexRouter } from "@fi/lib/hooks/useActiveDexRouter";
 import { formatFeeBps, useDexFeeSchedule } from "@fi/lib/hooks/useDexFeeSchedule";
 import { useProtocolTransaction } from "@fi/lib/hooks/useProtocolTransaction";
@@ -50,15 +50,6 @@ function displayMarketPrice(value: number | undefined): string {
 function displayPriceImpact(value: bigint | undefined): string {
   if (value === undefined) return "--";
   return `${(Number(value) / 100).toFixed(2)}%`;
-}
-
-function displayUnlockTime(value: bigint | undefined): string {
-  if (value === undefined) return "--";
-  return `${new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  }).format(new Date(Number(value) * 1_000))} UTC`;
 }
 
 function formatLpDetailAmount(value: bigint): string {
@@ -809,7 +800,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
                   <dl className="fi-form-details fi-lp-security-summary">
                     {permanentLockedLp > 0n ? <div><dt>Your permanent LP</dt><dd>{formatAmount(permanentLockedLp)}</dd></div> : null}
                     {timedLockedLp > 0n ? <div><dt>Your timed LP</dt><dd>{formatAmount(timedLockedLp)}</dd></div> : null}
-                    {earliestUnlockAt !== undefined ? <div><dt>Your next unlock</dt><dd>{displayUnlockTime(earliestUnlockAt)}</dd></div> : null}
+                    {earliestUnlockAt !== undefined ? <div><dt>Your next unlock</dt><dd>{formatUnlockTime(earliestUnlockAt)}</dd></div> : null}
                   </dl>
                 ) : null}
                 {(ownerLockIdsRead.isPending || locksRead.isPending) && hasLockedLp && address ? <p className="fi-hint">Loading your lock schedule...</p> : null}

@@ -1,0 +1,20 @@
+[
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/public/favicon.svg",
+    "status": "svg-xml-structure-reviewed",
+    "sha256": "b58be7638223486f4e3ddb3c794fe113561da360f8e8dbd7da033ed14ec8d533",
+    "elements": 5,
+    "scriptOrForeignObject": 0,
+    "eventAttributes": 0,
+    "semanticCodeReview": false
+  },
+  {
+    "path": "0xNothing-zkLTC-Testnet/apps/web/public/icon.svg",
+    "status": "svg-xml-structure-reviewed",
+    "sha256": "5e3315fd6e922c130fbccc69f534523fe20e66d4e94cb102c96544efcd45e436",
+    "elements": 585,
+    "scriptOrForeignObject": 0,
+    "eventAttributes": 0,
+    "semanticCodeReview": false
+  }
+]

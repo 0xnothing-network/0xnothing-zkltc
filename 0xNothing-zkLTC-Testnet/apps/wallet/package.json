@@ -10,6 +10,8 @@
     "build:app": "vite build",
     "build:inject": "node scripts/build-inject.mjs",
     "build:android": "node scripts/build-all.mjs && cap sync android",
+    "android:configure": "node --experimental-strip-types scripts/configure-android.ts",
+    "capacitor:sync:after": "node --experimental-strip-types scripts/configure-android.ts",
     "icons": "node scripts/generate-icons.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test --experimental-strip-types \"tests/**/*.test.ts\""

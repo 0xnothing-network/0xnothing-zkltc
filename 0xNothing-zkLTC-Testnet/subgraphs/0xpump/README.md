@@ -2,8 +2,10 @@
 
 Goldsky/Graph Node package for the 0xPump bonding-curve launchpad. It indexes
 market discovery, trades, OHLC candles, fees, readiness, and the graduation
-event schema. Testnet liquidity migration is disabled, so deployed testnet
-markets can reach `READY` but are not expected to emit `TokenGraduated`.
+event schema. The committed testnet graduation policy is `controller-active`;
+`npm run deploy:check` verifies the configured controller, adapter, and router
+state before deployment. Ready markets can emit `TokenGraduated` when that
+on-chain route is active.
 The mapping treats the contract's post-trade event fields as authoritative and
 does not perform `eth_call` or IPFS reads while indexing.
 
@@ -160,7 +162,7 @@ query Markets($first: Int!, $skip: Int!) {
 }
 ```
 
-Candles are maintained for periods `15`, `60`, `240`, and `1440` minutes. IPFS
+Candles are maintained for periods `1`, `15`, `60`, `240`, and `1440` minutes. IPFS
 URIs are stored as emitted; the frontend or API chooses a gateway at read time.
 
 ## Deploy last

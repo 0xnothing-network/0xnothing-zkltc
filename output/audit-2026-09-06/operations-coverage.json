@@ -1,0 +1,61 @@
+{
+  "project": "C-Users-tdat-Desktop-0xnothing",
+  "signal": "best_effort",
+  "indexed_at": "2026-09-06T09:00:08Z",
+  "metadata": {
+    "generation": "2026-09-06T09:00:08Z",
+    "index_mode": "full",
+    "recorded_at": "2026-09-06T09:09:35Z",
+    "recording_status": "complete",
+    "ignored_files_stored": 84,
+    "ignored_files_total": 84,
+    "hash_records_complete": true,
+    "coverage_version": 3,
+    "generation_matches": true
+  },
+  "paths": [
+    {
+      "requested_path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/api/data/candles/route.ts",
+      "path": "0xNothing-zkLTC-Testnet/apps/web/app/0xFi/api/data/candles/route.ts",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "0xNothing-zkLTC-Testnet/apps/web/app/api/marketplace/listings/route.ts",
+      "path": "0xNothing-zkLTC-Testnet/apps/web/app/api/marketplace/listings/route.ts",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "0xNothing-zkLTC-Testnet/apps/web/tests/server/routeBoundaries.test.ts",
+      "path": "0xNothing-zkLTC-Testnet/apps/web/tests/server/routeBoundaries.test.ts",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "0xNothing-zkLTC-Testnet/apps/web/tests/helpers/evaluateModule.ts",
+      "path": "0xNothing-zkLTC-Testnet/apps/web/tests/helpers/evaluateModule.ts",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    }
+  ],
+  "scopes": [
+    {
+      "requested_scope": "0xNothing-zkLTC-Testnet/0xFi/scripts",
+      "scope": "0xNothing-zkLTC-Testnet/0xFi/scripts",
+      "total": 0,
+      "has_more": false,
+      "entries": [],
+      "status": "no_recorded_issue"
+    }
+  ],
+  "caveat": "Best-effort signal only. No recorded issue does not prove graph or source completeness; read flagged source and qualify claims when metadata is changed or unavailable."
+}

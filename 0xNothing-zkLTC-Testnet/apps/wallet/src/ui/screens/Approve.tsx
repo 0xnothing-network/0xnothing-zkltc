@@ -21,6 +21,7 @@ import { Button, Note, Panel, PanelBody, Row, Rows } from "../components/kit";
 import { Screen } from "../components/Screen";
 import { useActionGate } from "../hooks/useActionGate";
 import { useLiveRead } from "../hooks/useLiveRead";
+import { typedSummary } from "../lib/typedData";
 import { useRoute } from "../router";
 import { useWallet } from "../state/WalletContext";
 
@@ -68,25 +69,6 @@ function quantity(value: string | undefined): bigint | undefined {
 function safeQuantity(value: string | undefined): bigint | null {
   try {
     return quantity(value) ?? 0n;
-  } catch {
-    return null;
-  }
-}
-
-function typedSummary(
-  message: string,
-): { domain: string; primaryType: string; chainId: number | null } | null {
-  try {
-    const parsed = JSON.parse(message) as {
-      domain?: { name?: string; chainId?: number | string };
-      primaryType?: string;
-    };
-    const chainId = parsed.domain?.chainId;
-    return {
-      domain: parsed.domain?.name ?? "—",
-      primaryType: parsed.primaryType ?? "—",
-      chainId: chainId === undefined ? null : Number(chainId),
-    };
   } catch {
     return null;
   }

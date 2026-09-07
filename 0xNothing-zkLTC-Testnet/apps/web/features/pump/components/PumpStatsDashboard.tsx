@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import {
   useAccount,
+  useConfig,
   useReadContract,
   useSwitchChain,
   useWriteContract,
@@ -25,6 +26,7 @@ import { PumpConfigNotice, PumpErrorState } from "@/features/pump/components/Pum
 import { useToast } from "@/components/Toast";
 import { getTransactionExplorerUrl, publicClient } from "@/lib/contract";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
+import { createPumpWalletGuard } from "@/features/pump/walletSession";
 
 function usd(value: string, fractionDigits = 2): string {
   return `$${formatWad(value, fractionDigits)}`;
@@ -240,6 +242,7 @@ function DeveloperFeePanel({
 }) {
   const toast = useToast();
   const { chainId } = useAccount();
+  const walletConfig = useConfig();
   const { switchChainAsync, isPending: isSwitching } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
   const claimLockRef = useRef(false);
@@ -282,6 +285,8 @@ function DeveloperFeePanel({
 
     setIsClaiming(true);
     try {
+      const assertWalletUnchanged = createPumpWalletGuard(walletConfig, address);
+      assertWalletUnchanged();
       await publicClient.simulateContract({
         account: address,
         address: withdrawTarget.address,
@@ -289,7 +294,9 @@ function DeveloperFeePanel({
         functionName: "withdrawProtocolFees",
         args: [address, claimable],
       });
+      assertWalletUnchanged();
       const hash = await writeContractAsync({
+        account: address,
         address: withdrawTarget.address,
         abi: withdrawTarget.abi,
         functionName: "withdrawProtocolFees",

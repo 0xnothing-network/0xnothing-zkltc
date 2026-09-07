@@ -462,10 +462,26 @@ export async function signerFor(address: Address): Promise<HDAccount | PrivateKe
     (candidate) => candidate.address.toLowerCase() === address.toLowerCase(),
   );
   if (!meta) throw new Error(t("vault.noAccount", { address }));
-  if (meta.source === "hd") return mnemonicToAccount(secret.mnemonic, { addressIndex: meta.index });
-  const key = secret.imported[meta.index];
-  if (!key) throw new Error(t("vault.noKey", { address }));
-  return privateKeyToAccount(key);
+  return accountForMeta(secret, meta, address);
+}
+
+/** Public metadata selects a key but can never change the address being authorized. */
+function accountForMeta(
+  secret: VaultSecret,
+  meta: AccountMeta,
+  address: Address,
+): HDAccount | PrivateKeyAccount {
+  const imported = secret.imported[meta.index];
+  if (meta.source === "imported" && !imported) {
+    throw new Error(t("vault.noKey", { address }));
+  }
+  const account = meta.source === "hd"
+    ? mnemonicToAccount(secret.mnemonic, { addressIndex: meta.index })
+    : privateKeyToAccount(imported!);
+  if (account.address.toLowerCase() !== address.toLowerCase()) {
+    throw new Error(t("vault.noKey", { address }));
+  }
+  return account;
 }
 
 /* -------------------------------------------------------- reveal / rotate */
@@ -482,12 +498,13 @@ export async function revealPrivateKey(password: string, address: Address): Prom
     (candidate) => candidate.address.toLowerCase() === address.toLowerCase(),
   );
   if (!meta) throw new Error(t("vault.noAccount", { address }));
+  const account = accountForMeta(secret, meta, address);
   if (meta.source === "imported") {
     const key = secret.imported[meta.index];
     if (!key) throw new Error(t("vault.noKey", { address }));
     return key;
   }
-  const hdKey = mnemonicToAccount(secret.mnemonic, { addressIndex: meta.index }).getHdKey();
+  const hdKey = (account as HDAccount).getHdKey();
   if (!hdKey.privateKey) throw new Error(t("vault.keyUnreadable"));
   return bytesToHex(hdKey.privateKey);
 }

@@ -152,6 +152,7 @@ function ListForSaleControl({
     useWaitForTransactionReceipt({ hash: listHash });
   const firedRef = useRef(false);
   const submitLockRef = useRef(false);
+  const handledApprovalRef = useRef<`0x${string}` | undefined>(undefined);
   const approved = approveReceipt?.status === "success";
   const listed = listReceipt?.status === "success";
 
@@ -201,10 +202,11 @@ function ListForSaleControl({
   }, [priceWei, writeListAsync, tokenId]);
 
   useEffect(() => {
-    if (approved && price && !firedRef.current && !listing && !listHash) {
+    if (approved && approveHash && price && !firedRef.current && !listing && !listHash && handledApprovalRef.current !== approveHash) {
+      handledApprovalRef.current = approveHash;
       void doList();
     }
-  }, [approved, price, listing, listHash, doList]);
+  }, [approved, approveHash, price, listing, listHash, doList]);
 
   const handleSubmit = async () => {
     firedRef.current = false;

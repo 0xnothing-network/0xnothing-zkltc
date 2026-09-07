@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { formatUnits } from "viem";
@@ -50,6 +50,8 @@ export function PumpHeader() {
   const pathname = usePathname();
   const toast = useToast();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
   const { address, isConnected, chainId } = useAccount();
   const { connectors, connect, isPending } = useConnect();
   const { disconnect } = useDisconnect();
@@ -74,17 +76,37 @@ export function PumpHeader() {
     },
   });
 
+  useEffect(() => setMobileOpen(false), [pathname]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setMobileOpen(false);
+      menuButtonRef.current?.focus();
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (!headerRef.current?.contains(event.target as Node)) setMobileOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [mobileOpen]);
+
   const connectWallet = () => {
     const connector = connectors[0];
     if (!connector) {
       toast.warning("No wallet detected", "Install a browser wallet and refresh the page.");
       return;
     }
-    connect({ connector });
+    connect({ connector }, { onError: (error) => { toast.handleError(error); } });
   };
 
   return (
-    <header className="pump-header">
+    <header ref={headerRef} className="pump-header">
       <div className="pump-header-inner">
         <Link href="/" className="pump-wordmark" aria-label="0xNothing home">
           <span className="pump-wordmark-zero">0x</span>
@@ -136,7 +158,9 @@ export function PumpHeader() {
               className="pump-button pump-button-warning"
               type="button"
               disabled={isSwitching}
-              onClick={() => switchChain({ chainId: PUMP_CHAIN_ID })}
+              onClick={() => switchChain({ chainId: PUMP_CHAIN_ID }, {
+                onError: (error) => { toast.handleError(error); },
+              })}
             >
               {isSwitching ? "Switching" : "Switch network"}
             </button>
@@ -160,6 +184,7 @@ export function PumpHeader() {
             </button>
           )}
           <button
+            ref={menuButtonRef}
             type="button"
             className="pump-menu-button"
             aria-label={mobileOpen ? "Close navigation" : "Open navigation"}

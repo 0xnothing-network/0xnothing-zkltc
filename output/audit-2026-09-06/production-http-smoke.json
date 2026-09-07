@@ -1,0 +1,32 @@
+[
+  {
+    "route": "/",
+    "status": 200,
+    "bytes": 17450
+  },
+  {
+    "route": "/0xFi",
+    "status": 200,
+    "bytes": 35723
+  },
+  {
+    "route": "/0xPump",
+    "status": 200,
+    "bytes": 20996
+  },
+  {
+    "route": "/0xpixel",
+    "status": 200,
+    "bytes": 30865
+  },
+  {
+    "route": "/privacy",
+    "status": 200,
+    "bytes": 36634
+  },
+  {
+    "route": "/api/health",
+    "status": 200,
+    "bytes": 15
+  }
+]

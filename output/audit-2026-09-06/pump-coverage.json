@@ -1,0 +1,93 @@
+{
+  "project": "C-Users-tdat-Desktop-0xnothing",
+  "signal": "best_effort",
+  "indexed_at": "2026-09-07T03:11:50Z",
+  "metadata": {
+    "generation": "2026-09-07T03:11:50Z",
+    "index_mode": "full",
+    "recorded_at": "2026-09-07T03:11:52Z",
+    "recording_status": "complete",
+    "ignored_files_stored": 106,
+    "ignored_files_total": 106,
+    "hash_records_complete": true,
+    "coverage_version": 3,
+    "generation_matches": true
+  },
+  "paths": [
+    {
+      "requested_path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/walletSession.ts",
+      "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/walletSession.ts",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "0xNothing-zkLTC-Testnet/apps/web/tests/client/pumpSafety.test.ts",
+      "path": "0xNothing-zkLTC-Testnet/apps/web/tests/client/pumpSafety.test.ts",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/hooks/usePumpData.ts",
+      "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/hooks/usePumpData.ts",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/TradePanel.tsx",
+      "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/TradePanel.tsx",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/CreateTokenForm.tsx",
+      "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/CreateTokenForm.tsx",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/NusdOraclePanel.tsx",
+      "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/NusdOraclePanel.tsx",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/TokenDetail.tsx",
+      "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/TokenDetail.tsx",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/PumpStatsDashboard.tsx",
+      "path": "0xNothing-zkLTC-Testnet/apps/web/features/pump/components/PumpStatsDashboard.tsx",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    }
+  ],
+  "scopes": [
+    {
+      "requested_scope": "0xNothing-zkLTC-Testnet/apps/web/features/pump",
+      "scope": "0xNothing-zkLTC-Testnet/apps/web/features/pump",
+      "total": 0,
+      "has_more": false,
+      "entries": [],
+      "status": "no_recorded_issue"
+    }
+  ],
+  "caveat": "Best-effort signal only. No recorded issue does not prove graph or source completeness; read flagged source and qualify claims when metadata is changed or unavailable."
+}
