@@ -26,6 +26,7 @@
 
 html {
   scroll-behavior: smooth;
+  color-scheme: dark;
   text-size-adjust: 100%;
   -webkit-text-size-adjust: 100%;
 }
@@ -80,8 +81,17 @@ body {
 
 /* Focus visible */
 :focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--primary, #fff);
   outline-offset: 2px;
+}
+
+/* Keep keyboard targets clear of sticky product headers. */
+:where(a, button, input, select, textarea, summary, [tabindex]) {
+  scroll-margin-block: 96px 24px;
+}
+
+:where(h1, h2, h3) {
+  text-wrap: balance;
 }
 
 /* Input color picker styling */
@@ -314,7 +324,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   top: 12px;
   z-index: 2147483001;
   transform: translateY(-140%);
-  background: var(--primary);
+  background: var(--primary, #fff);
   color: #05050a;
   padding: 10px 14px;
   font-size: 10px;

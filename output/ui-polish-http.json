@@ -1,0 +1,146 @@
+[
+  {
+    "route": "/",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/",
+    "bytes": 17450
+  },
+  {
+    "route": "/docs",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/docs",
+    "bytes": 144885
+  },
+  {
+    "route": "/privacy",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/privacy",
+    "bytes": 39536
+  },
+  {
+    "route": "/dev",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/dev",
+    "bytes": 35731
+  },
+  {
+    "route": "/0xFi",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xFi",
+    "bytes": 35721
+  },
+  {
+    "route": "/0xFi/swap",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xFi/swap",
+    "bytes": 37879
+  },
+  {
+    "route": "/0xFi/pools",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xFi/pools",
+    "bytes": 33403
+  },
+  {
+    "route": "/0xFi/pools/create",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xFi/pools/create",
+    "bytes": 32908
+  },
+  {
+    "route": "/0xFi/earn",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xFi/earn",
+    "bytes": 41757
+  },
+  {
+    "route": "/0xFi/farm",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xFi/earn",
+    "bytes": 41757
+  },
+  {
+    "route": "/0xFi/lend",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xFi/lend",
+    "bytes": 33650
+  },
+  {
+    "route": "/0xFi/borrow",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xFi/borrow",
+    "bytes": 37018
+  },
+  {
+    "route": "/0xFi/synth",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xFi/synth",
+    "bytes": 37846
+  },
+  {
+    "route": "/0xPump",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xPump",
+    "bytes": 20996
+  },
+  {
+    "route": "/0xPump/create",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xPump/create",
+    "bytes": 18447
+  },
+  {
+    "route": "/0xPump/nusd",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xPump/nusd",
+    "bytes": 18228
+  },
+  {
+    "route": "/0xPump/portfolio",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xPump/portfolio",
+    "bytes": 16541
+  },
+  {
+    "route": "/0xPump/stats",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xPump/stats",
+    "bytes": 17634
+  },
+  {
+    "route": "/0xpixel",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xpixel",
+    "bytes": 30905
+  },
+  {
+    "route": "/0xpixel/gallery",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xpixel/gallery",
+    "bytes": 20104
+  },
+  {
+    "route": "/0xpixel/marketplace",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xpixel/marketplace",
+    "bytes": 25454
+  },
+  {
+    "route": "/api/health",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/api/health",
+    "bytes": 15
+  },
+  {
+    "route": "/0xPump/token/0x30C81Ab870E42FB3492D05DF12cd04872eE06d50",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xPump/token/0x30C81Ab870E42FB3492D05DF12cd04872eE06d50",
+    "bytes": 18806
+  },
+  {
+    "route": "/0xFi/pools/0x0a573e077466cda9211063442714b67b0e2d74c7",
+    "status": 200,
+    "finalUrl": "http://localhost:3300/0xFi/pools/0x0a573e077466cda9211063442714b67b0e2d74c7",
+    "bytes": 38637
+  }
+]

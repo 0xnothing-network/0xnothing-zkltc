@@ -133,6 +133,7 @@
   grid-area: wordmark;
   display: inline-flex;
   width: fit-content;
+  min-height: 44px;
   align-items: center;
   gap: 2px;
   color: var(--pump-text);
@@ -183,7 +184,8 @@
   white-space: nowrap;
 }
 .pump-wallet-actions { grid-area: wallet; display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
-.pump-menu-button { display: none; width: 42px; height: 42px; flex: none; place-items: center; border: 1px solid var(--pump-line); color: var(--pump-text); }
+.pump-menu-button { display: none; width: 44px; height: 44px; flex: none; place-items: center; border: 1px solid var(--pump-line); color: var(--pump-text); }
+.pump-menu-button[aria-expanded="true"] { border-color: var(--pump-green); background: var(--pump-panel-2); color: var(--pump-green); }
 .pump-menu-button svg { width: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; }
 .pump-nav-mobile { display: none; }
 
@@ -378,9 +380,9 @@
 .pump-status-graduated { color: #9eb9ff; }
 .pump-token-title-row { margin-top: 16px; align-items: flex-start; }
 .pump-token-title-row h3 { overflow: hidden; margin: 0; font-size: 15px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
-.pump-token-title-row p { margin: 5px 0 0; color: var(--pump-green); font-size: 10px; }
+.pump-token-title-row p { margin: 5px 0 0; color: var(--pump-green); font-size: 10px; overflow-wrap: anywhere; }
 .pump-token-age { flex: none; color: var(--pump-muted); font-size: 9px; }
-.pump-token-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; margin: 22px 0; }
+.pump-token-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; margin: 22px 0; }
 .pump-token-metrics div { min-width: 0; }
 .pump-token-metrics dt { margin-bottom: 6px; color: var(--pump-muted); font-size: 9px; text-transform: uppercase; }
 .pump-token-metrics dd { margin: 0; font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
@@ -792,6 +794,8 @@
 .pump-search:focus-within,
 .pump-amount-field:focus-within,
 .pump-logo-drop:focus-within { border-color: rgba(119, 255, 177, 0.72); }
+.pump-logo-drop:focus-within { outline: 2px solid var(--pump-green); outline-offset: 2px; }
+.pump-shell .pump-token-card:focus-visible { outline-width: 2px !important; outline-offset: -2px; }
 
 @media (prefers-reduced-motion: reduce) {
   .pump-shell *,
@@ -1154,7 +1158,7 @@ section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section
 }
 
 .pump-shell .pump-field textarea {
-  resize: none;
+  resize: vertical;
 }
 
 .pump-shell .pump-field input:focus,
@@ -1967,18 +1971,33 @@ section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section
   }
 }
 
-@media (max-width: 360px) {
+/* Give all four market filters room before placing sort and search below. */
+@media (max-width: 480px) {
   .pump-market-controls {
-    grid-template-columns: minmax(0, 1fr) 120px;
+    grid-template-columns: 120px minmax(0, 1fr);
+  }
+
+  .pump-market-controls .pump-segmented {
+    grid-column: 1 / -1;
   }
 
   .pump-market-controls .pump-segmented button {
-    font-size: 8px;
+    font-size: 10px;
+  }
+
+  .pump-market-controls .pump-sort-select {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .pump-market-controls .pump-search {
+    grid-column: 2;
+    grid-row: 2;
   }
 
   .pump-market-controls .pump-sort-select select {
     padding-inline: 6px;
-    font-size: 10px !important;
+    font-size: 11px;
   }
 }
 

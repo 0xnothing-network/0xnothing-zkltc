@@ -601,6 +601,8 @@ a:hover .nothing-mark {
   --home-muted: rgba(255, 255, 255, 0.66);
   --home-dim: rgba(255, 255, 255, 0.38);
   position: relative;
+  display: flex;
+  flex-direction: column;
   isolation: isolate;
   min-height: 100dvh;
   background:
@@ -681,7 +683,8 @@ a:hover .nothing-mark {
 }
 
 .nothing-main {
-  min-height: calc(100dvh - 145px) !important;
+  flex: 1;
+  min-height: 0 !important;
 }
 
 .nothing-stage {
@@ -767,6 +770,7 @@ a:hover .nothing-mark {
 
 .nothing-nav {
   width: 100%;
+  gap: 16px;
   margin-top: clamp(36px, 7vw, 68px) !important;
   background: transparent !important;
   border: 0 !important;
@@ -790,7 +794,7 @@ a:hover .nothing-mark {
   justify-content: center;
   gap: 14px;
   width: min(176px, 100%);
-  min-height: 44px;
+  min-height: 50px;
   color: var(--nothing-link-fg) !important;
   background: var(--nothing-link-bg) !important;
   border: 1px solid var(--nothing-link-border) !important;
@@ -841,8 +845,21 @@ a:hover .nothing-mark {
 
 .nothing-home .nothing-link:focus-visible,
 .nothing-x:focus-visible {
-  outline: 2px solid #ffffff !important;
-  outline-offset: 4px;
+  outline: 2px solid currentColor !important;
+  outline-offset: -5px;
+}
+
+/* Press feedback must win over the final hover transform. */
+.nothing-home .nothing-link:active,
+.nothing-home .nothing-x:active {
+  transform: translate(1px, 1px) !important;
+}
+
+@media (hover: none) {
+  .nothing-home .nothing-link:hover,
+  .nothing-home .nothing-x:hover {
+    transform: none !important;
+  }
 }
 
 .nothing-footer span {
@@ -857,7 +874,7 @@ a:hover .nothing-mark {
   }
 
   .nothing-main {
-    min-height: calc(100dvh - 137px) !important;
+    min-height: 0 !important;
     align-items: center !important;
     padding-top: 42px !important;
     padding-bottom: 42px !important;
@@ -892,8 +909,8 @@ a:hover .nothing-mark {
   }
 }
 .nothing-home .nothing-x {
-  width: 40px !important;
-  height: 40px !important;
+  width: 44px !important;
+  height: 44px !important;
   padding: 0 !important;
 }
 
@@ -907,8 +924,8 @@ a:hover .nothing-mark {
 
 @media (max-width: 760px) {
   .nothing-home .nothing-x {
-    width: 36px !important;
-    height: 36px !important;
+    width: 44px !important;
+    height: 44px !important;
   }
 
   .nothing-home .nothing-x-logo {

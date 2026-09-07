@@ -197,7 +197,7 @@ function AppHeader() {
           left: addressMenuPosition.left,
           zIndex: 9999,
         }}
-        className="w-56 overflow-hidden border border-white/[0.14] bg-[#050507]/98 shadow-[6px_6px_0_0_var(--pixel-shadow),0_24px_70px_rgba(0,0,0,0.72)] backdrop-blur-md animate-slideDown"
+        className="pixel-address-menu w-56 overflow-hidden border border-white/[0.14] bg-[#050507]/98 shadow-[6px_6px_0_0_var(--pixel-shadow),0_24px_70px_rgba(0,0,0,0.72)] backdrop-blur-md animate-slideDown"
       >
         <button
           type="button"
@@ -307,7 +307,7 @@ function AppHeader() {
             </a>
           </nav>
 
-          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+          <div className="pixel-header-controls flex min-w-0 items-center gap-1.5 sm:gap-2">
             {mounted && isConnected && address ? (
               <div className="flex items-center gap-2">
                 {wrongNetwork && (
@@ -403,7 +403,7 @@ function AppHeader() {
             <button
               type="button"
               onClick={() => setMobileMenuOpen((v) => !v)}
-              className="md:hidden flex h-10 w-10 flex-col items-center justify-center gap-1.5 border border-white/[0.08] bg-white/[0.035] shadow-[3px_3px_0_0_var(--pixel-shadow)] transition-colors hover:bg-white/[0.06]"
+              className="pixel-menu-toggle md:hidden flex h-10 w-10 flex-col items-center justify-center gap-1.5 border border-white/[0.08] bg-white/[0.035] shadow-[3px_3px_0_0_var(--pixel-shadow)] transition-colors hover:bg-white/[0.06]"
               aria-label="Toggle menu"
               aria-expanded={mobileMenuOpen}
             >
@@ -429,7 +429,7 @@ function AppHeader() {
         {mobileMenuOpen ? (
           <nav
             key="mobile-menu"
-            className="md:hidden space-y-1 border-t border-white/[0.08] bg-[#07070d]/96 px-4 py-3 animate-slideDown"
+            className="pixel-mobile-menu md:hidden space-y-1 border-t border-white/[0.08] bg-[#07070d]/96 px-4 py-3 animate-slideDown"
           >
             <div className="px-3.5 py-2 text-xs text-[#64748B] uppercase tracking-wider" style={{ fontFamily: "var(--font-departure)" }}>
               0xPixel

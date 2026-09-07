@@ -85,9 +85,20 @@
   color: #051009;
 }
 
-.fi-root :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 1px solid var(--fi-green);
+.fi-root :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--fi-green);
   outline-offset: 2px;
+}
+
+/* Inset rings stay visible inside the terminal's clipped control groups. */
+.fi-root :is(.fi-wallet-menu, .fi-segmented, .fi-mobile-dock) :is(a, button):focus-visible,
+.fi-root :is(.fi-settings-details, .fi-pool-details, .fi-points-program-details, .fi-chart-a11y) > summary:focus-visible,
+.fi-root .fi-swap-asset-trigger:focus-visible {
+  outline-offset: -3px;
+}
+
+.fi-root .fi-segmented button.active:focus-visible {
+  outline-color: currentColor;
 }
 
 .fi-shell {
@@ -252,8 +263,12 @@
   right: 0;
   display: grid;
   width: 224px;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 160px - env(safe-area-inset-bottom));
   border: 1px solid var(--fi-line-strong);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
   background: var(--fi-panel);
   box-shadow: 8px 8px 0 rgba(1, 3, 2, 0.72);
 }
@@ -302,6 +317,17 @@
 .fi-wallet-menu .danger {
   border-bottom: 0;
   color: var(--fi-red);
+}
+
+.fi-wallet-button > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fi-wallet-button > svg {
+  flex: none;
 }
 
 .fi-icon-button.fi-mobile-menu-button,
@@ -769,6 +795,7 @@
 }
 
 .fi-segmented button {
+  min-width: 0;
   min-height: var(--fi-control-height);
   flex: 1;
   border: 0;
@@ -1695,9 +1722,9 @@
     grid-template-columns: auto minmax(190px, 1fr) auto;
   }
 
-  .fi-wordmark,
-  .fi-header-balances,
-  .fi-wallet-actions { grid-column: auto; }
+  .fi-wordmark { grid-column: 1; }
+  .fi-header-balances { grid-column: 2; }
+  .fi-wallet-actions { grid-column: 3; }
 
   .fi-nav-desktop {
     display: none;
@@ -1856,8 +1883,16 @@
 }
 
 @media (pointer: coarse) {
-  :where(.fi-button, .fi-icon-button, .fi-nav a, .fi-nav-mobile a, .fi-segmented button, .fi-slippage-options button, .fi-inline-retry, .fi-toast button) {
+  .fi-root {
+    --fi-control-height: 44px;
+  }
+
+  .fi-root :is(.fi-nav a, .fi-nav-mobile a, .fi-slippage-options button, .fi-inline-retry, .fi-toast button) {
     min-height: 44px;
+  }
+
+  .fi-root :is(.fi-icon-button, .fi-slippage-options button) {
+    min-width: 44px;
   }
 
   .fi-inline-retry,
@@ -3415,6 +3450,8 @@
   display: grid;
   max-height: 360px;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-padding-block: 8px;
   scrollbar-color: var(--fi-line-strong) var(--fi-input);
   scrollbar-width: thin;
 }
@@ -3554,5 +3591,31 @@
 
   .fi-points-redemption-quote {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .fi-field-label-row {
+    flex-wrap: wrap;
+    gap: 4px 12px;
+  }
+
+  .fi-field-label-row > span {
+    max-width: 100%;
+    margin-left: auto;
+  }
+
+  .fi-field-label-row span,
+  .fi-field small {
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
+  }
+}
+
+@media (pointer: coarse) {
+  .fi-root :is(.fi-points-position > .fi-button, .fi-points-program-details > summary, .fi-pool-details > summary, .fi-chart-a11y > summary) {
+    min-height: 44px;
+    padding-block: 10px;
   }
 }

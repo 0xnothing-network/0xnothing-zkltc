@@ -209,7 +209,7 @@ export function FiHeader() {
                   title={address}
                 >
                   <Wallet size={15} aria-hidden="true" />
-                  {shortAddress(address)}
+                  <span>{shortAddress(address)}</span>
                   <CaretDown size={12} aria-hidden="true" />
                 </button>
                 {walletOpen ? (

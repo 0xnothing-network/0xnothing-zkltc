@@ -1588,3 +1588,106 @@ a.pixel-btn-soft-amber {
     transition: none !important;
   }
 }
+
+/* Interaction polish follows the legacy cascade so compact variants retain
+   their pixel treatment while gaining usable touch and keyboard states. */
+.pixel-btn-soft.pixel-refresh-button {
+  padding: 0 !important;
+  display: inline-grid !important;
+  place-items: center;
+}
+
+.pixel-refresh-button > svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.pixel-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.pixel-header-controls,
+.pixel-menu-toggle {
+  flex-shrink: 0;
+}
+
+.pixel-mobile-menu {
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.pixel-btn,
+.pixel-nav,
+.pixel-nav-mobile,
+.pixel-nav-icon,
+.pixel-app-header button,
+.pixel-address-menu [role="menuitem"] {
+  touch-action: manipulation;
+}
+
+/* Inset rings survive the cut corners and the menu's overflow clipping.
+   Black and white keep focus visible on both light and dark pixel controls. */
+.pixel-btn:focus-visible,
+.pixel-btn-soft:focus-visible,
+.pixel-nav:focus-visible,
+.pixel-nav-mobile:focus-visible,
+.pixel-nav-icon:focus-visible,
+.pixel-color-button:focus-visible,
+.canvas-tool-strip button:focus-visible,
+.pixel-app-header :is(a, button):focus-visible,
+.pixel-address-menu [role="menuitem"]:focus-visible {
+  outline: 2px solid #fff !important;
+  outline-offset: -4px;
+  box-shadow: inset 0 0 0 6px #000 !important;
+}
+
+@media (max-width: 767px), (pointer: coarse) {
+  .pixel-btn,
+  .pixel-btn-soft,
+  .pixel-nav,
+  .pixel-nav-mobile,
+  .pixel-nav-icon,
+  .pixel-connect-wallet,
+  .canvas-tool-strip button,
+  .pixel-app-header button,
+  .pixel-address-menu [role="menuitem"] {
+    min-height: 44px !important;
+  }
+
+  .pixel-btn-icon,
+  .pixel-nav-icon,
+  .pixel-menu-toggle {
+    min-width: 44px !important;
+    flex-shrink: 0;
+  }
+}
+
+@media (hover: none), (prefers-reduced-motion: reduce) {
+  .pixel-btn:hover:not(:disabled),
+  .pixel-btn-soft:hover:not(:disabled),
+  .pixel-nav:hover,
+  .pixel-nav-mobile:hover,
+  .pixel-nav-icon:hover,
+  .pixel-app-header button:hover {
+    transform: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pixel-btn,
+  .pixel-btn-soft,
+  .pixel-nav,
+  .pixel-nav-mobile,
+  .pixel-nav-icon,
+  .pixel-app-header *,
+  .pixel-address-menu {
+    transition: none !important;
+    animation: none !important;
+  }
+}

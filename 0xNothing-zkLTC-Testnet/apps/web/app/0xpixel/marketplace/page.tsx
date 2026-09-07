@@ -279,7 +279,7 @@ function MarketplaceBody({ userAddress }: BodyProps) {
           <button
             onClick={handleRefresh}
             aria-busy={loading || undefined}
-            className="pixel-btn-soft pixel-btn-soft-indigo inline-grid h-11 w-11 shrink-0 place-items-center p-0 transition-colors sm:h-10 sm:w-10"
+            className="pixel-btn-soft pixel-btn-soft-indigo pixel-refresh-button inline-grid h-11 w-11 shrink-0 place-items-center p-0 transition-colors sm:h-10 sm:w-10"
             aria-label="Refresh"
             title="Refresh"
           >
