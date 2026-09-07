@@ -36,6 +36,32 @@ const originalNetwork = { id: "litvm", builtin: true };
 const otherNetwork = { id: "other", builtin: false };
 const unlocked = (_name: string, action: () => unknown) => action();
 
+test("live read budgets do not shorten signing transport retries", async () => {
+  type Transport = { timeout: number; retryCount: number };
+  type Client = { transport: Transport };
+  const rpc = evaluate<{
+    publicClient: Client;
+    walletClientFor(address: string): Promise<Client>;
+  }>("../../src/core/rpc/client.ts", {
+    viem: {
+      createPublicClient: (options: Client) => options,
+      createWalletClient: (options: Client) => options,
+      http: (_url: string, options: Transport) => options,
+    },
+    "../../config/networks": {
+      LITVM_NETWORK: originalNetwork,
+      networkIdentity: () => "litvm",
+      viemChainFor: () => ({ id: 4441 }),
+    },
+    "../keyring/vault": { signerFor: async () => owner },
+  });
+  assert.equal(rpc.publicClient.transport.timeout, 5_000);
+  assert.equal(rpc.publicClient.transport.retryCount, 0);
+  const signer = await rpc.walletClientFor(owner);
+  assert.equal(signer.transport.timeout, 15_000);
+  assert.equal(signer.transport.retryCount, 2);
+});
+
 test("profile read clients reuse the active RPC and resolve other profiles without selecting them", () => {
   const original = { ...originalNetwork, rpcUrl: "https://original.invalid" };
   const other = { ...original, rpcUrl: "https://other.invalid" };

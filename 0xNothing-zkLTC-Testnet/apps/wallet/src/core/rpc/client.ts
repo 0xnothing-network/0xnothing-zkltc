@@ -8,9 +8,9 @@ import {
 import { signerFor } from "../keyring/vault";
 
 /**
- * Transport settings mirror apps/web/lib/contract.ts so the wallet behaves
- * exactly like the site against the same RPC: requests inside a 10 ms window
- * are merged into one JSON-RPC batch, and multicall aggregation is on.
+ * Signing retains the existing retry window. Live reads use a shorter budget
+ * below: block polling retries them, so a stalled endpoint must not keep the
+ * wallet's single-flight read queue occupied for three 15-second attempts.
  */
 function transportFor(network: WalletNetwork) {
   return http(network.rpcUrl, {
@@ -24,7 +24,11 @@ function transportFor(network: WalletNetwork) {
 function clientFor(network: WalletNetwork) {
   return createPublicClient({
     chain: viemChainFor(network),
-    transport: transportFor(network),
+    transport: http(network.rpcUrl, {
+      batch: { batchSize: 100, wait: 10 },
+      retryCount: 0,
+      timeout: 5_000,
+    }),
     batch: { multicall: { batchSize: 16_384 } },
   });
 }

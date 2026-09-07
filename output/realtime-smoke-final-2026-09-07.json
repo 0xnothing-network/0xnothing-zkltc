@@ -1,0 +1,26 @@
+[
+  {
+    "path": "/0xFi/swap",
+    "status": 200,
+    "ms": 393,
+    "cache": null
+  },
+  {
+    "path": "/0xFi/api/data/pools",
+    "status": 200,
+    "ms": 12621,
+    "cache": "MISS",
+    "pools": 6,
+    "source": "goldsky",
+    "warning": "RPC tail is temporarily unavailable."
+  },
+  {
+    "path": "/0xFi/api/data/pools",
+    "status": 200,
+    "ms": 22,
+    "cache": "HIT",
+    "pools": 6,
+    "source": "goldsky",
+    "warning": "RPC tail is temporarily unavailable."
+  }
+]

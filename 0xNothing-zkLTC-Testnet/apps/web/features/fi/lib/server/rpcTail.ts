@@ -3,6 +3,7 @@ import "server-only";
 import { createPublicClient, formatUnits, http, parseAbiItem, type Address, type Hex } from "viem";
 import { deployment } from "@fi/config/deployment";
 import { createBoundedCache } from "@/lib/boundedCache";
+import { liveLogClient } from "./liveLogClient";
 
 const MAX_TAIL_BLOCKS = 5_000n;
 const BLOCK_TIMESTAMP_CONCURRENCY = 16;
@@ -35,9 +36,8 @@ const tokenDecimalsAbi = [
 const client = createPublicClient({
   transport: http(deployment.chain.rpcUrl, {
     batch: { batchSize: 100, wait: 10 },
-    retryCount: 2,
-    retryDelay: 300,
-    timeout: 15_000,
+    retryCount: 0,
+    timeout: 5_000,
   }),
 });
 
@@ -105,10 +105,10 @@ async function loadPairTailFromRpc(pool: Address, indexedBlock: number | null): 
   const fromBlock = capped ? latest - MAX_TAIL_BLOCKS + 1n : requestedFromBlock;
 
   const [syncLogs, swapLogs, mintLogs, burnLogs] = await Promise.all([
-    client.getLogs({ address: pool, event: syncEvent, fromBlock, toBlock: latest }),
-    client.getLogs({ address: pool, event: swapEvent, fromBlock, toBlock: latest }),
-    client.getLogs({ address: pool, event: mintEvent, fromBlock, toBlock: latest }),
-    client.getLogs({ address: pool, event: burnEvent, fromBlock, toBlock: latest }),
+    liveLogClient.getLogs({ address: pool, event: syncEvent, fromBlock, toBlock: latest }),
+    liveLogClient.getLogs({ address: pool, event: swapEvent, fromBlock, toBlock: latest }),
+    liveLogClient.getLogs({ address: pool, event: mintEvent, fromBlock, toBlock: latest }),
+    liveLogClient.getLogs({ address: pool, event: burnEvent, fromBlock, toBlock: latest }),
   ]);
 
   const rawEvents = [

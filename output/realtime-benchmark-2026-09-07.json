@@ -1,0 +1,46 @@
+{
+  "kind": "controlled I/O simulation, not production page-load timing",
+  "rpcReadDelayMs": 100,
+  "webMarketReadDelayMs": 300,
+  "results": [
+    {
+      "name": "wallet-price-load",
+      "before": [
+        377,
+        329,
+        316
+      ],
+      "after": [
+        223,
+        221,
+        223
+      ]
+    },
+    {
+      "name": "web-pool-envelope",
+      "before": [
+        664,
+        642,
+        645
+      ],
+      "after": [
+        385,
+        381,
+        362
+      ]
+    },
+    {
+      "name": "wallet-catalog-fallback",
+      "before": [
+        316,
+        314,
+        326
+      ],
+      "after": [
+        210,
+        207,
+        207
+      ]
+    }
+  ]
+}

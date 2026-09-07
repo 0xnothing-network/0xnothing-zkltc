@@ -1,0 +1,20 @@
+[
+  {
+    "sample": 1,
+    "ms": 9725,
+    "status": 200,
+    "cache": "MISS",
+    "pools": 6,
+    "source": "goldsky",
+    "warning": "RPC tail is temporarily unavailable."
+  },
+  {
+    "sample": 2,
+    "ms": 0,
+    "status": 200,
+    "cache": "HIT",
+    "pools": 6,
+    "source": "goldsky",
+    "warning": "RPC tail is temporarily unavailable."
+  }
+]

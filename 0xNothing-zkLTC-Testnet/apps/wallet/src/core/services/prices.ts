@@ -195,10 +195,7 @@ async function fetchPrices(
         ),
       })
     : Promise.resolve(null);
-  const adapter = await adapterPromise;
-
-  const [oracleCalls, pairAddresses, pumpCalls] = await Promise.all([
-    adapter !== null
+  const oraclePromise = adapterPromise.then((adapter) => adapter !== null
       ? client.multicall({
           allowFailure: true,
           contracts: [
@@ -210,9 +207,30 @@ async function fetchPrices(
             { address: adapter, abi: diaOracleAdapterAbi, functionName: "isFresh" },
           ] as const,
         })
-      : null,
-    pairsPromise,
+      : null);
+  // Reserves depend on pair discovery, not on the oracle or Pump response.
+  // Start this branch as soon as its own metadata is ready.
+  const dexPromise = pairsPromise.then(async (pairAddresses) => {
+    const withPair = poolTokens.flatMap((token, index) => {
+      const pair = pairAddresses[index];
+      return pair ? [{ token, pair }] : [];
+    });
+    const [token0s, reserves] = await Promise.all([
+      Promise.all(withPair.map((entry) => token0For(entry.pair, network, client))),
+      withPair.length > 0 ? client.multicall({
+        allowFailure: true,
+        contracts: withPair.map(
+          (entry) =>
+            ({ address: entry.pair, abi: dexPoolAbi, functionName: "getReserves" }) as const,
+        ),
+      }) : Promise.resolve([]),
+    ]);
+    return { withPair, token0s, reserves };
+  });
+  const [oracleCalls, pumpCalls, { withPair, token0s, reserves }] = await Promise.all([
+    oraclePromise,
     pumpPromise,
+    dexPromise,
   ]);
 
   let ltcPriceWad = 0n;
@@ -234,23 +252,7 @@ async function fetchPrices(
     }
   }
 
-  const pairs = poolTokens.map((token, index) => ({ token, pair: pairAddresses[index] ?? null }));
-
-  const withPair = pairs.filter((entry): entry is { token: WalletToken; pair: Address } =>
-    entry.pair !== null,
-  );
   if (withPair.length > 0) {
-    const [token0s, reserves] = await Promise.all([
-      Promise.all(withPair.map((entry) => token0For(entry.pair, network, client))),
-      client.multicall({
-        allowFailure: true,
-        contracts: withPair.map(
-          (entry) =>
-            ({ address: entry.pair, abi: dexPoolAbi, functionName: "getReserves" }) as const,
-        ),
-      }),
-    ]);
-
     withPair.forEach((entry, index) => {
       const token0 = token0s[index]?.toLowerCase();
       const reservesCall = reserves[index];

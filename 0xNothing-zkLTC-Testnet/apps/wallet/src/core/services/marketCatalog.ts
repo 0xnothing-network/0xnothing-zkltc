@@ -463,10 +463,8 @@ function mergeEntries(groups: readonly SwapCatalogEntry[][]): SwapCatalogEntry[]
 async function fetchCatalog(network: WalletNetwork): Promise<SwapCatalog> {
   if (!network.builtin) return { entries: [], changes24h: {}, degraded: false };
   const client = publicClient;
-  const [pumpApi, fiApi] = await Promise.allSettled([
-    boundedJson(`${PUBLIC_APP_URL}/api/pump/markets?limit=${MAX_PUMP_TOKENS}&sort=VOLUME`),
-    boundedJson(`${PUBLIC_APP_URL}/0xFi/api/data/pools`),
-  ]);
+  // Each source keeps API -> indexer -> on-chain precedence, but a slow
+  // source must not prevent the other source from starting its own fallback.
   let pumpEntries: SwapCatalogEntry[] = [];
   let fiEntries: SwapCatalogEntry[] = [];
   let changes24h: Record<string, number> = {};
@@ -475,45 +473,46 @@ async function fetchCatalog(network: WalletNetwork): Promise<SwapCatalog> {
   let fiChangesIndexed = false;
   let usedOnChain = false;
 
-  if (pumpApi.status === "fulfilled") {
+  const pumpLoad = (async () => {
     try {
-      pumpEntries = parsePumpCatalog(pumpApi.value);
+      pumpEntries = parsePumpCatalog(await boundedJson(`${PUBLIC_APP_URL}/api/pump/markets?limit=${MAX_PUMP_TOKENS}&sort=VOLUME`));
       pumpIndexed = true;
     } catch { /* try the public index directly */ }
-  }
-  if (pumpEntries.length === 0) {
-    try {
-      pumpEntries = await pumpCatalogFromGraph();
-      pumpIndexed = true;
-    } catch { /* fall through to bounded on-chain discovery */ }
-  }
-  if (pumpEntries.length === 0) {
-    pumpEntries = await pumpCatalogOnChain(client).catch(() => []);
-    usedOnChain ||= pumpEntries.length > 0;
-  }
+    if (pumpEntries.length === 0) {
+      try {
+        pumpEntries = await pumpCatalogFromGraph();
+        pumpIndexed = true;
+      } catch { /* fall through to bounded on-chain discovery */ }
+    }
+    if (pumpEntries.length === 0) {
+      pumpEntries = await pumpCatalogOnChain(client).catch(() => []);
+      usedOnChain ||= pumpEntries.length > 0;
+    }
+  })();
 
-  if (fiApi.status === "fulfilled") {
+  const fiLoad = (async () => {
     try {
-      const parsed = parseFiCatalog(fiApi.value);
+      const parsed = parseFiCatalog(await boundedJson(`${PUBLIC_APP_URL}/0xFi/api/data/pools`));
       fiEntries = parsed.entries;
       changes24h = parsed.changes24h;
       fiIndexed = true;
       fiChangesIndexed = Object.keys(changes24h).length > 0;
     } catch { /* try the public index directly */ }
-  }
-  if (fiEntries.length === 0 || !fiChangesIndexed) {
-    try {
-      const parsed = await fiCatalogFromGraph();
-      fiEntries = mergeEntries([fiEntries, parsed.entries]);
-      changes24h = { ...parsed.changes24h, ...changes24h };
-      fiIndexed = true;
-      fiChangesIndexed = Object.keys(changes24h).length > 0;
-    } catch { /* fall through to bounded on-chain discovery */ }
-  }
-  if (fiEntries.length === 0) {
-    fiEntries = await fiCatalogOnChain(client).catch(() => []);
-    usedOnChain ||= fiEntries.length > 0;
-  }
+    if (fiEntries.length === 0 || !fiChangesIndexed) {
+      try {
+        const parsed = await fiCatalogFromGraph();
+        fiEntries = mergeEntries([fiEntries, parsed.entries]);
+        changes24h = { ...parsed.changes24h, ...changes24h };
+        fiIndexed = true;
+        fiChangesIndexed = Object.keys(changes24h).length > 0;
+      } catch { /* fall through to bounded on-chain discovery */ }
+    }
+    if (fiEntries.length === 0) {
+      fiEntries = await fiCatalogOnChain(client).catch(() => []);
+      usedOnChain ||= fiEntries.length > 0;
+    }
+  })();
+  await Promise.all([pumpLoad, fiLoad]);
 
   const degraded = usedOnChain || !pumpIndexed || !fiIndexed || !fiChangesIndexed;
   return { entries: mergeEntries([pumpEntries, fiEntries]), changes24h, degraded };

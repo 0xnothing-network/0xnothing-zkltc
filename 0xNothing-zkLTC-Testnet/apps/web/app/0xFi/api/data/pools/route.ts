@@ -17,6 +17,7 @@ import { canonicalOracleMarketForIdentifier, canonicalOracleMarkets } from "@fi/
 import type { DataEnvelope, PoolPoint, PoolTokenPoint } from "@fi/lib/data";
 import { queryGoldsky, unconfiguredEnvelope } from "@fi/lib/server/goldsky";
 import { loadPairTail } from "@fi/lib/server/rpcTail";
+import { liveLogClient } from "@fi/lib/server/liveLogClient";
 import { tokenImageUrl } from "@fi/lib/tokenImage";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { hasPositiveBigInt, nonNegativeBigInt } from "@/lib/integer";
@@ -55,9 +56,10 @@ const pairCreatedEvent = parseAbiItem(
 const client = createPublicClient({
   transport: http(deployment.chain.rpcUrl, {
     batch: { batchSize: 100, wait: 10 },
-    retryCount: 2,
-    retryDelay: 300,
-    timeout: 15_000,
+    // Indexed values and existing warnings are the fallback for display reads.
+    // A refresh must not stall through multiple long RPC retry windows.
+    retryCount: 0,
+    timeout: 5_000,
   }),
 });
 
@@ -404,7 +406,7 @@ async function loadRpcTail(indexedBlock: number | null): Promise<{
   }
   const capped = latest - requestedFrom + 1n > MAX_RPC_TAIL_BLOCKS;
   const fromBlock = capped ? latest - MAX_RPC_TAIL_BLOCKS + 1n : requestedFrom;
-  const logs = await client.getLogs({
+  const logs = await liveLogClient.getLogs({
     address: factory,
     event: pairCreatedEvent,
     fromBlock,
@@ -507,6 +509,30 @@ async function loadFactoryPools(): Promise<PoolPoint[]> {
 }
 
 async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
+  // These reads do not depend on pool discovery. Observe rejections immediately
+  // while the pool branch runs, then preserve the oracle's failure semantics
+  // when its result is consumed below.
+  const since24h = Math.floor(Date.now() / 1000) - 86_400;
+  const marketReads = Promise.allSettled([
+    loadCanonicalOracleSnapshots(),
+    queryGoldsky<CandlesResult, CandleRow[]>(
+      CANDLES_24H_QUERY,
+      { since: since24h.toString() },
+      (data) => data.candles ?? [],
+      [],
+    ).catch(() => undefined),
+  ]);
+  // An unavailable indexer and a capped tail can both request full discovery
+  // in the same response. Reuse that snapshot instead of scanning every pair
+  // twice; a failed scan can still be retried by the later fallback.
+  let factoryPoolsRead: Promise<PoolPoint[]> | undefined;
+  const discoverFactoryPools = (): Promise<PoolPoint[]> => {
+    factoryPoolsRead ??= loadFactoryPools().catch((error) => {
+      factoryPoolsRead = undefined;
+      throw error;
+    });
+    return factoryPoolsRead;
+  };
   try {
     let envelope: DataEnvelope<PoolPoint[]>;
     try {
@@ -526,7 +552,7 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
 
     if (envelope.meta.source === "unconfigured") {
       try {
-        envelope.data = await loadFactoryPools();
+        envelope.data = await discoverFactoryPools();
       } catch (error) {
         console.warn("[0xFi/pools] factory discovery failed:", error);
         envelope.warning = `${envelope.warning ? `${envelope.warning} ` : ""}Factory discovery is temporarily unavailable.`;
@@ -544,7 +570,7 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
       const merged = new Map(envelope.data.map((pool) => [pool.id.toLowerCase(), pool]));
       if (tail.capped) {
         try {
-          const discovered = await loadFactoryPools();
+          const discovered = await discoverFactoryPools();
           for (const pool of discovered) {
             const key = pool.id.toLowerCase();
             if (!merged.has(key)) merged.set(key, pool);
@@ -577,21 +603,18 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
         pool.communityPair = true;
       }
     }
-    const since24h = Math.floor(Date.now() / 1000) - 86_400;
-    const [oracleState, candleEnv] = await Promise.all([
-      loadCanonicalOracleSnapshots(),
-      queryGoldsky<CandlesResult, CandleRow[]>(
-        CANDLES_24H_QUERY,
-        { since: since24h.toString() },
-        (data) => data.candles ?? [],
-        [],
-      ).catch(() => undefined),
+    const [marketResults] = await Promise.all([
+      marketReads,
       (async () => {
         await enrichPumpTokenImages(envelope.data).catch(() => { /* fallback logos remain available */ });
         await enrichRegistryImages(envelope.data).catch(() => { /* registry images are additive */ });
       })(),
       enrichLockBurnBadges(envelope.data).catch(() => { /* lock/burn badges are additive */ }),
     ]);
+    const [oracleResult, candleResult] = marketResults;
+    if (oracleResult.status === "rejected") throw oracleResult.reason;
+    const oracleState = oracleResult.value;
+    const candleEnv = candleResult.status === "fulfilled" ? candleResult.value : undefined;
 
     // Canonical markets are priced by DIA. Reserves remain the source of TVL.
     if (oracleState.failed > 0) {
