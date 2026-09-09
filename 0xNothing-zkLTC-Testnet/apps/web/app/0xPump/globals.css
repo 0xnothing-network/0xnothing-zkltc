@@ -173,7 +173,7 @@
   padding: 0 11px;
 }
 .pump-header-balance + .pump-header-balance { border-left: 1px solid var(--pump-line); }
-.pump-header-balance span { color: var(--pump-muted); font-size: 8px; }
+.pump-header-balance span { color: var(--pump-muted); font-size: 11px; }
 .pump-header-balance strong {
   overflow: hidden;
   color: var(--pump-green);
@@ -225,7 +225,7 @@
   display: block;
   margin-bottom: 8px;
   color: var(--pump-green);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -296,7 +296,7 @@
 .pump-vault-metrics > div:first-child { border-left: 0; padding-left: 18px; }
 .pump-stat-strip span,
 .pump-detail-stats span,
-.pump-vault-metrics span { display: block; margin-bottom: 7px; color: var(--pump-muted); font-size: 9px; text-transform: uppercase; }
+.pump-vault-metrics span { display: block; margin-bottom: 7px; color: var(--pump-muted); font-size: 11px; text-transform: uppercase; }
 .pump-stat-strip strong,
 .pump-detail-stats strong,
 .pump-vault-metrics strong { font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
@@ -374,19 +374,19 @@
 .pump-progress-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .pump-token-logo { position: relative; display: grid; width: 56px; height: 56px; flex: none; place-items: center; overflow: hidden; border: 1px solid var(--pump-line); background: #15191c; color: var(--pump-green); font-size: 13px; }
 .pump-token-logo img { width: 100%; height: 100%; object-fit: cover; }
-.pump-status { display: inline-flex; min-height: 24px; align-items: center; border: 1px solid currentColor; padding: 0 8px; font-size: 8px; font-weight: 700; }
+.pump-status { display: inline-flex; min-height: 24px; align-items: center; border: 1px solid currentColor; padding: 0 8px; font-size: 11px; font-weight: 700; }
 .pump-status-trading { color: var(--pump-green); }
 .pump-status-ready { color: var(--pump-yellow); }
 .pump-status-graduated { color: #9eb9ff; }
 .pump-token-title-row { margin-top: 16px; align-items: flex-start; }
 .pump-token-title-row h3 { overflow: hidden; margin: 0; font-size: 15px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .pump-token-title-row p { margin: 5px 0 0; color: var(--pump-green); font-size: 10px; overflow-wrap: anywhere; }
-.pump-token-age { flex: none; color: var(--pump-muted); font-size: 9px; }
+.pump-token-age { flex: none; color: var(--pump-muted); font-size: 11px; }
 .pump-token-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; margin: 22px 0; }
 .pump-token-metrics div { min-width: 0; }
-.pump-token-metrics dt { margin-bottom: 6px; color: var(--pump-muted); font-size: 9px; text-transform: uppercase; }
+.pump-token-metrics dt { margin-bottom: 6px; color: var(--pump-muted); font-size: 11px; text-transform: uppercase; }
 .pump-token-metrics dd { margin: 0; font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
-.pump-progress-label { margin-bottom: 7px; color: var(--pump-muted); font-size: 8px; text-transform: uppercase; }
+.pump-progress-label { margin-bottom: 7px; color: var(--pump-muted); font-size: 11px; text-transform: uppercase; }
 .pump-progress { height: 4px; overflow: hidden; background: #20252a; }
 .pump-progress span { display: block; height: 100%; background: var(--pump-green); transition: width 250ms ease; }
 .pump-token-grid.pump-trending-grid { grid-template-columns: repeat(3, minmax(0, 360px)); }
@@ -410,9 +410,9 @@
 
 .pump-panel { min-width: 0; border: 1px solid var(--pump-line); background: var(--pump-panel); padding: 22px; }
 .pump-create-grid { display: grid; grid-template-columns: minmax(0, 1000px); justify-content: center; margin-top: 24px; }
-.pump-fee-chip { display: inline-flex; min-height: 28px; align-items: center; border: 1px solid rgba(119,255,177,0.35); padding: 0 10px; color: var(--pump-green); font-size: 9px; }
+.pump-fee-chip { display: inline-flex; min-height: 28px; align-items: center; border: 1px solid rgba(119,255,177,0.35); padding: 0 10px; color: var(--pump-green); font-size: 11px; }
 .pump-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
-.pump-field { display: grid; min-width: 0; gap: 8px; color: var(--pump-muted); font-size: 9px; text-transform: uppercase; }
+.pump-field { display: grid; min-width: 0; gap: 8px; color: var(--pump-muted); font-size: 11px; text-transform: uppercase; }
 .pump-field-wide { grid-column: 1 / -1; }
 .pump-field em { color: #555c63; font-style: normal; }
 .pump-field input,
@@ -420,15 +420,15 @@
 .pump-field input { min-height: 46px; }
 .pump-field input:focus,
 .pump-field textarea:focus { border-color: rgba(119,255,177,0.55); }
-.pump-field > small { justify-self: end; color: #555c63; font-size: 8px; }
+.pump-field > small { justify-self: end; color: #555c63; font-size: 11px; }
 .pump-logo-drop { position: relative; display: flex; min-height: 112px; align-items: center; gap: 18px; border: 1px dashed var(--pump-line-strong); padding: 16px; background: #080a0b; cursor: pointer; }
 .pump-logo-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .pump-logo-drop > span:last-of-type { min-width: 0; }
 .pump-logo-drop strong { display: block; max-width: 360px; overflow: hidden; color: var(--pump-text); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; text-transform: none; }
-.pump-logo-drop small { display: block; margin-top: 7px; color: var(--pump-muted); font-size: 9px; line-height: 1.5; text-transform: none; }
+.pump-logo-drop small { display: block; margin-top: 7px; color: var(--pump-muted); font-size: 11px; line-height: 1.5; text-transform: none; }
 .pump-logo-preview { display: grid; width: 76px; height: 76px; flex: none; place-items: center; overflow: hidden; border: 1px solid var(--pump-line); color: var(--pump-green); }
 .pump-logo-preview img { width: 100%; height: 100%; object-fit: cover; }
-.pump-form-hint { margin: 12px 0; color: var(--pump-muted); font-size: 9px; line-height: 1.6; }
+.pump-form-hint { margin: 12px 0; color: var(--pump-muted); font-size: 11px; line-height: 1.6; }
 
 .pump-vault { margin-top: 14px; }
 .pump-vault-heading { align-items: flex-start; }
@@ -441,7 +441,7 @@
   border: 1px solid var(--pump-line-strong);
   padding: 0 10px;
   color: var(--pump-muted);
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 700;
 }
 .pump-vault-oracle-status[data-state="live"] { border-color: rgba(119, 255, 177, 0.5); color: var(--pump-green); }
@@ -458,10 +458,10 @@
 }
 .pump-vault-oracle-strip > div { min-width: 0; padding: 14px 16px; border: 0; background: #080a0b; }
 .pump-vault-oracle-strip > div:first-child { border-left: 0; }
-.pump-vault-oracle-strip span { display: block; margin-bottom: 7px; color: var(--pump-muted); font-size: 8px; text-transform: uppercase; }
+.pump-vault-oracle-strip span { display: block; margin-bottom: 7px; color: var(--pump-muted); font-size: 11px; text-transform: uppercase; }
 .pump-vault-oracle-strip strong { display: block; overflow-wrap: anywhere; color: var(--pump-text); font-size: 11px; font-weight: 500; }
 .pump-vault-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0 -22px; border-right: 0; border-left: 0; }
-.pump-vault-alert { margin: 16px 0 0; border-left: 2px solid var(--pump-muted); padding: 9px 12px; background: rgba(255, 255, 255, 0.025); color: var(--pump-muted); font-size: 9px; line-height: 1.55; }
+.pump-vault-alert { margin: 16px 0 0; border-left: 2px solid var(--pump-muted); padding: 9px 12px; background: rgba(255, 255, 255, 0.025); color: var(--pump-muted); font-size: 11px; line-height: 1.55; }
 .pump-vault-alert.warning { border-left-color: var(--pump-yellow); color: var(--pump-yellow); }
 .pump-vault-alert button,
 .pump-inline-error button { border: 0; padding: 0 2px; color: inherit; font: inherit; text-decoration: underline; text-underline-offset: 3px; }
@@ -478,22 +478,22 @@
 .pump-vault-form { display: grid; min-width: 0; align-content: start; gap: 16px; }
 .pump-vault-step { gap: 9px; }
 .pump-vault-field-head { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 12px; }
-.pump-vault-field-head label { min-width: 0; color: var(--pump-text); font-size: 9px; }
+.pump-vault-field-head label { min-width: 0; color: var(--pump-text); font-size: 11px; }
 .pump-vault-field-head label span { margin-right: 7px; color: var(--pump-green); }
-.pump-vault-field-head small { min-width: 0; color: var(--pump-muted); font-size: 8px; line-height: 1.45; overflow-wrap: anywhere; text-align: right; text-transform: none; }
-.pump-vault-field-head button { min-height: 32px; flex: none; border: 0; padding: 0 4px; color: var(--pump-green); font: inherit; font-size: 8px; }
+.pump-vault-field-head small { min-width: 0; color: var(--pump-muted); font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; text-align: right; text-transform: none; }
+.pump-vault-field-head button { min-height: 32px; flex: none; border: 0; padding: 0 4px; color: var(--pump-green); font: inherit; font-size: 11px; }
 .pump-vault-field-head button:hover { color: #a8ffcd; }
 .pump-vault-token-field { position: relative; min-width: 0; }
 .pump-vault-token-field input { min-height: 54px; padding-right: 82px; font-size: 18px; font-variant-numeric: tabular-nums; }
 .pump-vault-token-field > strong { position: absolute; top: 50%; right: 13px; color: var(--pump-text); font-size: 10px; font-weight: 500; transform: translateY(-50%); }
-.pump-vault-step > small { justify-self: start; color: var(--pump-muted); font-size: 8px; line-height: 1.5; text-transform: none; }
-.pump-vault-inline-error { margin: 0; border-left: 2px solid var(--pump-red); padding-left: 10px; color: var(--pump-red); font-size: 9px; line-height: 1.55; }
+.pump-vault-step > small { justify-self: start; color: var(--pump-muted); font-size: 11px; line-height: 1.5; text-transform: none; }
+.pump-vault-inline-error { margin: 0; border-left: 2px solid var(--pump-red); padding-left: 10px; color: var(--pump-red); font-size: 11px; line-height: 1.55; }
 .pump-vault-form > .pump-button { width: 100%; min-height: 48px; }
 .pump-vault-preview { min-width: 0; border-left: 1px solid var(--pump-line); padding-left: 24px; }
 .pump-vault-preview dl { display: grid; gap: 0; margin: 20px 0 0; }
 .pump-vault-preview dl > div { display: flex; min-width: 0; justify-content: space-between; gap: 12px; border-top: 1px solid var(--pump-line); padding: 10px 0; }
-.pump-vault-preview dt { color: var(--pump-muted); font-size: 8px; text-transform: uppercase; }
-.pump-vault-preview dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: var(--pump-text); font-size: 9px; text-align: right; }
+.pump-vault-preview dt { color: var(--pump-muted); font-size: 11px; text-transform: uppercase; }
+.pump-vault-preview dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: var(--pump-text); font-size: 11px; text-align: right; }
 .pump-vault-preview-amount {
   display: flex;
   min-width: 0;
@@ -519,12 +519,12 @@
 .pump-token-identity-copy > p { margin: 6px 0 15px; color: var(--pump-green); font-size: 13px; }
 .pump-token-links { display: flex; flex-wrap: wrap; gap: 14px; }
 .pump-token-links a,
-.pump-token-links button { display: inline-flex; min-height: 32px; align-items: center; border: 0; padding: 0 2px; color: var(--pump-muted); font: inherit; font-size: 9px; text-decoration: underline; text-underline-offset: 3px; }
+.pump-token-links button { display: inline-flex; min-height: 32px; align-items: center; border: 0; padding: 0 2px; color: var(--pump-muted); font: inherit; font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
 .pump-token-links a:hover,
 .pump-token-links button:hover { color: var(--pump-text); }
 .pump-token-price { display: grid; justify-items: end; gap: 7px; text-align: right; }
 .pump-token-price span,
-.pump-token-price small { color: var(--pump-muted); font-size: 9px; text-transform: uppercase; }
+.pump-token-price small { color: var(--pump-muted); font-size: 11px; text-transform: uppercase; }
 .pump-token-price strong { max-width: 28ch; font-size: 17px; font-weight: 500; overflow-wrap: anywhere; }
 .pump-detail-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: 16px; }
 .pump-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
@@ -537,7 +537,7 @@
 .pump-periods { margin: 0; }
 .pump-chart { width: 100%; height: 400px; }
 .pump-chart-message { position: absolute; z-index: 2; inset: 66px 0 0; display: grid; margin: 0; place-content: center; gap: 12px; padding: 24px; background: rgba(9, 10, 12, 0.82); color: var(--pump-muted); font-size: 10px; text-align: center; }
-.pump-chart-message button { min-height: 36px; border: 1px solid var(--pump-line-strong); padding: 0 14px; color: var(--pump-text); font: inherit; font-size: 9px; text-transform: uppercase; }
+.pump-chart-message button { min-height: 36px; border: 1px solid var(--pump-line-strong); padding: 0 14px; color: var(--pump-text); font: inherit; font-size: 11px; text-transform: uppercase; }
 .pump-trade-panel { position: sticky; top: 80px; width: 100%; }
 .pump-trade-tabs { width: 100%; margin: 0 0 20px; }
 .pump-trade-tabs button { flex: 1; }
@@ -545,8 +545,8 @@
 .pump-trade-tabs button.active.sell { background: var(--pump-red); color: #160508; }
 .pump-amount-field { display: block; border: 1px solid var(--pump-line); padding: 13px; background: #080a0b; }
 .pump-amount-field > span { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.pump-amount-field > span:first-child { margin-bottom: 12px; color: var(--pump-muted); font-size: 9px; }
-.pump-amount-field button { min-height: 28px; border: 0; padding: 0 2px; color: var(--pump-green); font: inherit; font-size: 8px; }
+.pump-amount-field > span:first-child { margin-bottom: 12px; color: var(--pump-muted); font-size: 11px; }
+.pump-amount-field button { min-height: 28px; border: 0; padding: 0 2px; color: var(--pump-green); font: inherit; font-size: 11px; }
 .pump-amount-field input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--pump-text); font: inherit; font-size: 24px; }
 .pump-amount-field strong { flex: none; font-size: 11px; }
 .pump-amount-output > span:last-child { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
@@ -554,24 +554,24 @@
 .pump-amount-output b { font-size: 11px; font-weight: 500; }
 .pump-quote-arrow { display: grid; width: 28px; height: 28px; margin: -1px auto; place-items: center; border: 1px solid var(--pump-line); background: var(--pump-panel); color: var(--pump-muted); font-size: 12px; }
 .pump-trade-details { display: grid; gap: 12px; margin: 18px 0; }
-.pump-trade-details > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--pump-muted); font-size: 9px; }
+.pump-trade-details > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--pump-muted); font-size: 11px; }
 .pump-trade-details strong { color: var(--pump-text); font-weight: 500; }
 .pump-inline-options { display: flex; gap: 3px; }
-.pump-inline-options button { min-width: 42px; min-height: 30px; border: 1px solid var(--pump-line); padding: 0 7px; color: var(--pump-muted); font: inherit; font-size: 8px; }
+.pump-inline-options button { min-width: 42px; min-height: 30px; border: 1px solid var(--pump-line); padding: 0 7px; color: var(--pump-muted); font: inherit; font-size: 11px; }
 .pump-inline-options button.active { border-color: var(--pump-green); color: var(--pump-green); }
-.pump-trade-details p { margin: 0; border-left: 2px solid var(--pump-yellow); padding-left: 9px; color: var(--pump-yellow); font-size: 9px; line-height: 1.5; }
-.pump-inline-error { margin: 14px 0; border-left: 2px solid var(--pump-red); padding: 8px 10px; background: rgba(255, 102, 125, 0.04); color: var(--pump-red); font-size: 9px; line-height: 1.5; }
+.pump-trade-details p { margin: 0; border-left: 2px solid var(--pump-yellow); padding-left: 9px; color: var(--pump-yellow); font-size: 11px; line-height: 1.5; }
+.pump-inline-error { margin: 14px 0; border-left: 2px solid var(--pump-red); padding: 8px 10px; background: rgba(255, 102, 125, 0.04); color: var(--pump-red); font-size: 11px; line-height: 1.5; }
 .pump-about p { margin: 16px 0; color: #b5bbc0; font-size: 11px; line-height: 1.75; overflow-wrap: anywhere; white-space: pre-wrap; }
-.pump-about small { color: var(--pump-muted); font-size: 8px; }
+.pump-about small { color: var(--pump-muted); font-size: 11px; }
 .pump-graduation-line { margin: 14px 0; border: 1px solid var(--pump-line); padding: 20px; background: var(--pump-panel); }
 .pump-graduation-line > div:first-child { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 12px; font-size: 10px; }
 .pump-graduation-line > .pump-button { margin-top: 14px; }
-.pump-graduation-line p { margin: 12px 0 0; color: var(--pump-muted); font-size: 9px; line-height: 1.6; }
+.pump-graduation-line p { margin: 12px 0 0; color: var(--pump-muted); font-size: 11px; line-height: 1.6; }
 
 .pump-holders { margin-top: 14px; padding: 0; overflow: hidden; }
 .pump-holders > .pump-panel-heading { min-height: 72px; padding: 0 20px; border-bottom: 1px solid var(--pump-line); }
 .pump-holder-heading-meta { display: flex; align-items: center; gap: 14px; }
-.pump-holder-count { color: var(--pump-muted); font-size: 9px; text-transform: uppercase; }
+.pump-holder-count { color: var(--pump-muted); font-size: 11px; text-transform: uppercase; }
 .pump-holder-warning { margin: 14px 20px; }
 .pump-holder-grid { width: 100%; }
 .pump-holder-row {
@@ -585,14 +585,14 @@
   font-size: 10px;
 }
 .pump-holder-row:last-child { border-bottom: 0; }
-.pump-holder-head { min-height: 38px; padding-block: 0; color: var(--pump-muted); font-size: 8px; text-transform: uppercase; }
+.pump-holder-head { min-height: 38px; padding-block: 0; color: var(--pump-muted); font-size: 11px; text-transform: uppercase; }
 .pump-holder-rank { color: var(--pump-muted); }
 .pump-holder-identity { display: grid; min-width: 0; gap: 5px; }
 .pump-holder-identity > a,
 .pump-holder-identity > strong { overflow: hidden; color: var(--pump-text); font-size: 10px; font-style: normal; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .pump-holder-identity > a { display: inline-flex; width: fit-content; min-height: 28px; max-width: 100%; align-items: center; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; }
 .pump-holder-identity > a:hover { color: var(--pump-green); text-decoration-color: currentColor; }
-.pump-holder-identity small { display: flex; min-width: 0; align-items: center; flex-wrap: wrap; gap: 7px; color: var(--pump-muted); font-size: 8px; text-transform: uppercase; }
+.pump-holder-identity small { display: flex; min-width: 0; align-items: center; flex-wrap: wrap; gap: 7px; color: var(--pump-muted); font-size: 11px; text-transform: uppercase; }
 .pump-holder-badge { display: inline-flex; min-height: 20px; align-items: center; border: 1px solid rgba(119, 255, 177, 0.55); padding: 0 6px; color: var(--pump-green); font-size: 7px; font-style: normal; line-height: 1; }
 .pump-holder-badge-system { border-color: rgba(248, 216, 107, 0.55); color: var(--pump-yellow); }
 .pump-holder-balance { min-width: 0; overflow-wrap: anywhere; text-align: right; }
@@ -601,12 +601,12 @@
 
 .pump-history { margin-top: 14px; padding: 0; overflow: hidden; }
 .pump-history > .pump-panel-heading { min-height: 72px; padding: 0 20px; border-bottom: 1px solid var(--pump-line); }
-.pump-source-label { color: var(--pump-muted); font-size: 8px; text-transform: uppercase; }
+.pump-source-label { color: var(--pump-muted); font-size: 11px; text-transform: uppercase; }
 .pump-table-wrap { overflow-x: auto; }
 .pump-table-wrap:focus-visible { outline: 1px solid var(--pump-green); outline-offset: -1px; }
 .pump-table { width: 100%; min-width: 720px; border-collapse: collapse; }
 .pump-table th,
-.pump-table td { height: 48px; border-bottom: 1px solid var(--pump-line); padding: 0 14px; font-size: 9px; text-align: right; white-space: nowrap; }
+.pump-table td { height: 48px; border-bottom: 1px solid var(--pump-line); padding: 0 14px; font-size: 11px; text-align: right; white-space: nowrap; }
 .pump-table th { height: 38px; color: var(--pump-muted); font-weight: 400; text-transform: uppercase; }
 .pump-table th:first-child,
 .pump-table td:first-child { position: sticky; z-index: 1; left: 0; background: var(--pump-panel); text-align: left; }
@@ -618,7 +618,7 @@
   justify-content: center;
   border: 1px solid currentColor;
   padding: 0 6px;
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
 }
@@ -641,7 +641,7 @@
   gap: 8px 22px;
   border-bottom: 1px solid var(--pump-line);
   color: var(--pump-muted);
-  font-size: 9px;
+  font-size: 11px;
   text-transform: uppercase;
 }
 .pump-stats-source span:first-child { color: var(--pump-green); }
@@ -662,7 +662,7 @@
 }
 .pump-stats-primary > div:first-child { border-left: 0; }
 .pump-stats-primary span,
-.pump-dev-claimable > span { color: var(--pump-muted); font-size: 9px; text-transform: uppercase; }
+.pump-dev-claimable > span { color: var(--pump-muted); font-size: 11px; text-transform: uppercase; }
 .pump-stats-primary strong {
   color: var(--pump-text);
   font-size: 26px;
@@ -672,7 +672,7 @@
 }
 .pump-stats-primary-featured strong { color: var(--pump-green); font-size: 32px; }
 .pump-stats-primary small,
-.pump-dev-claimable small { color: var(--pump-muted); font-size: 9px; line-height: 1.5; }
+.pump-dev-claimable small { color: var(--pump-muted); font-size: 11px; line-height: 1.5; }
 .pump-stats-detail-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
@@ -705,13 +705,13 @@
   border-top: 1px solid var(--pump-line);
   padding: 13px 0;
 }
-.pump-stats-list dt { color: var(--pump-muted); font-size: 9px; text-transform: uppercase; }
+.pump-stats-list dt { color: var(--pump-muted); font-size: 11px; text-transform: uppercase; }
 .pump-stats-list dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: var(--pump-text); font-size: 11px; text-align: right; }
 .pump-stats-lifecycle { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 25px; }
 .pump-stats-lifecycle > div { min-width: 0; border-left: 1px solid var(--pump-line); padding: 2px 14px; }
 .pump-stats-lifecycle > div:first-child { border-left: 0; padding-left: 0; }
 .pump-stats-lifecycle strong { display: block; color: var(--pump-text); font-size: 25px; font-weight: 500; }
-.pump-stats-lifecycle span { display: block; margin-top: 7px; color: var(--pump-muted); font-size: 8px; text-transform: uppercase; }
+.pump-stats-lifecycle span { display: block; margin-top: 7px; color: var(--pump-muted); font-size: 11px; text-transform: uppercase; }
 .pump-stats-leaderboard { margin-top: 12px; padding-bottom: 8px; }
 .pump-stats-market-list { margin-top: 18px; }
 .pump-stats-market-list > a {
@@ -724,13 +724,13 @@
   color: var(--pump-text);
 }
 .pump-stats-market-list > a:hover { background: rgba(255, 255, 255, 0.025); }
-.pump-stats-rank { color: var(--pump-green); font-size: 8px; }
+.pump-stats-rank { color: var(--pump-green); font-size: 11px; }
 .pump-stats-market-name { display: block; min-width: 0; }
 .pump-stats-market-name strong,
 .pump-stats-market-name small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pump-stats-market-name strong { font-size: 11px; font-weight: 500; }
-.pump-stats-market-name small { margin-top: 4px; color: var(--pump-green); font-size: 8px; }
-.pump-stats-market-trades { color: var(--pump-muted); font-size: 9px; text-align: right; }
+.pump-stats-market-name small { margin-top: 4px; color: var(--pump-green); font-size: 11px; }
+.pump-stats-market-trades { color: var(--pump-muted); font-size: 11px; text-align: right; }
 .pump-stats-market-volume { font-size: 12px; font-weight: 500; text-align: right; }
 .pump-stats-inline-error { margin: 18px 0 8px; color: var(--pump-red); font-size: 10px; }
 .pump-admin-check-error {
@@ -760,7 +760,7 @@
   border: 1px solid rgba(119, 255, 177, 0.45);
   padding: 0 10px;
   color: var(--pump-green);
-  font-size: 8px;
+  font-size: 11px;
   text-transform: uppercase;
 }
 .pump-dev-fees-grid {
@@ -876,7 +876,7 @@
   .pump-page-heading h1 { font-size: 30px; }
   .pump-stat-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .pump-stat-strip > div { padding: 12px 8px; }
-  .pump-stat-strip span { margin-bottom: 4px; font-size: 9px; letter-spacing: 0.02em; }
+  .pump-stat-strip span { margin-bottom: 4px; font-size: 11px; letter-spacing: 0.02em; }
   .pump-stat-strip strong { font-size: 14px; }
   .pump-market-toolbar,
 .pump-market-controls { align-items: stretch; flex-direction: column; }
@@ -917,7 +917,7 @@
   }
   .pump-trending-grid .pump-token-title-row { margin-top: 10px; }
   .pump-trending-grid .pump-token-title-row h3 { font-size: 12px; line-height: 1.2; white-space: normal; word-break: break-word; }
-  .pump-trending-grid .pump-token-title-row p { margin-top: 2px; font-size: 9px; }
+  .pump-trending-grid .pump-token-title-row p { margin-top: 2px; font-size: 11px; }
   .pump-trending-grid .pump-token-age { display: none; }
   .pump-trending-grid .pump-token-metrics { display: none; }
   .pump-trending-grid .pump-progress-label { margin-bottom: 4px; gap: 4px; font-size: 7px; }
@@ -980,7 +980,7 @@
 @media (max-width: 480px) {
   .pump-wordmark { font-size: 15px; }
   .pump-wallet-actions .pump-button { max-width: 128px; overflow: hidden; padding-inline: 10px; text-overflow: ellipsis; white-space: nowrap; }
-  .pump-nav-mobile .pump-nav-link { min-height: 44px; padding-inline: 4px; font-size: 9px; }
+  .pump-nav-mobile .pump-nav-link { min-height: 44px; padding-inline: 4px; font-size: 11px; }
   .pump-create-form,
 .pump-vault,
 .pump-trade-panel { padding: 16px; }
@@ -991,7 +991,7 @@
   .pump-vault-heading { align-items: flex-start; flex-direction: column; gap: 14px; }
   .pump-vault-oracle-strip { grid-template-columns: 1fr; }
   .pump-vault-metrics { grid-template-columns: 1fr; }
-  .pump-vault-tabs button { padding-inline: 7px; font-size: 9px; }
+  .pump-vault-tabs button { padding-inline: 7px; font-size: 11px; }
   .pump-vault-field-head { align-items: flex-start; flex-direction: column; gap: 7px; }
   .pump-vault-field-head small { white-space: normal; }
   .pump-market-controls { grid-template-columns: 1fr; }
@@ -1037,7 +1037,7 @@
   .pump-holder-head > span:nth-child(3) { display: none; }
   .pump-holder-rank { grid-column: 1; grid-row: 1 / span 2; align-self: center; }
   .pump-holder-identity { grid-column: 2; grid-row: 1; }
-  .pump-holder-balance { grid-column: 2; grid-row: 2; color: var(--pump-muted); font-size: 8px; text-align: left; }
+  .pump-holder-balance { grid-column: 2; grid-row: 2; color: var(--pump-muted); font-size: 11px; text-align: left; }
   .pump-holder-share { grid-column: 3; grid-row: 1 / span 2; align-self: center; }
 }
 
@@ -1047,34 +1047,6 @@
 .pump-amount-field button,
 .pump-vault-field-head button,
 .pump-inline-options button { min-height: 44px; }
-}
-
-header:not(.fi-root header):not(.pump-shell header):not(.nothing-home header) {
-  background: rgba(7, 7, 7, 0.94) !important;
-  border-color: rgba(245, 245, 245, 0.12) !important;
-  backdrop-filter: blur(10px);
-}
-
-main:not(.fi-root main):not(.pump-shell main):not(.nothing-home main) {
-  background-image:
-    radial-gradient(circle at 18% -10%, rgba(255, 255, 255, 0.04), transparent 26rem),
-    radial-gradient(circle at 82% 6%, rgba(255, 255, 255, 0.022), transparent 28rem),
-    linear-gradient(180deg, #050505 0%, #080808 42%, #050505 100%) !important;
-}
-
-main:not(.fi-root main):not(.pump-shell main):not(.nothing-home main) {
-  background-color: var(--px-bg) !important;
-  color: var(--px-ink) !important;
-}
-
-main:not(.fi-root main):not(.pump-shell main):not(.nothing-home main),
-section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section) {
-  color: #ffffff !important;
-}
-
-main:not(.fi-root main):not(.pump-shell main):not(.nothing-home main),
-section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section) {
-  background-color: #000000 !important;
 }
 
 @supports (content-visibility: auto) {
@@ -1231,7 +1203,7 @@ section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section
 
 .pump-portfolio-heading span {
   color: var(--pump-muted);
-  font-size: 9px;
+  font-size: 11px;
   text-transform: uppercase;
 }
 
@@ -1312,7 +1284,7 @@ section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section
   display: block;
   margin-top: 5px;
   color: var(--pump-muted);
-  font-size: 8px;
+  font-size: 11px;
   text-transform: uppercase;
 }
 
@@ -1328,7 +1300,7 @@ section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section
   display: block;
   margin-top: 4px;
   color: var(--pump-text);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0;
   line-height: 1.2;
@@ -1476,7 +1448,7 @@ section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section
 
   .pump-trending-heading .pump-button {
     padding-inline: 14px;
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .pump-trending-grid,
@@ -1508,7 +1480,7 @@ section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section
   }
 
   .pump-stat-strip span {
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .pump-stat-strip strong {
@@ -1591,7 +1563,7 @@ section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section
     min-height: 28px;
     align-self: start;
     padding-inline: 8px;
-    font-size: 8px;
+    font-size: 11px;
   }
 
   .pump-market-section > .pump-token-grid .pump-token-title-row {
@@ -1614,7 +1586,7 @@ section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section
   .pump-market-section > .pump-token-grid .pump-token-age {
     display: block;
     margin-top: 6px;
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .pump-market-section > .pump-token-grid .pump-token-metrics {
@@ -1627,7 +1599,7 @@ section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section
 
   .pump-market-section > .pump-token-grid .pump-token-metrics dt {
     margin-bottom: 4px;
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .pump-market-section > .pump-token-grid .pump-token-metrics dd {
@@ -1643,7 +1615,7 @@ section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section
     grid-row: 3;
     gap: 8px;
     margin-bottom: 7px;
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .pump-market-section > .pump-token-grid .pump-progress {
@@ -1866,7 +1838,7 @@ section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section
     max-width: calc(100% - 38px);
     overflow: hidden;
     padding: 0 4px;
-    font-size: 8px;
+    font-size: 11px;
     line-height: 1;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1889,7 +1861,7 @@ section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section
   .pump-trending-grid .pump-token-title-row p {
     margin-top: 3px;
     overflow: hidden;
-    font-size: 8px;
+    font-size: 11px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -1903,7 +1875,7 @@ section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section
     gap: 4px;
     margin-top: auto;
     margin-bottom: 5px;
-    font-size: 8px;
+    font-size: 11px;
     line-height: 1.1;
   }
 
@@ -1913,7 +1885,7 @@ section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section
 
   .pump-trending-grid .pump-progress-label > span:first-child::after {
     content: "READY";
-    font-size: 8px;
+    font-size: 11px;
   }
 
   .pump-trending-grid .pump-progress {
@@ -1956,7 +1928,7 @@ section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section
   .pump-market-controls .pump-segmented button {
     min-width: 0;
     padding-inline: 2px;
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .pump-market-controls .pump-sort-select {
@@ -2007,4 +1979,208 @@ section:not(.fi-root section):not(.pump-shell section):not(.nothing-home section
     margin-inline: auto;
     grid-template-columns: minmax(0, 1fr) minmax(120px, 144px);
   }
+}
+/* Pixel workspace: readable market data, square frames and stepped feedback. */
+.pump-shell :is(.pump-button,.pump-menu-button,.pump-panel,.pump-token-card,.pump-stats-section,.pump-portfolio-list) {
+  box-shadow: 3px 3px 0 #050607;
+}
+.pump-shell :is(button,a,input,select,textarea) { transition-timing-function: steps(2, end); }
+.pump-shell .pump-button:active:not(:disabled),
+.pump-shell .pump-menu-button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #050607; }
+.pump-shell :is(.pump-button,.pump-menu-button,.pump-nav-link,.pump-segmented button,.pump-inline-options button):focus-visible {
+  outline: 2px solid var(--pump-green);
+  outline-offset: 3px;
+}
+.pump-shell .pump-token-card:hover { transform: translate(-2px,-2px); box-shadow: 4px 4px 0 #050607; }
+.pump-shell .pump-progress span { transition-timing-function: steps(8, end); }
+.pump-shell :is(.pump-token-logo,.pump-detail-logo,.pump-portfolio-logo,.pump-logo-preview) img { image-rendering: auto; }
+@media (hover: none) {
+  .pump-shell .pump-token-card:hover { transform: none; box-shadow: 3px 3px 0 #050607; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pump-shell .pump-token-card,
+  .pump-shell .pump-progress span,
+  .pump-shell :is(button,a,input,select,textarea) { transition: none !important; }
+}
+.pump-shell {
+  --pump-bg: #101113;
+  --pump-panel: #181a1d;
+  --pump-panel-2: #202328;
+  --pump-input: #121416;
+  --pump-line: #363b40;
+  --pump-line-strong: #67716d;
+  --pump-text: #f1f2f3;
+  --pump-muted: #a6adb7;
+  --pump-green: #91efb1;
+  --pump-content: 1320px;
+  font-family: var(--font-departure), monospace;
+  -webkit-font-smoothing: auto;
+}
+.pump-shell :is(h1,h2,h3) { letter-spacing: 0; text-wrap: balance; }
+.pump-shell :is(.pump-eyebrow,.pump-status,.pump-token-metrics,.pump-detail-stats,.pump-stat-strip,.pump-stats-primary,.pump-table,.pump-header-balances,.pump-portfolio-value,.pump-token-price) { font-family: var(--font-departure), monospace; font-variant-numeric: tabular-nums; }
+.pump-shell .pump-header { background: var(--pump-bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.pump-header-inner { min-height: 76px; gap: 24px; }
+.pump-wordmark { font-size: 20px; letter-spacing: 0; }
+.pump-shell .pump-nav-desktop { padding: 4px; border: 1px solid var(--pump-line) !important; border-radius: 0; background: var(--pump-panel) !important; }
+.pump-shell .pump-nav-link { border-radius: 0; font-size: 12px; text-transform: none; font-weight: 600; }
+.pump-shell .pump-nav-link.active { background: var(--pump-panel-2) !important; color: var(--pump-green) !important; }
+.pump-shell .pump-nav-mobile { background: var(--pump-bg) !important; padding-block: 10px; gap: 5px; }
+.pump-header-balances { border: 0; gap: 12px; }
+.pump-header-balance { display: grid; gap: 5px; padding-inline: 8px; }
+.pump-header-balance span { font-size: 10px; }
+.pump-header-balance strong { font-size: 12px; }
+.pump-page { padding-block: 36px 72px; }
+.pump-shell :is(.pump-button,.pump-menu-button,.pump-search,.pump-sort-select select,.pump-field input,.pump-field textarea,.pump-inline-options button) { border-radius: 0; }
+.pump-button { font-size: 12px; text-transform: none; min-height: 44px; }
+.pump-shell :is(.pump-panel,.pump-token-card,.pump-stats-section,.pump-dev-fees,.pump-notice,.pump-empty-state,.pump-graduation-line) { border-radius: 0; }
+.pump-page-heading { padding-block: 12px 30px; gap: 28px; }
+.pump-page-heading h1,.pump-token-identity h1 { font-size: clamp(26px,3.2vw,36px); font-weight: 600; line-height: 1.08; }
+.pump-page-heading p { font-size: 14px; line-height: 1.65; }
+.pump-eyebrow { font-size: 10px; letter-spacing: .09em; }
+.pump-trending-section { padding-block: 4px 30px; }
+.pump-trending-heading h1 { font-size: clamp(24px,2.5vw,30px); font-weight: 600; }
+.pump-trending-grid { margin-top: 24px; }
+.pump-token-grid.pump-trending-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.pump-trending-grid .pump-token-card { border-color: var(--pump-line-strong); padding: 22px; }
+.pump-token-card { padding: 24px; transition: border-color 120ms steps(2, end),background-color 120ms steps(2, end),transform 120ms steps(2, end); }
+.pump-token-card:hover { background: var(--pump-panel-2); border-color: rgba(155,227,181,.45); }
+.pump-token-logo,.pump-detail-logo,.pump-portfolio-logo,.pump-logo-preview { border-radius: 0; }
+.pump-status { border-color: currentColor; border-radius: 0; background: var(--pump-panel-2); font-size: 11px; }
+.pump-token-title-row h3 { font-size: 16px; font-weight: 500; }
+.pump-token-title-row p { font-size: 12px; }
+.pump-token-age,.pump-token-metrics dt,.pump-progress-label { font-size: 10px; }
+.pump-token-metrics dd { font-size: 14px; }
+.pump-progress { height: 5px; border-radius: 0; }
+.pump-market-section { padding-top: 30px; }
+.pump-market-toolbar { margin-bottom: 20px; }
+.pump-market-toolbar h2,.pump-section-heading h2,.pump-panel-heading h2 { font-size: 20px; font-weight: 500; }
+.pump-search input,.pump-sort-select select { font-size: 13px; }
+.pump-search { min-height: 48px; }
+.pump-segmented { border-radius: 0; padding: 4px; gap: 3px; }
+.pump-segmented button { border-radius: 0; font-size: 12px; min-height: 38px; }
+.pump-stat-strip,.pump-detail-stats,.pump-stats-primary { overflow: hidden; border-radius: 0; margin-top: 20px; }
+.pump-stat-strip > div,.pump-detail-stats > div { padding: 21px; }
+.pump-stat-strip span,.pump-detail-stats span,.pump-vault-metrics span { font-size: 10px; }
+.pump-stat-strip strong,.pump-detail-stats strong,.pump-vault-metrics strong { font-size: 19px; }
+.pump-panel { padding: 26px; }
+.pump-empty-state { min-height: 230px; border-style: solid; background: var(--pump-panel); }
+.pump-empty-state p,.pump-empty-inline,.pump-notice p { font-size: 13px; line-height: 1.7; }
+.pump-empty-inline { padding: 22px; border: 1px solid var(--pump-line); border-radius: 0; background: var(--pump-panel); }
+.pump-create-page { max-width: 1080px; }
+.pump-create-grid { margin-top: 30px; }
+.pump-create-form { padding: clamp(22px,4vw,42px); }
+.pump-form-grid { gap: 24px; margin-top: 30px; }
+.pump-field { gap: 10px; font-size: 12px; text-transform: none; font-weight: 500; }
+.pump-field input,.pump-field textarea { min-height: 50px; padding: 14px 16px; font-size: 15px; line-height: 1.5; }
+.pump-field > small,.pump-form-hint { font-size: 11px; color: var(--pump-muted); }
+.pump-logo-drop { min-height: 146px; padding: 24px; border-radius: 0; background: var(--pump-input); }
+.pump-logo-drop strong { font-size: 14px; }
+.pump-logo-drop small,.pump-fee-chip { font-size: 11px; }
+.pump-fee-chip { border-radius: 0; }
+.pump-token-identity { padding-block: 28px; }
+.pump-token-price strong { font-size: 26px; }
+.pump-token-price span,.pump-token-price small,.pump-token-links :is(a,button),.pump-back-link { font-size: 12px; }
+.pump-detail-grid { gap: 20px; margin-top: 22px; }
+.pump-chart-panel,.pump-history,.pump-holders { padding: 0; }
+.pump-chart-heading { padding: 20px; }
+.pump-trade-panel { top: 96px; }
+.pump-amount-field { border-radius: 0; background: var(--pump-input); padding: 17px; }
+.pump-amount-field > span:first-child,.pump-trade-details > div,.pump-trade-details p,.pump-inline-error,.pump-graduation-line p { font-size: 12px; }
+.pump-amount-field input { font-size: 26px; }
+.pump-about p { font-size: 14px; }
+.pump-table th,.pump-table td { font-size: 11px; height: 52px; }
+.pump-holder-row,.pump-holder-identity > a,.pump-holder-identity > strong { font-size: 12px; }
+.pump-holder-head,.pump-holder-identity small,.pump-source-label { font-size: 10px; }
+.pump-table tbody tr:hover { background: rgba(255,255,255,.025); }
+.pump-portfolio-page { max-width: 1120px; }
+.pump-portfolio-heading > div { align-items: flex-start; flex-direction: column; gap: 12px; }
+.pump-portfolio-heading span { font-size: 11px; letter-spacing: .08em; }
+.pump-portfolio-page .pump-portfolio-section { padding-top: 30px; }
+.pump-portfolio-page .pump-section-heading { margin-bottom: 18px; }
+.pump-portfolio-page .pump-section-heading h2 { font-size: 23px; }
+.pump-portfolio-list { overflow: hidden; border: 1px solid var(--pump-line); border-radius: 0; background: var(--pump-panel); }
+.pump-portfolio-row { min-height: 88px; padding: 16px 22px; }
+.pump-portfolio-row:last-child { border-bottom: 0; }
+.pump-portfolio-identity strong,.pump-portfolio-value strong { font-size: 14px; }
+.pump-portfolio-identity small,.pump-portfolio-value small,.pump-portfolio-current-value { font-size: 11px; }
+.pump-stats-primary > div { background: var(--pump-panel); padding: 24px; min-height: 170px; }
+.pump-stats-primary strong { font-size: 32px; }
+.pump-stats-primary span,.pump-stats-primary small,.pump-stats-source,.pump-stats-list dt { font-size: 11px; }
+.pump-stats-list dd,.pump-stats-market-name strong { font-size: 14px; }
+.pump-stats-detail-grid { gap: 20px; margin-top: 20px; }
+.pump-stats-leaderboard { margin-top: 20px; }
+.pump-vault-oracle-strip strong { font-size: 13px; }
+.pump-vault-oracle-strip span,.pump-vault-alert { font-size: 11px; }
+@media (max-width: 1040px) {
+  .pump-token-grid.pump-trending-grid { grid-template-columns: repeat(3,minmax(250px,1fr)); grid-auto-flow: row; overflow-x: auto; padding-bottom: 8px; }
+  .pump-trade-panel { position: static; }
+}
+@media (max-width: 640px) {
+  .pump-page { width: calc(100% - 32px); padding-top: 24px; }
+  .pump-header-inner { width: calc(100% - 32px); min-height: 70px; }
+  .pump-nav-mobile { grid-template-columns: repeat(6,minmax(0,1fr)); }
+  .pump-page-heading { align-items: flex-start; gap: 18px; }
+  .pump-panel { padding: 20px; }
+  .pump-chart-panel,.pump-history,.pump-holders { padding: 0; }
+  .pump-trending-heading h1 { font-size: 26px; }
+  /* Three compact cards remain visible together on mobile. */
+  .pump-token-grid.pump-trending-grid,
+  .pump-trending-section .pump-loading-state .pump-token-grid {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    overflow: visible;
+    scroll-snap-type: none;
+    padding: 0;
+  }
+  .pump-trending-grid .pump-token-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    padding: 10px 8px;
+    gap: 8px;
+  }
+  .pump-trending-grid .pump-token-card-head { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+  .pump-trending-grid .pump-token-logo { width: 48px; height: 48px; }
+  .pump-trending-grid .pump-status {
+    position: static;
+    max-width: 100%;
+    min-height: 19px;
+    padding-inline: 3px;
+    font-size: 9px;
+  }
+  .pump-trending-grid .pump-token-title-row { display: block; margin: 0; }
+  .pump-trending-grid .pump-token-title-row h3 { font-size: 12px; line-height: 1.4; min-height: 0; white-space: nowrap; }
+  .pump-trending-grid .pump-token-title-row p { margin-top: 3px; font-size: 10px; }
+  .pump-trending-grid .pump-token-age { display: none; }
+  .pump-trending-grid .pump-token-metrics {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    margin: 2px 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--pump-line);
+  }
+  .pump-trending-grid .pump-token-metrics dt { font-size: 9px; margin-bottom: 3px; }
+  .pump-trending-grid .pump-token-metrics dd { font-size: 11px; overflow-wrap: anywhere; }
+  .pump-trending-grid .pump-progress-label { margin: auto 0 0; justify-content: flex-end; font-size: 10px; }
+  .pump-trending-grid .pump-progress-label > span:first-child { display: none; }
+  .pump-trending-grid .pump-token-metrics > div:not(:nth-child(2)),
+  .pump-trending-grid .pump-progress-label,
+  .pump-trending-grid .pump-progress { display: none; }
+  .pump-market-toolbar h2 { display: block; font-size: 23px; }
+  .pump-market-controls { width: 100%; grid-template-columns: 120px minmax(0,1fr); }
+  .pump-market-controls .pump-segmented { grid-column: 1 / -1; }
+  .pump-market-controls .pump-sort-select { grid-column: 1; grid-row: 2; }
+  .pump-market-controls .pump-search { grid-column: 2; grid-row: 2; }
+  .pump-market-controls .pump-segmented button { font-size: 12px; }
+  .pump-form-grid { gap: 20px; }
+  .pump-field input,.pump-field textarea { font-size: 16px; }
+  .pump-logo-drop { padding: 16px; }
+  .pump-portfolio-row { padding: 16px; }
+  .pump-portfolio-value strong { white-space: normal; overflow-wrap: anywhere; }
+  .pump-stats-primary strong { font-size: 24px; }
+  .pump-stats-detail-grid { gap: 14px; }
 }

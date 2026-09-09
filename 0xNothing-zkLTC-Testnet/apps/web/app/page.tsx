@@ -63,7 +63,6 @@ export default function Home() {
 
       <main className="nothing-main relative z-10 flex min-h-[calc(100dvh-147px)] items-center px-5 py-20 sm:px-6">
         <section className="nothing-stage mx-auto w-full max-w-5xl text-center">
-          <div className="nothing-crosshair" aria-hidden="true" />
           <h1 className="nothing-title">
             <span>Nothing</span>
             <span>to everything</span>

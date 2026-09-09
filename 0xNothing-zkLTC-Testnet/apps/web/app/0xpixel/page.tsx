@@ -100,8 +100,8 @@ export default function PixelPage() {
 
   return (
     <div style={{ fontFamily: "var(--font-departure)" }}>
-      <section className="relative overflow-hidden border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-4 pt-7 pb-6 text-center relative sm:px-5 sm:pt-12 sm:pb-10">
+      <section className="pixel-studio-intro relative overflow-hidden border-b border-white/5">
+        <div className="pixel-studio-intro-inner max-w-7xl mx-auto px-4 pt-7 pb-6 relative sm:px-5 sm:pt-12 sm:pb-10">
           <h1
             className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-3 sm:mb-4 tracking-tight leading-tight hero-fade-in text-balance"
             style={{ fontFamily: "var(--font-departure)" }}
@@ -120,9 +120,9 @@ export default function PixelPage() {
         </div>
       </section>
 
-      <main className="max-w-7xl mx-auto px-3 pt-4 pb-24 sm:px-5 sm:pt-8 sm:pb-16">
-        <div className="grid xl:grid-cols-[300px_minmax(0,1fr)_380px] gap-4 sm:gap-6 items-start">
-          <div className="order-2 xl:order-1">
+      <main className="pixel-workspace max-w-7xl mx-auto px-3 pt-4 pb-24 sm:px-5 sm:pt-8 sm:pb-16">
+        <div className="pixel-workspace-grid grid gap-4 sm:gap-6 items-start">
+          <div className="pixel-tools-column order-2 xl:order-1">
             <div className="xl:sticky xl:top-20">
               <Toolbar
                 selectedColor={selectedColor}
@@ -134,7 +134,7 @@ export default function PixelPage() {
             </div>
           </div>
 
-          <div className="order-1 xl:order-2 flex min-w-0 justify-center">
+          <div className="pixel-drawing-column order-1 xl:order-2 flex min-w-0 justify-center">
             <Canvas
               gridSize={gridSize}
               pixelData={pixelData}
@@ -147,7 +147,7 @@ export default function PixelPage() {
             />
           </div>
 
-          <div className="order-3 space-y-4">
+          <div className="pixel-publish-column order-3 space-y-4">
             <MintPanel
               pixelData={deferredPixelData}
               gridSize={gridSize}

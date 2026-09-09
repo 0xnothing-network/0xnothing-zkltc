@@ -15,24 +15,24 @@
  * "Заблокировать сейчас" and "今すぐロック" without a per-locale rule.
  */
 .w-root {
-  --fi-bg: #050806;
-  --fi-panel: #0a100c;
-  --fi-panel-2: #101812;
-  --fi-input: #060a07;
-  --fi-line: rgba(177, 232, 201, 0.11);
-  --fi-line-strong: rgba(177, 232, 201, 0.24);
-  --fi-text: #edf5f0;
-  --fi-muted: #8d9c94;
-  --fi-dim: #59665f;
-  --fi-green: #8ee9b8;
-  --fi-green-hover: #b5f0ce;
+  --fi-bg: #101113;
+  --fi-panel: #181a1d;
+  --fi-panel-2: #202328;
+  --fi-input: #141619;
+  --fi-line: rgba(207, 218, 231, 0.09);
+  --fi-line-strong: rgba(207, 218, 231, 0.17);
+  --fi-text: #f1f2f3;
+  --fi-muted: #a6adb7;
+  --fi-dim: #848d99;
+  --fi-green: #a0dbb8;
+  --fi-green-hover: #b8e8cb;
   --fi-red: #ff8f9f;
   --fi-yellow: #d8c98d;
-  --fi-blue: #c6d0ca;
-  --fi-control-height: 42px;
-  --fi-text-label: 10px;
-  --fi-text-body: 11px;
-  --fi-text-data: 12px;
+  --fi-blue: #c6ccd5;
+  --fi-control-height: 44px;
+  --fi-text-label: 11px;
+  --fi-text-body: 13px;
+  --fi-text-data: 13px;
   --w-gutter: 14px;
   --w-nav-height: 52px;
   position: relative;

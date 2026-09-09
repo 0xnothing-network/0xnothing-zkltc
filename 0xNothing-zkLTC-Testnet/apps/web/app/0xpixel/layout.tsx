@@ -1,6 +1,7 @@
 import { PixelHeader } from "@/features/pixel/components/PixelHeader";
 import { Providers } from "@/app/providers";
 import "./globals.css";
+import "./product.css";
 
 export default function PixelLayout({
   children,
@@ -9,8 +10,10 @@ export default function PixelLayout({
 }) {
   return (
     <Providers>
-      <PixelHeader />
-      {children}
+      <div className="pixel-product">
+        <PixelHeader />
+        {children}
+      </div>
     </Providers>
   );
 }

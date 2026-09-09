@@ -53,8 +53,8 @@ export default function GalleryPage() {
   }, [data, sort]);
 
   return (
-    <div className="min-h-[calc(100vh-64px)] px-3 py-6 sm:px-5 sm:py-10 max-w-7xl mx-auto" style={{ fontFamily: "var(--font-departure)" }}>
-      <div className="mb-6 sm:mb-10 flex items-end justify-between flex-wrap gap-4">
+    <div className="pixel-collection-page min-h-[calc(100vh-64px)] px-3 py-6 sm:px-5 sm:py-10 max-w-7xl mx-auto" style={{ fontFamily: "var(--font-departure)" }}>
+      <div className="pixel-collection-heading mb-6 sm:mb-10 flex items-end justify-between flex-wrap gap-4">
         <div>
           <h1
             className="hero-fade-in text-2xl sm:text-4xl font-bold text-white mb-2"
@@ -151,7 +151,7 @@ export default function GalleryPage() {
 
 function NotConnected() {
   return (
-    <div className="animate-fadeInUp text-center py-20">
+    <div className="pixel-collection-empty animate-fadeInUp text-center py-20">
       <h2
         className="text-xl font-bold text-white mb-2"
         style={{ fontFamily: "var(--font-departure)" }}
@@ -170,7 +170,7 @@ function NotConnected() {
 
 function EmptyState() {
   return (
-    <div className="animate-fadeInUp text-center py-20">
+    <div className="pixel-collection-empty animate-fadeInUp text-center py-20">
       <div className="w-24 h-24 mx-auto mb-6 bg-[#1A1A2E] rounded-2xl flex items-center justify-center border border-[#2D2D44]">
         <svg
           width="48"

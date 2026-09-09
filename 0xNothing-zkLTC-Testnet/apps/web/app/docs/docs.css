@@ -1,22 +1,22 @@
 .ox-docs-root {
-  --docs-bg: #070908;
-  --docs-panel: #0b0f0d;
-  --docs-panel-strong: #101612;
-  --docs-line: rgba(211, 255, 231, 0.12);
-  --docs-line-strong: rgba(211, 255, 231, 0.22);
-  --docs-text: #eff8f2;
-  --docs-muted: #93a49a;
-  --docs-faint: #627068;
-  --docs-accent: #9be7c4;
-  --docs-accent-ink: #06100b;
+  --docs-bg: #101113;
+  --docs-panel: #181a1d;
+  --docs-panel-strong: #202328;
+  --docs-line: #30343a;
+  --docs-line-strong: #565e68;
+  --docs-text: #f1f2f3;
+  --docs-muted: #a6adb7;
+  --docs-faint: #929ba7;
+  --docs-accent: #b8e8cb;
+  --docs-accent-ink: #101113;
   min-height: 100dvh;
   background:
-    linear-gradient(rgba(155, 231, 196, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(155, 231, 196, 0.025) 1px, transparent 1px),
+    linear-gradient(rgba(211, 220, 231, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(211, 220, 231, 0.025) 1px, transparent 1px),
     var(--docs-bg);
   background-size: 40px 40px;
   color: var(--docs-text);
-  font-family: var(--font-departure), var(--font-mono), ui-monospace, monospace;
+  font-family: var(--font-departure), monospace;
   color-scheme: dark;
 }
 
@@ -46,8 +46,8 @@
   z-index: 20;
   height: 64px;
   border-bottom: 1px solid var(--docs-line-strong);
-  background: rgba(7, 9, 8, 0.96);
-  backdrop-filter: blur(14px);
+  background: var(--docs-bg);
+  backdrop-filter: none;
 }
 
 .ox-docs-topbar-inner {
@@ -78,7 +78,7 @@
 }
 
 .ox-docs-brand span {
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -87,7 +87,7 @@
   border-left: 1px solid var(--docs-line-strong);
   padding-left: 10px;
   color: var(--docs-accent);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -101,7 +101,7 @@
 
 .ox-docs-network-label {
   color: var(--docs-muted);
-  font-size: 9px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -118,20 +118,20 @@
   padding: 0 14px;
   background: var(--docs-accent);
   color: var(--docs-accent-ink);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-decoration: none;
   text-transform: uppercase;
   white-space: nowrap;
-  transition: transform 130ms ease, background-color 130ms ease, border-color 130ms ease;
+  transition: transform 120ms steps(2, end), background-color 120ms steps(2, end), border-color 120ms steps(2, end);
 }
 
 .ox-docs-topbar nav a:hover,
 .ox-docs-hero-actions a:hover,
 .ox-docs-footer-actions a:hover {
-  background: #c3f3da;
-  border-color: #c3f3da;
+  background: #ffffff;
+  border-color: #ffffff;
   transform: translate(-1px, -1px);
 }
 
@@ -160,7 +160,7 @@
   gap: 32px;
   border-right: 1px solid var(--docs-line);
   padding: 34px 22px 26px 24px;
-  background: rgba(7, 9, 8, 0.76);
+  background: rgba(16, 17, 19, 0.76);
 }
 
 .ox-docs-nav-group + .ox-docs-nav-group {
@@ -171,7 +171,7 @@
   display: block;
   margin-bottom: 9px;
   color: var(--docs-faint);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -184,16 +184,16 @@
   border-left: 1px solid transparent;
   padding: 0 10px;
   color: var(--docs-muted);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.3;
   text-decoration: none;
-  transition: border-color 120ms ease, color 120ms ease, background-color 120ms ease;
+  transition: border-color 120ms steps(2, end), color 120ms steps(2, end), background-color 120ms steps(2, end);
 }
 
 .ox-docs-nav-group a:hover,
 .ox-docs-nav-group a:focus-visible {
   border-left-color: var(--docs-accent);
-  background: rgba(155, 231, 196, 0.045);
+  background: rgba(211, 220, 231, 0.045);
   color: var(--docs-text);
 }
 
@@ -207,14 +207,14 @@
 .ox-docs-sidebar-meta span,
 .ox-docs-sidebar-meta small {
   color: var(--docs-faint);
-  font-size: 8px;
+  font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 .ox-docs-sidebar-meta strong {
   color: var(--docs-text);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -250,7 +250,7 @@
   align-items: center;
   gap: 8px;
   color: var(--docs-accent);
-  font-size: 9px;
+  font-size: 12px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -259,7 +259,7 @@
   max-width: 690px;
   margin: 22px 0 0;
   color: var(--docs-text);
-  font-size: clamp(42px, 5.4vw, 70px);
+  font-size: clamp(32px, 4vw, 40px);
   font-weight: 400;
   letter-spacing: -0.065em;
   line-height: 0.94;
@@ -321,14 +321,14 @@
 
 .ox-docs-hero dt {
   color: var(--docs-faint);
-  font-size: 8px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .ox-docs-hero dd {
   color: var(--docs-text);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .ox-docs-warning {
@@ -350,14 +350,14 @@
 }
 
 .ox-docs-warning strong {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
 }
 
 .ox-docs-warning span {
   color: #b5ab8b;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -429,14 +429,14 @@
 
 .ox-docs-flow strong {
   color: var(--docs-accent);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
 }
 
 .ox-docs-flow span {
   color: var(--docs-muted);
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -444,7 +444,7 @@
   overflow: hidden;
   border: 1px solid var(--docs-line-strong);
   margin: 24px 0 0;
-  background: #050706;
+  background: #121416;
 }
 
 .ox-docs-code figcaption {
@@ -461,13 +461,13 @@
   overflow-wrap: anywhere;
   padding-block: 8px;
   color: var(--docs-text);
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .ox-docs-code-language {
   margin-left: 12px;
   color: var(--docs-faint);
-  font-size: 8px;
+  font-size: 12px;
   text-transform: uppercase;
 }
 
@@ -488,14 +488,14 @@
   color: var(--docs-muted);
   cursor: pointer;
   font: inherit;
-  font-size: 8px;
+  font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  transition: background-color 120ms ease, color 120ms ease;
+  transition: background-color 120ms steps(2, end), color 120ms steps(2, end);
 }
 
 .ox-docs-code button:hover {
-  background: rgba(155, 231, 196, 0.07);
+  background: rgba(211, 220, 231, 0.07);
   color: var(--docs-accent);
 }
 
@@ -504,9 +504,9 @@
   overflow: auto;
   margin: 0;
   padding: 20px;
-  color: #c9e2d4;
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 11px;
+  color: #d4dae3;
+  font-family: var(--font-departure), monospace;
+  font-size: 13px;
   line-height: 1.72;
   tab-size: 2;
   overscroll-behavior-x: contain;
@@ -533,7 +533,7 @@
   margin: 0;
   padding: 0 0 11px;
   color: var(--docs-text);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   text-transform: uppercase;
 }
@@ -552,13 +552,13 @@
 
 .ox-docs-contract strong {
   color: var(--docs-text);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
 }
 
 .ox-docs-contract span {
   color: var(--docs-faint);
-  font-size: 8px;
+  font-size: 12px;
   line-height: 1.4;
 }
 
@@ -569,7 +569,7 @@
   align-items: center;
   gap: 6px;
   color: var(--docs-accent);
-  font-size: 8px;
+  font-size: 12px;
   text-decoration: none;
 }
 
@@ -597,7 +597,7 @@
   padding: 15px;
   color: var(--docs-text);
   cursor: pointer;
-  font-size: 10px;
+  font-size: 12px;
   text-transform: uppercase;
 }
 
@@ -622,7 +622,7 @@
 
 .ox-docs-pool-addresses > div > span {
   color: var(--docs-muted);
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .ox-docs-ecosystem-map {
@@ -650,13 +650,13 @@
 
 .ox-docs-ecosystem-map strong {
   color: var(--docs-text);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
 }
 
 .ox-docs-ecosystem-map span {
   color: var(--docs-muted);
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.65;
 }
 
@@ -687,7 +687,7 @@
 .ox-docs-universe-grid strong,
 .ox-docs-fi-surfaces strong {
   color: var(--docs-text);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -695,7 +695,7 @@
 .ox-docs-universe-grid p {
   margin: 10px 0 0;
   color: var(--docs-muted);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.7;
 }
 
@@ -711,13 +711,13 @@
 
 .ox-docs-spec-line span {
   color: var(--docs-faint);
-  font-size: 9px;
+  font-size: 12px;
   text-transform: uppercase;
 }
 
 .ox-docs-spec-line strong {
   color: var(--docs-text);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -727,7 +727,7 @@
   gap: 8px;
   margin-top: 22px;
   color: var(--docs-accent);
-  font-size: 10px;
+  font-size: 12px;
   text-decoration: none;
 }
 
@@ -756,14 +756,14 @@
 
 .ox-docs-lifecycle strong {
   color: var(--docs-text);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
 }
 
 .ox-docs-lifecycle span {
   color: var(--docs-muted);
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.55;
 }
 
@@ -791,7 +791,7 @@
 .ox-docs-facts span,
 .ox-docs-facts small {
   color: var(--docs-faint);
-  font-size: 8px;
+  font-size: 12px;
   line-height: 1.45;
 }
 
@@ -812,18 +812,18 @@
   border-left: 2px solid var(--docs-accent);
   margin-top: 22px;
   padding: 13px 15px;
-  background: rgba(155, 231, 196, 0.045);
+  background: rgba(211, 220, 231, 0.045);
 }
 
 .ox-docs-note strong {
   color: var(--docs-text);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .ox-docs-note span {
   color: var(--docs-muted);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.65;
 }
 
@@ -845,14 +845,14 @@
 .ox-docs-method-list code,
 .ox-docs-native-rules code {
   color: var(--docs-accent);
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 9px;
+  font-family: var(--font-departure), monospace;
+  font-size: 12px;
 }
 
 .ox-docs-method-list span,
 .ox-docs-native-rules span {
   color: var(--docs-muted);
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.55;
 }
 
@@ -881,7 +881,7 @@
 
 .ox-docs-fi-surfaces span {
   color: var(--docs-muted);
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.65;
 }
 
@@ -908,7 +908,7 @@
 .ox-docs-fee-table-wrap th {
   background: var(--docs-panel-strong);
   color: var(--docs-faint);
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -916,7 +916,7 @@
 
 .ox-docs-fee-table-wrap td {
   color: var(--docs-muted);
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .ox-docs-fee-table-wrap tr:last-child td {
@@ -930,15 +930,15 @@
 .ox-docs-fee-table-wrap code,
 .ox-docs-copy code {
   color: var(--docs-accent);
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 9px;
+  font-family: var(--font-departure), monospace;
+  font-size: 12px;
 }
 
 .ox-docs-copy {
   max-width: 720px;
   margin: 18px 0 0;
   color: var(--docs-muted);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.75;
 }
 
@@ -947,7 +947,7 @@
   border-top: 2px solid var(--docs-accent);
   margin-top: 18px;
   padding-inline: 24px;
-  background: rgba(155, 231, 196, 0.025);
+  background: rgba(211, 220, 231, 0.025);
 }
 
 .ox-docs-universe-status {
@@ -959,7 +959,7 @@
   padding: 0 10px;
   background: var(--docs-panel-strong);
   color: var(--docs-accent);
-  font-size: 8px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -985,7 +985,7 @@
 
 .ox-docs-native-rules strong {
   color: var(--docs-text);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -1016,15 +1016,15 @@
 
 .ox-docs-indexers strong {
   color: var(--docs-text);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 500;
 }
 
 .ox-docs-indexers code {
   overflow: hidden;
   color: var(--docs-accent);
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 8px;
+  font-family: var(--font-departure), monospace;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1050,7 +1050,7 @@
 
 .ox-docs-checklist span {
   color: var(--docs-muted);
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.55;
 }
 
@@ -1069,7 +1069,7 @@
   gap: 20px;
   border-top: 1px solid var(--docs-line);
   color: var(--docs-faint);
-  font-size: 8px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -1120,7 +1120,7 @@
     padding: 0 12px;
     background: var(--docs-panel);
     color: var(--docs-muted);
-    font-size: 9px;
+    font-size: 12px;
     text-decoration: none;
   }
 
@@ -1154,7 +1154,7 @@
   }
 
   .ox-docs-hero h1 {
-    font-size: clamp(38px, 12vw, 56px);
+    font-size: clamp(32px, 8vw, 40px);
   }
 
   .ox-docs-hero dl {
@@ -1241,7 +1241,7 @@
   .ox-docs-code pre {
     max-height: 520px;
     padding: 16px;
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .ox-docs-universe {
@@ -1263,7 +1263,7 @@
   .ox-docs-topbar nav a {
     min-height: 44px;
     padding-inline: 10px;
-    font-size: 8px;
+    font-size: 12px;
   }
 
   .ox-docs-main {
@@ -1332,3 +1332,71 @@
     transition: none !important;
   }
 }
+
+/* Reading surfaces share the Nothing neutral palette; code and metadata stay monospaced. */
+.ox-docs-root { background: var(--docs-bg); }
+.ox-docs-root :is(code, pre, dt, dd),
+.ox-docs-eyebrow, .ox-docs-network-label, .ox-docs-nav-group > strong,
+.ox-docs-facts strong, .ox-docs-code figcaption {
+  font-family: var(--font-departure), monospace;
+  font-variant-numeric: tabular-nums;
+}
+.ox-docs-main { width: 100%; max-width: 1180px; padding-top: 28px; }
+.ox-docs-hero { grid-template-columns: minmax(0, 1.6fr) minmax(230px, .75fr); }
+.ox-docs-hero h1 { font-weight: 400; line-height: 1.04; letter-spacing: -.025em; }
+.ox-docs-hero p, .ox-docs-section-heading p, .ox-docs-copy { font-size: 14px; line-height: 1.8; max-width: 65ch; }
+.ox-docs-nav-group a { min-height: 44px; border-radius: 0; font-size: 13px; }
+.ox-docs-section-heading h2 { line-height: 1.2; }
+.ox-docs-section:target .ox-docs-section-icon { border-color: var(--docs-accent); background: var(--docs-panel-strong); }
+.ox-docs-topbar nav a, .ox-docs-hero-actions a, .ox-docs-footer-actions a,
+.ox-docs-section-icon, .ox-docs-universe-status { border-radius: 0; }
+.ox-docs-topbar nav a:hover, .ox-docs-hero-actions a:hover, .ox-docs-footer-actions a:hover { transform: translateY(-1px); }
+.ox-docs-code, .ox-docs-disclosure, .ox-docs-mobile-nav, .ox-docs-fee-table-wrap,
+.ox-docs-warning, .ox-docs-facts, .ox-docs-flow, .ox-docs-lifecycle > div,
+.ox-docs-ecosystem-map, .ox-docs-mechanism-grid, .ox-docs-universe-grid,
+.ox-docs-method-list, .ox-docs-fi-surfaces, .ox-docs-native-rules,
+.ox-docs-indexers, .ox-docs-checklist { border-radius: 0; }
+.ox-docs-ecosystem-map, .ox-docs-mechanism-grid, .ox-docs-universe-grid,
+.ox-docs-method-list, .ox-docs-fi-surfaces, .ox-docs-native-rules,
+.ox-docs-indexers, .ox-docs-checklist { overflow: hidden; }
+.ox-docs-code figcaption { min-height: 48px; gap: 8px; }
+.ox-docs-code pre { font-size: 13px; line-height: 1.85; padding: 24px; }
+.ox-docs-code-language { margin-left: 4px; }
+.ox-docs-code button { font-size: 11px; }
+.ox-docs-note { border-radius: 0; }
+.ox-docs-contract-columns h3, .ox-docs-mechanism-grid strong,
+.ox-docs-universe-grid strong, .ox-docs-fi-surfaces strong { font-size: 15px; }
+.ox-docs-fee-table-wrap tbody tr:hover { background: var(--docs-panel); }
+.ox-docs-root :is(p, li) { text-wrap: pretty; }
+@media (max-width: 1180px) and (min-width: 961px) {
+  .ox-docs-main { padding-inline: 28px; }
+  .ox-docs-hero { grid-template-columns: 1fr; }
+  .ox-docs-hero > div { border-right: 0; padding-right: 0; }
+  .ox-docs-hero dl { padding: 0 0 24px; }
+}
+@media (max-width: 760px) {
+  .ox-docs-main { padding-top: 18px; }
+  .ox-docs-hero { grid-template-columns: 1fr; }
+  .ox-docs-hero h1 { font-size: clamp(32px, 8vw, 40px); }
+  .ox-docs-code pre { font-size: 12px; padding: 16px; }
+  .ox-docs-code figcaption { gap: 4px; }
+  .ox-docs-hero dl > div { grid-template-columns: 110px minmax(0, 1fr); }
+}
+
+/* Pixel reading rhythm and a single interaction treatment. */
+.ox-docs-topbar nav a, .ox-docs-hero-actions a, .ox-docs-footer-actions a {
+  box-shadow: 3px 3px 0 #050606;
+  font-size: 11px;
+}
+.ox-docs-topbar nav a:active, .ox-docs-hero-actions a:active, .ox-docs-footer-actions a:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 #050606;
+}
+.ox-docs-article :is(p, li), .ox-docs-ecosystem-map span,
+.ox-docs-method-list span, .ox-docs-native-rules span,
+.ox-docs-lifecycle span, .ox-docs-note span, .ox-docs-flow span {
+  font-size: 14px;
+  line-height: 1.8;
+}
+.ox-docs-contract a, .ox-docs-pool-addresses a, .ox-docs-product-link { min-height: 44px; }
+.ox-docs-root a { overflow-wrap: anywhere; }

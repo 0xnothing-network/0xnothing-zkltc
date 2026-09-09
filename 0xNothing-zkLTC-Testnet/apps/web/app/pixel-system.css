@@ -1,0 +1,90 @@
+/* Shared pixel primitives. Product layouts and artwork retain their own geometry. */
+:root {
+  --pixel-ui-bg: #101113;
+  --pixel-ui-panel: #181a1d;
+  --pixel-ui-raised: #202328;
+  --pixel-ui-border: #30343a;
+  --pixel-ui-border-strong: #565e68;
+  --pixel-ui-text: #f1f2f3;
+  --pixel-ui-muted: #a6adb7;
+  --pixel-ui-action: #b8e8cb;
+  --pixel-ui-shadow: 3px 3px 0 #080909;
+  --pixel-ui-font: "Departure Mono", ui-monospace, monospace;
+}
+
+.pump-shell.pump-shell {
+  --pump-bg: var(--pixel-ui-bg);
+  --pump-panel: var(--pixel-ui-panel);
+  --pump-panel-2: var(--pixel-ui-raised);
+  --pump-line: var(--pixel-ui-border);
+  --pump-line-strong: var(--pixel-ui-border-strong);
+  --pump-text: var(--pixel-ui-text);
+  --pump-muted: var(--pixel-ui-muted);
+  --pump-green: var(--pixel-ui-action);
+}
+.fi-root.fi-root {
+  --fi-line: var(--pixel-ui-border);
+  --fi-line-strong: var(--pixel-ui-border-strong);
+}
+
+:is(.fi-root, .pump-shell, .pixel-product) :is(h1, h2, h3, button, input, select, textarea) {
+  font-family: var(--pixel-ui-font);
+  font-synthesis: none;
+}
+:is(.fi-root, .pump-shell, .pixel-product) :is(.fi-page-title, .pump-page-heading h1, .pixel-collection-heading h1) {
+  font-size: clamp(26px, 3vw, 38px);
+  line-height: 1.3;
+  letter-spacing: -.025em;
+}
+:is(.fi-root, .pump-shell, .pixel-product) :is(.fi-panel, .pump-panel, .pixel-panel, .pump-token-card, .nft-card) {
+  border-color: var(--pixel-ui-border);
+  border-radius: 0;
+  box-shadow: var(--pixel-ui-shadow);
+}
+:is(.fi-root, .pump-shell, .pixel-product) :is(.fi-button, .pump-button, .pixel-btn, .pixel-btn-soft) {
+  min-height: 44px;
+  font-size: 11px;
+  letter-spacing: .025em;
+  border-radius: 0;
+  transition: color 120ms steps(2, end), background-color 120ms steps(2, end), border-color 120ms steps(2, end), transform 120ms steps(2, end);
+}
+:is(.fi-root, .pump-shell, .pixel-product) :is(.fi-button, .pump-button, .pixel-btn, .pixel-btn-soft):active:not(:disabled) {
+  transform: translate(1px, 1px);
+}
+:is(.fi-root, .pump-shell, .pixel-product) :is(button, input, select, textarea, a, summary):focus-visible {
+  outline: 2px solid var(--pixel-ui-action);
+  outline-offset: -3px;
+}
+:is(.fi-root, .pump-shell, .pixel-product) button:disabled {
+  cursor: not-allowed;
+}
+.toast-card {
+  background: var(--pixel-ui-panel);
+  border: 1px solid var(--pixel-ui-border-strong);
+  border-radius: 0;
+  box-shadow: var(--pixel-ui-shadow);
+  font-family: var(--pixel-ui-font);
+}
+.toast-card p { color: var(--pixel-ui-muted); }
+.toast-card a { color: var(--pixel-ui-action); }
+.toast-card button:focus-visible { outline-offset: -2px; }
+
+@media (max-width: 640px) {
+  :is(.fi-root, .pump-shell, .pixel-product) :is(input:not([type="range"]):not([type="color"]):not([type="checkbox"]), select, textarea) {
+    font-size: max(16px, 1em);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.fi-root, .pump-shell, .pixel-product) :is(.fi-button, .pump-button, .pixel-btn, .pixel-btn-soft) {
+    transition: none;
+  }
+}
+
+/* Logos stay circular within the square pixel interface. */
+:is(.fi-root .fi-token-logo, .pump-shell .pump-token-logo,
+  .pump-shell .pump-detail-logo, .pump-shell .pump-portfolio-logo,
+  .pump-shell .pump-logo-preview, .pump-shell .pump-skeleton-logo,
+  .nothing-home .nothing-mark, .ox-docs-brand img) {
+  border-radius: 50% !important;
+  overflow: hidden;
+}

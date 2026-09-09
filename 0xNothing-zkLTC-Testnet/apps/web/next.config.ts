@@ -77,6 +77,7 @@ const nextConfig: NextConfig = {
     // remote pattern here would only widen /_next/image without serving anything.
     localPatterns: [
       { pathname: "/0xNothing.jpg", search: "" },
+      { pathname: "/images/nothing-hero-v2.png", search: "" },
     ],
     remotePatterns: [],
   },

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import "./privacy.css";
 
 export const metadata: Metadata = {
   title: "0xWallet Privacy Policy | 0xNothing",
@@ -200,7 +201,7 @@ const sections = [
 
 export default function PrivacyPage() {
   return (
-    <div className="relative min-h-[100dvh] overflow-hidden bg-black text-white">
+    <div className="ox-privacy relative min-h-[100dvh] overflow-hidden">
       <div
         className="pointer-events-none fixed inset-0 opacity-60"
         aria-hidden="true"

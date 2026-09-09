@@ -44,7 +44,7 @@ export const Toolbar = memo(function Toolbar({
 
   return (
     <div
-      className="animate-fadeInUp bg-[#1A1A2E] rounded-2xl p-3 sm:p-5 border border-[#2D2D44] flex flex-col gap-4 sm:gap-6"
+      className="pixel-tools-panel animate-fadeInUp bg-[#1A1A2E] rounded-2xl p-3 sm:p-5 border border-[#2D2D44] flex flex-col gap-4 sm:gap-6"
     >
       <>
           {/* Color Palette Section */}

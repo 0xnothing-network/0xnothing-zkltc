@@ -313,7 +313,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
   }
 
   return (
-    <div className="bg-[#1A1A2E] rounded-2xl border border-[#2D2D44] overflow-hidden">
+    <div className="pixel-mint-panel bg-[#1A1A2E] rounded-2xl border border-[#2D2D44] overflow-hidden">
       <div className="px-4 py-3 border-b border-[#2D2D44]">
         <h3
           className="text-white font-bold text-sm"

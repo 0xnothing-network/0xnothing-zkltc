@@ -1,0 +1,60 @@
+.ox-privacy {
+  background: #101113;
+  color: #f1f2f3;
+  font-family: var(--font-departure), monospace;
+  color-scheme: dark;
+}
+.ox-privacy > [aria-hidden="true"] { opacity: .12; }
+.ox-privacy header { background: #101113; border-color: #30343a; }
+.ox-privacy header a { font-size: 13px; letter-spacing: .16em; color: #f1f2f3; font-weight: 600; }
+.ox-privacy header span { font-size: 11px; letter-spacing: .1em; color: #a6adb7; }
+.ox-privacy main { padding-top: clamp(48px, 7vw, 92px); padding-bottom: 80px; }
+.ox-privacy main > div:first-child > p:first-child {
+  display: inline-flex;
+  padding: 7px 10px;
+  margin-bottom: 22px;
+  border: 1px solid #565e68;
+  border-radius: 0;
+  background: #202328;
+  color: #b8e8cb;
+  font-family: var(--font-departure), monospace;
+  font-size: 11px;
+  letter-spacing: .12em;
+}
+.ox-privacy h1 {
+  font-size: clamp(32px, 5vw, 40px);
+  line-height: 1.08;
+  font-weight: 400;
+  letter-spacing: -.025em;
+  text-transform: none;
+}
+.ox-privacy main > div:first-child > p:last-child { color: #a6adb7; font-size: 14px; line-height: 1.8; max-width: 65ch; }
+.ox-privacy main > div:last-child { margin-top: 56px; border-color: #565e68; }
+.ox-privacy section { border-color: #30343a; padding-block: 34px; }
+.ox-privacy section h2 {
+  color: #d2d8e0;
+  font-family: var(--font-departure), monospace;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.8;
+  letter-spacing: .045em;
+}
+.ox-privacy section > div { color: #b9c1cc; font-size: 14px; line-height: 1.8; max-width: 68ch; }
+.ox-privacy section strong { color: #f1f2f3; font-weight: 600; }
+.ox-privacy section a { color: #b8e8cb; text-decoration-color: #687482; transition: text-decoration-color 120ms steps(2, end); }
+.ox-privacy section a:hover { text-decoration-color: #f1f2f3; }
+.ox-privacy p, .ox-privacy li { text-wrap: pretty; }
+.ox-privacy footer { border-color: #30343a; background: #181a1d; }
+.ox-privacy footer > div { color: #a6adb7; font-size: 11px; line-height: 1.8; letter-spacing: .08em; }
+.ox-privacy a:focus-visible { outline: 2px solid #b8e8cb; outline-offset: 3px; border-radius: 0; }
+@media (min-width: 768px) {
+  .ox-privacy section { grid-template-columns: 190px minmax(0, 1fr); gap: 44px; }
+}
+@media (max-width: 600px) {
+  .ox-privacy section { padding-block: 28px; gap: 14px; }
+  .ox-privacy header span { font-size: 11px; letter-spacing: .04em; }
+  .ox-privacy main > div:last-child { margin-top: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ox-privacy section a { transition: none; }
+}

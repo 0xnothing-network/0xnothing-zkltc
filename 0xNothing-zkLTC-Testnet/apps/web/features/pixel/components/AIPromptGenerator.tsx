@@ -66,7 +66,7 @@ export const AIPromptGenerator = memo(function AIPromptGenerator({ gridSize, onA
   );
 
   return (
-    <div className="bg-[#1A1A2E] rounded-2xl p-3 sm:p-5 border border-[#2D2D44]">
+    <div className="pixel-generator-panel bg-[#1A1A2E] rounded-2xl p-3 sm:p-5 border border-[#2D2D44]">
       <div className="flex items-center gap-2 mb-3">
         <svg width="18" height="18" fill="none" stroke="#6366F1" strokeWidth="2" viewBox="0 0 24 24">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />

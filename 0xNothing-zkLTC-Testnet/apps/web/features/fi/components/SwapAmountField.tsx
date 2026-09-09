@@ -18,6 +18,7 @@ export function SwapAmountField({
   busy = false,
   onAmountChange,
   onAssetChange,
+  onAddressSelect,
   onMax,
   readOnly = false,
 }: {
@@ -35,6 +36,7 @@ export function SwapAmountField({
   busy?: boolean;
   onAmountChange?: (value: string) => void;
   onAssetChange: (value: string) => void;
+  onAddressSelect?: (address: string) => void;
   onMax?: () => void;
   readOnly?: boolean;
 }) {
@@ -74,6 +76,7 @@ export function SwapAmountField({
             value={assetValue}
             assets={assets}
             onChange={onAssetChange}
+            onAddressSelect={onAddressSelect}
           />
           {onMax ? (
             <button className="fi-max-button" type="button" onClick={onMax} aria-label={`Use maximum ${asset} balance`}>

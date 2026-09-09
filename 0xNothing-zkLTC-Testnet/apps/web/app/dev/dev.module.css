@@ -1,8 +1,8 @@
 .shell {
   min-height: 100dvh;
-  color: #f3fff8;
-  background: #070a09;
-  font-family: var(--font-mono), "JetBrains Mono", monospace;
+  color: #f1f2f3;
+  background: #101113;
+  font-family: var(--font-departure), monospace;
 }
 
 .shell :global(a) {
@@ -14,9 +14,9 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  border-bottom: 1px solid rgba(156, 237, 194, 0.16);
-  background: rgba(7, 10, 9, 0.94);
-  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(211, 220, 231, 0.16);
+  background: #101113;
+  backdrop-filter: none;
 }
 
 .headerInner,
@@ -45,8 +45,8 @@
   place-items: center;
   width: 31px;
   height: 31px;
-  border: 1px solid rgba(164, 245, 200, 0.55);
-  color: #a4f5c8;
+  border: 1px solid rgba(211, 220, 231, 0.55);
+  color: #b8e8cb;
   font-size: 12px;
   letter-spacing: -0.1em;
 }
@@ -68,13 +68,13 @@
 .meta,
 .address,
 .sectionNote {
-  color: rgba(220, 255, 235, 0.52);
+  color: rgba(215, 224, 235, 0.52);
 }
 
 .brandText span,
 .eyebrow,
 .meta {
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -98,9 +98,9 @@
   align-items: center;
   gap: 7px;
   padding: 8px 10px;
-  border: 1px solid rgba(220, 255, 235, 0.13);
-  color: rgba(220, 255, 235, 0.72);
-  font-size: 10px;
+  border: 1px solid rgba(215, 224, 235, 0.13);
+  color: rgba(215, 224, 235, 0.72);
+  font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -108,8 +108,8 @@
 .networkDot {
   width: 6px;
   height: 6px;
-  background: #a4f5c8;
-  box-shadow: 0 0 0 3px rgba(164, 245, 200, 0.12);
+  background: #b8e8cb;
+  box-shadow: 0 0 0 3px rgba(211, 220, 231, 0.12);
 }
 
 .main {
@@ -127,7 +127,7 @@
 .hero h1 {
   max-width: 760px;
   margin: 12px 0 14px;
-  font-size: clamp(32px, 5vw, 62px);
+  font-size: clamp(32px, 4vw, 40px);
   line-height: 0.98;
   letter-spacing: -0.08em;
   font-weight: 500;
@@ -136,26 +136,26 @@
 .hero p {
   max-width: 620px;
   margin: 0;
-  color: rgba(235, 255, 243, 0.65);
+  color: rgba(220, 227, 238, 0.65);
   font-size: 13px;
   line-height: 1.8;
 }
 
 .heroAside {
   padding: 18px 0 2px 22px;
-  border-left: 1px solid rgba(164, 245, 200, 0.26);
+  border-left: 1px solid rgba(211, 220, 231, 0.26);
 }
 
 .heroAside strong {
   display: block;
   margin: 7px 0 8px;
-  color: #a4f5c8;
+  color: #b8e8cb;
   font-size: 15px;
   font-weight: 500;
 }
 
 .heroAside p {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.7;
 }
 
@@ -165,17 +165,17 @@
   gap: 12px;
   padding: 14px 16px;
   margin-bottom: 26px;
-  border: 1px solid rgba(164, 245, 200, 0.16);
-  background: rgba(164, 245, 200, 0.04);
-  color: rgba(232, 255, 241, 0.76);
-  font-size: 11px;
+  border: 1px solid rgba(211, 220, 231, 0.16);
+  background: rgba(211, 220, 231, 0.04);
+  color: rgba(220, 227, 238, 0.76);
+  font-size: 12px;
   line-height: 1.7;
 }
 
 .banner svg {
   flex: 0 0 auto;
   margin-top: 2px;
-  color: #a4f5c8;
+  color: #b8e8cb;
 }
 
 .bannerError {
@@ -210,7 +210,7 @@
 .sectionNote {
   max-width: 420px;
   margin: 0;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.6;
   text-align: right;
 }
@@ -228,13 +228,13 @@
 .card {
   min-width: 0;
   padding: 17px;
-  border: 1px solid rgba(220, 255, 235, 0.12);
+  border: 1px solid #30343a;
   background: rgba(255, 255, 255, 0.025);
 }
 
 .cardAccent {
-  border-color: rgba(164, 245, 200, 0.25);
-  background: rgba(164, 245, 200, 0.05);
+  border-color: rgba(211, 220, 231, 0.25);
+  background: rgba(211, 220, 231, 0.05);
 }
 
 .cardTop {
@@ -242,21 +242,21 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  color: rgba(220, 255, 235, 0.54);
-  font-size: 10px;
+  color: rgba(215, 224, 235, 0.54);
+  font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .cardTop svg {
-  color: #a4f5c8;
+  color: #b8e8cb;
 }
 
 .value {
   display: block;
   min-height: 30px;
   margin-top: 17px;
-  color: #f3fff8;
+  color: #f1f2f3;
   font-size: clamp(19px, 2vw, 27px);
   line-height: 1.1;
   letter-spacing: -0.06em;
@@ -264,20 +264,20 @@
 }
 
 .valueAccent {
-  color: #a4f5c8;
+  color: #b8e8cb;
 }
 
 .subvalue {
   display: block;
   min-height: 18px;
   margin-top: 8px;
-  color: rgba(220, 255, 235, 0.46);
-  font-size: 10px;
+  color: rgba(215, 224, 235, 0.46);
+  font-size: 12px;
   line-height: 1.5;
 }
 
 .address {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -287,8 +287,8 @@
   align-items: center;
   gap: 7px;
   margin-top: 15px;
-  color: rgba(220, 255, 235, 0.7);
-  font-size: 10px;
+  color: rgba(215, 224, 235, 0.7);
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -300,8 +300,8 @@
 }
 
 .statusGood .statusDot {
-  background: #a4f5c8;
-  box-shadow: 0 0 0 3px rgba(164, 245, 200, 0.11);
+  background: #b8e8cb;
+  box-shadow: 0 0 0 3px rgba(211, 220, 231, 0.11);
 }
 
 .statusBad .statusDot {
@@ -326,8 +326,8 @@
 
 .formCard p {
   margin: -8px 0 0;
-  color: rgba(220, 255, 235, 0.52);
-  font-size: 11px;
+  color: rgba(215, 224, 235, 0.52);
+  font-size: 12px;
   line-height: 1.7;
 }
 
@@ -337,8 +337,8 @@
 }
 
 .field label {
-  color: rgba(220, 255, 235, 0.54);
-  font-size: 10px;
+  color: rgba(215, 224, 235, 0.54);
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -349,11 +349,11 @@
   min-width: 0;
   min-height: 44px;
   padding: 10px 11px;
-  border: 1px solid rgba(220, 255, 235, 0.15);
+  border: 1px solid #565e68;
   border-radius: 0;
   outline: none;
-  background: #0c120f;
-  color: #f3fff8;
+  background: #121416;
+  color: #f1f2f3;
   font: inherit;
   font-size: 12px;
 }
@@ -364,43 +364,43 @@
 
 .field input:focus,
 .field select:focus {
-  border-color: #a4f5c8;
-  box-shadow: 0 0 0 2px rgba(164, 245, 200, 0.13);
+  border-color: #b8e8cb;
+  box-shadow: 0 0 0 2px rgba(211, 220, 231, 0.13);
 }
 
 .checkbox {
   display: flex;
   align-items: flex-start;
   gap: 9px;
-  color: rgba(220, 255, 235, 0.62);
-  font-size: 10px;
+  color: rgba(215, 224, 235, 0.62);
+  font-size: 12px;
   line-height: 1.55;
 }
 
 .checkbox input {
   flex: 0 0 auto;
   margin-top: 2px;
-  accent-color: #a4f5c8;
+  accent-color: #b8e8cb;
 }
 
 .button {
   min-height: 44px;
   padding: 9px 13px;
-  border: 1px solid rgba(164, 245, 200, 0.34);
+  border: 1px solid rgba(211, 220, 231, 0.34);
   border-radius: 0;
-  background: rgba(164, 245, 200, 0.09);
-  color: #dffff0;
+  background: rgba(211, 220, 231, 0.09);
+  color: #f1f2f3;
   cursor: pointer;
   font: inherit;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  transition: transform 150ms ease, background-color 150ms ease, border-color 150ms ease;
+  transition: transform 120ms steps(2, end), background-color 120ms steps(2, end), border-color 120ms steps(2, end);
 }
 
 .button:hover:not(:disabled) {
-  border-color: #a4f5c8;
-  background: rgba(164, 245, 200, 0.16);
+  border-color: #b8e8cb;
+  background: rgba(211, 220, 231, 0.16);
 }
 
 .button:active:not(:disabled) {
@@ -409,19 +409,19 @@
 
 .button:focus-visible,
 .monoLink:focus-visible {
-  outline: 2px solid #a4f5c8;
+  outline: 2px solid #b8e8cb;
   outline-offset: 3px;
 }
 
 .button:disabled {
   cursor: not-allowed;
-  opacity: 0.36;
+  opacity: 0.5;
 }
 
 .buttonSecondary {
-  border-color: rgba(220, 255, 235, 0.15);
+  border-color: rgba(215, 224, 235, 0.15);
   background: transparent;
-  color: rgba(220, 255, 235, 0.72);
+  color: rgba(215, 224, 235, 0.72);
 }
 
 .buttonDanger {
@@ -442,12 +442,12 @@
   place-items: start;
   min-height: 150px;
   padding: 21px;
-  border: 1px dashed rgba(220, 255, 235, 0.17);
-  color: rgba(220, 255, 235, 0.58);
+  border: 1px dashed rgba(215, 224, 235, 0.17);
+  color: rgba(215, 224, 235, 0.58);
 }
 
 .empty strong {
-  color: #f3fff8;
+  color: #f1f2f3;
   font-size: 13px;
   font-weight: 500;
 }
@@ -455,12 +455,12 @@
 .empty p {
   max-width: 620px;
   margin: 0;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.7;
 }
 
 .monoLink {
-  color: #a4f5c8 !important;
+  color: #b8e8cb !important;
   text-decoration: underline !important;
   text-underline-offset: 3px;
 }
@@ -470,9 +470,9 @@
   width: 74%;
   height: 24px;
   margin-top: 18px;
-  background: linear-gradient(90deg, rgba(220, 255, 235, 0.07), rgba(220, 255, 235, 0.16), rgba(220, 255, 235, 0.07));
+  background: linear-gradient(90deg, rgba(215, 224, 235, 0.07), rgba(215, 224, 235, 0.16), rgba(215, 224, 235, 0.07));
   background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
+  animation: shimmer 1.5s steps(6, end) infinite;
 }
 
 @keyframes shimmer {
@@ -516,7 +516,7 @@
 
   .network {
     padding: 7px 8px;
-    font-size: 9px;
+    font-size: 12px;
   }
 
   .main {
@@ -554,4 +554,61 @@
   .button {
     transition: none;
   }
+}
+
+/* Operator surfaces: readable explanations, stable numeric alignment, clear form boundaries. */
+.shell { font-family: var(--font-departure), monospace; color-scheme: dark; }
+.brandText span, .eyebrow, .meta, .network, .cardTop, .value, .subvalue, .address,
+.status, .field input, .field select, .monoLink { font-family: var(--font-departure), monospace; font-variant-numeric: tabular-nums; }
+.brandMark, .network { border-radius: 0; }
+.brandMark { background: #202328; }
+.brandText span, .eyebrow, .muted, .meta, .address, .sectionNote,
+.cardTop, .subvalue, .formCard p, .field label { color: #a6adb7; }
+.hero h1 { line-height: 1.06; letter-spacing: -.025em; font-weight: 400; }
+.hero p { color: #a6adb7; font-size: 14px; line-height: 1.8; max-width: 65ch; }
+.heroAside { border-left-color: #48515d; }
+.heroAside p { font-size: 13px; }
+.banner { border-radius: 0; font-size: 13px; }
+.section { margin-top: 48px; }
+.sectionHeader { margin-bottom: 18px; }
+.sectionHeader h2 { font-size: 25px; line-height: 1.25; letter-spacing: -.03em; }
+.grid { gap: 14px; }
+.card { border-radius: 0; padding: 22px; background: #181a1d; }
+.cardAccent { background: #202328; }
+.value { letter-spacing: -.045em; line-height: 1.25; }
+.formCard { gap: 20px; }
+.formCard h3 { font-size: 17px; }
+.formCard p { font-size: 14px; line-height: 1.8; }
+.field { gap: 9px; }
+.field input, .field select { min-height: 46px; transition: border-color 120ms steps(2, end), box-shadow 120ms steps(2, end); }
+.field select { appearance: auto; }
+.button { font-size: 12px; min-height: 44px; font-weight: 600; }
+.buttonSecondary { background: #181a1d; }
+.buttonDanger:hover:not(:disabled) { background: rgba(255, 106, 82, .15); border-color: #ffb29d; }
+.empty { border-radius: 0; background: #181a1d; padding: 26px; }
+.empty p, .checkbox { font-size: 13px; }
+.skeleton { border-radius: 0; }
+.shell :global(a:focus-visible) { outline: 2px solid #b8e8cb; outline-offset: 4px; border-radius: 0; }
+@media (max-width: 600px) {
+  .card { padding: 18px; }
+  .sectionHeader h2 { font-size: 23px; }
+  .hero h1 { line-height: 1.1; }
+  .headerActions { gap: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .field input, .field select { transition: none; }
+}
+
+/* Shared pixel controls retain distinct danger and disabled states. */
+.button { border-color: #565e68; background: #202328; box-shadow: 3px 3px 0 #050606; font-size: 11px; }
+.button:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #050606; }
+.button:disabled { box-shadow: none; }
+.buttonSecondary { background: #181a1d; }
+.buttonDanger { border-color: #875b52; background: #2d2020; color: #ffb29d; }
+.field label, .eyebrow, .meta, .cardTop { font-size: 11px; }
+.field input, .field select { min-height: 44px; font-size: 14px; }
+.field input:focus-visible, .field select:focus-visible { outline: 2px solid #b8e8cb; outline-offset: 3px; box-shadow: none; }
+.banner, .empty p, .checkbox { font-size: 14px; line-height: 1.8; }
+@media (max-width: 600px) {
+  .field input, .field select { font-size: 16px; }
 }

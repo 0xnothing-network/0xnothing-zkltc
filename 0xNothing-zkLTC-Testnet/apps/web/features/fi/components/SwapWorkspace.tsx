@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowsDownUp, MagnifyingGlass } from "@phosphor-icons/react";
+import { ArrowsDownUp } from "@phosphor-icons/react";
 import { formatUnits, getAddress, isAddress } from "viem";
 import { useAccount, useBalance, useReadContract, useReadContracts } from "wagmi";
 import type { AssetSelectOption } from "@fi/components/AssetSelect";
@@ -9,7 +9,7 @@ import { ConnectWalletButton } from "@fi/components/ConnectWalletButton";
 import { SwapAmountField } from "@fi/components/SwapAmountField";
 import { NotDeployed, PanelHeading, TransactionStatus } from "@fi/components/UiStates";
 import { SlippageControl } from "@fi/components/SlippageControl";
-import { deployment, explorerAddressUrl } from "@fi/config/deployment";
+import { deployment } from "@fi/config/deployment";
 import { dexRouterAbi } from "@fi/lib/abis/dex";
 import { erc20Abi } from "@fi/lib/abis/erc20";
 import { nusdOracleAbi } from "@fi/lib/abis/nusd";
@@ -24,7 +24,6 @@ import {
 import {
   buildDexSwapCall,
   computeExecutionImpactBps,
-  importedTokenStatus,
   mergeVerifiedMetadata,
   quotedRate,
   readSwapDeepLink,
@@ -33,7 +32,6 @@ import {
   swapLiquidityStatus,
   swapRouteLabel,
   ORACLE_QUOTE_REFRESH_MS,
-  type ImportSide,
 } from "@fi/lib/swap";
 import { useActiveDexRouter } from "@fi/lib/hooks/useActiveDexRouter";
 import { formatFeeBps, useDexFeeSchedule } from "@fi/lib/hooks/useDexFeeSchedule";
@@ -61,7 +59,6 @@ export function SwapWorkspace() {
   const [amountText, setAmountText] = useState("");
   const [payContract, setPayContract] = useState("");
   const [receiveContract, setReceiveContract] = useState("");
-  const [importSide, setImportSide] = useState<ImportSide>("receive");
   const [importedAssets, setImportedAssets] = useState<SwapAsset[]>([]);
   const [slippageBps, setSlippageBps] = useState(50n);
   const tx = useProtocolTransaction();
@@ -73,7 +70,6 @@ export function SwapWorkspace() {
     if (link.tokenOut) setTokenOut(link.tokenOut);
     if (link.payContract) setPayContract(link.payContract);
     if (link.receiveContract) setReceiveContract(link.receiveContract);
-    if (link.importSide) setImportSide(link.importSide);
   }, []);
 
   const payCandidate = useMemo(() => {
@@ -392,17 +388,6 @@ export function SwapWorkspace() {
   );
   const importedContractsReady = payContractReady && receiveContractReady;
 
-  const payContractStatus = importedTokenStatus(payContract, detectedPayAsset, importedPay);
-  const receiveContractStatus = importedTokenStatus(receiveContract, detectedReceiveAsset, importedReceive);
-  const activeContract = importSide === "pay" ? payContract : receiveContract;
-  const activeDetectedAsset = importSide === "pay" ? detectedPayAsset : detectedReceiveAsset;
-  const activeContractStatus = importSide === "pay" ? payContractStatus : receiveContractStatus;
-
-  function updateActiveContract(value: string) {
-    if (importSide === "pay") setPayContract(value);
-    else setReceiveContract(value);
-    resetAmount();
-  }
   const routeLiquidityStatus = swapLiquidityStatus({
     bridgeLive: swapRoute.bridgeLive,
     detected: Boolean(detectedPayAsset || detectedReceiveAsset),
@@ -418,8 +403,9 @@ export function SwapWorkspace() {
     if (!amountText) return undefined;
     if (!amountIn || !assetIn) return "Enter a valid positive amount.";
     if (!importedContractsReady) return "Resolve both token contracts before swapping.";
-    if (!executableQuoteCurrent) return "Waiting for a quote for the current amount.";
     if (quoteError) return "A fresh swap quote is unavailable.";
+    // Pending/background quotes are not input errors. Execution remains guarded below.
+    if (!executableQuoteCurrent) return undefined;
     if (!routeConfigured) return "No liquidity is available for this pair.";
     if (spendableBalance !== undefined && amountIn > spendableBalance) {
       return assetIn.native ? "Leave at least 0.01 zkLTC in your wallet for network fees." : "Amount exceeds wallet balance.";
@@ -445,7 +431,6 @@ export function SwapWorkspace() {
     setTokenOut(tokenIn);
     setPayContract(receiveContract);
     setReceiveContract(payContract);
-    setImportSide((current) => current === "pay" ? "receive" : "pay");
     resetAmount();
   }
 
@@ -627,6 +612,7 @@ export function SwapWorkspace() {
           error={validation}
           onAmountChange={setAmountText}
           onAssetChange={chooseIn}
+          onAddressSelect={(address) => { setPayContract(address); resetAmount(); }}
           onMax={spendableBalance !== undefined && spendableBalance > 0n ? () => setAmountText(formatUnits(spendableBalance, assetIn?.decimals ?? 18)) : undefined}
         />
         <button type="button" className="fi-icon-button fi-swap-arrow" onClick={flip} aria-label="Reverse swap direction"><ArrowsDownUp size={18} weight="regular" aria-hidden="true" /></button>
@@ -650,50 +636,10 @@ export function SwapWorkspace() {
               ? "No liquidity is available for this pair."
               : undefined}
           onAssetChange={chooseOut}
+          onAddressSelect={(address) => { setReceiveContract(address); resetAmount(); }}
           readOnly
         />
-        <details className="fi-settings-details fi-token-import-details">
-          <summary>
-            <span>Import token address</span>
-            <strong>{activeDetectedAsset ? `${importSide === "pay" ? "Pay" : "Receive"} ${activeDetectedAsset.symbol}` : `${importSide === "pay" ? "Pay" : "Receive"} CA`}</strong>
-          </summary>
-          <div className="fi-token-address-import" data-state={activeContractStatus.tone}>
-            <div className="fi-segmented fi-import-side-switch" role="group" aria-label="Token address side">
-              <button type="button" className={importSide === "pay" ? "active" : ""} aria-pressed={importSide === "pay"} onClick={() => setImportSide("pay")}>Pay</button>
-              <button type="button" className={importSide === "receive" ? "active" : ""} aria-pressed={importSide === "receive"} onClick={() => setImportSide("receive")}>Receive</button>
-            </div>
-            <div className="fi-field-label-row">
-              <label htmlFor="swap-token-contract">{importSide === "pay" ? "Pay" : "Receive"} token address</label>
-              {activeDetectedAsset?.poolAddress ? (
-                <a href={explorerAddressUrl(activeDetectedAsset.poolAddress)} target="_blank" rel="noopener noreferrer">
-                  Explorer
-                </a>
-              ) : <span>Paste CA</span>}
-            </div>
-            <div className="fi-contract-input">
-              <MagnifyingGlass size={15} aria-hidden="true" />
-              <input
-                id="swap-token-contract"
-                type="text"
-                inputMode="text"
-                autoCapitalize="none"
-                autoComplete="off"
-                spellCheck={false}
-                value={activeContract}
-                placeholder={`Paste ${importSide} token address / 0x…`}
-                aria-describedby="swap-token-contract-status"
-                onChange={(event) => updateActiveContract(event.target.value)}
-              />
-              <span>CA</span>
-            </div>
-            <output id="swap-token-contract-status" className="fi-contract-status" aria-live="polite">
-              {activeContractStatus.message}
-              {!activeDetectedAsset?.trustedCore && activeDetectedAsset?.poolAddress
-                ? ` · ${shortAddress(activeDetectedAsset.poolAddress)}`
-                : ""}
-            </output>
-          </div>
-        </details>
+
         {routeLiquidityStatus ? (
           <div className="fi-inline-state" role="status" aria-live="polite">
             <div><strong>Swap route</strong><p>{routeLiquidityStatus}</p></div>

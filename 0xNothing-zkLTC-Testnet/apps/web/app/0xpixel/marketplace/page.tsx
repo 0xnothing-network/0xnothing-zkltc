@@ -82,7 +82,7 @@ export default function MarketplacePage() {
   const { address } = useAccount();
 
   return (
-    <div className="min-h-[calc(100vh-64px)] max-w-7xl mx-auto px-3 py-5 sm:px-4 sm:py-6" style={{ fontFamily: "var(--font-departure)" }}>
+    <div className="pixel-market-page min-h-[calc(100vh-64px)] max-w-7xl mx-auto px-3 py-5 sm:px-4 sm:py-6" style={{ fontFamily: "var(--font-departure)" }}>
       <MarketplaceHeader />
       <MarketplaceBody userAddress={address} />
     </div>
@@ -91,7 +91,7 @@ export default function MarketplacePage() {
 
 function MarketplaceHeader() {
   return (
-    <header className="mb-4 sm:mb-5">
+    <header className="pixel-collection-heading mb-4 sm:mb-5">
       <h1
         className="text-2xl sm:text-3xl font-bold text-white"
         style={{ fontFamily: "var(--font-departure)" }}
@@ -316,7 +316,7 @@ function MarketplaceBody({ userAddress }: BodyProps) {
         <EmptyState />
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+          <div className="pixel-market-grid grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
             {pageItems.map((nft) => (
               <ListingCard
                 key={nft.listingId.toString()}
