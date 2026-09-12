@@ -1,0 +1,69 @@
+/* Shared interaction layer. Pixel geometry is independent of motion timing. */
+:root {
+  --ui-ease: cubic-bezier(.22, .7, .2, 1);
+  --ui-fast: 160ms;
+}
+:is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product,
+  .nothing-home, .ox-docs-root, .ox-privacy) {
+  color-scheme: dark;
+  -webkit-tap-highlight-color: transparent;
+}
+:is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product)
+  :is(.fi-button, .fi-nav a, .fi-nav-mobile a, .fi-segmented button,
+  .fi-token-select-trigger, .fi-token-select-option, .fi-market-row,
+  .pump-button, .pump-nav-link, .pump-segmented button, .pump-token-card,
+  .pump-inline-options button, .pixel-btn, .pixel-btn-soft, .pixel-nav,
+  .pixel-nav-mobile, .nft-card, .marketplace-activity-row) {
+  transition-property: color, background-color, border-color, box-shadow, transform !important;
+  transition-duration: var(--ui-fast) !important;
+  transition-timing-function: var(--ui-ease) !important;
+}
+:is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product)
+  :is(.fi-amount-input, .fi-market-search, .pump-search, .pump-field input,
+  .pump-field textarea, .pixel-generator-panel textarea) {
+  transition: border-color var(--ui-fast) var(--ui-ease), box-shadow var(--ui-fast) var(--ui-ease);
+}
+:is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product)
+  :is(.fi-amount-input, .fi-market-search, .pump-search):focus-within {
+  border-color: var(--pixel-ui-action);
+  box-shadow: 0 0 0 1px var(--pixel-ui-action);
+}
+:is(.fi-root, .pump-shell, .pixel-product) :is(.fi-table-wrap, .pump-table-wrap,
+  .fi-swap-asset-results, .fi-token-select-menu) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--pixel-ui-border-strong) var(--pixel-ui-bg);
+  overscroll-behavior: contain;
+}
+:is(.fi-root, .pump-shell, .pixel-product) :is(h1, h2, h3) { text-wrap: balance; }
+.fi-root.fi-root .fi-swap-asset-picker { box-shadow: 6px 6px 0 #080909; }
+.fi-root.fi-root .fi-swap-asset-picker-heading { padding-bottom: 8px; border-bottom: 1px solid var(--fi-line); }
+.fi-root.fi-root .fi-token-select-option { min-height: 52px; }
+.fi-root.fi-root .fi-table th, .pump-shell.pump-shell .pump-table th {
+  background: var(--pixel-ui-raised);
+  color: var(--pixel-ui-muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+.fi-root.fi-root .fi-table td, .pump-shell.pump-shell .pump-table td { font-variant-numeric: tabular-nums; }
+.fi-root.fi-root .fi-table tbody tr:hover, .pump-shell.pump-shell .pump-table tbody tr:hover { background: #b8e8cb08; }
+.fi-root.fi-root .fi-empty-state, .pump-shell.pump-shell .pump-empty-state,
+.pixel-product.pixel-product .pixel-collection-empty {
+  border: 1px solid var(--pixel-ui-border);
+  border-top: 2px solid var(--pixel-ui-border-strong);
+  background: var(--pixel-ui-panel);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .fi-root.fi-root .fi-swap-asset-picker { animation: ui-menu-enter 150ms var(--ui-ease); }
+  .fi-root.fi-root :is(.fi-loading-line, .fi-loading-amount, .fi-loading-button, .fi-amount-quote-skeleton),
+  .pump-shell.pump-shell :is(.pump-skeleton-line, .pump-skeleton-block) { animation-timing-function: ease-in-out; }
+  @keyframes ui-menu-enter { from { opacity: 0; } to { opacity: 1; } }
+}
+@media (hover: hover) {
+  .fi-root.fi-root .fi-button:hover:not(:disabled),
+  .pump-shell.pump-shell .pump-button:hover:not(:disabled) { filter: brightness(1.07); }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product)
+    :is(button, a, input, textarea, .fi-amount-input, .fi-swap-asset-picker,
+    .fi-market-row, .pump-token-card, .nft-card) { transition: none !important; animation: none !important; }
+}

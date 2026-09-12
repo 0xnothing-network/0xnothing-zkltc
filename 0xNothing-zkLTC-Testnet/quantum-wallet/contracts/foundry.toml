@@ -1,0 +1,23 @@
+[profile.default]
+src = "src"
+test = "test"
+script = "script"
+out = "out"
+cache_path = "cache"
+libs = ["lib"]
+solc_version = "0.8.24"
+evm_version = "paris"
+optimizer = true
+optimizer_runs = 200
+via_ir = false
+fs_permissions = [{ access = "read-write", path = "./deployments" }]
+# This suite is deliberately crypto-heavy: TreeSigner's constructor builds a full
+# 1024-leaf WOTS key schedule (~1M keccak applications) and
+# test_reservedRotateLeaf_preventsBricking signs and submits 1023 ops in a single
+# tx. Stated explicitly rather than inherited so the ceiling a run gets is the one
+# the suite was written against, and a genuine regression still trips it.
+gas_limit = 9223372036854775807
+memory_limit = 134217728
+
+[fuzz]
+runs = 128

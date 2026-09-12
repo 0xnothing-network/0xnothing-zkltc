@@ -406,6 +406,21 @@ body {
   flex-direction: column;
   gap: 10px;
 }
+
+.w-q-icons {
+  font-family: var(--w-mono, ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace);
+  font-size: 1.05rem;
+  line-height: 1.7;
+  letter-spacing: 0.04em;
+  padding: 10px 12px;
+  margin: 8px 0;
+  border: 1px dashed var(--fi-line-strong);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--fi-text);
+  user-select: all;
+  word-break: break-all;
+}
 /* ------------------------------------------------------------------ header */
 
 .w-head {

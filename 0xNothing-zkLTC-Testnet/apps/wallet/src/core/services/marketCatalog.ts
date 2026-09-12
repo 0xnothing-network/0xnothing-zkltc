@@ -48,9 +48,27 @@ const FETCH_TIMEOUT_MS = 6_000;
 const MAX_PUMP_TOKENS = 200;
 const MAX_DEX_PAIRS = 300;
 const MAX_CANDLE_TOKENS = 12;
+const CANDLE_TTL_MS = 60_000;
+const MAX_CANDLE_CACHE_ENTRIES = 64;
 
 let catalogCache: { key: string; at: number; value: SwapCatalog } | null = null;
 let catalogLoad: { key: string; promise: Promise<SwapCatalog> } | null = null;
+const candleCache = new Map<string, { value: number | null; expiresAt: number }>();
+const candleInFlight = new Map<string, Promise<number | null>>();
+
+function cacheCandleChange(key: string, value: number | null): void {
+  const now = Date.now();
+  for (const [candidate, entry] of candleCache) {
+    if (entry.expiresAt <= now) candleCache.delete(candidate);
+  }
+  candleCache.delete(key);
+  while (candleCache.size >= MAX_CANDLE_CACHE_ENTRIES) {
+    const oldest = candleCache.keys().next().value as string | undefined;
+    if (oldest === undefined) break;
+    candleCache.delete(oldest);
+  }
+  candleCache.set(key, { value, expiresAt: now + CANDLE_TTL_MS });
+}
 
 function catalogKey(network: WalletNetwork): string {
   return `${network.id}:${network.rpcUrl}`;
@@ -535,7 +553,7 @@ export function loadSwapCatalog(network: WalletNetwork = activeNetwork): Promise
   return promise;
 }
 
-async function pumpCandleChange(address: Address): Promise<number | null> {
+async function fetchPumpCandleChange(address: Address): Promise<number | null> {
   let raw: unknown[] = [];
   try {
     const payload = record(await boundedJson(
@@ -582,6 +600,30 @@ async function pumpCandleChange(address: Address): Promise<number | null> {
   if (!Number.isFinite(open) || open <= 0 || !Number.isFinite(close) || close < 0) return null;
   const change = (close - open) / open;
   return change > -1 && change < 10_000 ? change : null;
+}
+
+/**
+ * A 24h bar does not move at block speed, but the effect that asks for one
+ * re-runs whenever the portfolio total does — roughly once per block on an
+ * active chain. Ungated, every tick refetched a candle series per held Pump
+ * token. `null` is cached alongside real values: a sparse token with no honest
+ * baseline is a settled answer, not a failure worth retrying every few seconds.
+ * A thrown fetch is left uncached so a network blip recovers on the next tick.
+ */
+function pumpCandleChange(address: Address): Promise<number | null> {
+  const key = address.toLowerCase();
+  const cached = candleCache.get(key);
+  if (cached !== undefined && cached.expiresAt > Date.now()) return Promise.resolve(cached.value);
+  const pending = candleInFlight.get(key);
+  if (pending !== undefined) return pending;
+  const promise = fetchPumpCandleChange(address).then((value) => {
+    cacheCandleChange(key, value);
+    return value;
+  }).finally(() => {
+    if (candleInFlight.get(key) === promise) candleInFlight.delete(key);
+  });
+  candleInFlight.set(key, promise);
+  return promise;
 }
 
 export async function loadPortfolioMarketChange24h(

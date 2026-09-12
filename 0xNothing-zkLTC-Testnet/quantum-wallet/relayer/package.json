@@ -1,0 +1,19 @@
+{
+  "name": "@0xnothing/qwallet-relayer",
+  "version": "0.1.0",
+  "description": "Sponsor relayer for 0xQuantum wallets on LitVM LiteForge Testnet. Dev pays gas; the relayer never sees user secrets.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ../nodehooks.mjs --experimental-strip-types src/server.ts",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ../nodehooks.mjs --test --experimental-strip-types test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "viem": "2.55.10"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.0.0"
+  }
+}

@@ -26,6 +26,7 @@ import type { PumpMarket } from "@/features/pump/types";
 import { useToast } from "@/components/Toast";
 import { invalidateAfterPumpTrade } from "@/lib/liveData";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 type TradeMode = "buy" | "sell";
 
@@ -54,7 +55,10 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
   const [amount, setAmount] = useState("");
   const [slippageBps, setSlippageBps] = useState(100n);
   const [pending, setPending] = useState(false);
-  const amountWei = useMemo(() => parseTradeAmount(amount), [amount]);
+  const typedAmountWei = useMemo(() => parseTradeAmount(amount), [amount]);
+  // The curve quote keys on the amount, so an undebounced field asked the chain
+  // to price every prefix of the number being typed. Settle first, quote once.
+  const { value: amountWei, pending: amountSettling } = useDebouncedValue(typedAmountWei);
   const configured = PUMP_CONFIGURED && NUSD_CONFIGURED;
 
   const buyQuote = useReadContract({
@@ -119,7 +123,9 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
   // for the length of an RPC round trip roughly every ten seconds. `isLoading`
   // stays false while a query is disabled, so an empty amount cannot pin the
   // button either, and a new amount still gates it until its quote arrives.
-  const quotePending = activeQuote.isLoading;
+  // The settling window counts as pending for the same reason: the quote on
+  // screen belongs to the previous amount, not the one now in the field.
+  const quotePending = amountSettling || activeQuote.isLoading;
   const quoteError = activeQuote.error;
   const tradeAllowed = market.status === "TRADING" || (market.status === "READY" && mode === "sell");
 

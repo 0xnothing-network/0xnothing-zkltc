@@ -978,19 +978,23 @@
   caret-color: transparent;
 }
 
+.fi-root .fi-amount-input[data-busy="true"] > input::placeholder {
+  color: transparent;
+  opacity: 0;
+}
+
 .fi-amount-quote-skeleton {
   position: absolute;
-  left: 16px;
-  width: min(32%, 148px);
-  height: 18px;
-  background: #262b30;
-  animation: fi-quote-pulse 1.1s steps(4, end) infinite;
+  left: 18px;
+  color: var(--fi-muted);
+  font-size: 22px;
+  line-height: 1;
+  opacity: 0.55;
   pointer-events: none;
 }
 
-@keyframes fi-quote-pulse {
-  from { opacity: 0.45; }
-  to { opacity: 1; }
+.fi-amount-quote-skeleton::before {
+  content: "—";
 }
 
 .fi-root .fi-amount-input input:focus-visible {
@@ -3709,3 +3713,36 @@
 @media (max-width: 760px) {
   .fi-root .fi-header-inner { grid-template-areas: "brand wallet"; }
 }
+
+/* Consistent workspace hierarchy across pools, earn, lend, borrow and synth. */
+.fi-root .fi-page-heading { padding-bottom: 24px; }
+.fi-root .fi-page-heading h1 { line-height: 1.25; text-wrap: balance; }
+.fi-root .fi-panel-heading { gap: 12px; padding-bottom: 16px; }
+.fi-root .fi-panel-heading h2 { line-height: 1.4; letter-spacing: -.02em; }
+.fi-root .fi-metric-strip { border-color: var(--fi-line); border-top: 2px solid var(--fi-line-strong); }
+.fi-root .fi-metric-strip > div { padding: 20px; }
+.fi-root .fi-metric-strip dt { margin-bottom: 12px; line-height: 1.5; }
+.fi-root .fi-metric-strip dd { font-size: clamp(18px, 2vw, 24px); font-variant-numeric: tabular-nums; }
+.fi-root .fi-workspace-grid { gap: 20px; }
+.fi-root .fi-table th { padding-block: 14px; }
+.fi-root .fi-table td { padding-block: 16px; line-height: 1.6; }
+.fi-root .fi-market-list { box-shadow: var(--pixel-ui-shadow); }
+.fi-root .fi-market-row { min-height: 84px; }
+.fi-root .fi-settings-details { border-color: var(--fi-line); }
+.fi-root .fi-settings-details > summary { min-height: 48px; }
+.fi-root .fi-form-details > div { padding-block: 10px; }
+.fi-root .fi-inline-state { line-height: 1.7; }
+.fi-root .fi-transaction-status { padding: 14px 16px; line-height: 1.7; }
+.fi-root .fi-points-card-heading { background: var(--fi-panel-2); }
+.fi-root .fi-points-position { padding: 18px; }
+.fi-root .fi-points-locks button { transition: background-color 160ms ease, border-color 160ms ease; }
+@media (max-width: 760px) {
+  .fi-root .fi-panel:not(.fi-panel-flush) { padding: 18px; }
+  .fi-root .fi-panel-heading h2 { font-size: 18px; }
+  .fi-root .fi-metric-strip > div { padding: 14px; }
+  .fi-root .fi-metric-strip dt { font-size: 10px; }
+  .fi-root .fi-workspace-grid { gap: 16px; }
+  .fi-root .fi-market-row { min-height: 76px; }
+  .fi-root .fi-table td { padding-block: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .fi-root .fi-points-locks button { transition: none; } }

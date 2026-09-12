@@ -27,6 +27,10 @@ export default defineConfig({
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
+    // The 0xQuantum SDK lives at ../../quantum-wallet/sdk and resolves viem
+    // through its own node_modules junction (apps/web). Dedupe forces every
+    // `viem` import — wallet code and SDK alike — onto this app's single copy.
+    dedupe: ["viem"],
   },
   // Stated rather than inherited from tsconfig.json: the bundle's JSX runtime is
   // not something to leave to whichever tsconfig the transform happens to find.

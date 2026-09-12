@@ -119,6 +119,8 @@ function MarketplaceBody({ userAddress }: BodyProps) {
 
   // Cache for API responses (persists across renders)
   const cacheRef = useRef<{ data: ListingsResponse | null; timestamp: number }>({ data: null, timestamp: 0 });
+  /** When the session copy was last written, so an unchanged poll can skip it. */
+  const sessionWriteRef = useRef(0);
 
   const fetchListings = useCallback(async (force = false, background = false) => {
     if (!force && requestRef.current && !requestRef.current.controller.signal.aborted) return;
@@ -148,11 +150,22 @@ function MarketplaceBody({ userAddress }: BodyProps) {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const body = (await r.json()) as ListingsResponse;
       if (ctrl.signal.aborted || requestRef.current?.controller !== ctrl) return;
-      const entry = { data: body, timestamp: Date.now() };
+      // Keeping the previous object when the bytes match leaves the grid alone:
+      // React bails out of an unchanged state write, so the poll stays live and
+      // the render, the BigInt re-parse and the re-sort drop out of it.
+      const unchanged = sameListings(cacheRef.current.data, body);
+      const settled = unchanged && cacheRef.current.data !== null ? cacheRef.current.data : body;
+      const entry = { data: settled, timestamp: Date.now() };
       cacheRef.current = entry;
-      writeListingsSessionCache(entry);
+      // An unchanged payload still needs its persisted timestamp refreshed
+      // before it ages out of the session cache — just not every five seconds,
+      // since that write serialises the whole payload on the main thread.
+      if (!unchanged || entry.timestamp - sessionWriteRef.current >= LISTINGS_SESSION_MAX_AGE_MS / 2) {
+        writeListingsSessionCache(entry);
+        sessionWriteRef.current = entry.timestamp;
+      }
       setError(null);
-      setData(body);
+      setData(settled);
     } catch (err) {
       if ((err as { name?: string }).name === "AbortError") return;
       console.error("[marketplace] load failed:", err);
@@ -242,6 +255,9 @@ function MarketplaceBody({ userAddress }: BodyProps) {
   const handleRefresh = useCallback(() => {
     cacheRef.current = { data: cacheRef.current.data, timestamp: 0 };
     clearListingsSessionCache();
+    // Nothing is persisted any more, so the next result must be written back
+    // even if it turns out to match what was just discarded.
+    sessionWriteRef.current = 0;
     forceRefreshRef.current = true;
     setPage(1);
     setReloadKey((k) => k + 1);
@@ -472,10 +488,14 @@ function MarketplaceActivity({ refreshKey = 0 }: { refreshKey?: number }) {
         if (skip > 0) return appendUniqueEvents(prev, body.events);
         if (!background) return body.events;
         // A live tab should refresh the current window, not grow the DOM forever.
-        return appendUniqueEvents(body.events, prev).slice(
+        const next = appendUniqueEvents(body.events, prev).slice(
           0,
           Math.max(ACTIVITY_PAGE_SIZE, loadedCountRef.current),
         );
+        // Most of these polls find nothing new. Handing back the previous array
+        // then lets React bail out instead of repainting every row twice a
+        // minute for a window that did not change.
+        return sameEventWindow(prev, next) ? prev : next;
       });
       if (skip > 0) loadedCountRef.current += body.events.length;
       else if (!background) loadedCountRef.current = body.events.length;
@@ -972,6 +992,40 @@ function appendUniqueEvents(
     next.push(event);
   }
   return next;
+}
+
+/**
+ * A visible tab re-polls listings every five seconds, and the response is a
+ * fresh object even when the marketplace has not moved. A fresh identity is
+ * enough to re-parse every listing into BigInt, re-sort the grid, rewrite the
+ * session cache and repaint every card, so an idle tab paid for a full render
+ * twelve times a minute. This payload is plain JSON from a single route, so its
+ * key order is stable and comparing serialisations is a sound way to ask
+ * whether the poll actually found anything.
+ */
+function sameListings(previous: ListingsResponse | null, next: ListingsResponse): boolean {
+  if (previous === null) return false;
+  try {
+    return JSON.stringify(previous) === JSON.stringify(next);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The same question for the activity window, where "nothing new" is the normal
+ * answer every five seconds. These events are immutable historical records, so
+ * the id sequence identifies the window without walking each row's fields.
+ */
+function sameEventWindow(
+  previous: readonly MarketActivityEvent[],
+  next: readonly MarketActivityEvent[],
+): boolean {
+  if (previous.length !== next.length) return false;
+  for (let index = 0; index < previous.length; index += 1) {
+    if (previous[index].id !== next[index].id) return false;
+  }
+  return true;
 }
 
 function activityFilterToType(filter: ActivityFilter): MarketActivityType | null {

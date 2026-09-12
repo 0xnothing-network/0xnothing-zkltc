@@ -178,6 +178,13 @@ function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect",
       "@/components/Toast": { useToast: () => ({ info() {}, success() {}, warning() {}, error() {}, handleError: (error: Error) => errors.push(error) }) },
       "@/lib/liveData": { invalidateAfterPumpTrade: async () => {} },
       "@/lib/actionLock": { tryAcquireAction: (ref: { current: boolean }) => ref.current ? false : (ref.current = true), releaseAction: (ref: { current: boolean }) => { ref.current = false; } },
+      // A settled pass-through, which is what the real hook returns once the
+      // field stops changing — the only state a trade is ever submitted from.
+      // Loading it for real would also claim a fifth `useState` slot, and this
+      // harness answers positionally from a four-entry list, so the hook would
+      // read `undefined` and report itself forever pending, gating the quote
+      // off and stalling the trade these tests exist to follow.
+      "@/lib/useDebouncedValue": { useDebouncedValue: (value: unknown) => ({ value, pending: false }) },
     },
   );
   return {
@@ -234,7 +241,7 @@ function componentHarness(name: PumpComponent, changeAt?: "simulation" | "upload
     : name === "NusdOraclePanel" ? [oracleMode, "1", "1", false] : [false];
   const pumpConfig = { ...config, ZERO_ADDRESS: zero, PUMP_CREATE_FEE: 1n, PUMP_GRADUATION_CONTROLLER_ADDRESS: controller,
     PUMP_GRADUATION_ROUTER_ADDRESS: router, PUMP_GRADUATION_ADAPTER_ADDRESS: adapter,
-    isValidPumpExternalUrl: () => true, ipfsToGatewayUrl: () => "https://metadata.test", normalizePumpExternalUrl: (value: string) => value.trim() };
+    isValidPumpExternalUrl: () => true, normalizePumpIpfsPath: () => "", ipfsToGatewayUrl: () => "https://metadata.test", normalizePumpExternalUrl: (value: string) => value.trim() };
   const guardModule = evaluateModule(new URL("../../features/pump/walletSession.ts", import.meta.url), {
     "wagmi/actions": { getAccount: () => account }, "@/features/pump/config": pumpConfig,
   });
@@ -303,7 +310,7 @@ function componentHarness(name: PumpComponent, changeAt?: "simulation" | "upload
       "@/components/Toast": { useToast: () => toast },
       "@/lib/actionLock": { tryAcquireAction: (ref: { current: boolean }) => ref.current ? false : (ref.current = true), releaseAction: (ref: { current: boolean }) => { ref.current = false; } },
     },
-    { TextEncoder, fetch: async () => ({ ok: true, json: async () => metadataValue ?? { configured: true } }) },
+    { TextEncoder, fetch: async () => ({ ok: true, headers: { get: () => null }, json: async () => metadataValue ?? { configured: true } }) },
   );
   const render = () => { stateIndex = 0; return component[name]({ token: TOKEN }); };
   return {

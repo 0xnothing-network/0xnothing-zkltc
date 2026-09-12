@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { formatUnits, zeroAddress, type Address } from "viem";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { AmountField } from "@fi/components/AmountField";
 import { AssetSelect } from "@fi/components/AssetSelect";
 import { ConnectWalletButton } from "@fi/components/ConnectWalletButton";
@@ -48,7 +49,11 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
   const [synth, setSynth] = useState<SynthAsset>(initialSynth);
   const [mode, setMode] = useState<SynthMode>("mint");
   const [amountText, setAmountText] = useState("");
-  const amount = parseAmount(amountText);
+  const typedAmount = parseAmount(amountText);
+  // The mint quote and the bounded fee quote are chained — the fee keys on the
+  // amount the first one returns — so a keystroke cost two serial round trips.
+  // Quoting the settled amount collapses a typed number to one pair.
+  const { value: amount, pending: amountSettling } = useDebouncedValue(typedAmount);
   const synthAddress = assets[synth].address;
   const vault = synth === "nBTC" ? deployment.contracts.nbtcVault : deployment.contracts.nethVault;
   const oracle = synth === "nBTC" ? deployment.contracts.btcOracle : deployment.contracts.ethOracle;
@@ -177,8 +182,10 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
 
   const error = useMemo(() => {
     if (!amountText) return undefined;
-    if (!amount) return "Enter a valid positive amount.";
-    const requiredBalance = mode === "mint" ? maximumMintDebit : amount;
+    // The purely local checks read the typed amount, so the field still answers
+    // on the keystroke; only the quote-derived mint debit waits for its quote.
+    if (!typedAmount) return "Enter a valid positive amount.";
+    const requiredBalance = mode === "mint" ? maximumMintDebit : typedAmount;
     if (sourceBalance !== undefined && requiredBalance !== undefined && requiredBalance > sourceBalance) {
       return mode === "withdraw"
         ? "Amount exceeds your withdrawable NUSD. Reserve backing cannot be withdrawn."
@@ -186,7 +193,7 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
           ? "NUSD balance does not cover the maximum mint debit."
           : "Amount exceeds the available balance.";
     }
-    if (mode === "repay" && synthDebt !== undefined && amount > synthDebt) {
+    if (mode === "repay" && synthDebt !== undefined && typedAmount > synthDebt) {
       return "Repayment exceeds current synth debt.";
     }
     if (mode === "mint" && mintPaused) return "Minting is paused by governance.";
@@ -198,7 +205,7 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
       return "DIA price is unavailable.";
     }
     return undefined;
-  }, [amount, amountText, maximumMintDebit, minimumMintAmount, mintFeeState.isError, mintPaused, mintQuoteState.isError, mode, oracleState.data, sourceBalance, synthDebt, withdrawPaused]);
+  }, [amountText, maximumMintDebit, minimumMintAmount, mintFeeState.isError, mintPaused, mintQuoteState.isError, mode, oracleState.data, sourceBalance, synthDebt, typedAmount, withdrawPaused]);
 
   function changeMode(nextMode: SynthMode) {
     setMode(nextMode);
@@ -207,7 +214,9 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
   }
 
   async function submit() {
-    if (!amount || !address || !synthAddress || activationBlocked) return;
+    // Never act on the settled amount while the field has already moved past it:
+    // the quotes below belong to the old number, and so would the transaction.
+    if (!amount || amountSettling || !address || !synthAddress || activationBlocked) return;
     const call = mode === "topup"
       ? { functionName: "depositCollateral", args: [amount, address] as const }
       : mode === "mint"
@@ -363,7 +372,7 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
               <button
                 type="submit"
                 className={`fi-button fi-button-block ${mode === "withdraw" ? "fi-button-muted" : "fi-button-primary"}`}
-                disabled={!configured || riskBlocked || !amount || (mode === "mint" && (!minimumMintAmount || maximumMintFee === undefined)) || Boolean(error) || tx.pending}
+                disabled={!configured || riskBlocked || !amount || amountSettling || (mode === "mint" && (!minimumMintAmount || maximumMintFee === undefined)) || Boolean(error) || tx.pending}
               >
                 {!configured ? "Not deployed" : activationBlocked ? vaultStatus.actionLabel : tx.pending ? "Processing" : mode === "mint" ? `Mint ${synth}` : mode === "topup" ? "Top up" : `${mode[0].toUpperCase()}${mode.slice(1)}`}
               </button>

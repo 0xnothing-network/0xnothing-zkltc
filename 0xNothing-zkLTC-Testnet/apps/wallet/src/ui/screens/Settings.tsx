@@ -7,11 +7,12 @@ import { Button, Note, Panel, PanelBody, Row, Rows } from "../components/kit";
 import { useActionGate } from "../hooks/useActionGate";
 import { rpcPermissionPattern } from "../lib/rpcPermission";
 import { Screen } from "../components/Screen";
-import { goHome } from "../router";
+import { goHome, navigate } from "../router";
 import { useWallet } from "../state/WalletContext";
 import { ChangePassword } from "./settings/ChangePassword";
 import { DangerZone } from "./settings/DangerZone";
 import { ImportAccount } from "./settings/ImportAccount";
+import { RelayNode } from "./settings/RelayNode";
 import { RevealSecrets } from "./settings/RevealSecrets";
 import { TokenManager } from "./settings/TokenManager";
 
@@ -251,6 +252,17 @@ export function Settings(): ReactNode {
             <Note>{t("set.lockNote")}</Note>
           </PanelBody>
         </Panel>
+
+        <Panel title={t("quantum.panel")}>
+          <PanelBody>
+            <Button block disabled={saving} onClick={() => navigate("#/quantum")}>
+              {t("quantum.migrate")}
+            </Button>
+            <Note>{t("quantum.migrateNote")}</Note>
+          </PanelBody>
+        </Panel>
+
+        <RelayNode />
 
         <Panel title={t("set.trading")}>
           <PanelBody>

@@ -14,11 +14,15 @@ import {
   decryptWithKey,
   type EncryptedBlob,
   encryptJson,
+  encryptWithKey,
   exportKey,
   importKey,
   keyForBlob,
 } from "./crypto";
 import { checkMnemonic, newMnemonic } from "./mnemonic";
+// Type-only: erased at compile time, so keyring does not gain a runtime
+// dependency on the quantum layer (which imports this module back).
+import type { QuantumStored } from "../quantum/storage";
 
 /**
  * The keyring.
@@ -38,6 +42,21 @@ export interface VaultSecret {
   mnemonic: string;
   /** Keys imported outside the HD tree. */
   imported: Hex[];
+  /**
+   * The 0xQuantum wallet record — its signing secret included — or absent when
+   * this install has no quantum wallet.
+   *
+   * It lives inside the vault rather than in a storage slot of its own so the
+   * one-time signing key is covered by the same PBKDF2+AES-GCM protection as
+   * the seed phrase, and so `changePassword` and `wipeWallet` cover it without
+   * a second code path that could drift.
+   *
+   * `isVaultSecret` below deliberately does NOT inspect this field: a record
+   * this module cannot parse must never make the whole vault unreadable, or a
+   * quantum bug would cost the user their main wallet. The quantum layer
+   * validates its own record on every read.
+   */
+  quantum?: QuantumStored;
 }
 
 export const MIN_WALLET_PASSWORD_LENGTH = 8;
@@ -288,6 +307,37 @@ export function unlock(password: string): Promise<VaultSecret> {
   return withNamedLock(VAULT_LOCK, () => unlockUnderVaultLock(password));
 }
 
+/* ------------------------------------------------------------ 0xquantum */
+
+/**
+ * The 0xQuantum record stored in the vault, or null when there is none.
+ * Requires an unlocked vault: the record carries a signing secret.
+ */
+export async function readVaultQuantum(): Promise<QuantumStored | null> {
+  return (await getSecret()).quantum ?? null;
+}
+
+/**
+ * Replace (or with null, clear) the 0xQuantum record.
+ *
+ * Re-encrypts the vault with the session key, which is why `encryptWithKey`
+ * passes the CURRENT blob as the salt template — see its note. Reading blob and
+ * key inside the vault lock keeps that template from going stale between the
+ * read and the write.
+ */
+export async function writeVaultQuantum(record: QuantumStored | null): Promise<void> {
+  await withNamedLock(VAULT_LOCK, async () => {
+    const [key, blob] = await Promise.all([sessionKey(), readVaultBlob()]);
+    if (!key || !blob) throw new WalletLockedError();
+    const current = await decryptWithKey<unknown>(blob, key);
+    if (!isVaultSecret(current)) throw new WalletLockedError();
+    const next: VaultSecret = { ...current };
+    if (record === null) delete next.quantum;
+    else next.quantum = record;
+    await persistentStore.set(STORAGE_KEYS.vault, await encryptWithKey(next, key, blob));
+  });
+}
+
 /* ---------------------------------------------------------------- accounts */
 
 export async function readAccounts(): Promise<AccountsState> {
@@ -535,6 +585,10 @@ export async function wipeWallet(): Promise<void> {
       persistentStore.remove(STORAGE_KEYS.connections),
       persistentStore.remove(STORAGE_KEYS.pending),
       persistentStore.remove(STORAGE_KEYS.resolved),
+      // The 0xQuantum record lives inside the vault and dies with it; this only
+      // clears the plaintext slot written by builds that predate encryption, so
+      // a wipe cannot leave an old signing secret behind.
+      persistentStore.remove(STORAGE_KEYS.quantum),
     ]);
   });
 }

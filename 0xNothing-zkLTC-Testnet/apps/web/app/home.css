@@ -62,3 +62,15 @@
   .nothing-nav { grid-template-columns: 1fr; width: 100%; }
   .nothing-link { min-height: 48px; }
 }
+.nothing-footer > div { justify-content: space-between; gap: 20px; }
+.nothing-footer-nav { display: flex; gap: 24px; }
+.nothing-footer-nav a { color: #a6adb7; font-size: 11px; letter-spacing: .025em; padding-block: 10px; }
+.nothing-footer-nav a:hover { color: #b8e8cb; }
+
+/* Smooth feedback with the existing pixel edges. */
+.nothing-link, .nothing-x, .nothing-link-arrow { transition-duration: 160ms; transition-timing-function: cubic-bezier(.22,.7,.2,1); }
+@media (prefers-reduced-motion: no-preference) {
+  .nothing-title, .nothing-nav { animation-timing-function: ease-out; animation-duration: 220ms; }
+  .nothing-nav { animation-delay: 0ms; }
+}
+@media (prefers-reduced-motion: reduce) { .nothing-link, .nothing-x, .nothing-link-arrow { transition: none; } }

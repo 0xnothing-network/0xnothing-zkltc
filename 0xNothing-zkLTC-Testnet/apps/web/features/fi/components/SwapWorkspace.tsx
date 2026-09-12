@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowsDownUp } from "@phosphor-icons/react";
 import { formatUnits, getAddress, isAddress } from "viem";
 import { useAccount, useBalance, useReadContract, useReadContracts } from "wagmi";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import type { AssetSelectOption } from "@fi/components/AssetSelect";
 import { ConnectWalletButton } from "@fi/components/ConnectWalletButton";
 import { SwapAmountField } from "@fi/components/SwapAmountField";
@@ -219,7 +220,11 @@ export function SwapWorkspace() {
   });
   const balance = assetIn?.native ? nativeBalance.data?.value : tokenBalance.data;
   const spendableBalance = spendableSwapBalance(balance, Boolean(assetIn?.native));
-  const amountIn = assetIn ? parseAmount(amountText, assetIn.decimals) : undefined;
+  const typedAmountIn = assetIn ? parseAmount(amountText, assetIn.decimals) : undefined;
+  // One amount fans out to six candidate-route quotes, so quoting per keystroke
+  // spent a round of eth_calls on every character of a number the user was still
+  // writing. The quotes key on the settled amount; the field keeps its own text.
+  const { value: amountIn, pending: amountSettling } = useDebouncedValue(typedAmountIn);
   const tokenInAddress = assetIn?.poolAddress;
   const tokenOutAddress = assetOut?.poolAddress;
   const canonicalNusd = deployment.contracts.nusd;
@@ -338,15 +343,19 @@ export function SwapWorkspace() {
       ? mintQuote.data === undefined && !mintQuote.error
       : redeemQuote.data === undefined && !redeemQuote.error
   ));
-  const quoteFetching = isOracleNusdRoute ? oracleQuotePending : swapRoute.isFetching;
+  const quoteFetching = amountSettling
+    || (isOracleNusdRoute ? oracleQuotePending : swapRoute.isFetching);
   const activeOracleQuote = isMintRoute ? mintQuote : redeemQuote;
   const oracleQuoteExecutable = Boolean(
     !isOracleNusdRoute
     || amountIn && amountOut !== undefined && !activeOracleQuote.isFetching && !activeOracleQuote.error,
   );
-  const executableQuoteCurrent = isOracleNusdRoute
+  // A quote for the previous amount is never executable for the amount now in
+  // the field, which is what the amountInQuoted comparison already says once the
+  // value settles. While it is still settling, say so directly.
+  const executableQuoteCurrent = !amountSettling && (isOracleNusdRoute
     ? oracleQuoteExecutable
-    : swapRoute.amountInQuoted === amountIn;
+    : swapRoute.amountInQuoted === amountIn);
   const quoteError = isOracleNusdRoute
     ? isMintRoute ? mintQuote.error : redeemQuote.error
     : swapRoute.error;
@@ -401,13 +410,15 @@ export function SwapWorkspace() {
 
   const validation = useMemo(() => {
     if (!amountText) return undefined;
-    if (!amountIn || !assetIn) return "Enter a valid positive amount.";
+    // Both of these judge the text against the wallet, not against a quote, so
+    // they answer from what is typed rather than waiting out the quote debounce.
+    if (!typedAmountIn || !assetIn) return "Enter a valid positive amount.";
     if (!importedContractsReady) return "Resolve both token contracts before swapping.";
     if (quoteError) return "A fresh swap quote is unavailable.";
     // Pending/background quotes are not input errors. Execution remains guarded below.
     if (!executableQuoteCurrent) return undefined;
     if (!routeConfigured) return "No liquidity is available for this pair.";
-    if (spendableBalance !== undefined && amountIn > spendableBalance) {
+    if (spendableBalance !== undefined && typedAmountIn > spendableBalance) {
       return assetIn.native ? "Leave at least 0.01 zkLTC in your wallet for network fees." : "Amount exceeds wallet balance.";
     }
     if (oracleMintGuarded && mintCapacityUnavailable) return "NUSD mint capacity is unavailable.";
@@ -419,7 +430,7 @@ export function SwapWorkspace() {
       return "The NUSD native reserve cannot cover this redemption.";
     }
     return undefined;
-  }, [amountIn, amountOut, amountText, assetIn, executableQuoteCurrent, importedContractsReady, mintCapacityUnavailable, mintedNusdAmount, oracleMintGuarded, oracleRedeemGuarded, quoteError, redeemReserve, redeemReserveUnavailable, remainingMintCapacity, routeConfigured, spendableBalance]);
+  }, [amountOut, amountText, assetIn, executableQuoteCurrent, importedContractsReady, mintCapacityUnavailable, mintedNusdAmount, oracleMintGuarded, oracleRedeemGuarded, quoteError, redeemReserve, redeemReserveUnavailable, remainingMintCapacity, routeConfigured, spendableBalance, typedAmountIn]);
 
   function resetAmount() {
     setAmountText("");
@@ -653,7 +664,7 @@ export function SwapWorkspace() {
             </div>
           </div>
         ) : null}
-        {amountIn ? (
+        {typedAmountIn ? (
           <dl className="fi-form-details">
             {routeLabel ? (
               <div>

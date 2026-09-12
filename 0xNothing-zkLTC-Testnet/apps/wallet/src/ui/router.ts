@@ -18,6 +18,7 @@ export type RouteName =
   | "swap"
   | "dapps"
   | "settings"
+  | "quantum"
   | "approve";
 
 export interface Route {
@@ -36,15 +37,25 @@ const ROUTES = new Set<string>([
   "swap",
   "dapps",
   "settings",
+  "quantum",
   "approve",
 ]);
+
+/**
+ * Where the app lands when no route is named. The popup opens at plain
+ * `index.html` with no hash, so this is what the user sees on every launch —
+ * and it is the 0xQuantum wallet, which is the point of this build.
+ *
+ * The main (HD) wallet is unchanged and still reachable at `#/home`.
+ */
+const DEFAULT_ROUTE: RouteName = "quantum";
 
 export function parseHash(hash: string): Route {
   const raw = hash.replace(/^#\/?/u, "");
   const [path = "", query = ""] = raw.split("?");
   const name = path.split("/")[0] ?? "";
   return {
-    name: ROUTES.has(name) ? (name as RouteName) : "home",
+    name: ROUTES.has(name) ? (name as RouteName) : DEFAULT_ROUTE,
     params: new URLSearchParams(query),
   };
 }
@@ -65,6 +76,13 @@ export function navigate(path: string): void {
   window.location.hash = next;
 }
 
+/**
+ * "Back" from any screen. Must name `#/home` explicitly rather than `#/`:
+ * the bare hash now resolves to DEFAULT_ROUTE (the quantum wallet), so a bare
+ * `#/` here would make the back button on the quantum screen a no-op — it would
+ * re-enter the screen it is trying to leave. Every other screen's back button
+ * would land on quantum too, instead of the main wallet's home.
+ */
 export function goHome(): void {
-  navigate("#/");
+  navigate("#/home");
 }

@@ -11,6 +11,10 @@ export const STORAGE_KEYS = {
   settings: "wallet.settings.v1",
   /** Imported ERC-20s. */
   tokens: "wallet.tokens.v1",
+  /** 0xQuantum post-quantum wallet secret (32-byte entropy hex + epoch). */
+  quantum: "wallet.quantum.v1",
+  /** Opt-in DePIN relayer-node settings + its running profit/loss ledger. No secrets. */
+  relayNode: "wallet.relayNode.v1",
   /** Locally recorded transactions (the chain has no per-account index). */
   history: "wallet.history.v1",
   /** Timestamped portfolio-value samples that back the 24h figure. */

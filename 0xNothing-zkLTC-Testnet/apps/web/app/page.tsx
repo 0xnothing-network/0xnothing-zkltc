@@ -70,7 +70,7 @@ export default function Home() {
 
           <nav className="nothing-nav mt-16 flex flex-col items-center justify-center gap-3 sm:flex-row" aria-label="0xNothing apps">
             {links.map((link) => {
-              const content = <><span>{link.label}</span><span aria-hidden="true">&gt;</span></>;
+              const content = <><span>{link.label}</span><span className="nothing-link-arrow" aria-hidden="true">&gt;</span></>;
               const className = `nothing-link nothing-link-${link.tone}`;
               return <Link key={link.href} href={link.href} className={className}>{content}</Link>;
             })}
@@ -81,6 +81,10 @@ export default function Home() {
       <footer className="nothing-footer relative z-10 border-t border-white/[0.04] px-5 py-6 sm:px-6">
         <div className="mx-auto flex max-w-5xl items-center justify-start text-[9px] uppercase tracking-[0.38em] text-white/[0.08]">
           <span>LitVm Testnet</span>
+          <nav className="nothing-footer-nav" aria-label="Resources">
+            <Link href="/docs">Docs</Link>
+            <Link href="/privacy">Privacy</Link>
+          </nav>
         </div>
       </footer>
     </div>

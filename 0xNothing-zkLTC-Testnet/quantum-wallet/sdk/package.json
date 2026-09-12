@@ -1,0 +1,22 @@
+{
+  "name": "@0xnothing/qwallet-sdk",
+  "version": "0.1.0",
+  "description": "Post-quantum contract-wallet SDK for 0xNothing zkLTC Testnet (WOTS + Merkle over keccak256). Byte-for-byte mirror of quantum-wallet/contracts.",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ../nodehooks.mjs --test --experimental-strip-types test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "vectors": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ../nodehooks.mjs --experimental-strip-types test/vectors.gen.ts"
+  },
+  "dependencies": {
+    "viem": "2.55.10"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.0.0"
+  }
+}

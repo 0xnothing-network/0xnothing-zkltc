@@ -100,6 +100,27 @@ function applyTheme(theme: WalletSettings["theme"]): void {
   }
 }
 
+/**
+ * A storage read rebuilds its objects every time, so a reload that changed
+ * nothing still handed React new identities — recreating the context value and,
+ * with it, the `tokens` array that `usePortfolio` keys its live read on. That
+ * key change drops the last portfolio to `null`, so HOME fell back to its
+ * loading state on every settings write and every cross-surface storage event,
+ * twice for a write that then echoes back through the subscription.
+ *
+ * These are precisely the records the wallet persists, so they are JSON by
+ * construction, and each has a single reader producing a stable key order:
+ * comparing serialisations is a sound identity test here. It runs a handful of
+ * times per session, not per frame.
+ */
+function keepIdentity<T>(previous: T, next: T): T {
+  try {
+    return JSON.stringify(previous) === JSON.stringify(next) ? previous : next;
+  } catch {
+    return next;
+  }
+}
+
 export function WalletProvider({ children }: { children: ReactNode }): ReactNode {
   const [phase, setPhase] = useState<Phase>("loading");
   const [accounts, setAccounts] = useState<AccountMeta[]>([]);
@@ -130,15 +151,15 @@ export function WalletProvider({ children }: { children: ReactNode }): ReactNode
     // A superseded reload must not repoint the process-wide RPC client after a
     // newer reload has already committed a different network to the UI.
     configureRpcClient(selected);
-    setAccounts(state.accounts);
+    setAccounts((previous) => keepIdentity(previous, state.accounts));
     setAddress(state.active ?? state.accounts[0]?.address ?? null);
     // Language before the first painted screen: `setSettings` below is what
     // re-renders, so the labels resolve in the stored locale straight away.
     setLocale(saved.locale);
     applyTheme(saved.theme);
-    setSettings(saved);
-    setNetwork(selected);
-    setTokens(list);
+    setSettings((previous) => keepIdentity(previous, saved));
+    setNetwork((previous) => keepIdentity(previous, selected));
+    setTokens((previous) => keepIdentity(previous, list));
   }, []);
   const decidePhase = useCallback(async (): Promise<Exclude<Phase, "loading">> => {
     if (!(await hasVault())) return "onboarding";

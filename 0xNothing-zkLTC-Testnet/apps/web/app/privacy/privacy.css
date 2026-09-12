@@ -58,3 +58,12 @@
 @media (prefers-reduced-motion: reduce) {
   .ox-privacy section a { transition: none; }
 }
+
+/* Editorial policy layout with clearer section anchors. */
+.ox-privacy main > div:first-child { padding-bottom: 32px; border-bottom: 2px solid #565e68; }
+.ox-privacy main > div:last-child { margin-top: 16px; border-top: 0; }
+.ox-privacy section { scroll-margin-top: 80px; }
+.ox-privacy section h2 { color: #b8e8cb; font-size: 13px; }
+.ox-privacy section a { text-underline-offset: 4px; }
+@media (min-width: 768px) { .ox-privacy section h2 { position: sticky; top: 88px; align-self: start; } }
+@media (max-width: 600px) { .ox-privacy main { padding-top: 32px; padding-bottom: 48px; } }

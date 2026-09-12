@@ -1400,3 +1400,20 @@
 }
 .ox-docs-contract a, .ox-docs-pool-addresses a, .ox-docs-product-link { min-height: 44px; }
 .ox-docs-root a { overflow-wrap: anywhere; }
+
+/* Long-form pages: quieter separators and readable anchors. */
+.ox-docs-root .ox-docs-hero { border-bottom: 1px solid var(--docs-line-strong); }
+.ox-docs-root .ox-docs-section { scroll-margin-top: 88px; }
+.ox-docs-root .ox-docs-section-heading { margin-bottom: 28px; }
+.ox-docs-root .ox-docs-code { border-top: 2px solid var(--docs-line-strong); box-shadow: 3px 3px 0 #080909; }
+.ox-docs-root .ox-docs-code figcaption { background: var(--docs-panel-strong); }
+.ox-docs-root .ox-docs-code pre { scrollbar-width: thin; scrollbar-color: var(--docs-line-strong) var(--docs-bg); overscroll-behavior: contain; }
+.ox-docs-root .ox-docs-nav-group a { border-left: 2px solid transparent; transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease; }
+.ox-docs-root .ox-docs-nav-group a:hover { border-left-color: var(--docs-accent); background: var(--docs-panel); }
+.ox-docs-root :is(.ox-docs-hero-actions a, .ox-docs-topbar nav a, .ox-docs-footer-actions a, .ox-docs-code button) { transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease; }
+@media (max-width: 760px) {
+  .ox-docs-root .ox-docs-hero > div { min-height: 0; padding-block: 24px 30px; }
+  .ox-docs-root .ox-docs-section { padding-block: 40px; }
+  .ox-docs-root .ox-docs-code pre { max-height: 420px; }
+}
+@media (prefers-reduced-motion: reduce) { .ox-docs-root :is(a, button) { transition: none !important; } }

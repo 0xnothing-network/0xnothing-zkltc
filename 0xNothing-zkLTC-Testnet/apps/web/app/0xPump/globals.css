@@ -2184,3 +2184,60 @@
   .pump-stats-primary strong { font-size: 24px; }
   .pump-stats-detail-grid { gap: 14px; }
 }
+
+/* Full product pass: create, discovery, trading, portfolio and statistics. */
+.pump-shell .pump-page { padding-bottom: 64px; }
+.pump-shell .pump-page-heading { padding-block: 8px 24px; margin-bottom: 24px; }
+.pump-shell .pump-page-heading h1 { line-height: 1.25; letter-spacing: -.025em; }
+.pump-shell .pump-page-heading .pump-eyebrow { margin-bottom: 10px; }
+.pump-shell .pump-create-page { max-width: 1200px; }
+.pump-shell .pump-create-grid { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; gap: 24px; margin-top: 0; }
+.pump-shell .pump-create-form { padding: 28px; }
+.pump-shell .pump-create-form .pump-panel-heading { padding-bottom: 20px; border-bottom: 1px solid var(--pump-line); }
+.pump-shell .pump-form-grid { gap: 20px; margin-top: 24px; }
+.pump-shell .pump-field input, .pump-shell .pump-field textarea { font-size: 13px; padding: 12px 14px; }
+.pump-shell .pump-field em { color: var(--pump-muted); font-size: 10px; }
+.pump-shell .pump-logo-drop { min-height: 104px; padding: 16px; background: var(--pump-input); transition: border-color 160ms ease, background-color 160ms ease; }
+.pump-shell .pump-logo-drop:hover, .pump-shell .pump-logo-drop:focus-within { border-color: var(--pump-green); background: var(--pump-panel-2); }
+.pump-shell .pump-logo-drop:focus-within { outline: 2px solid var(--pump-green); outline-offset: 3px; }
+.pump-shell .pump-logo-drop .pump-logo-preview { width: 56px; height: 56px; }
+.pump-create-preview { position: sticky; top: 106px; min-width: 0; border: 1px solid var(--pump-line); border-top: 2px solid var(--pump-green); padding: 24px; background: var(--pump-panel); box-shadow: var(--pixel-ui-shadow); }
+.pump-create-preview-identity { display: flex; align-items: center; gap: 14px; margin-top: 24px; }
+.pump-create-preview-identity > div { min-width: 0; }
+.pump-create-preview-identity h2 { margin: 0 0 8px; font-size: 18px; line-height: 1.4; overflow-wrap: anywhere; }
+.pump-create-preview-identity > div > span { color: var(--pump-green); font-size: 11px; overflow-wrap: anywhere; }
+.pump-create-preview-description { min-height: 72px; margin: 24px 0; color: var(--pump-muted); font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; white-space: pre-wrap; }
+.pump-create-preview dl { display: grid; gap: 0; }
+.pump-create-preview dl > div { padding: 14px 0; border-top: 1px solid var(--pump-line); display: grid; gap: 7px; }
+.pump-create-preview dt { color: var(--pump-muted); font-size: 10px; text-transform: uppercase; }
+.pump-create-preview dd { margin: 0; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.pump-shell .pump-form-hint { min-height: 20px; margin-block: 16px; }
+.pump-shell .pump-stats-primary > div { min-height: 144px; padding: 22px; border-top: 2px solid var(--pump-line-strong); }
+.pump-shell .pump-stats-detail-grid { gap: 16px; }
+.pump-shell .pump-stats-section { padding: 24px; }
+.pump-shell .pump-stat-strip { border-top: 2px solid var(--pump-line-strong); }
+.pump-shell .pump-portfolio-list { box-shadow: var(--pixel-ui-shadow); }
+.pump-shell .pump-table td { padding-block: 16px; }
+.pump-shell .pump-trade-panel { border-top: 2px solid var(--pump-green); }
+.pump-shell .pump-chart-heading { padding: 18px 20px; border-bottom: 1px solid var(--pump-line); }
+.pump-shell .pump-vault-workspace { gap: 28px; }
+.pump-shell .pump-vault-preview { background: var(--pump-panel-2); border: 1px solid var(--pump-line); padding: 20px; }
+@media (max-width: 1000px) {
+  .pump-shell .pump-create-grid { grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; }
+  .pump-shell .pump-create-form, .pump-create-preview { padding: 20px; }
+}
+@media (max-width: 760px) {
+  .pump-shell .pump-page { padding-bottom: 40px; }
+  .pump-shell .pump-page-heading { padding-bottom: 20px; margin-bottom: 20px; }
+  .pump-shell .pump-create-grid { grid-template-columns: minmax(0, 1fr); }
+  .pump-create-preview { position: static; }
+  .pump-shell .pump-create-form { padding: 18px; }
+  .pump-shell .pump-form-grid { gap: 18px; }
+  .pump-shell .pump-field input, .pump-shell .pump-field textarea { font-size: 16px; }
+  .pump-shell .pump-logo-drop { gap: 12px; }
+  .pump-shell .pump-logo-drop strong { white-space: normal; overflow-wrap: anywhere; }
+  .pump-shell .pump-stats-primary > div { padding: 16px; min-height: 122px; }
+  .pump-shell .pump-stats-section { padding: 18px; }
+  .pump-shell .pump-vault-preview { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .pump-shell .pump-logo-drop { transition: none; } }

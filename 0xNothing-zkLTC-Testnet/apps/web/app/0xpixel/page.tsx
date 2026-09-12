@@ -57,34 +57,54 @@ export default function PixelPage() {
   const historyRef = useRef(history);
 
   useEffect(() => { pixelDataRef.current = pixelData; }, [pixelData]);
-  useEffect(() => { historyRef.current = history; }, [history]);
 
+  // `historyRef` is the undo stack; `history` only mirrors it so `canUndo` has
+  // something to render from. The ref is written before the state deliberately:
+  // Ctrl+Z is bound to a window keydown with no repeat guard, so holding it
+  // fires at the OS key-repeat rate — far faster than a passive effect can copy
+  // state back into a ref. While the ref lagged, every repeat past the first
+  // popped a fresh entry off the stack but restored the same stale snapshot, so
+  // holding undo quietly ate the history while the canvas moved back one step.
   const pushHistory = useCallback((snapshot: string[][]) => {
-    setHistory((h) => [...h, snapshot.map((row) => [...row])].slice(-MAX_HISTORY));
+    historyRef.current = [
+      ...historyRef.current,
+      snapshot.map((row) => [...row]),
+    ].slice(-MAX_HISTORY);
+    setHistory(historyRef.current);
   }, []);
 
   const handleClear = useCallback(() => {
+    const cleared = makeEmptyGrid(gridSize);
     pushHistory(pixelDataRef.current);
-    setPixelData(makeEmptyGrid(gridSize));
+    pixelDataRef.current = cleared;
+    setPixelData(cleared);
   }, [gridSize, pushHistory]);
 
   const handleApplyPixelData = useCallback(
     (newPixelData: string[][]) => {
       pushHistory(pixelDataRef.current);
+      pixelDataRef.current = newPixelData;
       setPixelData(newPixelData);
     },
     [pushHistory]
   );
 
-  const handleStrokeStart = useCallback(() => {
-    pushHistory(pixelDataRef.current);
+  // Canvas already keeps its own copy of the grid synchronously current and
+  // hands it over, so snapshot what it passes rather than this component's
+  // effect-fed mirror — that mirror still holds the grid from before the
+  // previous stroke whenever two strokes land inside a single commit.
+  const handleStrokeStart = useCallback((dataBeforeStroke: string[][]) => {
+    pushHistory(dataBeforeStroke);
   }, [pushHistory]);
 
   const handleUndo = useCallback(() => {
-    if (historyRef.current.length === 0) return;
-    const prev = historyRef.current[historyRef.current.length - 1];
-    setHistory((h) => h.slice(0, -1));
-    setPixelData(prev);
+    const stack = historyRef.current;
+    if (stack.length === 0) return;
+    const previous = stack[stack.length - 1];
+    historyRef.current = stack.slice(0, -1);
+    setHistory(historyRef.current);
+    pixelDataRef.current = previous;
+    setPixelData(previous);
   }, []);
 
   const canUndo = history.length > 0;
@@ -92,9 +112,12 @@ export default function PixelPage() {
   const setSelectedColorStable = useCallback((c: string) => setSelectedColor(c), []);
   const setGridSizeStable = useCallback((size: number) => {
     if (size === gridSize) return;
+    const empty = makeEmptyGrid(size);
     setGridSize(size);
-    setPixelData(makeEmptyGrid(size));
-    setHistory([]);
+    pixelDataRef.current = empty;
+    setPixelData(empty);
+    historyRef.current = [];
+    setHistory(historyRef.current);
   }, [gridSize]);
   const handleMintSuccess = useCallback(() => {}, []);
 

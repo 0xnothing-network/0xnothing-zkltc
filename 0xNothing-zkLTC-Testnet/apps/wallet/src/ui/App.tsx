@@ -7,6 +7,7 @@ import { Note } from "./components/kit";
 import { Screen } from "./components/Screen";
 import { ToastBar } from "./components/ToastBar";
 import { goHome, type RouteName, useRoute } from "./router";
+import { useRelayNode } from "./hooks/useRelayNode";
 import { Home } from "./screens/Home";
 import { Onboarding } from "./screens/Onboarding";
 import { Unlock } from "./screens/Unlock";
@@ -33,6 +34,7 @@ const MintNusd = lazy(() => import("./screens/MintNusd").then((module) => ({ def
 const Receive = lazy(() => import("./screens/Receive").then((module) => ({ default: module.Receive })));
 const Send = lazy(() => import("./screens/Send").then((module) => ({ default: module.Send })));
 const Settings = lazy(() => import("./screens/Settings").then((module) => ({ default: module.Settings })));
+const QuantumWallet = lazy(() => import("./screens/QuantumWallet").then((module) => ({ default: module.QuantumWallet })));
 const Swap = lazy(() => import("./screens/Swap").then((module) => ({ default: module.Swap })));
 
 /**
@@ -65,6 +67,8 @@ function screenFor(name: RouteName): ReactNode {
       return <Dapps />;
     case "settings":
       return <Settings />;
+    case "quantum":
+      return <ProtocolOnly title={t("quantum.title")}><QuantumWallet /></ProtocolOnly>;
     case "approve":
       return <Approve />;
     default:
@@ -89,6 +93,11 @@ export function App(): ReactNode {
   const { phase, settings } = useWallet();
   const route = useRoute();
   const surface = isPopupSurface() ? "popup" : "full";
+
+  // Opt-in DePIN relayer node. A no-op unless the user turned it on in Settings;
+  // mounted here rather than on a screen so it survives navigation, and gated on
+  // `phase` inside the hook so it dies with the lock.
+  useRelayNode();
 
   const body = phase === "loading"
     ? <Opening />

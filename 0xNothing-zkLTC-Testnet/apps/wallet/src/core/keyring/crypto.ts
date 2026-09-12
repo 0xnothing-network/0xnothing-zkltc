@@ -169,6 +169,59 @@ export async function encryptJson(value: unknown, password: string): Promise<Enc
   }
 }
 
+/**
+ * Re-encrypt with an ALREADY-DERIVED key, reusing `template`'s salt and
+ * iteration count.
+ *
+ * This exists so the vault can be rewritten while it is unlocked. Unlocking
+ * leaves only the derived key in session storage — the password is gone by
+ * design — so a rewrite cannot go through `encryptJson`, which needs the
+ * password to run PBKDF2.
+ *
+ * The salt is reused deliberately, and this is the part that must not be
+ * changed: the session key was derived from (password, template.salt), so
+ * keeping both means the blob still opens with the same password later, via
+ * `keyForBlob(blob, password)`. Minting a fresh salt here would silently bind
+ * the new ciphertext to a key nobody can re-derive — the next unlock would fail
+ * and the wallet would be unrecoverable.
+ *
+ * Because of that, this is only valid for a blob encrypted under the CURRENT
+ * session key's salt. After `changePassword` re-encrypts with a new salt, the
+ * caller must re-read the blob before rewriting it.
+ */
+export async function encryptWithKey(
+  value: unknown,
+  key: CryptoKey,
+  template: EncryptedBlob,
+): Promise<EncryptedBlob> {
+  const checked = validatedBlob(template);
+  const iv = randomBytes(IV_BYTES);
+  const plaintext = new TextEncoder().encode(JSON.stringify(value));
+  let ciphertext: Uint8Array | undefined;
+  try {
+    ciphertext = new Uint8Array(await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: iv as BufferSource },
+      key,
+      plaintext,
+    ));
+    return {
+      v: 1,
+      kdf: "PBKDF2-SHA256",
+      iterations: checked.blob.iterations,
+      salt: bytesToBase64(checked.salt),
+      iv: bytesToBase64(iv),
+      data: bytesToBase64(ciphertext),
+    };
+  } finally {
+    plaintext.fill(0);
+    ciphertext?.fill(0);
+    iv.fill(0);
+    checked.salt.fill(0);
+    checked.iv.fill(0);
+    checked.data.fill(0);
+  }
+}
+
 /** Throws if the password is wrong — AES-GCM tag verification fails closed. */
 export async function decryptJson<T>(blob: EncryptedBlob, password: string): Promise<T> {
   const checked = validatedBlob(blob);

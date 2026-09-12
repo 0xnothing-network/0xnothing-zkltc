@@ -612,3 +612,23 @@
 @media (max-width: 600px) {
   .field input, .field select { font-size: 16px; }
 }
+
+/* Operator console follows the same form rhythm as public applications. */
+.card { border-top: 2px solid #565e68; }
+.cardAccent { border-top-color: #b8e8cb; }
+.formCard { padding: 24px; border: 1px solid #30343a; background: #181a1d; }
+.sectionHeader { padding-bottom: 16px; border-bottom: 1px solid #30343a; }
+.field input, .field select { transition: border-color 160ms ease, background-color 160ms ease; }
+.button { transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease; }
+
+/* Operator console shares the public pixel terminal frame. */
+.shell { background-color: var(--pixel-ui-bg); background-image: var(--pixel-pattern); }
+.header { background: #151a15; border-bottom: 3px double var(--pixel-ui-border-strong); box-shadow: 0 4px 0 #050705; }
+.card, .formCard { background: var(--pixel-ui-panel); border: 1px solid var(--pixel-window-edge); box-shadow: var(--pixel-ui-shadow); }
+.cardAccent { background: #253121; border-color: #93ad83; }
+.sectionHeader { border-bottom: 3px double var(--pixel-ui-border-strong); }
+.sectionHeader h2 { font-weight: 400; text-shadow: 2px 2px 0 #3b4a34; }
+.button { box-shadow: var(--pixel-control-shadow); }
+.button:active:not(:disabled) { box-shadow: inset 1px 1px 0 #0005, 1px 1px 0 #050705; }
+@media (max-width: 600px) { .formCard { padding: 16px; } }
+@media (prefers-reduced-motion: reduce) { .button, .field input, .field select { transition: none; } }

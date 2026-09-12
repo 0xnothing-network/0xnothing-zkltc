@@ -405,7 +405,25 @@ export function CreateTokenForm() {
           {buttonLabel}
         </button>
       </section>
-
+      <aside className="pump-create-preview" aria-label="Token preview">
+        <span className="pump-eyebrow">Preview</span>
+        <div className="pump-create-preview-identity">
+          <span className="pump-logo-preview">
+            {preview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={preview} alt="Token logo preview" />
+            ) : <span aria-hidden="true">{symbol.slice(0, 2) || "?"}</span>}
+          </span>
+          <div><h2>{name.trim() || "Token name"}</h2><span>{symbol || "TICKER"}</span></div>
+        </div>
+        <p className="pump-create-preview-description">{description.trim() || "Your token description will appear here."}</p>
+        <dl>
+          <div><dt>Network</dt><dd>LitVM Testnet</dd></div>
+          <div><dt>Creation fee</dt><dd>{formatUnits(fee, 18)} NUSD</dd></div>
+          <div><dt>Website</dt><dd>{website.trim() || "—"}</dd></div>
+          <div><dt>Social</dt><dd>{twitter.trim() || "—"}</dd></div>
+        </dl>
+      </aside>
     </div>
   );
 }

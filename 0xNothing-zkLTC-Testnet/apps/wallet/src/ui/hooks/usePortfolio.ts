@@ -46,8 +46,14 @@ export function usePortfolio(): PortfolioView {
     const portfolio = read.data;
     if (!address || total === undefined || !complete || !portfolio) return;
     let cancelled = false;
+    // `total` moves whenever any balance or price does, so this effect re-runs
+    // roughly once per block. Re-entering the loading state for an account that
+    // already has an answer would rebuild this state object twice per tick —
+    // re-rendering all of HOME both times — and a wallet with no 24h baseline
+    // would visibly flip between the pending and the no-data reading each time.
+    // A refresh keeps whatever is on screen until it has something better.
     setChangeState((current) => current?.address === address && current.networkId === network.id
-      ? { ...current, loading: true }
+      ? current
       : { address, networkId: network.id, value: null, loading: true });
     void (async () => {
       try {
@@ -55,11 +61,21 @@ export function usePortfolio(): PortfolioView {
         const market = await loadPortfolioMarketChange24h(portfolio, network).catch(() => null);
         const next = market ?? await change24h(address, total, network);
         if (!cancelled) {
-          setChangeState({ address, networkId: network.id, value: next, loading: false });
+          setChangeState((current) => current?.address === address
+            && current.networkId === network.id
+            && current.value === next
+            && !current.loading
+            ? current
+            : { address, networkId: network.id, value: next, loading: false });
         }
       } catch {
         if (!cancelled) {
-          setChangeState({ address, networkId: network.id, value: null, loading: false });
+          setChangeState((current) => current?.address === address
+            && current.networkId === network.id
+            && current.value === null
+            && !current.loading
+            ? current
+            : { address, networkId: network.id, value: null, loading: false });
         }
       }
     })();

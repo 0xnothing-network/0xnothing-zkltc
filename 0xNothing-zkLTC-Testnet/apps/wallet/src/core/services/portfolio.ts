@@ -160,10 +160,19 @@ async function fetchPortfolio(
     loadPrices(tokens, network, client),
   ]);
 
+  // Throwing is how a read keeps the last good snapshot on screen, so it is
+  // still the right answer to an RPC outage: every leg down, nothing to show.
+  // One leg down is not that. A single unreachable imported token — or a
+  // lending pool that stops answering — used to blank every other balance the
+  // wallet had already fetched, leaving HOME with no asset list at all. A lone
+  // failure now degrades to an unpriced row instead.
   const failedBalance = balances.find((entry) => entry.status === "failure");
-  if (failedBalance !== undefined) throw failedBalance.error;
+  if (failedBalance !== undefined && balances.every((entry) => entry.status === "failure")) {
+    throw failedBalance.error;
+  }
 
   const suppliedCall = includeLending ? balances[balances.length - 1] : undefined;
+  const suppliedFailed = suppliedCall !== undefined && suppliedCall.status !== "success";
   const suppliedNusd =
     suppliedCall?.status === "success" ? (suppliedCall.result as bigint) : 0n;
 
@@ -171,28 +180,35 @@ async function fetchPortfolio(
   const balanceIndex = new Map(erc20Tokens.map((token, index) => [token.id, index]));
   for (const token of tokens) {
     const price = prices.get(token.id);
-    const priceWad = price?.priceWad ?? 0n;
     let balance = 0n;
+    let unread = false;
     if (!token.address) {
       balance = nativeBalance;
     } else {
       const index = balanceIndex.get(token.id);
       const call = index === undefined ? undefined : balances[index];
+      unread = call?.status !== "success";
       balance = call?.status === "success" ? (call.result as bigint) : 0n;
     }
+    // An unread balance has no honest dollar value behind it, so it takes the
+    // zero price the list already renders as "--" rather than a confident $0.00
+    // that reads as "you hold none of this".
+    const priceWad = unread ? 0n : (price?.priceWad ?? 0n);
     rows.push({
       token,
       balance,
       priceWad,
       valueWad: usdValueWad(balance, token.decimals, priceWad),
-      stale: price?.stale ?? true,
+      stale: unread || (price?.stale ?? true),
     });
   }
 
   const holdingsWad = rows.reduce((sum, row) => sum + row.valueWad, 0n);
   return {
     rows,
-    complete: rows.every((row) => !row.stale),
+    // A missing supplied balance understates the total just as a missing row
+    // does, and neither belongs in the 24h snapshot book.
+    complete: !suppliedFailed && rows.every((row) => !row.stale),
     totalWad: holdingsWad + suppliedNusd,
     suppliedNusd,
     blockNumber,

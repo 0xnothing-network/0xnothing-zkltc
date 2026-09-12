@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "./pixel-system.css";
+@import "./interface-polish.css";
+@import "./pixel-theme.css";
 
 /* Pixel-style departure mono font */
 @font-face {

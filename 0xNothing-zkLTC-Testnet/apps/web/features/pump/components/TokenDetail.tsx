@@ -9,6 +9,7 @@ import { pumpGraduationControllerAbi, pumpGraduationRouterAbi, zeroXPumpAbi } fr
 import { usePumpMarket } from "@/features/pump/hooks/usePumpData";
 import {
   ipfsToGatewayUrl,
+  normalizePumpIpfsPath,
   normalizePumpExternalUrl,
   PUMP_CHAIN_ID,
   PUMP_FACTORY_ADDRESS,
@@ -204,16 +205,22 @@ export function TokenDetail({ token }: { token: Address }) {
   const toast = useToast();
   const query = usePumpMarket(token);
   const market = query.data?.market;
-  const metadataUrl = market ? ipfsToGatewayUrl(market.metadataURI) : "";
+  const metadataCid = market ? normalizePumpIpfsPath(market.metadataURI) : "";
+  const metadataUrl = metadataCid
+    ? `/api/pump/metadata?cid=${encodeURIComponent(metadataCid)}`
+    : market ? ipfsToGatewayUrl(market.metadataURI) : "";
   const metadata = useQuery({
     queryKey: ["pump-token-metadata", metadataUrl],
     enabled: Boolean(metadataUrl),
     queryFn: async ({ signal }) => {
       const response = await fetch(metadataUrl, { signal });
-      if (!response.ok) throw new Error("Metadata unavailable");
+      if (!response.ok || response.headers.get("X-Pump-Metadata-Status") === "unavailable") throw new Error("Metadata unavailable");
       return parseTokenMetadata(await response.json());
     },
     staleTime: 60 * 60 * 1000,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   if (query.isLoading) {

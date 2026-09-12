@@ -27,8 +27,15 @@
     "type": "module"
   },
   "permissions": ["storage", "alarms"],
-  "host_permissions": ["https://liteforge.rpc.caldera.xyz/*", "https://0xnothing.xyz/*", "https://api.goldsky.com/*"],
-  "optional_host_permissions": ["https://*/*", "http://localhost/*", "http://127.0.0.1/*", "http://[::1]/*"],
+  "host_permissions": [
+    "https://liteforge.rpc.caldera.xyz/*",
+    "https://0xnothing.xyz/*",
+    "https://api.goldsky.com/*",
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+    "http://[::1]/*"
+  ],
+  "optional_host_permissions": ["https://*/*"],
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],

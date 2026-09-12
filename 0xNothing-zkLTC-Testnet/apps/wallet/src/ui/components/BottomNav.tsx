@@ -9,6 +9,10 @@ import type { RouteName } from "../router";
  */
 const HOME_FAMILY = new Set<RouteName>([
   "home",
+  // The bare hash resolves here, so 0xQuantum is a root of this family, not a
+  // side trip. Without it no tab lights up at all on the screen the wallet
+  // opens to — which reads as "you are nowhere".
+  "quantum",
   "send",
   "receive",
   "history",
@@ -18,7 +22,10 @@ const HOME_FAMILY = new Set<RouteName>([
 ]);
 
 const ITEMS: readonly { name: RouteName; label: MessageKey; glyph: string; path: string }[] = [
-  { name: "home", label: "nav.home", glyph: "▣", path: "#/" },
+  // "#/home", not "#/": the bare hash resolves to the 0xQuantum wallet, which is
+  // the launch screen. Pointing this at "#/" would make the Home tab open the
+  // quantum wallet instead of the HD wallet home it is labelled for.
+  { name: "home", label: "nav.home", glyph: "▣", path: "#/home" },
   { name: "swap", label: "nav.swap", glyph: "⇄", path: "#/swap" },
   { name: "dapps", label: "nav.dapp", glyph: "◎", path: "#/dapps" },
 ];
