@@ -90,6 +90,11 @@ const SAME_AS_ENGLISH: Record<Code, readonly MessageKey[]> = {
     "set.explorerUrl", "set.networkInvalid", "set.networkDuplicate", "set.networkPermission", "set.customNetworkNote"],
 };
 
+/** Quantum and relay surfaces currently ship with the English fallback. */
+const QUANTUM_RELAY_ENGLISH: readonly MessageKey[] = Object.keys(EN).filter(
+  (key): key is MessageKey => key.startsWith("quantum.") || key.startsWith("relay.") || key === "common.refresh",
+);
+
 /** New market discovery/review copy falls back until each locale is translated. */
 const SWAP_MARKET_ENGLISH: readonly MessageKey[] = [
   "swap.searchToken",
@@ -180,6 +185,7 @@ test("every gap is a declared one", () => {
       ...NEUTRAL,
       ...(code === "vi" ? [] : SWAP_MARKET_ENGLISH),
       ...(code === "vi" ? [] : POINTS_ENGLISH),
+      ...QUANTUM_RELAY_ENGLISH,
       ...SAME_AS_ENGLISH[code],
     ];
     assert.deepEqual(

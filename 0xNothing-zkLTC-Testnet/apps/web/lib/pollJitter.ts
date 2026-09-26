@@ -44,7 +44,7 @@ export type VisibilityRefreshOptions = {
   dataUpdatedAt: number;
   enabled?: boolean;
   isFetching: boolean;
-  refetch: () => Promise<unknown>;
+  refetch: (options?: { cancelRefetch?: boolean }) => Promise<unknown>;
   maxAgeMs: number;
 };
 
@@ -89,7 +89,9 @@ export function useVisibilityRefresh({
       // A normal poll or another observer may have refreshed the query during
       // the jitter delay. Avoid cancelling/restarting that work on tab return.
       if (!canRefresh()) return;
-      await refetchRef.current();
+      // Two mounted consumers can observe the same stale query before React
+      // commits isFetching. Reuse the request instead of cancelling its owner.
+      await refetchRef.current({ cancelRefetch: false });
     };
     const onVisibilityChange = () => {
       clearTimer();

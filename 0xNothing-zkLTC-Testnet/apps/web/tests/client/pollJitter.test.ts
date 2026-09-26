@@ -3,6 +3,7 @@ import { webcrypto } from "node:crypto";
 import test from "node:test";
 import type { VisibilityRefreshOptions } from "../../lib/pollJitter.ts";
 import { evaluateModule } from "../helpers/evaluateModule.ts";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 
 function harness() {
   const refs: Array<{ current: unknown }> = [];
@@ -96,4 +97,41 @@ test("visible stale data refreshes once and handles a rejected background read",
   await new Promise<void>((resolve) => setImmediate(resolve));
   assert.equal(calls, 1);
   h.unmount();
+});
+
+test("two visible consumers share the live refresh without cancelling its request", async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+  const queryKey = ["shared-market"];
+  client.setQueryData(queryKey, { price: 1 });
+  let reads = 0;
+  let signal: AbortSignal | undefined;
+  let complete: ((value: { price: number }) => void) | undefined;
+  const observer = new QueryObserver(client, {
+    queryKey,
+    queryFn: (context) => {
+      reads += 1;
+      signal = context.signal;
+      return new Promise<{ price: number }>((resolve) => { complete = resolve; });
+    },
+    staleTime: Infinity,
+  });
+  const unsubscribe = observer.subscribe(() => {});
+  const first = harness();
+  const second = harness();
+  try {
+    const state = { ...options(async () => {}), refetch: observer.refetch };
+    first.render(state);
+    second.render(state);
+    first.visible();
+    second.visible();
+    first.flush();
+    second.flush();
+    assert.equal(reads, 1);
+    assert.equal(signal?.aborted, false);
+    complete?.({ price: 2 });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.deepEqual(client.getQueryData(queryKey), { price: 2 });
+  } finally {
+    first.unmount(); second.unmount(); unsubscribe(); client.clear();
+  }
 });

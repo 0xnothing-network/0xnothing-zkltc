@@ -15,6 +15,7 @@ import { GridSkeleton } from "@/features/pixel/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { LITVM_CHAIN_ID } from "@/lib/chainSwitch";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
+import { fetchJson } from "@/lib/http";
 
 type SortKey = "newest" | "price-asc" | "price-desc";
 type ActivityFilter = "all" | "sold" | "minted" | "listed" | "cancelled";
@@ -143,12 +144,10 @@ function MarketplaceBody({ userAddress }: BodyProps) {
       const url = force
         ? `/api/marketplace/listings?force=1&t=${Date.now()}`
         : "/api/marketplace/listings";
-      const r = await fetch(url, {
+      const body = await fetchJson<ListingsResponse>(url, {
         signal: ctrl.signal,
         cache: force ? "no-store" : "default",
       });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const body = (await r.json()) as ListingsResponse;
       if (ctrl.signal.aborted || requestRef.current?.controller !== ctrl) return;
       // Keeping the previous object when the bytes match leaves the grid alone:
       // React bails out of an unchanged state write, so the poll stays live and
@@ -167,7 +166,7 @@ function MarketplaceBody({ userAddress }: BodyProps) {
       setError(null);
       setData(settled);
     } catch (err) {
-      if ((err as { name?: string }).name === "AbortError") return;
+      if (ctrl.signal.aborted || requestRef.current?.controller !== ctrl) return;
       console.error("[marketplace] load failed:", err);
       if (!cacheRef.current.data) {
         setError("Couldn't load listings. Please retry.");
@@ -210,10 +209,12 @@ function MarketplaceBody({ userAddress }: BodyProps) {
     };
     const timer = window.setInterval(refreshStaleListings, LISTINGS_FRESH_FOR_MS);
     window.addEventListener("focus", refreshStaleListings);
+    window.addEventListener("online", refreshStaleListings);
     document.addEventListener("visibilitychange", refreshStaleListings);
     return () => {
       window.clearInterval(timer);
       window.removeEventListener("focus", refreshStaleListings);
+      window.removeEventListener("online", refreshStaleListings);
       document.removeEventListener("visibilitychange", refreshStaleListings);
     };
   }, [fetchListings]);
@@ -475,12 +476,10 @@ function MarketplaceActivity({ refreshKey = 0 }: { refreshKey?: number }) {
       if (type) params.set("type", type);
       if (force) params.set("force", "1");
 
-      const r = await fetch(`/api/marketplace/activity?${params.toString()}`, {
+      const body = await fetchJson<ActivityResponse>(`/api/marketplace/activity?${params.toString()}`, {
         signal: ctrl.signal,
         cache: force ? "no-store" : "default",
       });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const body = (await r.json()) as ActivityResponse;
       if (ctrl.signal.aborted || abortRef.current !== ctrl) return;
       setError(null);
 
@@ -529,9 +528,11 @@ function MarketplaceActivity({ refreshKey = 0 }: { refreshKey?: number }) {
     };
     const timer = window.setInterval(refreshVisibleActivity, 5_000);
     document.addEventListener("visibilitychange", refreshVisibleActivity);
+    window.addEventListener("online", refreshVisibleActivity);
     return () => {
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", refreshVisibleActivity);
+      window.removeEventListener("online", refreshVisibleActivity);
     };
   }, [fetchActivity]);
 

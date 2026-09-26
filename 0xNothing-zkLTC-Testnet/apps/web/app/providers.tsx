@@ -7,6 +7,7 @@ import { useBlockNumber } from "wagmi";
 import { wagmiConfig } from "@/lib/wagmi";
 import { ToastProvider } from "@/components/Toast";
 import { BLOCK_SYNC_MS, isBlockSyncedQueryKey } from "@/lib/liveData";
+import { litvm } from "@/config/wagmi";
 
 const BLOCK_POLL_MS = BLOCK_SYNC_MS + Math.floor(Math.random() * 2_001);
 
@@ -14,6 +15,7 @@ function LiveSync() {
   const queryClient = useQueryClient();
   const lastBlockRef = useRef<bigint | undefined>(undefined);
   const blockNumber = useBlockNumber({
+    chainId: litvm.id,
     query: {
       refetchInterval: BLOCK_POLL_MS,
       refetchIntervalInBackground: false,

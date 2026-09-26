@@ -223,7 +223,9 @@ export function useProtocolTransaction() {
         return undefined;
       } finally {
         if (confirmedStep) void queryClient.invalidateQueries({
-          predicate: (query) => isBlockSyncedQueryKey(query.queryKey),
+          predicate: (query) => isBlockSyncedQueryKey(query.queryKey)
+            || query.queryKey[0] === "fi-pools"
+            || query.queryKey[0] === "fi-activity",
         });
         inFlightRef.current = false;
       }

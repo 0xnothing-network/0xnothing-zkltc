@@ -67,6 +67,9 @@ function portfolioHarness() {
       delayNextBalance = true;
       client.setQueryData(["pump-portfolio-markets"], { markets: [market, { ...market, tokenAddress: OTHER }], configured: true, source: "subgraph" });
     },
+    setMarkets: (markets: typeof market[]) => {
+      client.setQueryData(["pump-portfolio-markets"], { markets, configured: true, source: "subgraph" });
+    },
     visibility, publicClientOptions, balanceReads,
     close: () => { unsubscribe.forEach((fn) => fn()); client.clear(); },
   };
@@ -86,6 +89,23 @@ test("Pump portfolio clears the previous wallet's balances during account switch
     assert.equal(switched.held.length, 0);
     assert.equal(switched.heldIsLoading, true);
   } finally { harness.close(); }
+});
+
+test("Pump portfolio reuses balances when live prices or market order change", async () => {
+  const h = portfolioHarness();
+  try {
+    h.render();
+    await setImmediate();
+    h.setMarkets([market, { ...market, tokenAddress: OTHER }]);
+    h.render();
+    await setImmediate();
+    assert.equal(h.render().balances.size, 2);
+    const reads = h.balanceReads.length;
+    h.setMarkets([{ ...market, tokenAddress: OTHER, priceNusd: "2" }, { ...market, priceNusd: "3" }]);
+    assert.equal(h.render().balances.size, 2);
+    await setImmediate();
+    assert.equal(h.balanceReads.length, reads, "reordering the same tokens must not start another balance scan");
+  } finally { h.close(); }
 });
 
 test("Pump portfolio pins balance reads to LitVM and stops visibility refresh after disconnect", async () => {

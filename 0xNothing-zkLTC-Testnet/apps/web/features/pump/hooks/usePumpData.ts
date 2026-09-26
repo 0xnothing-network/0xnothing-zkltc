@@ -397,16 +397,12 @@ export function usePumpPortfolio() {
     maxAgeMs: STEADY_LIVE_MS,
   });
   const markets = marketsQuery.data?.markets ?? EMPTY_MARKETS;
-  const marketsHash = useMemo(() => {
-    if (!markets.length) return "";
-    let hash = 0;
-    for (const m of markets) {
-      const s = m.tokenAddress.toLowerCase();
-      for (let i = 0; i < s.length; i++) hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0;
-    }
-    return `${markets.length}:${hash >>> 0}`;
-  }, [markets]);
-  const tokensKey = marketsHash;
+  // Prices and sort order change on every live market update; neither changes
+  // which balances we need. Use exact membership, avoiding 32-bit collisions.
+  const tokensKey = useMemo(
+    () => [...new Set(markets.map((market) => market.tokenAddress.toLowerCase()))].sort().join(","),
+    [markets],
+  );
 
   const balancesKey = address ? `pump-portfolio:balances:${address.toLowerCase()}:${tokensKey || "empty"}` : "pump-portfolio:balances:empty";
   const balancesEnabled = Boolean(address && publicClient && markets.length);

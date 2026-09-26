@@ -8,6 +8,7 @@ interface ToolbarProps {
   gridSize: number;
   onGridSizeChange: (size: number) => void;
   onClear: () => void;
+  onImport: () => void;
 }
 
 const PALETTE_COLORS = [
@@ -29,6 +30,7 @@ export const Toolbar = memo(function Toolbar({
   gridSize,
   onGridSizeChange,
   onClear,
+  onImport,
 }: ToolbarProps) {
   const [recentColors, setRecentColors] = useState<string[]>([]);
   const [customHex, setCustomHex] = useState(selectedColor);
@@ -47,6 +49,12 @@ export const Toolbar = memo(function Toolbar({
       className="pixel-tools-panel animate-fadeInUp bg-[#1A1A2E] rounded-2xl p-3 sm:p-5 border border-[#2D2D44] flex flex-col gap-4 sm:gap-6"
     >
       <>
+          <button
+            onClick={onImport}
+            className="w-full rounded-xl border border-indigo-400/40 bg-indigo-500/10 py-3 text-xs font-bold uppercase tracking-wider text-indigo-200 transition-colors hover:bg-indigo-500/20"
+          >
+            Import Image
+          </button>
           {/* Color Palette Section */}
           <div>
             <p

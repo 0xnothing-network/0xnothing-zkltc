@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { evaluateModule } from "../helpers/evaluateModule.ts";
 import type { useProtocolTransaction } from "../../features/fi/lib/hooks/useProtocolTransaction.ts";
+import { isBlockSyncedQueryKey } from "../../lib/liveData.ts";
 
 const ACCOUNT = "0x1111111111111111111111111111111111111111";
 const OTHER = "0x2222222222222222222222222222222222222222";
@@ -13,6 +14,7 @@ function harness(options: { changeAt?: "simulation" | "receipt"; chainId?: numbe
   let state: { phase: string; message: string; hash?: string };
   let writes = 0;
   let invalidations = 0;
+  let predicate: (query: { queryKey: readonly unknown[] }) => boolean = () => false;
   const wallet = {
     account: { address: options.signer ?? ACCOUNT },
     getChainId: async () => options.chainId ?? 4441,
@@ -37,7 +39,7 @@ function harness(options: { changeAt?: "simulation" | "receipt"; chainId?: numbe
         useRef: (current: unknown) => ({ current }),
         useState: (initial: typeof state) => { state = initial; return [initial, (next: typeof state) => { state = next; }]; },
       },
-      "@tanstack/react-query": { useQueryClient: () => ({ invalidateQueries: async () => { invalidations += 1; } }) },
+      "@tanstack/react-query": { useQueryClient: () => ({ invalidateQueries: async (options: { predicate: typeof predicate }) => { invalidations += 1; predicate = options.predicate; } }) },
       wagmi: {
         useConfig: () => ({}),
         useAccount: () => ({ ...account }),
@@ -49,10 +51,10 @@ function harness(options: { changeAt?: "simulation" | "receipt"; chainId?: numbe
       "@fi/lib/abis/erc20": { erc20Abi: [] },
       "@fi/config/deployment": { deployment: { chain: { id: 4441 } } },
       "@fi/lib/errors": { readableError: (error: Error) => error.message },
-      "@/lib/liveData": { isBlockSyncedQueryKey: () => true },
+      "@/lib/liveData": { isBlockSyncedQueryKey },
     },
   );
-  return { tx: evaluated.useProtocolTransaction(), result: () => ({ state, writes, invalidations }) };
+  return { tx: evaluated.useProtocolTransaction(), result: () => ({ state, writes, invalidations }), refreshes: (queryKey: readonly unknown[]) => predicate({ queryKey }) };
 }
 
 test("an account change while simulating cannot send the old account's request", async () => {
@@ -86,4 +88,10 @@ test("an unchanged wallet completes the existing transaction flow", async () => 
   assert.equal(run.result().writes, 1);
   assert.equal(run.result().state.phase, "success");
   assert.equal(run.result().invalidations, 1);
+  assert.equal(run.refreshes(["fi-pools"]), true);
+  assert.equal(run.refreshes(["fi-activity", ACCOUNT]), true);
+  assert.equal(run.refreshes(["readContract", { functionName: "getPosition" }]), true);
+  assert.equal(run.refreshes(["readContracts", { contracts: [{ functionName: "redemptionReserve" }] }]), true);
+  assert.equal(run.refreshes(["readContract", { functionName: "symbol" }]), false);
+  assert.equal(run.refreshes(["pump-markets"]), false);
 });

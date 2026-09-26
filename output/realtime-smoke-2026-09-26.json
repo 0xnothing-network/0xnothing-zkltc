@@ -1,0 +1,92 @@
+{
+  "base": "http://127.0.0.1:3317",
+  "at": "2026-09-26T15:35:53.414Z",
+  "rows": [
+    {
+      "path": "/",
+      "sample": 0,
+      "status": 200,
+      "elapsedMs": 204,
+      "bytes": 17586,
+      "cache": null
+    },
+    {
+      "path": "/0xFi/swap",
+      "sample": 0,
+      "status": 200,
+      "elapsedMs": 21,
+      "bytes": 36352,
+      "cache": null
+    },
+    {
+      "path": "/0xPump",
+      "sample": 0,
+      "status": 200,
+      "elapsedMs": 21,
+      "bytes": 20913,
+      "cache": null
+    },
+    {
+      "path": "/0xpixel/marketplace",
+      "sample": 0,
+      "status": 200,
+      "elapsedMs": 19,
+      "bytes": 25720,
+      "cache": null
+    },
+    {
+      "path": "/0xFi/api/data/pools",
+      "sample": 0,
+      "status": 200,
+      "elapsedMs": 8798,
+      "bytes": 4118,
+      "cache": null,
+      "warning": "24h volume is unavailable while the RPC tail is capped.",
+      "records": 6
+    },
+    {
+      "path": "/0xFi/api/data/pools",
+      "sample": 1,
+      "status": 200,
+      "elapsedMs": 11,
+      "bytes": 4118,
+      "cache": null,
+      "warning": "24h volume is unavailable while the RPC tail is capped.",
+      "records": 6
+    },
+    {
+      "path": "/api/pump/stats",
+      "sample": 0,
+      "status": 200,
+      "elapsedMs": 428,
+      "bytes": 418,
+      "cache": null
+    },
+    {
+      "path": "/api/pump/stats",
+      "sample": 1,
+      "status": 200,
+      "elapsedMs": 7,
+      "bytes": 418,
+      "cache": null
+    },
+    {
+      "path": "/api/marketplace/listings",
+      "sample": 0,
+      "status": 200,
+      "elapsedMs": 4955,
+      "bytes": 160705,
+      "cache": null,
+      "records": 399
+    },
+    {
+      "path": "/api/marketplace/listings",
+      "sample": 1,
+      "status": 200,
+      "elapsedMs": 12,
+      "bytes": 160705,
+      "cache": null,
+      "records": 399
+    }
+  ]
+}

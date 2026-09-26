@@ -167,9 +167,7 @@ async function fetchPortfolio(
   // wallet had already fetched, leaving HOME with no asset list at all. A lone
   // failure now degrades to an unpriced row instead.
   const failedBalance = balances.find((entry) => entry.status === "failure");
-  if (failedBalance !== undefined && balances.every((entry) => entry.status === "failure")) {
-    throw failedBalance.error;
-  }
+  if (failedBalance !== undefined) throw failedBalance.error;
 
   const suppliedCall = includeLending ? balances[balances.length - 1] : undefined;
   const suppliedFailed = suppliedCall !== undefined && suppliedCall.status !== "success";

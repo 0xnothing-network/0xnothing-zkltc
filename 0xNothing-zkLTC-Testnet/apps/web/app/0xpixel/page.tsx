@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Toolbar } from "@/features/pixel/components/Toolbar";
 import { AIPromptGenerator } from "@/features/pixel/components/AIPromptGenerator";
 import { PixelLoadingIndicator } from "@/components/PageLoader";
+import { ImageImporter } from "@/features/pixel/components/ImageImporter";
 
 const MAX_HISTORY = 50;
 const DEFAULT_GRID_SIZE = 16;
@@ -51,6 +52,7 @@ export default function PixelPage() {
   );
   const [history, setHistory] = useState<string[][][]>([]);
   const [selectedColor, setSelectedColor] = useState("#6366F1");
+  const [isImporterOpen, setIsImporterOpen] = useState(false);
   const deferredPixelData = useDeferredValue(pixelData);
 
   const pixelDataRef = useRef(pixelData);
@@ -153,6 +155,7 @@ export default function PixelPage() {
                 gridSize={gridSize}
                 onGridSizeChange={setGridSizeStable}
                 onClear={handleClear}
+                onImport={() => setIsImporterOpen(true)}
               />
             </div>
           </div>
@@ -184,6 +187,14 @@ export default function PixelPage() {
           </div>
         </div>
       </main>
+
+      {isImporterOpen && (
+        <ImageImporter
+          gridSize={gridSize}
+          onApply={handleApplyPixelData}
+          onClose={() => setIsImporterOpen(false)}
+        />
+      )}
 
       <Footer />
     </div>
