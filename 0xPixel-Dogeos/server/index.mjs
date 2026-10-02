@@ -24,5 +24,8 @@ if(process.argv.includes('--dev')) {
   const {createServer}=await import('vite'); const vite=await createServer({root,server:{middlewareMode:true,hmr:false},appType:'spa'});app.use(vite.middlewares);
 } else { app.use(base,express.static(path.join(root,'dist'),{maxAge:'1h',index:false,dotfiles:'deny'})); app.get([base,base+'/{*rest}'],(req,res)=>res.sendFile(path.join(root,'dist/index.html'))); }
 app.use((error,req,res,next)=>{const status=error.status>=400&&error.status<500?error.status:503;if(status===503)console.error('Chain data request failed.');res.status(status).json({error:status===503?'Chain data is temporarily unavailable. Retry shortly.':status===404?'Pixel not found.':'Invalid request parameters or body.'});});
-const port=Number(process.env.PORT||3300);app.listen(port,'127.0.0.1',()=>console.log(`DOGEOSxPIXEL: http://localhost:${port}${base}`));
+const port=Number(process.env.PORT||3300),host=process.env.HOST||'127.0.0.1';
+if(!Number.isInteger(port)||port<1||port>65535)throw new Error('PORT must be an integer from 1 to 65535.');
+if(host.length>253||!/^[a-zA-Z0-9.:-]+$/.test(host))throw new Error('HOST must be an IP address or hostname.');
+app.listen(port,host,()=>console.log(`DOGEOSxPIXEL: http://localhost:${port}${base} (listening on ${host})`));
 

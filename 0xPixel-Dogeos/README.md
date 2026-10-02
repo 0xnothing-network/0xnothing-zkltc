@@ -17,6 +17,8 @@ npm start
 
 `npm run dev` chạy Vite middleware để phát triển; refresh browser sau khi sửa source. `PORT` có thể cấu hình trong `.env.local`.
 
+Public/deploy: xem [PUBLIC.md](./PUBLIC.md). Backend hosting đặt `HOST=0.0.0.0`, `NODE_ENV=production` và PORT được cấp. Workspace Next.js khi deploy cần `DOGEOS_PIXEL_ORIGIN` trỏ tới backend đang chạy; không dùng localhost của máy Windows trên hosting.
+
 ## Đã có
 
 - Chế độ sáng/tối: nút mặt trăng/mặt trời cạnh Connect wallet; mặc định theo hệ thống, lưu lựa chọn trên trình duyệt và áp dụng trước khi trang vẽ lần đầu.
@@ -89,7 +91,7 @@ npm run test:chain-readonly
 npm run test:providers
 ```
 
-53 contract checks, gồm 4 fuzz tests chạy 512 cases/test và 2 stateful invariants chạy 64 × 96 calls/invariant; 48 unit/backend/mapping/fee/codec tests. Browser tests kiểm tra desktop/mobile, draft 65,536 runs, import/export, phân trang, đổi session ngay trước ký, kết nối/đổi mạng đang chờ và từ chối ký. Ví giả lập không ký giao dịch. Báo cáo rà soát sâu và giới hạn kỹ thuật ở [AUDIT.md](./AUDIT.md).
+53 contract checks, gồm 4 fuzz tests chạy 512 cases/test và 2 stateful invariants chạy 64 × 96 calls/invariant; 51 unit/backend/mapping/fee/codec/hosting tests. Browser tests kiểm tra desktop/mobile, draft 65,536 runs, import/export, phân trang, đổi session ngay trước ký, kết nối/đổi mạng đang chờ và từ chối ký. Ví giả lập không ký giao dịch. Báo cáo rà soát sâu và giới hạn kỹ thuật ở [AUDIT.md](./AUDIT.md).
 
 Smoke test đã gửi giao dịch thật bằng deployer và ví test thứ hai: mint, collection của creator và secondary owner, membership, approval, list, buy, offer, accept, cancel, refund, earnings và royalty. Có 6 NFT mẫu thật đang niêm yết. Bằng chứng ở `output/live-smoke.json`; screenshot và báo cáo UI/API nằm cùng thư mục.
 

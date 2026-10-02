@@ -1,0 +1,41 @@
+{
+  "publicDeploymentVerified": false,
+  "publicDeploymentPending": "User public URL and hosting platform not supplied.",
+  "nextProxySmokePassed": true,
+  "testsPassed": 51,
+  "checkedAt": "2026-10-02T00:48:38.0045049Z",
+  "checks": [
+    {
+      "status": 200,
+      "offlineMessage": false,
+      "path": "/DOGEOSxPIXEL"
+    },
+    {
+      "status": 200,
+      "offlineMessage": false,
+      "path": "/DOGEOSxPIXEL/market"
+    },
+    {
+      "status": 200,
+      "offlineMessage": false,
+      "path": "/DOGEOSxPIXEL/studio"
+    },
+    {
+      "status": 200,
+      "offlineMessage": false,
+      "path": "/DOGEOSxPIXEL/collections"
+    },
+    {
+      "status": 200,
+      "offlineMessage": false,
+      "path": "/DOGEOSxPIXEL/api/config"
+    },
+    {
+      "status": 200,
+      "offlineMessage": false,
+      "path": "/DOGEOSxPIXEL/api/catalog?limit=2"
+    }
+  ],
+  "productionPortAndHostSmokePassed": true,
+  "dockerBuilt": false
+}
