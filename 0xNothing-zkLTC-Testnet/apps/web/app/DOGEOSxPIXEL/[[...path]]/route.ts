@@ -1,7 +1,10 @@
-// Local development uses :3301; deployed workspaces configure the Node service
-// origin with DOGEOS_PIXEL_ORIGIN. The service serves the same /DOGEOSxPIXEL path.
+import { dogeosEmbedded } from '../../../lib/server/dogeosEmbedded';
+
+// Production serves the bundled app; DOGEOS_PIXEL_ORIGIN optionally selects
+// an external service. Local development uses the app server on :3301.
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 const base = '/DOGEOSxPIXEL';
 const maxBodyBytes = 64 * 1024;
 async function bodyFor(request: Request): Promise<Uint8Array | undefined> {
@@ -26,7 +29,7 @@ async function forward(request: Request) {
   if (incoming.pathname !== base && !incoming.pathname.startsWith(base + '/')) return new Response('Not found.', { status: 404 });
   try {
     const configured = process.env.DOGEOS_PIXEL_ORIGIN?.trim();
-    if (!configured && process.env.NODE_ENV === 'production') throw new Error('DOGEOS_PIXEL_ORIGIN is required in production.');
+    if (!configured && process.env.NODE_ENV === 'production') return await dogeosEmbedded(request);
     const origin = new URL(configured || 'http://127.0.0.1:3301');
     if (!['http:', 'https:'].includes(origin.protocol) || origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash || origin.origin === incoming.origin) throw new Error('Invalid DOGEOS_PIXEL_ORIGIN.');
     const upstream = new URL(incoming.pathname + incoming.search, origin);
@@ -45,7 +48,7 @@ async function forward(request: Request) {
     return new Response(response.body, { status: response.status, headers });
   } catch (error) {
     if (error instanceof RangeError) return new Response('Request body too large.', { status: 413 });
-    console.error('DOGEOSxPIXEL upstream unavailable. Check DOGEOS_PIXEL_ORIGIN and the Node service.');
+    console.error('DOGEOSxPIXEL unavailable. Check the bundled service or DOGEOS_PIXEL_ORIGIN.');
     return new Response('DOGEOS × PIXEL is temporarily unavailable. Please try again shortly.', { status: 503 });
   }
 }

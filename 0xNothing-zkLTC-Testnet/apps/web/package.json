@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run build:dogeos && next build",
+    "build:dogeos": "node scripts/prepare-dogeos.mjs",
     "build:cloudflare": "opennextjs-cloudflare build",
     "start": "next start",
     "preview:cloudflare": "opennextjs-cloudflare preview",

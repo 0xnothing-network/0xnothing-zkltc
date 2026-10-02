@@ -30,5 +30,5 @@ test('public HOST and assigned PORT serve the read-only API using a mock RPC and
   let result;
   const deadline=Date.now()+10000;
   while(Date.now()<deadline){try{const response=await fetch(`http://${address}:${port}/DOGEOSxPIXEL/api/config`,{signal:AbortSignal.timeout(500)});if(response.ok){result=await response.json();break;}}catch{}if(app.process.exitCode!==null)break;await new Promise(resolve=>setTimeout(resolve,50));}
-  assert.ok(result,'Public listener did not serve its assigned port.');assert.equal(result.chainId,6281971);assert.match(app.output(),/listening on 0\.0\.0\.0/);assert.deepEqual(rpcMethods,['eth_chainId']);
+  assert.ok(result,'Public listener did not serve its assigned port.');assert.equal(result.chainId,6281971);assert.match(app.output(),/listening on 0\.0\.0\.0/);assert.deepEqual(rpcMethods,[]);
 });

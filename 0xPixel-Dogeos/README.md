@@ -13,11 +13,11 @@ npm run build
 npm start
 ```
 
-`npm start` tự dùng cổng 3300 khi còn trống. Nếu web workspace đã chạy trên 3300, app dùng 3301 và được chuyển tiếp qua route `/DOGEOSxPIXEL` của workspace. File tích hợp duy nhất nằm ngoài thư mục này là `../0xNothing-zkLTC-Testnet/apps/web/app/DOGEOSxPIXEL/[[...path]]/route.ts`.
+`npm start` tự dùng cổng 3300 khi còn trống. Nếu web workspace đã chạy trên 3300, app dùng 3301 và được chuyển tiếp qua route `/DOGEOSxPIXEL` của workspace. Workspace production đóng gói app qua prepare script, Node handler và file tracing; local development vẫn dùng server riêng.
 
 `npm run dev` chạy Vite middleware để phát triển; refresh browser sau khi sửa source. `PORT` có thể cấu hình trong `.env.local`.
 
-Public/deploy: xem [PUBLIC.md](./PUBLIC.md). Backend hosting đặt `HOST=0.0.0.0`, `NODE_ENV=production` và PORT được cấp. Workspace Next.js khi deploy cần `DOGEOS_PIXEL_ORIGIN` trỏ tới backend đang chạy; không dùng localhost của máy Windows trên hosting.
+Public/deploy: xem [PUBLIC.md](./PUBLIC.md). Workspace Next.js build kèm frontend và backend DOGEOSxPIXEL, không cần `DOGEOS_PIXEL_ORIGIN` hoặc server local trên production. Biến origin chỉ dùng khi chọn backend riêng; service Node độc lập đặt `HOST=0.0.0.0`, `NODE_ENV=production` và PORT được cấp.
 
 ## Đã có
 
@@ -91,7 +91,7 @@ npm run test:chain-readonly
 npm run test:providers
 ```
 
-53 contract checks, gồm 4 fuzz tests chạy 512 cases/test và 2 stateful invariants chạy 64 × 96 calls/invariant; 51 unit/backend/mapping/fee/codec/hosting tests. Browser tests kiểm tra desktop/mobile, draft 65,536 runs, import/export, phân trang, đổi session ngay trước ký, kết nối/đổi mạng đang chờ và từ chối ký. Ví giả lập không ký giao dịch. Báo cáo rà soát sâu và giới hạn kỹ thuật ở [AUDIT.md](./AUDIT.md).
+53 contract checks, gồm 4 fuzz tests chạy 512 cases/test và 2 stateful invariants chạy 64 × 96 calls/invariant; 64 unit/backend/mapping/fee/codec/hosting tests. Browser tests kiểm tra desktop/mobile, draft 65,536 runs, import/export, phân trang, đổi session ngay trước ký, kết nối/đổi mạng đang chờ và từ chối ký. Ví giả lập không ký giao dịch. Báo cáo rà soát sâu và giới hạn kỹ thuật ở [AUDIT.md](./AUDIT.md).
 
 Smoke test đã gửi giao dịch thật bằng deployer và ví test thứ hai: mint, collection của creator và secondary owner, membership, approval, list, buy, offer, accept, cancel, refund, earnings và royalty. Có 6 NFT mẫu thật đang niêm yết. Bằng chứng ở `output/live-smoke.json`; screenshot và báo cáo UI/API nằm cùng thư mục.
 

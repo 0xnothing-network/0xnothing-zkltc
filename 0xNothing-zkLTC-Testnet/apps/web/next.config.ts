@@ -51,6 +51,9 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
   outputFileTracingRoot: __dirname,
+  outputFileTracingIncludes: {
+    '/DOGEOSxPIXEL/**': ['./.dogeos/**/*'],
+  },
   experimental: {
     optimizePackageImports: [
       "wagmi",

@@ -23,3 +23,16 @@ node_modules
 0xNothing-zkLTC-Testnet/docs
 0xNothing-zkLTC-Testnet/graft
 0xNothing-zkLTC-Testnet/subgraphs
+
+# DogeOS build context carries only public frontend/backend source.
+**/.dogeos
+0xPixel-Dogeos/.env*
+0xPixel-Dogeos/.runtime
+0xPixel-Dogeos/output
+0xPixel-Dogeos/contracts
+0xPixel-Dogeos/subgraph
+0xPixel-Dogeos/graft
+0xPixel-Dogeos/tests
+0xPixel-Dogeos/dist
+0xPixel-Dogeos/deployments/*
+!0xPixel-Dogeos/deployments/chikyu.json

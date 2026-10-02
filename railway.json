@@ -7,7 +7,17 @@
       "/Dockerfile",
       "/.dockerignore",
       "/railway.json",
-      "/0xNothing-zkLTC-Testnet/apps/web/**"
+      "/0xNothing-zkLTC-Testnet/apps/web/**",
+      "/0xPixel-Dogeos/package.json",
+      "/0xPixel-Dogeos/package-lock.json",
+      "/0xPixel-Dogeos/tsconfig.json",
+      "/0xPixel-Dogeos/vite.config.ts",
+      "/0xPixel-Dogeos/index.html",
+      "/0xPixel-Dogeos/src/**",
+      "/0xPixel-Dogeos/public/**",
+      "/0xPixel-Dogeos/server/**",
+      "/0xPixel-Dogeos/scripts/runtime.mjs",
+      "/0xPixel-Dogeos/deployments/chikyu.json"
     ]
   },
   "deploy": {
