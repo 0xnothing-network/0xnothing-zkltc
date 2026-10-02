@@ -1,0 +1,15 @@
+{
+  "elapsedMs": 5198,
+  "source": "subgraph",
+  "supply": 6,
+  "total": 6,
+  "indexedBlock": 8231222,
+  "checkpointBlock": 8231222,
+  "replayRanges": [
+    {
+      "from": "8231222",
+      "to": "8231222"
+    }
+  ],
+  "cacheDir": "C:\\Users\\tdat\\AppData\\Local\\Temp\\dogeos-embed-live-eWC5cG"
+}
