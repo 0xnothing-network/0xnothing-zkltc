@@ -26,7 +26,7 @@ function hexColor(r: number, g: number, b: number): string {
 
 export function rgbaToPixelGrid(source: PixelImageSource, options: PixelImportOptions): string[][] {
   const { gridSize, mode = "fit", colors = 32 } = options;
-  if (![8, 16, 32, 64].includes(gridSize) && gridSize !== 2 && gridSize !== 4 || !Number.isInteger(source.width) || !Number.isInteger(source.height) || source.width <= 0 || source.height <= 0 || source.width * source.height > 16_777_216 || !Number.isInteger(colors) || colors < 1 || colors > 64) {
+  if (![8, 16, 32, 64, 128, 256].includes(gridSize) && gridSize !== 2 && gridSize !== 4 || !Number.isInteger(source.width) || !Number.isInteger(source.height) || source.width <= 0 || source.height <= 0 || source.width * source.height > 16_777_216 || !Number.isInteger(colors) || colors < 1 || colors > 64) {
     throw new Error("Invalid image dimensions");
   }
   if (source.data.length < source.width * source.height * 4) throw new Error("Invalid image data");

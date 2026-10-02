@@ -1,0 +1,49 @@
+{
+  "name": "dogeos-x-pixel",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/serve.mjs --dev",
+    "start": "node scripts/serve.mjs",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs",
+    "test:contracts": "forge test --root contracts",
+    "compile": "forge build --root contracts && node scripts/export-abi.mjs",
+    "deploy": "node scripts/deploy.mjs",
+    "smoke:chain": "node scripts/smoke-chain.mjs",
+    "test:ui": "node tests/browser.mjs",
+    "subgraph:build": "npm --prefix subgraph run build",
+    "test:wallet-ui": "node tests/wallet-browser.mjs",
+    "test:api": "node tests/api-live.mjs",
+    "verify": "npm test && npm run test:contracts && npm run build && npm run subgraph:build",
+    "test:subgraph-client": "node tests/subgraph-client.mjs",
+    "subgraph:deploy": "npm run subgraph:build && goldsky subgraph deploy --path subgraph",
+    "test:subgraph-live": "node tests/subgraph-live.mjs",
+    "test:studio": "node tests/studio-browser.mjs",
+    "test:wallet-races": "node tests/wallet-races.mjs",
+    "test:ui-regressions": "node tests/ui-regressions.mjs",
+    "test:chain-readonly": "node tests/chain-readonly.mjs",
+    "test:providers": "node tests/provider-discovery.mjs"
+  },
+  "dependencies": {
+    "@fontsource/space-grotesk": "5.2.10",
+    "@openzeppelin/contracts": "5.6.0",
+    "@phosphor-icons/react": "2.1.7",
+    "dotenv": "17.2.3",
+    "express": "5.1.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "viem": "2.55.10"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@types/node": "22.18.10",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "@vitejs/plugin-react": "5.0.4",
+    "typescript": "5.9.3",
+    "vite": "7.3.6"
+  }
+}

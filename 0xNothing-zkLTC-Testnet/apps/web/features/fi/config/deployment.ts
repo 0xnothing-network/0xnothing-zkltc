@@ -123,12 +123,6 @@ export const deployment = {
   },
 } as const;
 
-export type ContractKey = keyof typeof deployment.contracts;
-
-export function isContractConfigured(key: ContractKey): boolean {
-  return Boolean(deployment.contracts[key]);
-}
-
 export function explorerAddressUrl(address: Address): string {
   return `${deployment.chain.explorerUrl}/address/${address}`;
 }

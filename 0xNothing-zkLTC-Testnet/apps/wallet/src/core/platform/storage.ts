@@ -25,7 +25,7 @@ export interface KeyValueStore {
   setMany(entries: readonly (readonly [string, unknown])[]): Promise<void>;
   remove(key: string): Promise<void>;
   keys(): Promise<string[]>;
-  /** Fires when another document in the same profile changes `key`. */
+  /** Fires when this store or another document in the same profile changes `key`. */
   subscribe(key: string, handler: (value: unknown) => void): () => void;
 }
 
@@ -77,6 +77,7 @@ function chromeStore(area: "local" | "session"): KeyValueStore {
 }
 
 function webStore(storage: Storage): KeyValueStore {
+  const watchers = new Map<string, Set<(value: unknown) => void>>();
   return {
     async get<T>(key: string) {
       const raw = storage.getItem(key);
@@ -89,12 +90,15 @@ function webStore(storage: Storage): KeyValueStore {
     },
     async set(key, value) {
       storage.setItem(key, JSON.stringify(value));
+      watchers.get(key)?.forEach((handler) => handler(value));
     },
     async setMany(entries) {
       for (const [key, value] of entries) storage.setItem(key, JSON.stringify(value));
+      for (const [key, value] of entries) watchers.get(key)?.forEach((handler) => handler(value));
     },
     async remove(key) {
       storage.removeItem(key);
+      watchers.get(key)?.forEach((handler) => handler(undefined));
     },
     async keys() {
       return Array.from({ length: storage.length }, (_, i) => storage.key(i)).filter(
@@ -102,21 +106,30 @@ function webStore(storage: Storage): KeyValueStore {
       );
     },
     subscribe(key, handler) {
+      const set = watchers.get(key) ?? new Set();
+      set.add(handler);
+      watchers.set(key, set);
       const listener = (event: StorageEvent): void => {
-        if (event.key !== key) return;
+        if (event.storageArea !== storage || (event.key !== key && event.key !== null)) return;
         if (event.newValue === null) {
           handler(undefined);
           return;
         }
+        let value: unknown;
         try {
-          handler(JSON.parse(event.newValue) as unknown);
+          value = JSON.parse(event.newValue) as unknown;
         } catch {
           // Corrupt data from another tab is treated as absent, matching get().
-          handler(undefined);
+          value = undefined;
         }
+        handler(value);
       };
       window.addEventListener("storage", listener);
-      return () => window.removeEventListener("storage", listener);
+      return () => {
+        window.removeEventListener("storage", listener);
+        set.delete(handler);
+        if (set.size === 0) watchers.delete(key);
+      };
     },
   };
 }

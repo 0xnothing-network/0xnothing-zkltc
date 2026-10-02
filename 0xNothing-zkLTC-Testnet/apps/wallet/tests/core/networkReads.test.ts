@@ -48,12 +48,20 @@ test("live read budgets do not shorten signing transport retries", async () => {
       createWalletClient: (options: Client) => options,
       http: (_url: string, options: Transport) => options,
     },
+    "viem/accounts": { toAccount: (source: unknown) => source },
+    "../i18n": { t: (key: string) => key },
     "../../config/networks": {
       LITVM_NETWORK: originalNetwork,
       networkIdentity: () => "litvm",
+      resolveNetwork: () => originalNetwork,
       viemChainFor: () => ({ id: 4441 }),
     },
-    "../keyring/vault": { signerFor: async () => owner },
+    "../keyring/vault": {
+      signerFor: async () => ({ address: owner }),
+      readAccounts: async () => ({ active: owner, accounts: [] }),
+      readSettings: async () => ({ networkId: originalNetwork.id, customNetworks: [] }),
+      isUnlocked: async () => true,
+    },
   });
   assert.equal(rpc.publicClient.transport.timeout, 5_000);
   assert.equal(rpc.publicClient.transport.retryCount, 0);
@@ -77,6 +85,8 @@ test("profile read clients reuse the active RPC and resolve other profiles witho
       createWalletClient: () => ({}),
       http: (url: string) => url,
     },
+    "viem/accounts": { toAccount: (source: unknown) => source },
+    "../i18n": { t: (key: string) => key },
     "../../config/networks": {
       LITVM_NETWORK: original,
       networkIdentity: (network: typeof original) => `${network.id}:${network.rpcUrl}`,
@@ -283,7 +293,7 @@ function nftFixture() {
   const rpc = { activeNetwork: originalNetwork, publicClient: client };
   const service = evaluate<NftService>("../../src/core/services/nfts.ts", {
     "../../abis": { pixelNftAbi: [] },
-    "../../config/contracts": { CONTRACTS: { pixelNft: owner } },
+    "../../config/contracts": { PIXEL_COLLECTIONS: [{ address: owner, name: "0xPixel" }] },
     "../lib/pixelSvg": { pixelDataToSvgDataUrl: () => "data:image/svg+xml,test" },
     "../rpc/client": rpc,
     "./tx": {},

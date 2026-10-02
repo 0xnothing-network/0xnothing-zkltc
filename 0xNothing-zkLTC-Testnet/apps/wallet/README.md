@@ -93,7 +93,10 @@ memory-only, so locking is a single delete with nothing left behind. Auto-lock
 defaults to 15 minutes and is pushed out by deliberate actions.
 
 **Signers are built per use and never cached**, so a lock takes effect
-everywhere at once. Revealing a seed phrase or a private key re-asks for the
+everywhere at once. Signing clients retain public metadata while preparing
+nonce, gas and fees, then resolve a fresh signer at the signature boundary.
+Locking or changing the active account or RPC invalidates the pending action.
+Revealing a seed phrase or a private key re-asks for the
 password even while unlocked.
 
 **The service worker holds no key material and cannot sign.** Anything needing a

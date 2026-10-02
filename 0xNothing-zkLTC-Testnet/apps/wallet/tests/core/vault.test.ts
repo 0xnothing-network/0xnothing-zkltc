@@ -87,3 +87,26 @@ test("imported-key metadata cannot authorize a signature for another address", a
     await vault.wipeWallet();
   }
 });
+
+test("malformed persisted session deadlines fail closed and activity cannot extend them", async () => {
+  const vault = await loadVault();
+  const { sessionStore } = await server!.ssrLoadModule("/src/core/platform/storage.ts");
+  const { STORAGE_KEYS } = await server!.ssrLoadModule("/src/core/platform/storageKeys.ts");
+  const password = "correct horse battery staple";
+  await vault.wipeWallet();
+  try {
+    await vault.createVault(password, PHRASE);
+    const validSession = await sessionStore.get(STORAGE_KEYS.session);
+    for (const invalidDeadline of ["never", Number.NaN, Number.POSITIVE_INFINITY, true, {}, []]) {
+      await sessionStore.setMany([
+        [STORAGE_KEYS.session, validSession],
+        [STORAGE_KEYS.sessionDeadline, invalidDeadline],
+      ]);
+      await vault.touchSession();
+      assert.equal(await vault.isUnlocked(), false, String(invalidDeadline));
+      assert.equal(await sessionStore.get(STORAGE_KEYS.session), null);
+    }
+  } finally {
+    await vault.wipeWallet();
+  }
+});

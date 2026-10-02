@@ -39,6 +39,18 @@
   },
   {
     "anonymous": false,
+    "inputs": [{ "indexed": false, "internalType": "uint256", "name": "remainingDuration", "type": "uint256" }],
+    "name": "RewardSchedulePaused",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [{ "indexed": false, "internalType": "uint256", "name": "periodFinish", "type": "uint256" }],
+    "name": "RewardScheduleResumed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
     "inputs": [{ "indexed": false, "internalType": "bool", "name": "paused", "type": "bool" }],
     "name": "DepositsPauseUpdated",
     "type": "event"

@@ -1,4 +1,5 @@
-import { type Address, type Hex, zeroAddress } from "viem";
+import { type Address, type Hex, type TransactionReceipt, zeroAddress } from "viem";
+import { deliveredTokenAmount } from "../../../../../shared/transactions/tokenDelivery";
 import {
   dexFactoryAbi,
   dexPoolAbi,
@@ -33,9 +34,8 @@ import {
  * The oracle legs matter because WzkLTC/NUSD is one thin pool while
  * `mintAtOracle`/`redeemAtOracle` settle at the DIA feed for no fee. The router
  * has no oracle entry point, so those two shapes cost two confirmations: stage
- * two spends the NUSD that actually landed and scales its floor down in the
- * same proportion. Pool output is concave, so a linear down-scale is always a
- * safe floor — and the floor is never scaled up.
+ * two spends the NUSD that actually landed and preserves the displayed
+ * end-to-end output floor, so staged execution cannot compound slippage.
  */
 export type SwapRouteKind =
   | "oracle"
@@ -479,6 +479,10 @@ export async function quoteSwap(params: {
   // choice correct in both directions, whichever side is cheaper at the time.
   return candidates.reduce<SwapRoute>((winner, candidate) => {
     if (candidate.path.length === 0 || candidate.amountOut <= 0n) return winner;
+    // An executable route beats a paused one, regardless of its nominal quote.
+    // Retain a paused quote only when no live route exists, for the UI warning.
+    if (winner.kind === "none" || (winner.paused && !candidate.paused)) return candidate;
+    if (!winner.paused && candidate.paused) return winner;
     return candidate.amountOut > winner.amountOut ? candidate : winner;
   }, noRoute(identity, paused));
 }
@@ -501,19 +505,11 @@ export function routeLabel(route: SwapRoute, from: string, to: string): string |
   }
 }
 
-function nusdBalance(client: SwapClient, account: Address): Promise<bigint> {
-  return client.readContract({
-    address: CONTRACTS.nusd,
-    abi: erc20Abi,
-    functionName: "balanceOf",
-    args: [account],
-  });
-}
-
 /** A staged route may not start its second leg until the first one has landed. */
-async function settled(client: SwapClient, hash: Hex): Promise<void> {
+async function settled(client: SwapClient, hash: Hex): Promise<TransactionReceipt> {
   const receipt = await client.waitForTransactionReceipt({ hash, timeout: 180_000 });
   if (receipt.status !== "success") throw new Error(t("err.txReverted"));
+  return receipt;
 }
 
 function routerSwap(params: TxLine & {
@@ -652,7 +648,6 @@ export async function executeSwap(params: {
   // bridge asset in the wallet instead of settling below the displayed limit.
 
   if (route.kind === "oracle-mint") {
-    const before = await nusdBalance(client, from);
     const minted = await writeCall({
       from,
       address: CONTRACTS.nusd,
@@ -664,9 +659,8 @@ export async function executeSwap(params: {
       label,
       detailLabel: { key: "swap.step1Oracle", params: { symbol: tokenIn.symbol } },
     }, context);
-    await settled(client, minted);
-    const delivered = (await nusdBalance(client, from)) - before;
-    if (delivered <= 0n) throw new Error(t("err.noNusdDelivered"));
+    const receipt = await settled(client, minted);
+    const delivered = deliveredTokenAmount(receipt, CONTRACTS.nusd, from);
     await ensureAllowance({
       from,
       token: CONTRACTS.nusd,
@@ -693,7 +687,6 @@ export async function executeSwap(params: {
     amount: amountIn,
     symbol: tokenIn.symbol,
   }, context);
-  const before = await nusdBalance(client, from);
   const sold = await routerSwap({
     from,
     amountIn,
@@ -704,9 +697,8 @@ export async function executeSwap(params: {
     label,
     detailLabel: { key: "swap.step1Pool", params: { symbol: tokenIn.symbol } },
   }, context);
-  await settled(client, sold);
-  const delivered = (await nusdBalance(client, from)) - before;
-  if (delivered <= 0n) throw new Error(t("err.noNusdDelivered"));
+  const receipt = await settled(client, sold);
+  const delivered = deliveredTokenAmount(receipt, CONTRACTS.nusd, from);
   return writeCall({
     from,
     address: CONTRACTS.nusd,

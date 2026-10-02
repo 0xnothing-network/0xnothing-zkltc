@@ -1,0 +1,87 @@
+type Pixel @entity(immutable: false) {
+  id: ID!
+  tokenId: BigInt!
+  name: String!
+  description: String!
+  grid: Int!
+  pixels: Bytes!
+  artworkHash: Bytes!
+  owner: Bytes!
+  creator: Bytes!
+  mintedAt: BigInt!
+  ownershipNonce: BigInt!
+  tokenApproved: Boolean!
+  ownerApproval: MarketApproval!
+  collection: Collection
+  listing: Listing
+  offers: [Offer!]! @derivedFrom(field: "pixel")
+  sales: [Sale!]! @derivedFrom(field: "pixel")
+}
+
+type MarketApproval @entity(immutable: false) {
+  id: ID!
+  approved: Boolean!
+}
+type Collection @entity(immutable: false) {
+  id: ID!
+  owner: Bytes!
+  name: String!
+  description: String!
+  createdAt: BigInt!
+  pixelCount: Int!
+  pixels: [Pixel!]! @derivedFrom(field: "collection")
+}
+type Listing @entity(immutable: false) {
+  id: ID!
+  pixel: Pixel!
+  seller: Bytes!
+  price: BigInt!
+  expiry: BigInt!
+  nonce: BigInt!
+  status: String!
+  createdAt: BigInt!
+}
+type Offer @entity(immutable: false) {
+  id: ID!
+  pixel: Pixel!
+  bidder: Bytes!
+  amount: BigInt!
+  expiry: BigInt!
+  status: String!
+  createdAt: BigInt!
+}
+type Sale @entity(immutable: true) {
+  id: ID!
+  pixel: Pixel!
+  seller: Bytes!
+  buyer: Bytes!
+  price: BigInt!
+  royalty: BigInt!
+  fee: BigInt!
+  kind: String!
+  transaction: Bytes!
+  timestamp: BigInt!
+}
+type Activity @entity(immutable: true) {
+  id: ID!
+  kind: String!
+  tokenId: BigInt!
+  account: Bytes!
+  amount: BigInt!
+  transaction: Bytes!
+  block: BigInt!
+  timestamp: BigInt!
+}
+type Account @entity(immutable: false) {
+  id: ID!
+  credits: BigInt!
+}
+type Stats @entity(immutable: false) {
+  id: ID!
+  minted: BigInt!
+  collections: BigInt!
+  sales: BigInt!
+  volume: BigInt!
+  royalties: BigInt!
+  fees: BigInt!
+}

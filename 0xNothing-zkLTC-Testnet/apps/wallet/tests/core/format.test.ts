@@ -65,8 +65,23 @@ test("parseAmount refuses anything that is not a plain decimal", () => {
   // A lone separator is not an amount yet, but a leading one is.
   assert.equal(parseAmount(".", 18), null);
   assert.equal(parseAmount(".5", 18), WAD / 2n);
-  // Extra decimals are the user's typing, not a reason to reject the field.
-  assert.equal(parseAmount("0.0000000000000000001", 18), 0n);
+  // Amounts below one token unit are not representable on-chain.
+  assert.equal(parseAmount("0.0000000000000000001", 18), null);
+});
+
+test("amount parsing never rounds the submitted token quantity or joins malformed comma groups", () => {
+  assert.equal(parseAmount("1.0000005", 6), null);
+  assert.equal(parseAmount("1.5", 0), null);
+  assert.equal(parseAmount("0.9999999", 6), null);
+  assert.equal(parseAmount("1.0000000", 6), 1_000_000n);
+  assert.equal(parseAmount(".5", 6), 500_000n);
+  assert.equal(parseAmount("1,000.50", 6), 1_000_500_000n);
+  for (const input of ["1,2", "1,23,456", ",123", "123,", "1,,000"]) {
+    assert.equal(parseAmount(input, 6), null, input);
+  }
+  for (const decimals of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 37]) {
+    assert.equal(parseAmount("1", decimals), null);
+  }
 });
 
 test("usd value scales by the token's own decimals", () => {

@@ -813,5 +813,46 @@
   {
     "stateMutability": "payable",
     "type": "receive"
+  },
+  {
+    "name": "tokenPackedData",
+    "stateMutability": "view",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "artName",
+        "type": "string"
+      },
+      {
+        "name": "description",
+        "type": "string"
+      },
+      {
+        "name": "gridSize",
+        "type": "uint256"
+      },
+      {
+        "name": "pixelData",
+        "type": "bytes"
+      },
+      {
+        "name": "creator",
+        "type": "address"
+      },
+      {
+        "name": "mintedAt",
+        "type": "uint256"
+      },
+      {
+        "name": "artworkHash",
+        "type": "bytes32"
+      }
+    ],
+    "type": "function"
   }
 ]

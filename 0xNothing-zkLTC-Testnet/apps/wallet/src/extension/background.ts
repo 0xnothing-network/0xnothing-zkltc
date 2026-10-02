@@ -2,6 +2,7 @@ import { LITVM_RPC_URL } from "../config/chain";
 import {
   BUILTIN_NETWORKS,
   networkHex,
+  networkIdentity,
   normalizeCustomNetworks,
   resolveNetwork,
   type WalletNetwork,
@@ -334,6 +335,7 @@ async function askUser(params: {
   origin: string;
   title?: string;
   networkId?: string;
+  networkIdentity?: string;
   targetNetworkId?: string;
   account?: string;
   tx?: DappRequest["tx"];
@@ -347,6 +349,7 @@ async function askUser(params: {
     kind: params.kind,
     at: Date.now(),
     networkId: params.networkId,
+    networkIdentity: params.networkIdentity,
     targetNetworkId: params.targetNetworkId,
     account: params.account as DappRequest["account"],
     tx: params.tx,
@@ -495,7 +498,7 @@ async function handle(call: RpcCall, origin: string, title?: string): Promise<An
     }
     const account = await activeAccount();
     if (!account) return fail(4100, "No wallet set up in the extension");
-    const answer = await askUser({ kind: "connect", origin, title, account, networkId: network.id });
+    const answer = await askUser({ kind: "connect", origin, title, account, networkId: network.id, networkIdentity: networkIdentity(network) });
     if (answer.error) return answer;
     const approved = String(answer.result);
     await grantConnection(origin, [approved as `0x${string}`]);
@@ -525,6 +528,7 @@ async function handle(call: RpcCall, origin: string, title?: string): Promise<An
       title,
       account,
       networkId: network.id,
+      networkIdentity: networkIdentity(network),
       targetNetworkId: target.id,
     });
     if (answer.error) return answer;
@@ -543,6 +547,7 @@ async function handle(call: RpcCall, origin: string, title?: string): Promise<An
       title,
       account,
       networkId: network.id,
+      networkIdentity: networkIdentity(network),
       tx: {
         to: raw.to as `0x${string}` | undefined,
         value: raw.value,
@@ -560,7 +565,7 @@ async function handle(call: RpcCall, origin: string, title?: string): Promise<An
     if (signer && !sameAccount(signer, account)) {
       return fail(4100, "The signing address does not match the connected account");
     }
-    return askUser({ kind: "sign", origin, title, account, message, networkId: network.id });
+    return askUser({ kind: "sign", origin, title, account, message, networkId: network.id, networkIdentity: networkIdentity(network) });
   }
 
   if (method === "eth_signTypedData_v4" || method === "eth_signTypedData_v3") {
@@ -575,7 +580,7 @@ async function handle(call: RpcCall, origin: string, title?: string): Promise<An
       message = undefined;
     }
     if (!validMessage(message) || message.length === 0) return fail(-32602, "Invalid typed data");
-    return askUser({ kind: "sign-typed", origin, title, account, message, networkId: network.id });
+    return askUser({ kind: "sign-typed", origin, title, account, message, networkId: network.id, networkIdentity: networkIdentity(network) });
   }
 
   return fail(-32601, `The wallet does not support ${method}`);

@@ -1,0 +1,118 @@
+{
+  "inventoryCount": 1537,
+  "categories": {
+    "project": 568,
+    "agent-metadata": 1,
+    "test": 131,
+    "generated-or-artifact": 91,
+    "vendored": 746
+  },
+  "totalBytes": 12773678,
+  "findings": [],
+  "missingWorkingTreePaths": [
+    "0xNothing-zkLTC-Testnet/apps/wallet/src/core/quantum/account.ts",
+    "0xNothing-zkLTC-Testnet/apps/wallet/src/core/quantum/boardClient.ts",
+    "0xNothing-zkLTC-Testnet/apps/wallet/src/core/quantum/client.ts",
+    "0xNothing-zkLTC-Testnet/apps/wallet/src/core/quantum/config.ts",
+    "0xNothing-zkLTC-Testnet/apps/wallet/src/core/quantum/relayNode.ts",
+    "0xNothing-zkLTC-Testnet/apps/wallet/src/core/quantum/selfRelay.ts",
+    "0xNothing-zkLTC-Testnet/apps/wallet/src/core/quantum/storage.ts",
+    "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/hooks/useRelayNode.ts",
+    "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/QuantumWallet.tsx",
+    "0xNothing-zkLTC-Testnet/apps/wallet/src/ui/screens/settings/RelayNode.tsx"
+  ],
+  "contractParity": [
+    {
+      "mainnet": "0xNothing-zkLTC-Mainnet/contracts/src/common/Clones.sol",
+      "testnet": "0xNothing-zkLTC-Testnet/contracts/src/common/Clones.sol",
+      "identical": true
+    },
+    {
+      "mainnet": "0xNothing-zkLTC-Mainnet/contracts/src/common/MathX.sol",
+      "testnet": "0xNothing-zkLTC-Testnet/contracts/src/common/MathX.sol",
+      "identical": true
+    },
+    {
+      "mainnet": "0xNothing-zkLTC-Mainnet/contracts/src/common/ReentrancyGuard.sol",
+      "testnet": "0xNothing-zkLTC-Testnet/contracts/src/common/ReentrancyGuard.sol",
+      "identical": true
+    },
+    {
+      "mainnet": "0xNothing-zkLTC-Mainnet/contracts/src/common/RoleControl.sol",
+      "testnet": "0xNothing-zkLTC-Testnet/contracts/src/common/RoleControl.sol",
+      "identical": true
+    },
+    {
+      "mainnet": "0xNothing-zkLTC-Mainnet/contracts/src/common/SafeTransferLib.sol",
+      "testnet": "0xNothing-zkLTC-Testnet/contracts/src/common/SafeTransferLib.sol",
+      "identical": true
+    },
+    {
+      "mainnet": "0xNothing-zkLTC-Mainnet/contracts/src/common/TwoStepAdmin.sol",
+      "testnet": "0xNothing-zkLTC-Testnet/contracts/src/common/TwoStepAdmin.sol",
+      "identical": true
+    },
+    {
+      "mainnet": "0xNothing-zkLTC-Mainnet/contracts/src/graduation/GraduationRouter.sol",
+      "testnet": "0xNothing-zkLTC-Testnet/contracts/src/graduation/GraduationRouter.sol",
+      "identical": true
+    },
+    {
+      "mainnet": "0xNothing-zkLTC-Mainnet/contracts/src/graduation/PermanentLiquidityLocker.sol",
+      "testnet": "0xNothing-zkLTC-Testnet/contracts/src/graduation/PermanentLiquidityLocker.sol",
+      "identical": true
+    },
+    {
+      "mainnet": "0xNothing-zkLTC-Mainnet/contracts/src/graduation/interfaces/IGraduationAdapter.sol",
+      "testnet": "0xNothing-zkLTC-Testnet/contracts/src/graduation/interfaces/IGraduationAdapter.sol",
+      "identical": true
+    },
+    {
+      "mainnet": "0xNothing-zkLTC-Mainnet/contracts/src/graduation/interfaces/IGraduationRouter.sol",
+      "testnet": "0xNothing-zkLTC-Testnet/contracts/src/graduation/interfaces/IGraduationRouter.sol",
+      "identical": true
+    },
+    {
+      "mainnet": "0xNothing-zkLTC-Mainnet/contracts/src/graduation/interfaces/ILPLocker.sol",
+      "testnet": "0xNothing-zkLTC-Testnet/contracts/src/graduation/interfaces/ILPLocker.sol",
+      "identical": true
+    },
+    {
+      "mainnet": "0xNothing-zkLTC-Mainnet/contracts/src/nusd/DIAOracleAdapter.sol",
+      "testnet": "0xNothing-zkLTC-Testnet/contracts/src/nusd/DIAOracleAdapter.sol",
+      "identical": true
+    },
+    {
+      "mainnet": "0xNothing-zkLTC-Mainnet/contracts/src/nusd/NUSD.sol",
+      "testnet": "0xNothing-zkLTC-Testnet/contracts/src/nusd/NUSD.sol",
+      "identical": true
+    },
+    {
+      "mainnet": "0xNothing-zkLTC-Mainnet/contracts/src/nusd/NativeCollateralVault.sol",
+      "testnet": "0xNothing-zkLTC-Testnet/contracts/src/nusd/NativeCollateralVault.sol",
+      "identical": true
+    },
+    {
+      "mainnet": "0xNothing-zkLTC-Mainnet/contracts/src/nusd/OracleNUSD.sol",
+      "testnet": "0xNothing-zkLTC-Testnet/contracts/src/nusd/OracleNUSD.sol",
+      "identical": true
+    },
+    {
+      "mainnet": "0xNothing-zkLTC-Mainnet/contracts/src/nusd/interfaces/IDIAAggregatorV3.sol",
+      "testnet": "0xNothing-zkLTC-Testnet/contracts/src/nusd/interfaces/IDIAAggregatorV3.sol",
+      "identical": true
+    },
+    {
+      "mainnet": "0xNothing-zkLTC-Mainnet/contracts/src/pump/PumpToken.sol",
+      "testnet": "0xNothing-zkLTC-Testnet/contracts/src/pump/PumpToken.sol",
+      "identical": true
+    },
+    {
+      "mainnet": "0xNothing-zkLTC-Mainnet/contracts/src/pump/ZeroXPump.sol",
+      "testnet": "0xNothing-zkLTC-Testnet/contracts/src/pump/ZeroXPump.sol",
+      "identical": true
+    }
+  ],
+  "excludedNonSourceCount": 292,
+  "limitation": "Complete byte inventory and automated syntax/import screening of tracked and unignored source/configuration files; this is not a complete manual semantic or independent security audit. Ignored dependencies, build caches, secrets and binary assets are outside this inventory."
+}

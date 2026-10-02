@@ -1,0 +1,30 @@
+{
+  "base": "http://127.0.0.1:4381",
+  "results": [
+    {
+      "check": "V2 metadata",
+      "name": "0xPixel V2 · 256",
+      "description": "Bản kiểm chứng 256×256 với 4.096 đoạn màu: hình ảnh và mô tả lưu hoàn toàn on-chain.",
+      "imageUrl": "/api/pixel-image?tokenId=1&collection=0xd83cb7acef921f98b6b983cbb712a583869da9eb"
+    },
+    {
+      "check": "Images and legacy cache identity",
+      "v2Bytes": 180634,
+      "v2Hash": "d9090293769c809e6242d1f959330752b1fcfa46c5fe01a7d9a1d090c425e3f4",
+      "legacyHash": "6482f11ce297d040dbdca29e967e65c3f991e81fdb96019fb1d6ef488fed494f"
+    },
+    {
+      "check": "Live inventory",
+      "count": 13,
+      "collections": [
+        "0x33a32b9b2bee864f9e42bfa39ca7bdc72f655988",
+        "0xd83cb7acef921f98b6b983cbb712a583869da9eb"
+      ]
+    },
+    {
+      "check": "Live V2 activity through RPC",
+      "events": 1,
+      "v2MintPresent": true
+    }
+  ]
+}

@@ -1,8 +1,8 @@
+import { PIXEL_COLLECTIONS, PIXEL_V2_ENABLED, isPixelCollection, isPixelV2Collection, pixelTokenKey } from "@/lib/pixelCollections";
 import { NextResponse } from "next/server";
 import type { Address } from "viem";
 import {
   publicClient,
-  PIXEL_NFT_CONTRACT_ADDRESS,
   PIXEL_MARKETPLACE_ADDRESS,
 } from "@/lib/contract";
 import { MarketplaceAbi, marketplaceNftKey } from "@/lib/marketplaceAbi";
@@ -119,7 +119,7 @@ async function loadListingsPayload(fresh: boolean): Promise<ListingsPayload> {
 }
 
 async function loadListingCandidates(fresh: boolean): Promise<ListingDTO[]> {
-  if (hasMarketplaceSubgraph()) {
+  if (!PIXEL_V2_ENABLED && hasMarketplaceSubgraph()) {
     try {
       const listings = await fetchAllMarketplaceListingsFromSubgraph(5_000, fresh);
       return listings.map((listing) => ({
@@ -277,26 +277,20 @@ async function fetchPixelTokensForListings(
   listings: ListingDTO[],
 ): Promise<Record<string, TokenDTO | null>> {
   const output: Record<string, TokenDTO | null> = {};
-  const pixelListings = listings.filter((listing) => isPixelCollection(listing.collection));
-  const pixelIds = Array.from(new Set(pixelListings.map((listing) => listing.tokenId)));
-
-  let subgraphTokens: Awaited<ReturnType<typeof fetchTokenMetadataFromSubgraph>> = {};
-  if (pixelIds.length > 0 && hasMarketplaceSubgraph()) {
-    try {
-      subgraphTokens = await fetchTokenMetadataFromSubgraph(pixelIds);
-    } catch (error) {
-      console.warn("[marketplace] pixel metadata subgraph failed; using RPC:", error);
+  for (const entry of PIXEL_COLLECTIONS) {
+    const pixelListings = listings.filter((listing) => listing.collection.toLowerCase() === entry.address.toLowerCase());
+    const pixelIds = Array.from(new Set(pixelListings.map((listing) => listing.tokenId)));
+    if (!pixelIds.length) continue;
+    let indexed: Awaited<ReturnType<typeof fetchTokenMetadataFromSubgraph>> = {};
+    if (!isPixelV2Collection(entry.address) && hasMarketplaceSubgraph()) {
+      try { indexed = await fetchTokenMetadataFromSubgraph(pixelIds); }
+      catch (error) { console.warn("[marketplace] pixel metadata index failed; using RPC:", error); }
     }
-  }
-
-  const missingPixelIds = pixelIds.filter((tokenId) => !subgraphTokens[tokenId]?.imageUrl);
-  const onchainPixelTokens = await fetchPixelTokensOnchain(missingPixelIds);
-  for (const listing of pixelListings) {
-    const indexed = subgraphTokens[listing.tokenId];
-    const metadata = indexed?.imageUrl
-      ? indexed
-      : onchainPixelTokens[listing.tokenId] ?? indexed ?? null;
-    output[marketplaceNftKey(listing.collection, listing.tokenId)] = metadata;
+    const missing = pixelIds.filter((tokenId) => !indexed[tokenId]?.imageUrl);
+    const onchain = await fetchPixelTokensOnchain(missing, entry.address);
+    for (const tokenId of pixelIds) {
+      output[pixelTokenKey(entry.address, tokenId)] = indexed[tokenId]?.imageUrl ? indexed[tokenId] : onchain[tokenId] ?? null;
+    }
   }
 
   return output;
@@ -316,12 +310,12 @@ async function fetchGenericTokensForListings(
 }
 
 async function fetchPixelTokensOnchain(
-  tokenIds: string[],
+  tokenIds: string[], collection: Address,
 ): Promise<Record<string, TokenDTO | null>> {
   const output: Record<string, TokenDTO | null> = {};
   const missing: string[] = [];
   for (const tokenId of tokenIds) {
-    const cached = pixelTokenCache.get(tokenId);
+    const cached = pixelTokenCache.get(pixelTokenKey(collection, tokenId));
     // A cached null is a token without a usable image; only `undefined` is a miss.
     if (cached !== undefined) {
       output[tokenId] = cached;
@@ -335,7 +329,7 @@ async function fetchPixelTokensOnchain(
     allowFailure: true,
     batchSize: MARKETPLACE_MULTICALL_BATCH_SIZE,
     contracts: missing.map((tokenId) => ({
-      address: PIXEL_NFT_CONTRACT_ADDRESS,
+      address: collection,
       abi: PixelNFTABI,
       functionName: "tokenData" as const,
       args: [BigInt(tokenId)] as const,
@@ -349,7 +343,7 @@ async function fetchPixelTokensOnchain(
     if (result?.status === "success") {
       const tuple = result.result as readonly [string, bigint, string, Address, bigint, string];
       const imageUrl = tuple[2] && tuple[1]
-        ? getPixelImageUrl(tokenId)
+        ? getPixelImageUrl(tokenId, collection)
         : "";
       metadata = imageUrl
         ? {
@@ -361,16 +355,13 @@ async function fetchPixelTokensOnchain(
           }
         : null;
     }
-    pixelTokenCache.set(tokenId, metadata);
+    pixelTokenCache.set(pixelTokenKey(collection, tokenId), metadata);
     output[tokenId] = metadata;
   }
 
   return output;
 }
 
-function isPixelCollection(collection: string): boolean {
-  return collection.toLowerCase() === PIXEL_NFT_CONTRACT_ADDRESS.toLowerCase();
-}
 
 async function withTimeout<T>(
   promise: Promise<T>,

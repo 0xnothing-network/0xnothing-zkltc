@@ -133,7 +133,7 @@ export default function GalleryPage() {
             className="nft-grid grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6"
           >
             {sorted.map((nft, index) => (
-              <div key={nft.tokenId.toString()}>
+              <div key={`${nft.collection}:${nft.tokenId}`}>
                 <OwnedNftCard
                   nft={nft}
                   isPaused={paused === true}
@@ -261,6 +261,7 @@ function useUserNfts(address: `0x${string}` | undefined) {
         cache: force ? "no-store" : "default",
       }, "Gallery request failed");
       return body.tokens.map<OwnedNft>((token) => ({
+        collection: token.collection,
         tokenId: BigInt(token.tokenId),
         name: token.name,
         imageUrl: token.imageUrl,
@@ -284,6 +285,7 @@ function useUserNfts(address: `0x${string}` | undefined) {
 }
 
 interface OwnedNftApiShape {
+  collection: `0x${string}`;
   tokenId: string;
   name: string;
   imageUrl: string;

@@ -1,0 +1,74 @@
+{
+  "passed": true,
+  "finishedAt": "2026-10-02T00:19:18.006Z",
+  "url": "http://localhost:3300/DOGEOSxPIXEL",
+  "checks": {
+    "unit": 48,
+    "contracts": 53,
+    "contractFuzzCasesPerTest": 512,
+    "invariantRuns": 64,
+    "invariantCallsPerRun": 96,
+    "studioBrowser": 14,
+    "walletRaceBrowser": 11,
+    "uiRegression": 29,
+    "typecheckAndProductionBuild": "passed",
+    "graphCodegenAndWasm": "passed",
+    "dependencies": {
+      "root": 0,
+      "subgraph": 0
+    },
+    "walletProviderBrowser": 11,
+    "totalDeepBrowser": 65
+  },
+  "subgraph": {
+    "version": "1.0.1",
+    "tag": "prod",
+    "meta": {
+      "block": {
+        "number": 8215220,
+        "hash": "0x4a727e27188f9885c0f005c3336c816bfadf02c1366ecb8805eee10be1015d36"
+      },
+      "hasIndexingErrors": false
+    },
+    "source": "subgraph"
+  },
+  "signedTransactions": 0,
+  "productionSolidityChanged": false,
+  "performance": {
+    "stroke256DurationMs": 851,
+    "longTasksMs": []
+  },
+  "evidence": [
+    "output/browser-smoke.json",
+    "output/wallet-browser.json",
+    "output/wallet-races.json",
+    "output/api-smoke.json",
+    "output/subgraph-client.json",
+    "output/subgraph-live.json",
+    "output/deep-studio-regression.json",
+    "output/ui-regressions.json",
+    "output/chain-readonly.json",
+    "output/provider-discovery.json"
+  ],
+  "limitations": [
+    "Maximum 4096-run artwork tokenURI requires approximately 28.41M gas; packed data reads are used for catalog/indexing.",
+    "Live signed-transaction smoke evidence belongs to the earlier deployment; this audit uses local contract tests and read-only live calls."
+  ],
+  "resumption": {
+    "finishedAt": "2026-10-02T00:19:18.006Z",
+    "completed": true,
+    "sourceHashes": {
+      "src/lib/wallet.tsx": "6190fd2a7682f488a320f3b8190e9e4191ea40138c27dd8a8fed20d93a10c6cd",
+      "src/components/Studio.tsx": "48d2030b6f5b8803cfef9997290ed838f28447ba34784b4b126363086a039e25",
+      "server/catalog-store.mjs": "b639ed6053ca7b7cb29a05a471b3c019c52572c105160bed68b2863da752d702"
+    },
+    "fixes": [
+      "cached account/chain during asynchronous connection",
+      "listener handoff and indefinitely pending connection cancellation",
+      "stale add/switch network continuations",
+      "EIP6963 identities, names, deduplication and shared bound",
+      "standalone NFT cache canonical reorg invalidation",
+      "final primary pointerup stroke coordinate"
+    ]
+  }
+}

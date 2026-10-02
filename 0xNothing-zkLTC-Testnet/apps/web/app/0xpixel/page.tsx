@@ -8,7 +8,7 @@ import { AIPromptGenerator } from "@/features/pixel/components/AIPromptGenerator
 import { PixelLoadingIndicator } from "@/components/PageLoader";
 import { ImageImporter } from "@/features/pixel/components/ImageImporter";
 
-const MAX_HISTORY = 50;
+import { pixelHistoryLimit } from "@/lib/pixelV2";
 const DEFAULT_GRID_SIZE = 16;
 
 function makeEmptyGrid(gridSize: number): string[][] {
@@ -71,7 +71,7 @@ export default function PixelPage() {
     historyRef.current = [
       ...historyRef.current,
       snapshot.map((row) => [...row]),
-    ].slice(-MAX_HISTORY);
+    ].slice(-pixelHistoryLimit(snapshot.length));
     setHistory(historyRef.current);
   }, []);
 

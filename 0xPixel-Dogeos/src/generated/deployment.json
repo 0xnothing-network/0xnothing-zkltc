@@ -1,0 +1,20 @@
+{
+  "chainId": 6281971,
+  "rpc": "https://rpc.testnet.dogeos.com",
+  "deployer": "0x3e2641D38f7A309Ed82bC5009bB2aA0010122005",
+  "compiler": "0.8.34",
+  "evm": "prague",
+  "createdAt": "2026-10-01T15:24:59.527Z",
+  "DogeosPixel": {
+    "address": "0x5f99636850e62d41e03b29ba53b5dc285d4ceab8",
+    "transactionHash": "0xdcd698cd7d50fd7f759c44cac475625bf27555742975d9f35f87702d078e9397",
+    "startBlock": 8204635,
+    "gasUsed": "3351396"
+  },
+  "PixelMarket": {
+    "address": "0xc1f82f63ee635154e5655afe2fcba4a5e85b1e6b",
+    "transactionHash": "0xc11891d3751f6f3cd218671d78211389670768083fda78514409aab92a161e31",
+    "startBlock": 8204637,
+    "gasUsed": "1289712"
+  }
+}

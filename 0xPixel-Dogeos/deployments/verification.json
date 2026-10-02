@@ -1,0 +1,6 @@
+{
+  "network": "DogeOS Chikyu Testnet",
+  "chainId": 6281971,
+  "DogeosPixel": { "address": "0x5f99636850e62d41e03b29ba53b5dc285d4ceab8", "status": "Pass - Verified", "guid": "0x5f99636850e62d41e03b29ba53b5dc285d4ceab86abe858b" },
+  "PixelMarket": { "address": "0xc1f82f63ee635154e5655afe2fcba4a5e85b1e6b", "status": "Pass - Verified", "guid": "0xc1f82f63ee635154e5655afe2fcba4a5e85b1e6b6abe85df" }
+}

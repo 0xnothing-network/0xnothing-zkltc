@@ -1,16 +1,17 @@
 import { unstable_cache } from "next/cache";
-import { publicClient, PIXEL_NFT_CONTRACT_ADDRESS } from "@/lib/contract";
+import { publicClient } from "@/lib/contract";
 import { PixelNFTABI } from "@/lib/abi";
 import { pixelDataToSVGMarkup } from "@/lib/gridParser";
 import { normalizeUint256TokenId } from "@/lib/tokenId";
+import { resolvePixelCollection } from "@/lib/pixelCollections";
 
 export const runtime = "nodejs";
 export const revalidate = 31_536_000;
 
 const readPixelImage = unstable_cache(
-  async (tokenId: string) => {
+  async (tokenId: string, collection: `0x${string}`) => {
     const tuple = await publicClient.readContract({
-      address: PIXEL_NFT_CONTRACT_ADDRESS,
+      address: collection,
       abi: PixelNFTABI,
       functionName: "tokenData",
       args: [BigInt(tokenId)],
@@ -20,12 +21,15 @@ const readPixelImage = unstable_cache(
     if (!tuple[2] || !Number.isInteger(gridSize) || gridSize <= 0) return "";
     return pixelDataToSVGMarkup(tuple[2], gridSize);
   },
-  ["pixel-image-v1"],
+  ["pixel-image-v2-collection"],
   { revalidate: 31_536_000 },
 );
 
 export async function GET(request: Request) {
-  const rawTokenId = new URL(request.url).searchParams.get("tokenId")?.trim() ?? "";
+  const params = new URL(request.url).searchParams;
+  const collection = resolvePixelCollection(params.get("collection"));
+  if (!collection) return Response.json({ error: "Unsupported collection" }, { status: 400, headers: { "Cache-Control": "no-store" } });
+  const rawTokenId = params.get("tokenId")?.trim() ?? "";
   const tokenId = normalizeUint256TokenId(rawTokenId);
   if (!tokenId) {
     return Response.json(
@@ -35,7 +39,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const svg = await readPixelImage(tokenId);
+    const svg = await readPixelImage(tokenId, collection);
     if (!svg) {
       return Response.json(
         { error: "Pixel image unavailable" },

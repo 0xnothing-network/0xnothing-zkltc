@@ -4,10 +4,9 @@ import {
   ChartLineDown,
   Warning,
 } from "@phosphor-icons/react/dist/ssr";
-import type { Address, Hash } from "viem";
-import { explorerAddressUrl, explorerTransactionUrl } from "@fi/config/deployment";
+import type { Hash } from "viem";
+import { explorerTransactionUrl } from "@fi/config/deployment";
 import { fiPath } from "@fi/config/paths";
-import { shortAddress } from "@fi/lib/format";
 
 export function PageHeading({
   title,
@@ -129,15 +128,6 @@ export function SkeletonRows({ count = 4, label = "Loading data" }: { count?: nu
         </div>
       ))}
     </div>
-  );
-}
-
-export function AddressLink({ address }: { address: Address }) {
-  return (
-    <a className="fi-address-link" href={explorerAddressUrl(address)} target="_blank" rel="noopener noreferrer">
-      {shortAddress(address)}
-      <ArrowSquareOut size={13} aria-hidden="true" />
-    </a>
   );
 }
 

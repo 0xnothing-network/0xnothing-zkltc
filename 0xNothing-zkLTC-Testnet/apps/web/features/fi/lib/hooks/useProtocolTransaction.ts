@@ -15,6 +15,7 @@ import { erc20Abi } from "@fi/lib/abis/erc20";
 import { deployment } from "@fi/config/deployment";
 import { readableError } from "@fi/lib/errors";
 import { isBlockSyncedQueryKey } from "@/lib/liveData";
+import { deliveredTokenAmount } from "../../../../../../shared/transactions/tokenDelivery";
 
 export type TransactionPhase =
   | "idle"
@@ -41,7 +42,7 @@ export interface TokenApproval {
 }
 
 /**
- * One wallet-confirmed stage. `deliveredToken` measures the wallet balance delta
+ * One wallet-confirmed stage. `deliveredToken` measures net receipt transfers
  * the stage produced, and the next stage is built from that exact amount, so a
  * route that can only settle in two transactions always spends what really
  * landed rather than what was quoted a block earlier.
@@ -110,12 +111,6 @@ export function useProtocolTransaction() {
         (total, stage) => total + 1 + approvalList(stage.approval).length,
         0,
       );
-      const readBalance = (token: Address) => publicClient.readContract({
-        address: token,
-        abi: erc20Abi,
-        functionName: "balanceOf",
-        args: [address],
-      });
 
       inFlightRef.current = true;
       const connectorUid = getAccount(config).connector?.uid;
@@ -190,7 +185,6 @@ export function useProtocolTransaction() {
           const call = typeof stage.call === "function" ? stage.call(delivered) : stage.call;
           if (!call.address) throw new Error("Not deployed. This transaction is disabled.");
           setState({ phase: "simulating", message: "Checking latest on-chain state" });
-          const balanceBefore = stage.deliveredToken ? await readBalance(stage.deliveredToken) : 0n;
           const simulation = await publicClient.simulateContract({
             account: address,
             address: call.address,
@@ -211,7 +205,7 @@ export function useProtocolTransaction() {
           confirmedStep = true;
           lastHash = hash;
           if (stage.deliveredToken) {
-            delivered = (await readBalance(stage.deliveredToken)) - balanceBefore;
+            delivered = deliveredTokenAmount(receipt, stage.deliveredToken, address);
           }
         }
 

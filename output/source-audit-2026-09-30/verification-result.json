@@ -1,0 +1,25 @@
+{
+  "clientDate": "2026-09-30",
+  "command": "npm run verify",
+  "exitCode": 0,
+  "evidence": "verify-final.log",
+  "tests": {
+    "tooling": 11,
+    "web": 136,
+    "wallet": 136,
+    "testnetContracts": 70,
+    "mainnetContracts": 72,
+    "fiContracts": 160,
+    "marketplaceSubgraph": 4,
+    "fiOperations": 28,
+    "total": 617,
+    "newRegressions": 21
+  },
+  "sourceInventoryFiles": 1537,
+  "automatedSyntaxImportFindings": 0,
+  "commonContractPairsIdentical": 18,
+  "completeManualSourceReview": false,
+  "completeVendorSemanticReview": false,
+  "deploymentPerformed": false,
+  "userWorkingTreeChangesPreserved": true
+}

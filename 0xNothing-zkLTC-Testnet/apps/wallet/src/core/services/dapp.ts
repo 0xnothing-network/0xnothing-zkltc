@@ -40,6 +40,8 @@ export interface DappRequest {
   at: number;
   /** Profile selected when the page made the request; old rows omit it. */
   networkId?: string;
+  /** Full reviewed RPC/profile identity; prevents edits reusing a profile id. */
+  networkIdentity?: string;
   /** Saved profile requested by wallet_switchEthereumChain. */
   targetNetworkId?: string;
   account?: Address;
@@ -174,6 +176,9 @@ function safeRequest(value: unknown): DappRequest | null {
     ? undefined
     : safeText(entry.title, MAX_TITLE_LENGTH);
   const networkId = entry.networkId === undefined ? undefined : safeText(entry.networkId, 96);
+  const networkIdentity = entry.networkIdentity === undefined
+    ? undefined
+    : safeText(entry.networkIdentity, 8_192);
   const targetNetworkId = entry.targetNetworkId === undefined
     ? undefined
     : safeText(entry.targetNetworkId, 96);
@@ -197,6 +202,7 @@ function safeRequest(value: unknown): DappRequest | null {
     || account === null
     || (entry.title !== undefined && entry.title !== "" && title === undefined)
     || (entry.networkId !== undefined && networkId === undefined)
+    || (entry.networkIdentity !== undefined && networkIdentity === undefined)
     || (kind === "transaction" && tx === undefined)
     || ((kind === "sign" || kind === "sign-typed") && message === undefined)
     || (kind === "switch-network" && targetNetworkId === undefined)
@@ -209,6 +215,7 @@ function safeRequest(value: unknown): DappRequest | null {
     kind,
     at,
     networkId,
+    networkIdentity,
     targetNetworkId,
     account,
     tx,

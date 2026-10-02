@@ -1,0 +1,745 @@
+{
+  "completed": "2026-10-02T00:19:18.006Z",
+  "url": "http://localhost:3300/DOGEOSxPIXEL",
+  "contractTests": 53,
+  "fuzzRuns": 512,
+  "unitMappingFeeTests": 48,
+  "webBuild": "passed",
+  "subgraphCodegenAndWasmBuild": "passed",
+  "subgraphDeployed": true,
+  "dependencyAudit": {
+    "web": 0,
+    "subgraph": 0
+  },
+  "contractsVerified": {
+    "network": "DogeOS Chikyu Testnet",
+    "chainId": 6281971,
+    "DogeosPixel": {
+      "address": "0x5f99636850e62d41e03b29ba53b5dc285d4ceab8",
+      "status": "Pass - Verified",
+      "guid": "0x5f99636850e62d41e03b29ba53b5dc285d4ceab86abe858b"
+    },
+    "PixelMarket": {
+      "address": "0xc1f82f63ee635154e5655afe2fcba4a5e85b1e6b",
+      "status": "Pass - Verified",
+      "guid": "0xc1f82f63ee635154e5655afe2fcba4a5e85b1e6b6abe85df"
+    }
+  },
+  "evidence": {
+    "browser-smoke": {
+      "passed": true,
+      "errors": [],
+      "checks": [
+        "desktop home",
+        "market filter/search",
+        "artwork modal",
+        "studio template/undo/redo/resize",
+        "draft restoration",
+        "disconnected mint",
+        "collections",
+        "6 mobile routes without overflow"
+      ],
+      "finished": "2026-10-01T22:38:05.055Z"
+    },
+    "wallet-browser": {
+      "passed": true,
+      "checks": [
+        "injected wallet connection",
+        "wrong network",
+        "switch to DogeOS",
+        "real owned NFT reads",
+        "real transaction simulation",
+        "user rejection resets pending state",
+        "account change clears stale NFT data",
+        "provider disconnect"
+      ],
+      "signedTransactions": 0,
+      "errors": []
+    },
+    "api-smoke": {
+      "passed": true,
+      "verifiedAt": "2026-10-02T00:14:25.313Z",
+      "checks": [
+        "chain config",
+        "live catalog",
+        "active listings",
+        "pagination",
+        "owner/search/collection filters",
+        "offers token filter",
+        "invalid and repeated query parameter rejection",
+        "bounded read-only RPC requests and batches",
+        "nonexistent NFT 404",
+        "private key excluded from static assets"
+      ]
+    },
+    "live-smoke": {
+      "passed": true,
+      "network": "DogeOS Chikyū Testnet",
+      "chainId": 6281971,
+      "contracts": {
+        "nft": "0x5f99636850e62d41e03b29ba53b5dc285d4ceab8",
+        "market": "0xc1f82f63ee635154e5655afe2fcba4a5e85b1e6b"
+      },
+      "testBuyer": "0xd40D564AcC61f908d9C593ADc6F98e0B1c67B7c1",
+      "checked": [
+        "Minted",
+        "CollectionCreated",
+        "TokenCollectionChanged",
+        "Listed",
+        "Sold",
+        "OfferMade",
+        "OfferAccepted",
+        "OfferCancelled",
+        "Withdrawn"
+      ],
+      "royaltyAndFeeVerified": true,
+      "secondaryOwnerCollectionVerified": true,
+      "supply": 6,
+      "activeListings": 6,
+      "refundHash": "0x29575a3f1ff517e92876dab3a48ef65d9a1ca62ecedaad41950f831ebfa44ff7",
+      "testBuyerReserveDOGE": "0.106660032644112463",
+      "accounting": {
+        "held": "0",
+        "escrow": "0",
+        "credits": "0"
+      },
+      "transactions": [
+        {
+          "type": "Minted",
+          "hash": "0xd2aa71aaadd3ab38c3217f041f4e42391dadec81c6ce7b406e135b96db5b5d14",
+          "block": 8204932
+        },
+        {
+          "type": "Minted",
+          "hash": "0xef934a538ea0a3ca75251034c26ebf91713e4a68fda1297077e2925fd19da13a",
+          "block": 8204934
+        },
+        {
+          "type": "Minted",
+          "hash": "0x19d42aa3ec89e2cbc607f877ae86bdb585e4d6bc2209787c17cef9a3cee31c6a",
+          "block": 8204936
+        },
+        {
+          "type": "Minted",
+          "hash": "0x90288a226943fe7afeccd5740a881581b8bdbc12fbf78310c1e9ddb9714b0a7c",
+          "block": 8204938
+        },
+        {
+          "type": "Minted",
+          "hash": "0x1c2ecadaffb562ac7b5ccaadcd86ae84d53daef865e953f625587e3bd3c43e33",
+          "block": 8204940
+        },
+        {
+          "type": "Minted",
+          "hash": "0x311106f6374de6e325d4e3c06804baaac3c8366fd5ba5d8f2ed5f9150e69968c",
+          "block": 8204942
+        },
+        {
+          "type": "CollectionCreated",
+          "hash": "0xa41b68c927301ebc36bfc871571427b33eb6cc8ea24222c7ccaa33c02e35cc7d",
+          "block": 8204944
+        },
+        {
+          "type": "TokenCollectionChanged",
+          "hash": "0x5d098fef5c8ab1b0fd59ff4a0ed16b0ee792dc1485353b83b44800bba2fa6868",
+          "block": 8204946
+        },
+        {
+          "type": "TokenCollectionChanged",
+          "hash": "0x240fed3211b463eff15402b7cb971c44fbe27f345ab0fc499d53eee5e96e2957",
+          "block": 8204948
+        },
+        {
+          "type": "TokenCollectionChanged",
+          "hash": "0x0ea529a94c76e76125216d4d28ff5e756ff64ebe65a698363e4616f6d385bee4",
+          "block": 8204950
+        },
+        {
+          "type": "TokenCollectionChanged",
+          "hash": "0x9fc2d85414cb4c6f80a5a63c64aa3b8a835f18bee1a305ef063ff79d1a7535ea",
+          "block": 8204952
+        },
+        {
+          "type": "TokenCollectionChanged",
+          "hash": "0x1e3f9dc431a024bfa37abdc114a96ddd40d8c881f53fa64dd7b79bd720ba6921",
+          "block": 8204954
+        },
+        {
+          "type": "TokenCollectionChanged",
+          "hash": "0xb1f3dee0b0a76b7e073e3e1a91e3962c1c86e2b0790d1b44a69c645ddbd35067",
+          "block": 8204956
+        },
+        {
+          "type": "Listed",
+          "hash": "0x279bcf220e22dc396a7eac33f0b72bc9a7cf27ace3033f5ba1fd3e4f09ae4a2b",
+          "block": 8204961
+        },
+        {
+          "type": "Listed",
+          "hash": "0x12d8f547a6bfc466ac107ff7f57cdf51cd8717b116a927306ce2d546cd429e31",
+          "block": 8205015
+        },
+        {
+          "type": "Sold",
+          "hash": "0x0b07d7e810769bcf7124cd241b7bf80c6dfae3feb13c6d46c831f5fae8bccf51",
+          "block": 8205017
+        },
+        {
+          "type": "CollectionCreated",
+          "hash": "0xff3ca53cbe0c51c6345505f67ef46a6c99dbb6318932014ec16982bb7855d465",
+          "block": 8205019
+        },
+        {
+          "type": "TokenCollectionChanged",
+          "hash": "0x1530b442a3c4bff6ee2650d36615d4babba195e16b858e8cce76f69ccb464bd4",
+          "block": 8205021
+        },
+        {
+          "type": "Listed",
+          "hash": "0x6270dc5eab7fbfb561d12d89b119545968252b1bfb5b55d2ab43f62c436dc702",
+          "block": 8205025
+        },
+        {
+          "type": "OfferMade",
+          "hash": "0xa9947ff4b0344d516b80685810f51ac273d261a6ad2e4ba24404875b7ba76e81",
+          "block": 8205026
+        },
+        {
+          "type": "OfferAccepted",
+          "hash": "0x8671f7962f352fbd07a97d1567112c3fa946c04b38861ba8714dc1bbb6dbfc95",
+          "block": 8205028
+        },
+        {
+          "type": "TokenCollectionChanged",
+          "hash": "0xb5ebd822476dcc801c09c67508d77e2fc2f8cb8d30e87f0bb3756148146ce1b2",
+          "block": 8205030
+        },
+        {
+          "type": "OfferMade",
+          "hash": "0x9681b5023f54b5f9fadc7cbf0bc0e0a50f96c3d2c39c2cdd206759424a7ee235",
+          "block": 8205032
+        },
+        {
+          "type": "OfferCancelled",
+          "hash": "0xa43f327ddaf9579edef19de899264357516655d85e4c65e344f5f116d4614dbd",
+          "block": 8205034
+        },
+        {
+          "type": "Withdrawn",
+          "hash": "0x4062ccfdf100cb8cc980ee407cd7d86871b83afce3ab330298ae065f61eb8386",
+          "block": 8205036
+        },
+        {
+          "type": "Withdrawn",
+          "hash": "0xffa4f65774d9e8b6d050dabcc7f40e37e9449f529ee5fb9cbe8b7f98a7bcc9e2",
+          "block": 8205038
+        },
+        {
+          "type": "Listed",
+          "hash": "0x9282f3b5ac4b9120173eb9e3f20fadbcbba60a41b41cb79e3b4822f8766c4b70",
+          "block": 8205042
+        },
+        {
+          "type": "Listed",
+          "hash": "0xf26a84752eab7f80018ff338df423e11eb99032ee8d914bad9dfe74f31d09e7d",
+          "block": 8205045
+        },
+        {
+          "type": "Listed",
+          "hash": "0x9fb57f0ecd565175dcb91c271318a700b5be47995857ec4bfe6864b65e71b1c4",
+          "block": 8205049
+        },
+        {
+          "type": "Listed",
+          "hash": "0x38ce41e8f985b6de6d502fdfbfdc1748f779d4f6de30475cf4e96b2cc8610390",
+          "block": 8205053
+        },
+        {
+          "type": "Listed",
+          "hash": "0xf871dd92de35660cbd5b03d38e77c447815fb4c0af2e8e40e30fa85446852e55",
+          "block": 8205056
+        },
+        {
+          "type": "Listed",
+          "hash": "0xab80e49ccb94796ef663eff9a598d9358f09ed1f4529482a8011612e7ca4e941",
+          "block": 8205060
+        }
+      ],
+      "finished": "2026-10-01T15:50:10.075Z"
+    },
+    "subgraph-client": {
+      "passed": true,
+      "checks": [
+        "healthy subgraph discovery with live contract revalidation",
+        "owner/filter variables and approval-aware listed filter",
+        "pagination",
+        "endpoint failure fallback",
+        "stale index fallback",
+        "indexing error fallback",
+        "inconsistent discovery fallback",
+        "wrong supply fallback",
+        "query values passed as variables"
+      ],
+      "realGraphNodeDeployed": false
+    },
+    "chain-source-check": {
+      "passed": true,
+      "archiveCallAtBlock": "8204932",
+      "nftRuntimeMatchesArtifact": true
+    },
+    "subgraph-live": {
+      "passed": true,
+      "verifiedAt": "2026-10-02T00:14:30.169Z",
+      "endpoint": "https://api.goldsky.com/api/public/project_cmupqw08z0f4301vmcyh60xs9/subgraphs/dogeos-pixel/prod/gn",
+      "website": "http://localhost:3300/DOGEOSxPIXEL/",
+      "meta": {
+        "block": {
+          "number": 8215220,
+          "hash": "0x4a727e27188f9885c0f005c3336c816bfadf02c1366ecb8805eee10be1015d36"
+        },
+        "hasIndexingErrors": false
+      },
+      "websiteIndexedBlock": 8215220,
+      "stats": {
+        "minted": "6",
+        "collections": "2",
+        "sales": "2",
+        "volume": "30000000000000000",
+        "royalties": "300000000000000",
+        "fees": "300000000000000"
+      },
+      "samples": {
+        "pixels": 6,
+        "collections": 2,
+        "listings": 9,
+        "offers": 2,
+        "sales": 2,
+        "accounts": 2,
+        "activities": 40
+      },
+      "filters": [
+        {
+          "filter": "owner",
+          "returned": 6,
+          "total": 6,
+          "source": "subgraph"
+        },
+        {
+          "filter": "search",
+          "returned": 1,
+          "total": 1,
+          "source": "subgraph"
+        },
+        {
+          "filter": "listed",
+          "returned": 6,
+          "total": 6,
+          "source": "subgraph"
+        },
+        {
+          "filter": "collection",
+          "returned": 6,
+          "total": 6,
+          "source": "subgraph"
+        }
+      ],
+      "checks": [
+        "Healthy index, minted and collection counts, discovery, metadata, owners, membership, and active listings match chain-validated website data.",
+        "Collection metadata and counts, sale totals, positive offer amounts, and nonnegative account credits are consistent.",
+        "Owner, name search, listed, and available collection filters use Goldsky and match its results."
+      ]
+    },
+    "theme": {
+      "passed": true,
+      "functionalChecks": 18,
+      "functionalPassed": 18,
+      "routeModalViewportChecks": 48,
+      "horizontalOverflows": 0,
+      "browserErrors": 0,
+      "darkContrastFailures": 0,
+      "themeRegressions": [],
+      "preexistingLightPaletteObservationCount": 0,
+      "decorativeLogoExcluded": ".brand-times ×",
+      "targetedLightChecks": 10,
+      "targetedLightPassed": 10,
+      "report": "output/theme-qa.json"
+    },
+    "wallet-races": {
+      "startedAt": "2026-10-02T00:12:24.904Z",
+      "checks": [
+        {
+          "name": "pending disconnect cannot resurrect a connection from cached account results",
+          "pass": true,
+          "durationMs": 2392
+        },
+        {
+          "name": "account change during connection cannot commit a cached previous account",
+          "pass": true,
+          "durationMs": 1515
+        },
+        {
+          "name": "invalid wallet account and chain responses fail without connecting",
+          "pass": true,
+          "durationMs": 2630
+        },
+        {
+          "name": "EIP-6963 deduplicates injected providers and rejects invalid descriptions",
+          "pass": true,
+          "durationMs": 1307
+        },
+        {
+          "name": "missing chain is added and explicitly switched before trading",
+          "pass": true,
+          "durationMs": 1335
+        },
+        {
+          "name": "swap immediately before signing aborts without reaching eth_sendTransaction",
+          "pass": true,
+          "durationMs": 6466
+        },
+        {
+          "name": "wrongNetwork immediately before signing aborts without reaching eth_sendTransaction",
+          "pass": true,
+          "durationMs": 3297
+        },
+        {
+          "name": "disconnect immediately before signing aborts without reaching eth_sendTransaction",
+          "pass": true,
+          "durationMs": 3322
+        },
+        {
+          "name": "duplicate account and chain events preserve a valid transaction and denial resets state",
+          "pass": true,
+          "durationMs": 3261
+        },
+        {
+          "name": "account changes clear old NFT cards and earnings before new account reads resolve",
+          "pass": true,
+          "durationMs": 3971
+        },
+        {
+          "name": "clipboard denial is handled and dialog padding preserves the form",
+          "pass": true,
+          "durationMs": 2241
+        }
+      ],
+      "errors": [],
+      "signedTransactions": 0,
+      "passed": true,
+      "finishedAt": "2026-10-02T00:12:56.643Z"
+    },
+    "deep-studio-regression": {
+      "url": "http://localhost:3300/DOGEOSxPIXEL",
+      "startedAt": "2026-10-02T00:12:05.096Z",
+      "checks": [
+        {
+          "name": "blank canvas metadata and selected size persist through reload",
+          "pass": true,
+          "durationMs": 2886
+        },
+        {
+          "name": "template, resize and imported metadata have reversible undo and redo",
+          "pass": true,
+          "durationMs": 1523
+        },
+        {
+          "name": "primary strokes interpolate, ignore right/secondary pointers and avoid no-op history",
+          "pass": true,
+          "durationMs": 1352
+        },
+        {
+          "name": "primary pointerup paints its final coordinate without consuming no-op history",
+          "pass": true,
+          "durationMs": 1314
+        },
+        {
+          "name": "fill no-ops do not consume history and eyedropper does not alter art",
+          "pass": true,
+          "durationMs": 1368
+        },
+        {
+          "name": "cancelled pointer commits exactly once and editable shortcuts leave tools unchanged",
+          "pass": true,
+          "durationMs": 1252
+        },
+        {
+          "name": "invalid JSON imports preserve draft and imported text cannot execute markup",
+          "pass": true,
+          "durationMs": 1295
+        },
+        {
+          "name": "async import cannot overwrite drawing made while reading its file",
+          "pass": true,
+          "durationMs": 1223
+        },
+        {
+          "name": "navigation flushes a draft before its debounce timeout",
+          "pass": true,
+          "durationMs": 1268
+        },
+        {
+          "name": "corrupt drafts and denied/quota storage leave studio usable",
+          "pass": true,
+          "durationMs": 4002
+        },
+        {
+          "name": "65,536-run draft restores, persists and exports without truncation",
+          "pass": true,
+          "durationMs": 2661
+        },
+        {
+          "name": "PNG and JSON exports preserve current canvas and import round-trips",
+          "pass": true,
+          "durationMs": 1796
+        },
+        {
+          "name": "image source dimensions are checked before bitmap decode",
+          "pass": true,
+          "durationMs": 2035
+        },
+        {
+          "name": "256-grid stroke performance and storage messages remain bounded on mobile",
+          "pass": true,
+          "durationMs": 2287
+        }
+      ],
+      "errors": [],
+      "performance": {
+        "stroke256DurationMs": 851,
+        "longTasksMs": []
+      },
+      "passed": true,
+      "finishedAt": "2026-10-02T00:12:31.360Z"
+    },
+    "ui-regressions": {
+      "checks": [
+        "light 1440 /",
+        "light 1440 /market",
+        "light 1440 /collections",
+        "light 1440 /studio",
+        "light 1440 /wallet",
+        "light 1440 /activity",
+        "dark 1440 /",
+        "dark 1440 /market",
+        "dark 1440 /collections",
+        "dark 1440 /studio",
+        "dark 1440 /wallet",
+        "dark 1440 /activity",
+        "light 375 /",
+        "light 375 /market",
+        "light 375 /collections",
+        "light 375 /studio",
+        "light 375 /wallet",
+        "light 375 /activity",
+        "dark 375 /",
+        "dark 375 /market",
+        "dark 375 /collections",
+        "dark 375 /studio",
+        "dark 375 /wallet",
+        "dark 375 /activity",
+        "saved theme survives reload without changing SVG artwork",
+        "NFT pagination appends all 30 unique artworks",
+        "wallet offer pagination retains every escrowed offer beyond 48",
+        "collection pagination retains independent previews beyond 24",
+        "NFT detail pagination exposes all 50 offers without truncation"
+      ],
+      "errors": [],
+      "startedAt": "2026-10-02T00:14:24.437Z",
+      "passed": true,
+      "finishedAt": "2026-10-02T00:14:58.998Z"
+    },
+    "chain-readonly": {
+      "passed": true,
+      "verifiedAt": "2026-10-01T22:44:18.190Z",
+      "block": "8213418",
+      "chainId": 6281971,
+      "contracts": {
+        "DogeosPixel": {
+          "address": "0x5f99636850e62d41e03b29ba53b5dc285d4ceab8",
+          "bytecodeMatches": true,
+          "abiMatches": true,
+          "runtimeBytes": 14883,
+          "codeHash": "0xcb5b12af77701b433fe555c6d63cf84a06053df0722ad1e3550c6abead486017",
+          "immutableRanges": []
+        },
+        "PixelMarket": {
+          "address": "0xc1f82f63ee635154e5655afe2fcba4a5e85b1e6b",
+          "bytecodeMatches": true,
+          "abiMatches": true,
+          "runtimeBytes": 5608,
+          "codeHash": "0x798b497686e9442bc2c326fcf1a5344015ef00de30d1669778447703c5db0143",
+          "immutableRanges": [
+            {
+              "start": 377,
+              "length": 32
+            },
+            {
+              "start": 1389,
+              "length": 32
+            },
+            {
+              "start": 1761,
+              "length": 32
+            },
+            {
+              "start": 2486,
+              "length": 32
+            },
+            {
+              "start": 3761,
+              "length": 32
+            },
+            {
+              "start": 4475,
+              "length": 32
+            },
+            {
+              "start": 4643,
+              "length": 32
+            },
+            {
+              "start": 4876,
+              "length": 32
+            },
+            {
+              "start": 5187,
+              "length": 32
+            },
+            {
+              "start": 3829,
+              "length": 32
+            },
+            {
+              "start": 5273,
+              "length": 32
+            }
+          ]
+        }
+      },
+      "accounting": {
+        "held": "0",
+        "escrow": "0",
+        "credits": "0",
+        "solvent": true
+      },
+      "signedTransactions": 0
+    },
+    "provider-discovery": {
+      "checks": [
+        {
+          "name": "discovery has a shared 20-provider cap including injected fallback",
+          "passed": true,
+          "durationMs": 1496
+        },
+        {
+          "name": "blank/oversized provider identities and names are rejected",
+          "passed": true,
+          "durationMs": 628
+        },
+        {
+          "name": "different UUIDs for the same provider do not create duplicate choices",
+          "passed": true,
+          "durationMs": 604
+        },
+        {
+          "name": "the first valid provider retains a duplicated UUID",
+          "passed": true,
+          "durationMs": 630
+        },
+        {
+          "name": "network switch accepts its own genuine chainChanged notification",
+          "passed": true,
+          "durationMs": 803
+        },
+        {
+          "name": "disconnect cancels the add-chain continuation of a pending switch",
+          "passed": true,
+          "durationMs": 826
+        },
+        {
+          "name": "account changes cancel interactive continuations from the previous account",
+          "passed": true,
+          "durationMs": 895
+        },
+        {
+          "name": "reconnecting the same provider cannot revive its previous switch operation",
+          "passed": true,
+          "durationMs": 999
+        },
+        {
+          "name": "replacing the provider cannot revive the previous switch operation",
+          "passed": true,
+          "durationMs": 1310
+        },
+        {
+          "name": "disconnect during chain addition prevents the subsequent switch request",
+          "passed": true,
+          "durationMs": 1004
+        },
+        {
+          "name": "disconnect unlocks other wallets even if its initial account request never settles",
+          "passed": true,
+          "durationMs": 1498
+        }
+      ],
+      "errors": [],
+      "signedTransactions": 0,
+      "startedAt": "2026-10-02T00:17:11.451Z",
+      "passed": true,
+      "finishedAt": "2026-10-02T00:17:22.212Z"
+    }
+  },
+  "sourceHashes": {
+    "nft": "6ce37d91c426f99af340f664d1bf27a73860b99f77ba544d03c5f0589abde25b",
+    "market": "30f78dfdc01784f788ae3273bd83f3557c4b80c198e69dbe030afd304e8dd37a"
+  },
+  "subgraphVerifiedAt": "2026-10-02T00:14:30.169Z",
+  "subgraph": {
+    "provider": "Goldsky",
+    "name": "dogeos-pixel",
+    "version": "1.0.1",
+    "tag": "prod",
+    "network": "dogeos-testnet",
+    "endpoint": "https://api.goldsky.com/api/public/project_cmupqw08z0f4301vmcyh60xs9/subgraphs/dogeos-pixel/prod/gn",
+    "status": "healthy",
+    "synced": true,
+    "websiteSource": "subgraph",
+    "verifiedAt": "2026-10-02T00:14:30.169Z"
+  },
+  "themeVerifiedAt": "2026-10-01T17:02:11.709Z",
+  "theme": {
+    "modes": [
+      "light",
+      "dark"
+    ],
+    "default": "system",
+    "savedPreference": true,
+    "firstPaintInitialization": true,
+    "artworkUnchanged": true,
+    "webBuild": "passed"
+  },
+  "invariants": {
+    "runs": 64,
+    "depth": 96,
+    "callsPerInvariant": 6144,
+    "reverts": 0
+  },
+  "resumption": {
+    "finishedAt": "2026-10-02T00:19:18.006Z",
+    "completed": true,
+    "sourceHashes": {
+      "src/lib/wallet.tsx": "6190fd2a7682f488a320f3b8190e9e4191ea40138c27dd8a8fed20d93a10c6cd",
+      "src/components/Studio.tsx": "48d2030b6f5b8803cfef9997290ed838f28447ba34784b4b126363086a039e25",
+      "server/catalog-store.mjs": "b639ed6053ca7b7cb29a05a471b3c019c52572c105160bed68b2863da752d702"
+    },
+    "fixes": [
+      "cached account/chain during asynchronous connection",
+      "listener handoff and indefinitely pending connection cancellation",
+      "stale add/switch network continuations",
+      "EIP6963 identities, names, deduplication and shared bound",
+      "standalone NFT cache canonical reorg invalidation",
+      "final primary pointerup stroke coordinate"
+    ]
+  },
+  "deepBrowserChecks": 65
+}

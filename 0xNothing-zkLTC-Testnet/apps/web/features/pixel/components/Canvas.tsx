@@ -1,4 +1,5 @@
 "use client";
+import { pixelCellSize } from "@/lib/pixelV2";
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { downloadAsPNG, downloadAsJSON, pixelDataToJSON } from "@/lib/gridParser";
@@ -95,7 +96,7 @@ export function Canvas({
     if (!canvas || !container) return null;
     const rect = canvas.getBoundingClientRect();
     const containerSize = Math.min(container.clientWidth, container.clientHeight);
-    const cs = Math.floor(containerSize / gridSize);
+    const cs = pixelCellSize(containerSize, gridSize);
     const gridDisplaySize = cs * gridSize * zoom;
     const offsetX = (container.clientWidth - gridDisplaySize) / 2 - pan.x * zoom;
     const offsetY = (container.clientHeight - gridDisplaySize) / 2 - pan.y * zoom;
@@ -117,7 +118,7 @@ export function Canvas({
       if (!ctx) return;
 
       const containerSize = Math.min(container.clientWidth, container.clientHeight);
-      const cs = Math.floor(containerSize / gridSize);
+      const cs = pixelCellSize(containerSize, gridSize);
       const gridDisplaySize = cs * gridSize * zoom;
       const offsetX = (container.clientWidth - gridDisplaySize) / 2 - pan.x * zoom;
       const offsetY = (container.clientHeight - gridDisplaySize) / 2 - pan.y * zoom;
@@ -224,7 +225,7 @@ export function Canvas({
     if (!pctx) return;
 
     const containerSize = Math.min(container.clientWidth, container.clientHeight);
-    const cs = Math.floor(containerSize / gridSize);
+    const cs = pixelCellSize(containerSize, gridSize);
     const gridDisplaySize = cs * gridSize * zoom;
     const offsetX = (container.clientWidth - gridDisplaySize) / 2 - pan.x * zoom;
     const offsetY = (container.clientHeight - gridDisplaySize) / 2 - pan.y * zoom;

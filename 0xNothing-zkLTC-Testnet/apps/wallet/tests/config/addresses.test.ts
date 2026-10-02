@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { CONTRACTS, FI_DEPLOYMENT_BLOCK, PIXEL_START_BLOCK } from "../../src/config/contracts.ts";
+import { CONTRACTS, FI_DEPLOYMENT_BLOCK, PIXEL_START_BLOCK, PIXEL_LEGACY_START_BLOCK, PIXEL_COLLECTIONS } from "../../src/config/contracts.ts";
 
 /**
  * The wallet mirrors its addresses by hand: importing the web app's generated
@@ -71,4 +71,7 @@ test("pixel addresses and the log-scan floor match the deployment record", () =>
   same(CONTRACTS.pixelNft, text(pixel, "nft"));
   same(CONTRACTS.pixelMarketplace, text(pixel, "marketplace"));
   assert.equal(PIXEL_START_BLOCK, BigInt(pixel.nftStartBlock as number));
+  same(CONTRACTS.pixelLegacyNft, text(pixel, "legacyNft"));
+  assert.equal(PIXEL_LEGACY_START_BLOCK, BigInt(pixel.legacyNftStartBlock as number));
+  assert.equal(new Set(PIXEL_COLLECTIONS.map((entry) => entry.address.toLowerCase())).size, 2);
 });

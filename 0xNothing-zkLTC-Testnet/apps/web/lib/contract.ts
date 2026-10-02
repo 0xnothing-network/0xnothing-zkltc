@@ -6,10 +6,7 @@ import {
   PIXEL_MARKETPLACE_ADDRESS as PUBLIC_PIXEL_MARKETPLACE_ADDRESS,
   PIXEL_NFT_ADDRESS,
 } from "@/lib/publicConfig";
-import {
-  getTokenExplorerUrl,
-  getTransactionExplorerUrl,
-} from "./explorer";
+import { getTransactionExplorerUrl } from "./explorer";
 
 export {
   LITVM_EXPLORER_URL,
@@ -21,10 +18,6 @@ export {
 export const PIXEL_NFT_CONTRACT_ADDRESS = PIXEL_NFT_ADDRESS;
 
 export const PIXEL_MARKETPLACE_ADDRESS = PUBLIC_PIXEL_MARKETPLACE_ADDRESS;
-
-export function getExplorerUrl(tokenId?: bigint | number | string): string {
-  return getTokenExplorerUrl(PIXEL_NFT_CONTRACT_ADDRESS, tokenId);
-}
 
 export function getMarketplaceTxUrl(txHash: string): string {
   return getTransactionExplorerUrl(txHash);
@@ -91,19 +84,20 @@ const userNftCache = createBoundedCache<bigint[] | null>({
   ttlMs: CACHE_TTL_SUCCESS,
 });
 
-export async function getUserTokenIds(address: string): Promise<bigint[]> {
+export async function getUserTokenIds(address: string, collection: `0x${string}` = PIXEL_NFT_CONTRACT_ADDRESS): Promise<bigint[]> {
   if (!address || typeof address !== "string" || !address.match(/^0x[0-9a-fA-F]{40}$/)) {
     return [];
   }
   const addr = address.toLowerCase() as `0x${string}`;
 
-  const cached = userNftCache.get(addr);
+  const cacheKey = `${collection.toLowerCase()}:${addr}`;
+  const cached = userNftCache.get(cacheKey);
   if (cached) return cached;
 
   try {
     const balance = (await withRetry(() =>
       publicClient.readContract({
-        address: PIXEL_NFT_CONTRACT_ADDRESS,
+        address: collection,
         abi: PixelNFTABI,
         functionName: "balanceOf",
         args: [addr],
@@ -115,7 +109,7 @@ export async function getUserTokenIds(address: string): Promise<bigint[]> {
     const n = Number(balance);
 
     if (n === 0) {
-      userNftCache.set(addr, []);
+      userNftCache.set(cacheKey, []);
       return [];
     }
 
@@ -130,7 +124,7 @@ export async function getUserTokenIds(address: string): Promise<bigint[]> {
       const results = await publicClient.multicall({
         allowFailure: true,
         contracts: indexes.map((index) => ({
-          address: PIXEL_NFT_CONTRACT_ADDRESS,
+          address: collection,
           abi: PixelNFTABI,
           functionName: "userTokens" as const,
           args: [addr, BigInt(index)] as const,
@@ -142,7 +136,7 @@ export async function getUserTokenIds(address: string): Promise<bigint[]> {
         const index = indexes[resultIndex];
         return withRetry(() =>
           publicClient.readContract({
-            address: PIXEL_NFT_CONTRACT_ADDRESS,
+            address: collection,
             abi: PixelNFTABI,
             functionName: "userTokens",
             args: [addr, BigInt(index)],
@@ -158,14 +152,14 @@ export async function getUserTokenIds(address: string): Promise<bigint[]> {
     if (ids.length !== n) {
       throw new Error(`Incomplete NFT enumeration: expected ${n}, received ${ids.length}`);
     }
-    userNftCache.set(addr, ids);
+    userNftCache.set(cacheKey, ids);
     return ids.sort((a, b) => (a === b ? 0 : a < b ? -1 : 1));
   } catch (err) {
     console.error("[Contract] getUserTokenIds error:", err);
     // A previously enumerated list is better than an error, even past its ttl.
-    const stale = userNftCache.entry(addr);
+    const stale = userNftCache.entry(cacheKey);
     if (stale?.value) return stale.value;
-    userNftCache.set(addr, null);
+    userNftCache.set(cacheKey, null);
     throw err;
   }
 }

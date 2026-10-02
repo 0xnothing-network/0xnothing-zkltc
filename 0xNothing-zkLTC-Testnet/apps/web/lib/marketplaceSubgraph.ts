@@ -27,6 +27,7 @@ export interface SubgraphListingDTO {
 export type SubgraphMarketEventType = "MINTED" | "LISTED" | "BOUGHT" | "CANCELLED";
 
 export interface SubgraphMarketEventDTO {
+  collection?: `0x${string}`;
   id: string;
   listingId: string;
   tokenId: string;

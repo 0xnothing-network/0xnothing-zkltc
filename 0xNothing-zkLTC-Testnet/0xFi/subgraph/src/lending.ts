@@ -116,16 +116,15 @@ function refreshMarket(address: Address, timestamp: BigInt, includeGovernance: b
     market.supplyPaused = true;
     market.borrowPaused = true;
     market.collateralWithdrawalPaused = true;
+    market.governanceReady = false;
     governance = true;
   }
   // Caps and pauses only move through CapsUpdated / PausesUpdated, so user actions
   // skip those five eth_calls and read the four accounting values that actually
-  // change per event. All three pauses still being true is the pessimistic default,
-  // which means an earlier governance read reverted; retry it instead of leaving the
-  // market permanently reported as paused.
-  if (market.supplyPaused && market.borrowPaused && market.collateralWithdrawalPaused) {
-    governance = true;
-  }
+  // change per event. Readiness tracks every governance read: a successful false
+  // pause flag cannot conceal another reverted read, and an intentionally paused
+  // market does not need five extra calls on every action.
+  if (!market.governanceReady) governance = true;
   const supplied = contract.try_totalSupplied();
   const borrowed = contract.try_totalBorrowed();
   const badDebt = contract.try_totalBadDebtNusd();
@@ -145,6 +144,8 @@ function refreshMarket(address: Address, timestamp: BigInt, includeGovernance: b
     if (!supplyPaused.reverted) market.supplyPaused = supplyPaused.value;
     if (!borrowPaused.reverted) market.borrowPaused = borrowPaused.value;
     if (!collateralPaused.reverted) market.collateralWithdrawalPaused = collateralPaused.value;
+    market.governanceReady = !supplyCap.reverted && !borrowCap.reverted
+      && !supplyPaused.reverted && !borrowPaused.reverted && !collateralPaused.reverted;
   }
   market.updatedAt = timestamp;
   market.save();

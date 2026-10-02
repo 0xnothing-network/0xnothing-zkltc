@@ -22,7 +22,7 @@ const PALETTE_COLORS = [
   "#800000", "#ffd700", "#006400", "#00008b",
 ];
 
-const GRID_OPTIONS = [8, 16, 32, 64];
+const GRID_OPTIONS = [8, 16, 32, 64, 128, 256];
 
 export const Toolbar = memo(function Toolbar({
   selectedColor,
@@ -165,7 +165,7 @@ export const Toolbar = memo(function Toolbar({
             >
               Grid Size
             </p>
-            <div className="flex gap-1.5">
+            <div className="grid grid-cols-3 gap-1.5">
               {GRID_OPTIONS.map((size) => (
                 <button
                   key={size}

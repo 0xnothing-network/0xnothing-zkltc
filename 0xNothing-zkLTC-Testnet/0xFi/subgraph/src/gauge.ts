@@ -3,6 +3,8 @@ import {
   DepositsPauseUpdated,
   RewardAdded,
   RewardPaid,
+  RewardSchedulePaused,
+  RewardScheduleResumed,
   Staked,
   Withdrawn,
 } from "../generated/templates/LiquidityGauge/LiquidityGauge";
@@ -43,6 +45,22 @@ export function handleRewardAdded(event: RewardAdded): void {
   if (gauge == null) return;
   gauge.totalFunded = gauge.totalFunded.plus(event.params.amount);
   gauge.rewardRate = event.params.rewardRate;
+  gauge.periodFinish = event.params.periodFinish;
+  gauge.updatedAt = event.block.timestamp;
+  gauge.save();
+}
+
+export function handleRewardSchedulePaused(event: RewardSchedulePaused): void {
+  const gauge = Gauge.load(event.address);
+  if (gauge == null) return;
+  gauge.periodFinish = event.block.timestamp;
+  gauge.updatedAt = event.block.timestamp;
+  gauge.save();
+}
+
+export function handleRewardScheduleResumed(event: RewardScheduleResumed): void {
+  const gauge = Gauge.load(event.address);
+  if (gauge == null) return;
   gauge.periodFinish = event.params.periodFinish;
   gauge.updatedAt = event.block.timestamp;
   gauge.save();

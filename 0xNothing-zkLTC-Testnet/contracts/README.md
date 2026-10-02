@@ -1,8 +1,10 @@
 # 0xNothing zkLTC Testnet Contracts
 
-This Foundry project contains OracleNUSD, the 0xPump bonding curve, and the
-disabled-by-default graduation router. The deployed 0xPixel sources under
-`src/0xpixel/reference/` are immutable references and are excluded from builds.
+This Foundry project contains OracleNUSD, the 0xPump bonding curve, the
+disabled-by-default graduation router and the active [0xPixel V2](PIXEL_V2.md)
+collection with fully on-chain metadata and grids up to 256. The legacy
+deployed 0xPixel sources under `src/0xpixel/reference/` remain immutable
+references and are excluded from builds.
 
 ## Test
 

@@ -269,6 +269,74 @@ export class PixelNFT__tokenDataResult {
   }
 }
 
+export class PixelNFT__tokenPackedDataResult {
+  value0: string;
+  value1: string;
+  value2: BigInt;
+  value3: Bytes;
+  value4: Address;
+  value5: BigInt;
+  value6: Bytes;
+
+  constructor(
+    value0: string,
+    value1: string,
+    value2: BigInt,
+    value3: Bytes,
+    value4: Address,
+    value5: BigInt,
+    value6: Bytes,
+  ) {
+    this.value0 = value0;
+    this.value1 = value1;
+    this.value2 = value2;
+    this.value3 = value3;
+    this.value4 = value4;
+    this.value5 = value5;
+    this.value6 = value6;
+  }
+
+  toMap(): TypedMap<string, ethereum.Value> {
+    let map = new TypedMap<string, ethereum.Value>();
+    map.set("value0", ethereum.Value.fromString(this.value0));
+    map.set("value1", ethereum.Value.fromString(this.value1));
+    map.set("value2", ethereum.Value.fromUnsignedBigInt(this.value2));
+    map.set("value3", ethereum.Value.fromBytes(this.value3));
+    map.set("value4", ethereum.Value.fromAddress(this.value4));
+    map.set("value5", ethereum.Value.fromUnsignedBigInt(this.value5));
+    map.set("value6", ethereum.Value.fromFixedBytes(this.value6));
+    return map;
+  }
+
+  getArtName(): string {
+    return this.value0;
+  }
+
+  getDescription(): string {
+    return this.value1;
+  }
+
+  getGridSize(): BigInt {
+    return this.value2;
+  }
+
+  getPixelData(): Bytes {
+    return this.value3;
+  }
+
+  getCreator(): Address {
+    return this.value4;
+  }
+
+  getMintedAt(): BigInt {
+    return this.value5;
+  }
+
+  getArtworkHash(): Bytes {
+    return this.value6;
+  }
+}
+
 export class PixelNFT extends ethereum.SmartContract {
   static bind(address: Address): PixelNFT {
     return new PixelNFT("PixelNFT", address);
@@ -797,6 +865,49 @@ export class PixelNFT extends ethereum.SmartContract {
     }
     let value = result.value;
     return ethereum.CallResult.fromValue(value[0].toBigInt());
+  }
+
+  tokenPackedData(tokenId: BigInt): PixelNFT__tokenPackedDataResult {
+    let result = super.call(
+      "tokenPackedData",
+      "tokenPackedData(uint256):(string,string,uint256,bytes,address,uint256,bytes32)",
+      [ethereum.Value.fromUnsignedBigInt(tokenId)],
+    );
+
+    return new PixelNFT__tokenPackedDataResult(
+      result[0].toString(),
+      result[1].toString(),
+      result[2].toBigInt(),
+      result[3].toBytes(),
+      result[4].toAddress(),
+      result[5].toBigInt(),
+      result[6].toBytes(),
+    );
+  }
+
+  try_tokenPackedData(
+    tokenId: BigInt,
+  ): ethereum.CallResult<PixelNFT__tokenPackedDataResult> {
+    let result = super.tryCall(
+      "tokenPackedData",
+      "tokenPackedData(uint256):(string,string,uint256,bytes,address,uint256,bytes32)",
+      [ethereum.Value.fromUnsignedBigInt(tokenId)],
+    );
+    if (result.reverted) {
+      return new ethereum.CallResult();
+    }
+    let value = result.value;
+    return ethereum.CallResult.fromValue(
+      new PixelNFT__tokenPackedDataResult(
+        value[0].toString(),
+        value[1].toString(),
+        value[2].toBigInt(),
+        value[3].toBytes(),
+        value[4].toAddress(),
+        value[5].toBigInt(),
+        value[6].toBytes(),
+      ),
+    );
   }
 }
 

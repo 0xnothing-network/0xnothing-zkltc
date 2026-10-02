@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "verifiedAt": "2026-10-02T00:14:25.313Z",
+  "checks": [
+    "chain config",
+    "live catalog",
+    "active listings",
+    "pagination",
+    "owner/search/collection filters",
+    "offers token filter",
+    "invalid and repeated query parameter rejection",
+    "bounded read-only RPC requests and batches",
+    "nonexistent NFT 404",
+    "private key excluded from static assets"
+  ]
+}

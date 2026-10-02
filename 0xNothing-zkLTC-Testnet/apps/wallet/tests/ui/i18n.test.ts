@@ -90,10 +90,6 @@ const SAME_AS_ENGLISH: Record<Code, readonly MessageKey[]> = {
     "set.explorerUrl", "set.networkInvalid", "set.networkDuplicate", "set.networkPermission", "set.customNetworkNote"],
 };
 
-/** Quantum and relay surfaces currently ship with the English fallback. */
-const QUANTUM_RELAY_ENGLISH: readonly MessageKey[] = Object.keys(EN).filter(
-  (key): key is MessageKey => key.startsWith("quantum.") || key.startsWith("relay.") || key === "common.refresh",
-);
 
 /** New market discovery/review copy falls back until each locale is translated. */
 const SWAP_MARKET_ENGLISH: readonly MessageKey[] = [
@@ -160,6 +156,16 @@ const POINTS_ENGLISH: readonly MessageKey[] = [
 
 const codes = Object.keys(LOCALES) as Code[];
 
+/** RWA trading ships in English and Vietnamese, matching the points rollout. */
+const RWA_ENGLISH: readonly MessageKey[] = [
+  "rwa.buy", "rwa.sell", "rwa.txBuy", "rwa.txSell", "rwa.policy", "rwa.empty", "rwa.activation",
+  "rwa.network", "rwa.open", "rwa.paused", "rwa.noPrice", "rwa.issuer", "rwa.loading", "rwa.balance",
+  "rwa.liquidity", "rwa.reserve", "rwa.floor", "rwa.daily", "rwa.price", "rwa.direction", "rwa.amount",
+  "rwa.invalidAmount", "rwa.quoteUnavailable", "rwa.fee", "rwa.pay", "rwa.receive", "rwa.insufficient",
+  "rwa.review", "rwa.maxPayment", "rwa.minReceive", "rwa.slippage", "rwa.submitted", "rwa.documents",
+  "rwa.sources", "rwa.source",
+];
+
 function placeholders(template: string): string[] {
   return [...template.matchAll(/\{(\w+)\}/gu)].map((match) => match[1] ?? "").sort();
 }
@@ -185,7 +191,8 @@ test("every gap is a declared one", () => {
       ...NEUTRAL,
       ...(code === "vi" ? [] : SWAP_MARKET_ENGLISH),
       ...(code === "vi" ? [] : POINTS_ENGLISH),
-      ...QUANTUM_RELAY_ENGLISH,
+      ...(code === "vi" ? [] : RWA_ENGLISH),
+      "common.refresh",
       ...SAME_AS_ENGLISH[code],
     ];
     assert.deepEqual(

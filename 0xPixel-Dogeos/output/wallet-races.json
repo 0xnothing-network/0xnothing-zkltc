@@ -1,0 +1,64 @@
+{
+  "startedAt": "2026-10-02T00:12:24.904Z",
+  "checks": [
+    {
+      "name": "pending disconnect cannot resurrect a connection from cached account results",
+      "pass": true,
+      "durationMs": 2392
+    },
+    {
+      "name": "account change during connection cannot commit a cached previous account",
+      "pass": true,
+      "durationMs": 1515
+    },
+    {
+      "name": "invalid wallet account and chain responses fail without connecting",
+      "pass": true,
+      "durationMs": 2630
+    },
+    {
+      "name": "EIP-6963 deduplicates injected providers and rejects invalid descriptions",
+      "pass": true,
+      "durationMs": 1307
+    },
+    {
+      "name": "missing chain is added and explicitly switched before trading",
+      "pass": true,
+      "durationMs": 1335
+    },
+    {
+      "name": "swap immediately before signing aborts without reaching eth_sendTransaction",
+      "pass": true,
+      "durationMs": 6466
+    },
+    {
+      "name": "wrongNetwork immediately before signing aborts without reaching eth_sendTransaction",
+      "pass": true,
+      "durationMs": 3297
+    },
+    {
+      "name": "disconnect immediately before signing aborts without reaching eth_sendTransaction",
+      "pass": true,
+      "durationMs": 3322
+    },
+    {
+      "name": "duplicate account and chain events preserve a valid transaction and denial resets state",
+      "pass": true,
+      "durationMs": 3261
+    },
+    {
+      "name": "account changes clear old NFT cards and earnings before new account reads resolve",
+      "pass": true,
+      "durationMs": 3971
+    },
+    {
+      "name": "clipboard denial is handled and dialog padding preserves the form",
+      "pass": true,
+      "durationMs": 2241
+    }
+  ],
+  "errors": [],
+  "signedTransactions": 0,
+  "passed": true,
+  "finishedAt": "2026-10-02T00:12:56.643Z"
+}

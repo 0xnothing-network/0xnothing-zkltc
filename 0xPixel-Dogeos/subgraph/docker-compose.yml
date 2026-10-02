@@ -1,0 +1,38 @@
+services:
+  graph-node:
+    image: graphprotocol/graph-node:latest
+    ports:
+      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:8001:8001"
+      - "127.0.0.1:8020:8020"
+      - "127.0.0.1:8030:8030"
+      - "127.0.0.1:8040:8040"
+    depends_on:
+      - ipfs
+      - postgres
+    environment:
+      postgres_host: postgres
+      postgres_user: graph
+      postgres_pass: ${GRAPH_POSTGRES_PASSWORD:?Set GRAPH_POSTGRES_PASSWORD in subgraph/.env}
+      postgres_db: graph
+      ipfs: "ipfs:5001"
+      ethereum: "dogeos-testnet:${DOGEOS_ARCHIVE_RPC_URL:?Set DOGEOS_ARCHIVE_RPC_URL in subgraph/.env}"
+      GRAPH_LOG: info
+  ipfs:
+    image: ipfs/kubo:latest
+    ports:
+      - "127.0.0.1:5001:5001"
+    volumes:
+      - ipfs-data:/data/ipfs
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: graph
+      POSTGRES_PASSWORD: ${GRAPH_POSTGRES_PASSWORD:?Set GRAPH_POSTGRES_PASSWORD in subgraph/.env}
+      POSTGRES_DB: graph
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+volumes:
+  ipfs-data:
+  postgres-data:

@@ -1,10 +1,9 @@
 import { type ReactNode, useEffect, useState } from "react";
-import { type Address, hexToString, isHex } from "viem";
+import { hexToString, isHex } from "viem";
 import { nativeTokenFor } from "../../config/assets";
 import { txUrl } from "../../config/chain";
-import { BUILTIN_NETWORKS, LITVM_NETWORK } from "../../config/networks";
+import { BUILTIN_NETWORKS, LITVM_NETWORK, networkIdentity } from "../../config/networks";
 import { type MessageKey, t } from "../../core/i18n";
-import { signerFor } from "../../core/keyring/vault";
 import { describeError } from "../../core/lib/errors";
 import { formatAmount, shortenAddress } from "../../core/lib/format";
 import {
@@ -16,7 +15,8 @@ import {
   resolveRequest,
   watchPending,
 } from "../../core/services/dapp";
-import { previewRaw, sendRaw } from "../../core/services/tx";
+import { executeDappRequest } from "../../core/services/dappExecution";
+import { previewRaw } from "../../core/services/tx";
 import { Button, Note, Panel, PanelBody, Row, Rows } from "../components/kit";
 import { Screen } from "../components/Screen";
 import { useActionGate } from "../hooks/useActionGate";
@@ -84,32 +84,6 @@ function readable(message: string): string {
     return message;
   }
 }
-async function execute(request: DappRequest, signer: Address, host: string): Promise<string> {
-  if (request.kind === "connect") return signer;
-  if (request.kind === "switch-network") {
-    if (!request.targetNetworkId) throw new Error(t("apr.unreadable"));
-    return request.targetNetworkId;
-  }
-  if (request.kind === "transaction") {
-    const tx = request.tx ?? {};
-    return sendRaw({
-      from: signer,
-      to: tx.to,
-      value: quantity(tx.value),
-      data: tx.data,
-      gas: quantity(tx.gas),
-      label: { key: "tx.dapp", params: { host } },
-      detail: tx.to,
-    });
-  }
-  const account = await signerFor(signer);
-  if (request.kind === "sign") {
-    const message = request.message ?? "";
-    return account.signMessage({ message: isHex(message) ? { raw: message } : message });
-  }
-  return account.signTypedData(JSON.parse(request.message ?? "{}") as never);
-}
-
 function hostOf(origin: string): string {
   try {
     return new URL(origin).host;
@@ -164,7 +138,8 @@ export function Approve(): ReactNode {
   const mismatch = request?.account !== undefined
     && (address === null || request.account.toLowerCase() !== address.toLowerCase());
   const networkMismatch = request !== null
-    && (request.networkId ?? LITVM_NETWORK.id) !== network.id;
+    && ((request.networkId ?? LITVM_NETWORK.id) !== network.id
+      || (request.networkIdentity !== undefined && request.networkIdentity !== networkIdentity(network)));
   const targetNetwork = request?.kind === "switch-network"
     ? [...BUILTIN_NETWORKS, ...settings.customNetworks].find(
         (candidate) => candidate.id === request.targetNetworkId,
@@ -218,7 +193,7 @@ export function Approve(): ReactNode {
         window.close();
         return;
       }
-      const result = await execute(request, signer, hostOf(request.origin));
+      const result = await executeDappRequest(request, signer, hostOf(request.origin), network, approvalClaim);
       executionCompleted = true;
       const settled = await resolveRequest(request.id, result, approvalClaim);
       if (request.kind === "transaction") {

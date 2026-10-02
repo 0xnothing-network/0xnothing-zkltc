@@ -14,6 +14,7 @@ import { navigate } from "../router";
 import { useWallet } from "../state/WalletContext";
 import { AssetList } from "./home/AssetList";
 import { NftGrid } from "./home/NftGrid";
+import { RwaList } from "./home/RwaList";
 
 /**
  * HOME, laid out as the wireframe: the account title with its copyable address,
@@ -168,13 +169,7 @@ export function Home(): ReactNode {
           aria-labelledby="home-tab-rwa"
           hidden={tab !== "rwa"}
         >
-          <div className="w-stack">
-            <div className="w-empty">
-              <span>RWA</span>
-              <span>{t("home.rwaSoon")}</span>
-            </div>
-            <Note>{t("home.rwaNote")}</Note>
-          </div>
+          {tab === "rwa" ? <RwaList /> : null}
         </div>
       </div>
 

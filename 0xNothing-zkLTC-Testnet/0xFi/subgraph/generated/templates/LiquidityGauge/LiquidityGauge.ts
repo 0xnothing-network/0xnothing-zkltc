@@ -106,6 +106,42 @@ export class RewardAdded__Params {
   }
 }
 
+export class RewardSchedulePaused extends ethereum.Event {
+  get params(): RewardSchedulePaused__Params {
+    return new RewardSchedulePaused__Params(this);
+  }
+}
+
+export class RewardSchedulePaused__Params {
+  _event: RewardSchedulePaused;
+
+  constructor(event: RewardSchedulePaused) {
+    this._event = event;
+  }
+
+  get remainingDuration(): BigInt {
+    return this._event.parameters[0].value.toBigInt();
+  }
+}
+
+export class RewardScheduleResumed extends ethereum.Event {
+  get params(): RewardScheduleResumed__Params {
+    return new RewardScheduleResumed__Params(this);
+  }
+}
+
+export class RewardScheduleResumed__Params {
+  _event: RewardScheduleResumed;
+
+  constructor(event: RewardScheduleResumed) {
+    this._event = event;
+  }
+
+  get periodFinish(): BigInt {
+    return this._event.parameters[0].value.toBigInt();
+  }
+}
+
 export class DepositsPauseUpdated extends ethereum.Event {
   get params(): DepositsPauseUpdated__Params {
     return new DepositsPauseUpdated__Params(this);

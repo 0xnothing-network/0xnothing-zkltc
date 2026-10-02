@@ -37,6 +37,8 @@ dist/
 .DS_Store
 *.log
 *.tmp
+*.tmp.png
+.probe-*.txt
 *.bak
 *.orig
 *.rej

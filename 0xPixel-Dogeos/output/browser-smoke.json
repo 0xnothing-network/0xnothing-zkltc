@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "errors": [],
+  "checks": [
+    "desktop home",
+    "market filter/search",
+    "artwork modal",
+    "studio template/undo/redo/resize",
+    "draft restoration",
+    "disconnected mint",
+    "collections",
+    "6 mobile routes without overflow"
+  ],
+  "finished": "2026-10-01T22:38:05.055Z"
+}

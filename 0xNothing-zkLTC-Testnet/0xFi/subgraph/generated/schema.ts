@@ -1705,6 +1705,19 @@ export class SyntheticMarket extends Entity {
     this.set("withdrawPaused", Value.fromBoolean(value));
   }
 
+  get governanceReady(): boolean {
+    let value = this.get("governanceReady");
+    if (!value || value.kind == ValueKind.NULL) {
+      return false;
+    } else {
+      return value.toBoolean();
+    }
+  }
+
+  set governanceReady(value: boolean) {
+    this.set("governanceReady", Value.fromBoolean(value));
+  }
+
   get updatedAt(): BigInt {
     let value = this.get("updatedAt");
     if (!value || value.kind == ValueKind.NULL) {
@@ -2072,6 +2085,19 @@ export class LendingMarket extends Entity {
 
   set collateralWithdrawalPaused(value: boolean) {
     this.set("collateralWithdrawalPaused", Value.fromBoolean(value));
+  }
+
+  get governanceReady(): boolean {
+    let value = this.get("governanceReady");
+    if (!value || value.kind == ValueKind.NULL) {
+      return false;
+    } else {
+      return value.toBoolean();
+    }
+  }
+
+  set governanceReady(value: boolean) {
+    this.set("governanceReady", Value.fromBoolean(value));
   }
 
   get updatedAt(): BigInt {

@@ -1,0 +1,1975 @@
+{
+  "url": "http://localhost:3300/DOGEOSxPIXEL",
+  "checkedAt": "2026-10-01T16:53:33.257Z",
+  "checks": [
+    {
+      "name": "follows initial dark system",
+      "actual": "dark",
+      "expected": "dark",
+      "pass": true
+    },
+    {
+      "name": "toggle changes light and saves",
+      "actual": {
+        "theme": "light",
+        "stored": "light"
+      },
+      "expected": {
+        "theme": "light",
+        "stored": "light"
+      },
+      "pass": true
+    },
+    {
+      "name": "saved light survives client navigation",
+      "actual": "light",
+      "expected": "light",
+      "pass": true
+    },
+    {
+      "name": "saved light survives reload",
+      "actual": "light",
+      "expected": "light",
+      "pass": true
+    },
+    {
+      "name": "explicit light overrides dark system",
+      "actual": "light",
+      "expected": "light",
+      "pass": true
+    },
+    {
+      "name": "explicit dark overrides light system",
+      "actual": "dark",
+      "expected": "dark",
+      "pass": true
+    },
+    {
+      "name": "saved dark key",
+      "actual": "dark",
+      "expected": "dark",
+      "pass": true
+    },
+    {
+      "name": "artwork pixels and sources unchanged on theme switch",
+      "actual": "7e7b76407e5a5bb91372d4c90ce497ace4ff413129c914e2dbac3e552e4186fe",
+      "expected": "7e7b76407e5a5bb91372d4c90ce497ace4ff413129c914e2dbac3e552e4186fe",
+      "pass": true
+    },
+    {
+      "name": "follows initial light system",
+      "actual": "light",
+      "expected": "light",
+      "pass": true
+    },
+    {
+      "name": "automatic theme follows changing system",
+      "actual": "dark",
+      "expected": "dark",
+      "pass": true
+    },
+    {
+      "name": "blocked storage still follows system",
+      "actual": "dark",
+      "expected": "dark",
+      "pass": true
+    },
+    {
+      "name": "blocked storage toggle remains functional",
+      "actual": "light",
+      "expected": "light",
+      "pass": true
+    },
+    {
+      "name": "blocked storage explicit choice survives system change",
+      "actual": "light",
+      "expected": "light",
+      "pass": true
+    },
+    {
+      "name": "bootstrap before React system=dark, saved=null",
+      "actual": {
+        "theme": "dark",
+        "reactNotLoaded": true
+      },
+      "expected": {
+        "theme": "dark",
+        "reactNotLoaded": true
+      },
+      "pass": true,
+      "background": "rgb(23, 26, 22)"
+    },
+    {
+      "name": "bootstrap before React system=light, saved=null",
+      "actual": {
+        "theme": "light",
+        "reactNotLoaded": true
+      },
+      "expected": {
+        "theme": "light",
+        "reactNotLoaded": true
+      },
+      "pass": true,
+      "background": "rgb(250, 249, 245)"
+    },
+    {
+      "name": "bootstrap before React system=dark, saved=light",
+      "actual": {
+        "theme": "light",
+        "reactNotLoaded": true
+      },
+      "expected": {
+        "theme": "light",
+        "reactNotLoaded": true
+      },
+      "pass": true,
+      "background": "rgb(250, 249, 245)"
+    },
+    {
+      "name": "bootstrap before React system=light, saved=dark",
+      "actual": {
+        "theme": "dark",
+        "reactNotLoaded": true
+      },
+      "expected": {
+        "theme": "dark",
+        "reactNotLoaded": true
+      },
+      "pass": true,
+      "background": "rgb(23, 26, 22)"
+    },
+    {
+      "name": "painted studio canvas data unchanged on theme switch",
+      "canvasCount": 1,
+      "actual": "da9c2d9a9b4876619ab13fe8e3fb3439b88c475e810d9b76af226cafa516b09e",
+      "expected": "da9c2d9a9b4876619ab13fe8e3fb3439b88c475e810d9b76af226cafa516b09e",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "screenshots": [
+    "output/theme-dark-1440-home.png",
+    "output/theme-dark-1440-market.png",
+    "output/theme-dark-1440-studio.png",
+    "output/theme-dark-1440-collections.png",
+    "output/theme-dark-1440-wallet.png",
+    "output/theme-dark-1440-activity.png",
+    "output/theme-dark-1440-wallet-modal.png",
+    "output/theme-dark-1440-nft-modal.png",
+    "output/theme-dark-375-home.png",
+    "output/theme-dark-375-market.png",
+    "output/theme-dark-375-studio.png",
+    "output/theme-dark-375-collections.png",
+    "output/theme-dark-375-wallet.png",
+    "output/theme-dark-375-activity.png",
+    "output/theme-dark-375-wallet-modal.png",
+    "output/theme-dark-375-nft-modal.png",
+    "output/theme-light-1440-home.png",
+    "output/theme-light-1440-market.png",
+    "output/theme-light-1440-studio.png",
+    "output/theme-light-1440-collections.png",
+    "output/theme-light-1440-wallet.png",
+    "output/theme-light-1440-activity.png",
+    "output/theme-light-1440-wallet-modal.png",
+    "output/theme-light-1440-nft-modal.png",
+    "output/theme-light-375-home.png",
+    "output/theme-light-375-studio.png",
+    "output/theme-light-375-activity.png"
+  ],
+  "visualChecks": [
+    {
+      "theme": "dark",
+      "width": 1440,
+      "route": "home",
+      "heading": "Much pixel.Very yours.",
+      "overflow": false,
+      "documentWidth": 1440,
+      "offenders": [],
+      "contrastChecked": 103
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "route": "market",
+      "heading": "Find your kind of pixel.",
+      "overflow": false,
+      "documentWidth": 1440,
+      "offenders": [],
+      "contrastChecked": 70
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "route": "studio",
+      "heading": "A little square.A lot of you.",
+      "overflow": false,
+      "documentWidth": 1440,
+      "offenders": [],
+      "contrastChecked": 65
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "route": "collections",
+      "heading": "Pixels belong together.",
+      "overflow": false,
+      "documentWidth": 1440,
+      "offenders": [],
+      "contrastChecked": 37
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "route": "wallet",
+      "heading": "Good pixels. Your pixels.",
+      "overflow": false,
+      "documentWidth": 1440,
+      "offenders": [],
+      "contrastChecked": 26
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "route": "activity",
+      "heading": "A living pixel trail.",
+      "overflow": false,
+      "documentWidth": 1440,
+      "offenders": [],
+      "contrastChecked": 193
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "route": "wallet-modal",
+      "overflow": false,
+      "clientWidth": 488,
+      "scrollWidth": 488,
+      "background": "rgb(23, 26, 22)",
+      "color": "rgb(240, 237, 228)",
+      "text": "Bring your wallet.Connect your browser wallet to mint, curate and trade with test DOGE.No browser wallet detected. Open this site in a browser with an EVM wallet extension, or in your wallet's dApp br"
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "route": "nft-modal",
+      "overflow": false,
+      "clientWidth": 1048,
+      "scrollWidth": 1048,
+      "background": "rgb(23, 26, 22)",
+      "color": "rgb(240, 237, 228)",
+      "text": "Pixel #632 × 32 · Immutable on-chain artPIXEL #6Friendly AfterlifeNothing spooky. Just good company.Created by 0x3e26…2005Owned by 0x3e26…2005TradeOffersDetailsAsking price3.5 DOGEExpires 31/10/2026Bu"
+    },
+    {
+      "theme": "dark",
+      "width": 375,
+      "route": "home",
+      "heading": "Much pixel.Very yours.",
+      "overflow": false,
+      "documentWidth": 375,
+      "offenders": [],
+      "contrastChecked": 100
+    },
+    {
+      "theme": "dark",
+      "width": 375,
+      "route": "market",
+      "heading": "Find your kind of pixel.",
+      "overflow": false,
+      "documentWidth": 375,
+      "offenders": [],
+      "contrastChecked": 67
+    },
+    {
+      "theme": "dark",
+      "width": 375,
+      "route": "studio",
+      "heading": "A little square.A lot of you.",
+      "overflow": false,
+      "documentWidth": 375,
+      "offenders": [],
+      "contrastChecked": 55
+    },
+    {
+      "theme": "dark",
+      "width": 375,
+      "route": "collections",
+      "heading": "Pixels belong together.",
+      "overflow": false,
+      "documentWidth": 375,
+      "offenders": [],
+      "contrastChecked": 34
+    },
+    {
+      "theme": "dark",
+      "width": 375,
+      "route": "wallet",
+      "heading": "Good pixels. Your pixels.",
+      "overflow": false,
+      "documentWidth": 375,
+      "offenders": [],
+      "contrastChecked": 23
+    },
+    {
+      "theme": "dark",
+      "width": 375,
+      "route": "activity",
+      "heading": "A living pixel trail.",
+      "overflow": false,
+      "documentWidth": 375,
+      "offenders": [
+        {
+          "selector": "div.activity-labels",
+          "right": 620
+        },
+        {
+          "selector": "span",
+          "right": 425
+        },
+        {
+          "selector": "span",
+          "right": 514
+        },
+        {
+          "selector": "span",
+          "right": 604
+        },
+        {
+          "selector": "div.activity-row",
+          "right": 620
+        },
+        {
+          "selector": "span",
+          "right": 425
+        },
+        {
+          "selector": "span",
+          "right": 514
+        },
+        {
+          "selector": "a",
+          "right": 604
+        }
+      ],
+      "contrastChecked": 190
+    },
+    {
+      "theme": "dark",
+      "width": 375,
+      "route": "wallet-modal",
+      "overflow": false,
+      "clientWidth": 335,
+      "scrollWidth": 335,
+      "background": "rgb(23, 26, 22)",
+      "color": "rgb(240, 237, 228)",
+      "text": "Bring your wallet.Connect your browser wallet to mint, curate and trade with test DOGE.No browser wallet detected. Open this site in a browser with an EVM wallet extension, or in your wallet's dApp br"
+    },
+    {
+      "theme": "dark",
+      "width": 375,
+      "route": "nft-modal",
+      "overflow": false,
+      "clientWidth": 335,
+      "scrollWidth": 335,
+      "background": "rgb(23, 26, 22)",
+      "color": "rgb(240, 237, 228)",
+      "text": "Pixel #632 × 32 · Immutable on-chain artPIXEL #6Friendly AfterlifeNothing spooky. Just good company.Created by 0x3e26…2005Owned by 0x3e26…2005TradeOffersDetailsAsking price3.5 DOGEExpires 31/10/2026Bu"
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "route": "home",
+      "heading": "Much pixel.Very yours.",
+      "overflow": false,
+      "documentWidth": 320,
+      "offenders": [],
+      "contrastChecked": 100
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "route": "market",
+      "heading": "Find your kind of pixel.",
+      "overflow": false,
+      "documentWidth": 320,
+      "offenders": [],
+      "contrastChecked": 67
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "route": "studio",
+      "heading": "A little square.A lot of you.",
+      "overflow": false,
+      "documentWidth": 320,
+      "offenders": [],
+      "contrastChecked": 55
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "route": "collections",
+      "heading": "Pixels belong together.",
+      "overflow": false,
+      "documentWidth": 320,
+      "offenders": [],
+      "contrastChecked": 34
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "route": "wallet",
+      "heading": "Good pixels. Your pixels.",
+      "overflow": false,
+      "documentWidth": 320,
+      "offenders": [],
+      "contrastChecked": 23
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "route": "activity",
+      "heading": "A living pixel trail.",
+      "overflow": false,
+      "documentWidth": 320,
+      "offenders": [
+        {
+          "selector": "div.activity-labels",
+          "right": 620
+        },
+        {
+          "selector": "span",
+          "right": 425
+        },
+        {
+          "selector": "span",
+          "right": 514
+        },
+        {
+          "selector": "span",
+          "right": 604
+        },
+        {
+          "selector": "div.activity-row",
+          "right": 620
+        },
+        {
+          "selector": "span",
+          "right": 425
+        },
+        {
+          "selector": "span",
+          "right": 514
+        },
+        {
+          "selector": "a",
+          "right": 604
+        }
+      ],
+      "contrastChecked": 190
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "route": "wallet-modal",
+      "overflow": false,
+      "clientWidth": 280,
+      "scrollWidth": 280,
+      "background": "rgb(23, 26, 22)",
+      "color": "rgb(240, 237, 228)",
+      "text": "Bring your wallet.Connect your browser wallet to mint, curate and trade with test DOGE.No browser wallet detected. Open this site in a browser with an EVM wallet extension, or in your wallet's dApp br"
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "route": "nft-modal",
+      "overflow": false,
+      "clientWidth": 280,
+      "scrollWidth": 280,
+      "background": "rgb(23, 26, 22)",
+      "color": "rgb(240, 237, 228)",
+      "text": "Pixel #632 × 32 · Immutable on-chain artPIXEL #6Friendly AfterlifeNothing spooky. Just good company.Created by 0x3e26…2005Owned by 0x3e26…2005TradeOffersDetailsAsking price3.5 DOGEExpires 31/10/2026Bu"
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "home",
+      "heading": "Much pixel.Very yours.",
+      "overflow": false,
+      "documentWidth": 1440,
+      "offenders": [],
+      "contrastChecked": 103
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "market",
+      "heading": "Find your kind of pixel.",
+      "overflow": false,
+      "documentWidth": 1440,
+      "offenders": [],
+      "contrastChecked": 70
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "studio",
+      "heading": "A little square.A lot of you.",
+      "overflow": false,
+      "documentWidth": 1440,
+      "offenders": [],
+      "contrastChecked": 65
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "collections",
+      "heading": "Pixels belong together.",
+      "overflow": false,
+      "documentWidth": 1440,
+      "offenders": [],
+      "contrastChecked": 37
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "wallet",
+      "heading": "Good pixels. Your pixels.",
+      "overflow": false,
+      "documentWidth": 1440,
+      "offenders": [],
+      "contrastChecked": 26
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "activity",
+      "heading": "A living pixel trail.",
+      "overflow": false,
+      "documentWidth": 1440,
+      "offenders": [],
+      "contrastChecked": 193
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "wallet-modal",
+      "overflow": false,
+      "clientWidth": 488,
+      "scrollWidth": 488,
+      "background": "rgb(250, 249, 245)",
+      "color": "rgb(36, 41, 30)",
+      "text": "Bring your wallet.Connect your browser wallet to mint, curate and trade with test DOGE.No browser wallet detected. Open this site in a browser with an EVM wallet extension, or in your wallet's dApp br"
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "nft-modal",
+      "overflow": false,
+      "clientWidth": 1048,
+      "scrollWidth": 1048,
+      "background": "rgb(250, 249, 245)",
+      "color": "rgb(36, 41, 30)",
+      "text": "Pixel #632 × 32 · Immutable on-chain artPIXEL #6Friendly AfterlifeNothing spooky. Just good company.Created by 0x3e26…2005Owned by 0x3e26…2005TradeOffersDetailsAsking price3.5 DOGEExpires 31/10/2026Bu"
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "home",
+      "heading": "Much pixel.Very yours.",
+      "overflow": false,
+      "documentWidth": 375,
+      "offenders": [],
+      "contrastChecked": 100
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "market",
+      "heading": "Find your kind of pixel.",
+      "overflow": false,
+      "documentWidth": 375,
+      "offenders": [],
+      "contrastChecked": 67
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "studio",
+      "heading": "A little square.A lot of you.",
+      "overflow": false,
+      "documentWidth": 375,
+      "offenders": [],
+      "contrastChecked": 55
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "collections",
+      "heading": "Pixels belong together.",
+      "overflow": false,
+      "documentWidth": 375,
+      "offenders": [],
+      "contrastChecked": 34
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "wallet",
+      "heading": "Good pixels. Your pixels.",
+      "overflow": false,
+      "documentWidth": 375,
+      "offenders": [],
+      "contrastChecked": 23
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "activity",
+      "heading": "A living pixel trail.",
+      "overflow": false,
+      "documentWidth": 375,
+      "offenders": [
+        {
+          "selector": "div.activity-labels",
+          "right": 620
+        },
+        {
+          "selector": "span",
+          "right": 425
+        },
+        {
+          "selector": "span",
+          "right": 514
+        },
+        {
+          "selector": "span",
+          "right": 604
+        },
+        {
+          "selector": "div.activity-row",
+          "right": 620
+        },
+        {
+          "selector": "span",
+          "right": 425
+        },
+        {
+          "selector": "span",
+          "right": 514
+        },
+        {
+          "selector": "a",
+          "right": 604
+        }
+      ],
+      "contrastChecked": 190
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "wallet-modal",
+      "overflow": false,
+      "clientWidth": 335,
+      "scrollWidth": 335,
+      "background": "rgb(250, 249, 245)",
+      "color": "rgb(36, 41, 30)",
+      "text": "Bring your wallet.Connect your browser wallet to mint, curate and trade with test DOGE.No browser wallet detected. Open this site in a browser with an EVM wallet extension, or in your wallet's dApp br"
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "nft-modal",
+      "overflow": false,
+      "clientWidth": 335,
+      "scrollWidth": 335,
+      "background": "rgb(250, 249, 245)",
+      "color": "rgb(36, 41, 30)",
+      "text": "Pixel #632 × 32 · Immutable on-chain artPIXEL #6Friendly AfterlifeNothing spooky. Just good company.Created by 0x3e26…2005Owned by 0x3e26…2005TradeOffersDetailsAsking price3.5 DOGEExpires 31/10/2026Bu"
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "home",
+      "heading": "Much pixel.Very yours.",
+      "overflow": false,
+      "documentWidth": 320,
+      "offenders": [],
+      "contrastChecked": 100
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "market",
+      "heading": "Find your kind of pixel.",
+      "overflow": false,
+      "documentWidth": 320,
+      "offenders": [],
+      "contrastChecked": 67
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "studio",
+      "heading": "A little square.A lot of you.",
+      "overflow": false,
+      "documentWidth": 320,
+      "offenders": [],
+      "contrastChecked": 55
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "collections",
+      "heading": "Pixels belong together.",
+      "overflow": false,
+      "documentWidth": 320,
+      "offenders": [],
+      "contrastChecked": 34
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "wallet",
+      "heading": "Good pixels. Your pixels.",
+      "overflow": false,
+      "documentWidth": 320,
+      "offenders": [],
+      "contrastChecked": 23
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "activity",
+      "heading": "A living pixel trail.",
+      "overflow": false,
+      "documentWidth": 320,
+      "offenders": [
+        {
+          "selector": "div.activity-labels",
+          "right": 620
+        },
+        {
+          "selector": "span",
+          "right": 425
+        },
+        {
+          "selector": "span",
+          "right": 514
+        },
+        {
+          "selector": "span",
+          "right": 604
+        },
+        {
+          "selector": "div.activity-row",
+          "right": 620
+        },
+        {
+          "selector": "span",
+          "right": 425
+        },
+        {
+          "selector": "span",
+          "right": 514
+        },
+        {
+          "selector": "a",
+          "right": 604
+        }
+      ],
+      "contrastChecked": 190
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "wallet-modal",
+      "overflow": false,
+      "clientWidth": 280,
+      "scrollWidth": 280,
+      "background": "rgb(250, 249, 245)",
+      "color": "rgb(36, 41, 30)",
+      "text": "Bring your wallet.Connect your browser wallet to mint, curate and trade with test DOGE.No browser wallet detected. Open this site in a browser with an EVM wallet extension, or in your wallet's dApp br"
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "nft-modal",
+      "overflow": false,
+      "clientWidth": 280,
+      "scrollWidth": 280,
+      "background": "rgb(250, 249, 245)",
+      "color": "rgb(36, 41, 30)",
+      "text": "Pixel #632 × 32 · Immutable on-chain artPIXEL #6Friendly AfterlifeNothing spooky. Just good company.Created by 0x3e26…2005Owned by 0x3e26…2005TradeOffersDetailsAsking price3.5 DOGEExpires 31/10/2026Bu"
+    }
+  ],
+  "contrastIssues": [
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "home",
+      "selector": "span.brand-times",
+      "text": "×",
+      "ratio": 2.73,
+      "threshold": 4.5,
+      "color": "rgb(150, 154, 140)",
+      "background": "250,249,245",
+      "fontSize": 20,
+      "classification": "decorative-logo"
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "market",
+      "selector": "span.brand-times",
+      "text": "×",
+      "ratio": 2.73,
+      "threshold": 4.5,
+      "color": "rgb(150, 154, 140)",
+      "background": "250,249,245",
+      "fontSize": 20,
+      "classification": "decorative-logo"
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "studio",
+      "selector": "span.brand-times",
+      "text": "×",
+      "ratio": 2.73,
+      "threshold": 4.5,
+      "color": "rgb(150, 154, 140)",
+      "background": "250,249,245",
+      "fontSize": 20,
+      "classification": "decorative-logo"
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "collections",
+      "selector": "span.brand-times",
+      "text": "×",
+      "ratio": 2.73,
+      "threshold": 4.5,
+      "color": "rgb(150, 154, 140)",
+      "background": "250,249,245",
+      "fontSize": 20,
+      "classification": "decorative-logo"
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "wallet",
+      "selector": "span.brand-times",
+      "text": "×",
+      "ratio": 2.73,
+      "threshold": 4.5,
+      "color": "rgb(150, 154, 140)",
+      "background": "250,249,245",
+      "fontSize": 20,
+      "classification": "decorative-logo"
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "activity",
+      "selector": "span.brand-times",
+      "text": "×",
+      "ratio": 2.73,
+      "threshold": 4.5,
+      "color": "rgb(150, 154, 140)",
+      "background": "250,249,245",
+      "fontSize": 20,
+      "classification": "decorative-logo"
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "home",
+      "selector": "span.brand-times",
+      "text": "×",
+      "ratio": 2.73,
+      "threshold": 4.5,
+      "color": "rgb(150, 154, 140)",
+      "background": "250,249,245",
+      "fontSize": 16,
+      "classification": "decorative-logo"
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "market",
+      "selector": "span.brand-times",
+      "text": "×",
+      "ratio": 2.73,
+      "threshold": 4.5,
+      "color": "rgb(150, 154, 140)",
+      "background": "250,249,245",
+      "fontSize": 16,
+      "classification": "decorative-logo"
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "studio",
+      "selector": "span.brand-times",
+      "text": "×",
+      "ratio": 2.73,
+      "threshold": 4.5,
+      "color": "rgb(150, 154, 140)",
+      "background": "250,249,245",
+      "fontSize": 16,
+      "classification": "decorative-logo"
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "collections",
+      "selector": "span.brand-times",
+      "text": "×",
+      "ratio": 2.73,
+      "threshold": 4.5,
+      "color": "rgb(150, 154, 140)",
+      "background": "250,249,245",
+      "fontSize": 16,
+      "classification": "decorative-logo"
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "wallet",
+      "selector": "span.brand-times",
+      "text": "×",
+      "ratio": 2.73,
+      "threshold": 4.5,
+      "color": "rgb(150, 154, 140)",
+      "background": "250,249,245",
+      "fontSize": 16,
+      "classification": "decorative-logo"
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "activity",
+      "selector": "span.brand-times",
+      "text": "×",
+      "ratio": 2.73,
+      "threshold": 4.5,
+      "color": "rgb(150, 154, 140)",
+      "background": "250,249,245",
+      "fontSize": 16,
+      "classification": "decorative-logo"
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "home",
+      "selector": "span.brand-times",
+      "text": "×",
+      "ratio": 2.73,
+      "threshold": 4.5,
+      "color": "rgb(150, 154, 140)",
+      "background": "250,249,245",
+      "fontSize": 16,
+      "classification": "decorative-logo"
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "market",
+      "selector": "span.brand-times",
+      "text": "×",
+      "ratio": 2.73,
+      "threshold": 4.5,
+      "color": "rgb(150, 154, 140)",
+      "background": "250,249,245",
+      "fontSize": 16,
+      "classification": "decorative-logo"
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "studio",
+      "selector": "span.brand-times",
+      "text": "×",
+      "ratio": 2.73,
+      "threshold": 4.5,
+      "color": "rgb(150, 154, 140)",
+      "background": "250,249,245",
+      "fontSize": 16,
+      "classification": "decorative-logo"
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "collections",
+      "selector": "span.brand-times",
+      "text": "×",
+      "ratio": 2.73,
+      "threshold": 4.5,
+      "color": "rgb(150, 154, 140)",
+      "background": "250,249,245",
+      "fontSize": 16,
+      "classification": "decorative-logo"
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "wallet",
+      "selector": "span.brand-times",
+      "text": "×",
+      "ratio": 2.73,
+      "threshold": 4.5,
+      "color": "rgb(150, 154, 140)",
+      "background": "250,249,245",
+      "fontSize": 16,
+      "classification": "decorative-logo"
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "activity",
+      "selector": "span.brand-times",
+      "text": "×",
+      "ratio": 2.73,
+      "threshold": 4.5,
+      "color": "rgb(150, 154, 140)",
+      "background": "250,249,245",
+      "fontSize": 16,
+      "classification": "decorative-logo"
+    }
+  ],
+  "finishedAt": "2026-10-01T17:02:11.709Z",
+  "summary": {
+    "functionalChecks": 18,
+    "functionalPassed": 18,
+    "routeModalViewportChecks": 48,
+    "horizontalOverflows": 0,
+    "browserErrors": 0,
+    "darkContrastFailures": 0,
+    "themeRegressions": [],
+    "preexistingLightPaletteObservationCount": 0,
+    "decorativeLogoExcluded": ".brand-times ×",
+    "targetedLightChecks": 10,
+    "targetedLightPassed": 10
+  },
+  "targetedLightChecks": [
+    {
+      "width": 1440,
+      "route": "home",
+      "key": "banner copy",
+      "text": "A pencil, a palette and a place in the pack.",
+      "min": 4.5,
+      "pass": true,
+      "overflow": false,
+      "asset": [
+        "http://localhost:3300/DOGEOSxPIXEL/assets/index-BqCeAmJU.css"
+      ],
+      "selector": "p:has-text(\"A pencil,\")",
+      "color": "rgb(93, 85, 44)",
+      "background": "244,197,66",
+      "ratio": 4.609
+    },
+    {
+      "width": 1440,
+      "route": "home",
+      "key": "banner small",
+      "text": "8 × 8 to 256 × 256 pixels.",
+      "min": 4.5,
+      "selector": "small",
+      "color": "rgb(98, 83, 32)",
+      "background": "244,197,66",
+      "ratio": 4.649,
+      "pass": true,
+      "overflow": false,
+      "asset": [
+        "http://localhost:3300/DOGEOSxPIXEL/assets/index-BqCeAmJU.css"
+      ]
+    },
+    {
+      "width": 1440,
+      "route": "home",
+      "key": "banner number",
+      "text": "01",
+      "min": 3,
+      "selector": "strong",
+      "color": "rgb(133, 106, 21)",
+      "background": "244,197,66",
+      "ratio": 3.173,
+      "pass": true,
+      "overflow": false,
+      "asset": [
+        "http://localhost:3300/DOGEOSxPIXEL/assets/index-BqCeAmJU.css"
+      ]
+    },
+    {
+      "width": 1440,
+      "route": "studio",
+      "key": "canvas footer",
+      "text": "Draft saved on this device",
+      "min": 4.5,
+      "selector": "span",
+      "color": "rgb(104, 110, 97)",
+      "background": "240,241,233",
+      "ratio": 4.626,
+      "pass": true,
+      "overflow": false,
+      "asset": [
+        "http://localhost:3300/DOGEOSxPIXEL/assets/index-BqCeAmJU.css"
+      ]
+    },
+    {
+      "width": 1440,
+      "route": "activity",
+      "key": "activity labels",
+      "text": "Transaction",
+      "min": 4.5,
+      "selector": "span",
+      "color": "rgb(104, 110, 97)",
+      "background": "239,239,232",
+      "ratio": 4.555,
+      "pass": true,
+      "overflow": false,
+      "asset": [
+        "http://localhost:3300/DOGEOSxPIXEL/assets/index-BqCeAmJU.css"
+      ]
+    },
+    {
+      "width": 375,
+      "route": "home",
+      "key": "banner copy",
+      "text": "A pencil, a palette and a place in the pack.",
+      "min": 4.5,
+      "pass": true,
+      "overflow": false,
+      "asset": [
+        "http://localhost:3300/DOGEOSxPIXEL/assets/index-BqCeAmJU.css"
+      ],
+      "selector": "p:has-text(\"A pencil,\")",
+      "color": "rgb(93, 85, 44)",
+      "background": "244,197,66",
+      "ratio": 4.609
+    },
+    {
+      "width": 375,
+      "route": "home",
+      "key": "banner small",
+      "text": "8 × 8 to 256 × 256 pixels.",
+      "min": 4.5,
+      "selector": "small",
+      "color": "rgb(98, 83, 32)",
+      "background": "244,197,66",
+      "ratio": 4.649,
+      "pass": true,
+      "overflow": false,
+      "asset": [
+        "http://localhost:3300/DOGEOSxPIXEL/assets/index-BqCeAmJU.css"
+      ]
+    },
+    {
+      "width": 375,
+      "route": "home",
+      "key": "banner number",
+      "text": "01",
+      "min": 3,
+      "selector": "strong",
+      "color": "rgb(133, 106, 21)",
+      "background": "244,197,66",
+      "ratio": 3.173,
+      "pass": true,
+      "overflow": false,
+      "asset": [
+        "http://localhost:3300/DOGEOSxPIXEL/assets/index-BqCeAmJU.css"
+      ]
+    },
+    {
+      "width": 375,
+      "route": "studio",
+      "key": "canvas footer",
+      "text": "Draft saved on this device",
+      "min": 4.5,
+      "selector": "span",
+      "color": "rgb(104, 110, 97)",
+      "background": "240,241,233",
+      "ratio": 4.626,
+      "pass": true,
+      "overflow": false,
+      "asset": [
+        "http://localhost:3300/DOGEOSxPIXEL/assets/index-BqCeAmJU.css"
+      ]
+    },
+    {
+      "width": 375,
+      "route": "activity",
+      "key": "activity labels",
+      "text": "Transaction",
+      "min": 4.5,
+      "selector": "span",
+      "color": "rgb(104, 110, 97)",
+      "background": "239,239,232",
+      "ratio": 4.555,
+      "pass": true,
+      "overflow": false,
+      "asset": [
+        "http://localhost:3300/DOGEOSxPIXEL/assets/index-BqCeAmJU.css"
+      ]
+    }
+  ],
+  "priorLightObservations": [
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "home",
+      "selector": "p",
+      "text": "A pencil, a palette and a place in the pack.",
+      "ratio": 4.32,
+      "threshold": 4.5,
+      "color": "rgb(98, 89, 47)",
+      "background": "244,197,66",
+      "fontSize": 14,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "home",
+      "selector": "p",
+      "text": "No upload server. No disappearing images.",
+      "ratio": 4.32,
+      "threshold": 4.5,
+      "color": "rgb(98, 89, 47)",
+      "background": "244,197,66",
+      "fontSize": 14,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "home",
+      "selector": "strong",
+      "text": "01",
+      "ratio": 2.33,
+      "threshold": 3,
+      "color": "rgb(160, 127, 22)",
+      "background": "244,197,66",
+      "fontSize": 39,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "home",
+      "selector": "small",
+      "text": "8 × 8 to 256 × 256 pixels.",
+      "ratio": 3.97,
+      "threshold": 4.5,
+      "color": "rgb(110, 93, 35)",
+      "background": "244,197,66",
+      "fontSize": 12,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "home",
+      "selector": "strong",
+      "text": "02",
+      "ratio": 2.33,
+      "threshold": 3,
+      "color": "rgb(160, 127, 22)",
+      "background": "244,197,66",
+      "fontSize": 39,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "home",
+      "selector": "small",
+      "text": "Free mint. Immutable artwork.",
+      "ratio": 3.97,
+      "threshold": 4.5,
+      "color": "rgb(110, 93, 35)",
+      "background": "244,197,66",
+      "fontSize": 12,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "home",
+      "selector": "strong",
+      "text": "03",
+      "ratio": 2.33,
+      "threshold": 3,
+      "color": "rgb(160, 127, 22)",
+      "background": "244,197,66",
+      "fontSize": 39,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "home",
+      "selector": "small",
+      "text": "Curate a collection. Trade in DOGE.",
+      "ratio": 3.97,
+      "threshold": 4.5,
+      "color": "rgb(110, 93, 35)",
+      "background": "244,197,66",
+      "fontSize": 12,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "studio",
+      "selector": "span",
+      "text": "0",
+      "ratio": 4.23,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "240,241,233",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "studio",
+      "selector": "span",
+      "text": "painted pixels ·",
+      "ratio": 4.23,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "240,241,233",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "studio",
+      "selector": "span",
+      "text": "0",
+      "ratio": 4.23,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "240,241,233",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "studio",
+      "selector": "span",
+      "text": "runs",
+      "ratio": 4.23,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "240,241,233",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "studio",
+      "selector": "span",
+      "text": "Draft saved on this device",
+      "ratio": 4.23,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "240,241,233",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "activity",
+      "selector": "span",
+      "text": "Activity",
+      "ratio": 4.16,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "239,239,232",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "activity",
+      "selector": "span",
+      "text": "Pixel / collection",
+      "ratio": 4.16,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "239,239,232",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "activity",
+      "selector": "span",
+      "text": "Wallet",
+      "ratio": 4.16,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "239,239,232",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "activity",
+      "selector": "span",
+      "text": "DOGE",
+      "ratio": 4.16,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "239,239,232",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "route": "activity",
+      "selector": "span",
+      "text": "Transaction",
+      "ratio": 4.16,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "239,239,232",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "home",
+      "selector": "p",
+      "text": "A pencil, a palette and a place in the pack.",
+      "ratio": 4.32,
+      "threshold": 4.5,
+      "color": "rgb(98, 89, 47)",
+      "background": "244,197,66",
+      "fontSize": 12,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "home",
+      "selector": "p",
+      "text": "No upload server. No disappearing images.",
+      "ratio": 4.32,
+      "threshold": 4.5,
+      "color": "rgb(98, 89, 47)",
+      "background": "244,197,66",
+      "fontSize": 12,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "home",
+      "selector": "strong",
+      "text": "01",
+      "ratio": 2.33,
+      "threshold": 3,
+      "color": "rgb(160, 127, 22)",
+      "background": "244,197,66",
+      "fontSize": 29,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "home",
+      "selector": "small",
+      "text": "8 × 8 to 256 × 256 pixels.",
+      "ratio": 3.97,
+      "threshold": 4.5,
+      "color": "rgb(110, 93, 35)",
+      "background": "244,197,66",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "home",
+      "selector": "strong",
+      "text": "02",
+      "ratio": 2.33,
+      "threshold": 3,
+      "color": "rgb(160, 127, 22)",
+      "background": "244,197,66",
+      "fontSize": 29,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "home",
+      "selector": "small",
+      "text": "Free mint. Immutable artwork.",
+      "ratio": 3.97,
+      "threshold": 4.5,
+      "color": "rgb(110, 93, 35)",
+      "background": "244,197,66",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "home",
+      "selector": "strong",
+      "text": "03",
+      "ratio": 2.33,
+      "threshold": 3,
+      "color": "rgb(160, 127, 22)",
+      "background": "244,197,66",
+      "fontSize": 29,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "home",
+      "selector": "small",
+      "text": "Curate a collection. Trade in DOGE.",
+      "ratio": 3.97,
+      "threshold": 4.5,
+      "color": "rgb(110, 93, 35)",
+      "background": "244,197,66",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "studio",
+      "selector": "span",
+      "text": "0",
+      "ratio": 4.23,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "240,241,233",
+      "fontSize": 8,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "studio",
+      "selector": "span",
+      "text": "painted pixels ·",
+      "ratio": 4.23,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "240,241,233",
+      "fontSize": 8,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "studio",
+      "selector": "span",
+      "text": "0",
+      "ratio": 4.23,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "240,241,233",
+      "fontSize": 8,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "studio",
+      "selector": "span",
+      "text": "runs",
+      "ratio": 4.23,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "240,241,233",
+      "fontSize": 8,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "studio",
+      "selector": "span",
+      "text": "Draft saved on this device",
+      "ratio": 4.23,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "240,241,233",
+      "fontSize": 8,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "activity",
+      "selector": "span",
+      "text": "Activity",
+      "ratio": 4.16,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "239,239,232",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "activity",
+      "selector": "span",
+      "text": "Pixel / collection",
+      "ratio": 4.16,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "239,239,232",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "activity",
+      "selector": "span",
+      "text": "Wallet",
+      "ratio": 4.16,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "239,239,232",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "activity",
+      "selector": "span",
+      "text": "DOGE",
+      "ratio": 4.16,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "239,239,232",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "route": "activity",
+      "selector": "span",
+      "text": "Transaction",
+      "ratio": 4.16,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "239,239,232",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "home",
+      "selector": "p",
+      "text": "A pencil, a palette and a place in the pack.",
+      "ratio": 4.32,
+      "threshold": 4.5,
+      "color": "rgb(98, 89, 47)",
+      "background": "244,197,66",
+      "fontSize": 12,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "home",
+      "selector": "p",
+      "text": "No upload server. No disappearing images.",
+      "ratio": 4.32,
+      "threshold": 4.5,
+      "color": "rgb(98, 89, 47)",
+      "background": "244,197,66",
+      "fontSize": 12,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "home",
+      "selector": "strong",
+      "text": "01",
+      "ratio": 2.33,
+      "threshold": 3,
+      "color": "rgb(160, 127, 22)",
+      "background": "244,197,66",
+      "fontSize": 29,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "home",
+      "selector": "small",
+      "text": "8 × 8 to 256 × 256 pixels.",
+      "ratio": 3.97,
+      "threshold": 4.5,
+      "color": "rgb(110, 93, 35)",
+      "background": "244,197,66",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "home",
+      "selector": "strong",
+      "text": "02",
+      "ratio": 2.33,
+      "threshold": 3,
+      "color": "rgb(160, 127, 22)",
+      "background": "244,197,66",
+      "fontSize": 29,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "home",
+      "selector": "small",
+      "text": "Free mint. Immutable artwork.",
+      "ratio": 3.97,
+      "threshold": 4.5,
+      "color": "rgb(110, 93, 35)",
+      "background": "244,197,66",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "home",
+      "selector": "strong",
+      "text": "03",
+      "ratio": 2.33,
+      "threshold": 3,
+      "color": "rgb(160, 127, 22)",
+      "background": "244,197,66",
+      "fontSize": 29,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "home",
+      "selector": "small",
+      "text": "Curate a collection. Trade in DOGE.",
+      "ratio": 3.97,
+      "threshold": 4.5,
+      "color": "rgb(110, 93, 35)",
+      "background": "244,197,66",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "studio",
+      "selector": "span",
+      "text": "0",
+      "ratio": 4.23,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "240,241,233",
+      "fontSize": 8,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "studio",
+      "selector": "span",
+      "text": "painted pixels ·",
+      "ratio": 4.23,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "240,241,233",
+      "fontSize": 8,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "studio",
+      "selector": "span",
+      "text": "0",
+      "ratio": 4.23,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "240,241,233",
+      "fontSize": 8,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "studio",
+      "selector": "span",
+      "text": "runs",
+      "ratio": 4.23,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "240,241,233",
+      "fontSize": 8,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "studio",
+      "selector": "span",
+      "text": "Draft saved on this device",
+      "ratio": 4.23,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "240,241,233",
+      "fontSize": 8,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "activity",
+      "selector": "span",
+      "text": "Activity",
+      "ratio": 4.16,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "239,239,232",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "activity",
+      "selector": "span",
+      "text": "Pixel / collection",
+      "ratio": 4.16,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "239,239,232",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "activity",
+      "selector": "span",
+      "text": "Wallet",
+      "ratio": 4.16,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "239,239,232",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "activity",
+      "selector": "span",
+      "text": "DOGE",
+      "ratio": 4.16,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "239,239,232",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "route": "activity",
+      "selector": "span",
+      "text": "Transaction",
+      "ratio": 4.16,
+      "threshold": 4.5,
+      "color": "rgb(111, 116, 103)",
+      "background": "239,239,232",
+      "fontSize": 10,
+      "classification": "preexisting-light-palette",
+      "resolved": true
+    }
+  ]
+}

@@ -1540,7 +1540,6 @@
 .fi-status[data-state="danger"],
 .fi-status[data-state="offline"] { color: var(--fi-red); }
 
-.fi-address-link,
 .fi-text-link {
   display: inline-flex;
   align-items: center;
@@ -1551,7 +1550,6 @@
   text-underline-offset: 3px;
 }
 
-.fi-address-link:hover,
 .fi-text-link:hover {
   color: var(--fi-green);
 }
@@ -1779,7 +1777,8 @@
 
   .fi-nav-mobile {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
     border-top: 1px solid var(--fi-line);
     padding: 5px 12px;
     background: var(--fi-bg);
@@ -2969,7 +2968,8 @@
     bottom: 0;
     left: 0;
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
     min-height: calc(60px + env(safe-area-inset-bottom));
     border-top: 1px solid var(--fi-line-strong);
     padding: 0 2px env(safe-area-inset-bottom);

@@ -1,6 +1,8 @@
+import { resolvePixelCollection, pixelTokenKey, isPixelV2Collection } from "@/lib/pixelCollections";
 import { NextResponse } from "next/server";
-import { publicClient, PIXEL_NFT_CONTRACT_ADDRESS } from "@/lib/contract";
+import { publicClient } from "@/lib/contract";
 import { PixelNFTABI } from "@/lib/abi";
+import { PixelV2ABI } from "@/lib/pixelV2Abi";
 import { getPixelImageUrl } from "@/lib/pixelImage";
 import {
   fetchTokenMetadataFromSubgraph,
@@ -21,6 +23,7 @@ const MAX_CACHE_ENTRIES = 4_096;
 interface TokenMetadata {
   tokenId: string;
   name: string;
+  description?: string;
   imageUrl: string;
   creator: string;
   mintedAt: number;
@@ -43,6 +46,8 @@ const metadataCache = createBoundedCache<TokenMetadata | null>({
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  const collection = resolvePixelCollection(searchParams.get("collection"));
+  if (!collection) return NextResponse.json({ error: "Unsupported collection" }, { status: 400 });
   const raw = searchParams.get("ids");
   if (!raw) {
     return NextResponse.json({ error: "Missing ids" }, { status: 400 });
@@ -70,7 +75,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await fetchMetadataBatch(uniqueIds);
+    const result = await fetchMetadataBatch(uniqueIds, collection);
     return NextResponse.json(
       { tokens: result },
       {
@@ -91,13 +96,13 @@ export async function GET(request: Request) {
 }
 
 async function fetchMetadataBatch(
-  tokenIds: string[]
+  tokenIds: string[], collection: `0x${string}`
 ): Promise<Record<string, TokenMetadata | null>> {
   // Hydrate from cache first.
   const out: Record<string, TokenMetadata | null> = {};
   const missing: string[] = [];
   for (const id of tokenIds) {
-    const cached = metadataCache.get(id);
+    const cached = metadataCache.get(pixelTokenKey(collection, id));
     if (cached !== undefined) {
       out[id] = cached;
     } else {
@@ -108,7 +113,7 @@ async function fetchMetadataBatch(
   if (missing.length === 0) return out;
 
   let rpcMissing = missing;
-  if (hasMarketplaceSubgraph()) {
+  if (!isPixelV2Collection(collection) && hasMarketplaceSubgraph()) {
     try {
       const subgraphTokens = await fetchTokenMetadataFromSubgraph(missing);
       rpcMissing = [];
@@ -123,7 +128,7 @@ async function fetchMetadataBatch(
             creator: meta.creator,
             mintedAt: meta.mintedAt,
           };
-          metadataCache.set(id, next);
+          metadataCache.set(pixelTokenKey(collection, id), next);
           out[id] = next;
         } else {
           rpcMissing.push(id);
@@ -137,16 +142,22 @@ async function fetchMetadataBatch(
 
   if (rpcMissing.length === 0) return out;
 
-  // Multicall tokenData for the rest. allowFailure so one missing token
-  // doesn't poison the whole batch.
+  // V2 returns the immutable description and binary art directly, avoiding
+  // tokenURI's SVG/base64 rendering cost and tokenData's hex conversion.
+  const packedV2 = isPixelV2Collection(collection);
   const results = await publicClient.multicall({
     allowFailure: true,
-    contracts: rpcMissing.map((id) => ({
-      address: PIXEL_NFT_CONTRACT_ADDRESS,
+    contracts: rpcMissing.map((id) => packedV2 ? {
+      address: collection,
+      abi: PixelV2ABI,
+      functionName: "tokenPackedData" as const,
+      args: [BigInt(id)] as const,
+    } : {
+      address: collection,
       abi: PixelNFTABI,
       functionName: "tokenData" as const,
       args: [BigInt(id)] as const,
-    })),
+    }),
   });
 
   for (let i = 0; i < rpcMissing.length; i++) {
@@ -154,23 +165,27 @@ async function fetchMetadataBatch(
     const r = results[i];
     if (!r || r.status !== "success") {
       // Cache the miss briefly so we don't hammer a bad token id.
-      metadataCache.set(id, null, CACHE_TTL_ERROR);
+      metadataCache.set(pixelTokenKey(collection, id), null, CACHE_TTL_ERROR);
       out[id] = null;
       continue;
     }
-    const tuple = r.result as readonly [string, bigint, string, string, bigint, string];
-    const [name, gridSize, pixelData, creator, mintedAt] = tuple;
+    const legacy = r.result as readonly [string, bigint, string, string, bigint, string];
+    const packed = r.result as readonly [string, string, bigint, string, string, bigint, string];
+    const [name, gridSize, pixelData, creator, mintedAt] = packedV2
+      ? [packed[0], packed[2], packed[3], packed[4], packed[5]] as const
+      : legacy;
     const imageUrl = pixelData && gridSize
-      ? getPixelImageUrl(id)
+      ? getPixelImageUrl(id, collection)
       : "";
     const meta: TokenMetadata = {
       tokenId: id,
       name: name || `Token #${id}`,
+      ...(packedV2 ? { description: packed[1] } : {}),
       imageUrl,
       creator,
       mintedAt: Number(mintedAt),
     };
-    metadataCache.set(id, meta);
+    metadataCache.set(pixelTokenKey(collection, id), meta);
     out[id] = meta;
   }
 

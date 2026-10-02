@@ -6,6 +6,9 @@
     "subgraph"
   ],
   "scripts": {
+    "rwa:test": "forge test --root contracts --match-contract RwaMarketTest",
+    "rwa:check": "node --experimental-strip-types scripts/check-rwa-markets.mjs",
+    "rwa:abi": "forge build --root contracts && node scripts/generate-rwa-abi.mjs",
     "dev": "npm --prefix ../apps/web run dev -- --port 3300",
     "build": "npm run check:scripts && npm run check:contracts && npm run check:subgraph && npm run check:web",
     "check:scripts": "node scripts/check-scripts.mjs && node --test scripts/test/*.test.mjs",

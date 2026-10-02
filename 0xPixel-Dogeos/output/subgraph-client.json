@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "checks": [
+    "healthy subgraph discovery with live contract revalidation",
+    "owner/filter variables and approval-aware listed filter",
+    "pagination",
+    "endpoint failure fallback",
+    "stale index fallback",
+    "indexing error fallback",
+    "inconsistent discovery fallback",
+    "wrong supply fallback",
+    "query values passed as variables"
+  ],
+  "realGraphNodeDeployed": false
+}

@@ -38,6 +38,8 @@ export interface WriteRequest extends TxLine {
 export interface TxExecutionContext {
   network: WalletNetwork;
   client: typeof publicClient;
+  /** Optional action-specific session check, repeated after async simulation. */
+  assertReady?: () => Promise<void>;
 }
 
 function executionContext(context?: TxExecutionContext): TxExecutionContext {
@@ -48,9 +50,10 @@ export async function writeCall(
   request: WriteRequest,
   context?: TxExecutionContext,
 ): Promise<Hex> {
-  const { network, client: readClient } = executionContext(context);
+  const { network, client: readClient, assertReady } = executionContext(context);
   const hash = await withNamedLock(`tx:${request.from.toLowerCase()}`, async () => {
-    const client = await walletClientFor(request.from, network);
+    await assertReady?.();
+    const client = await walletClientFor(request.from, network, assertReady);
     const { request: simulated } = await readClient.simulateContract({
       account: client.account,
       address: request.address,
@@ -59,6 +62,7 @@ export async function writeCall(
       args: request.args as never,
       value: request.value,
     });
+    await assertReady?.();
     return client.writeContract(simulated);
   });
   await afterSubmit(request.from, hash, request.kind, request, network, readClient).catch(() => {});
@@ -139,11 +143,10 @@ export async function sendRaw(params: TxLine & {
   value?: bigint;
   data?: Hex;
   gas?: bigint;
-}): Promise<Hex> {
-  const network = activeNetwork;
-  const readClient = publicClient;
+}, context?: TxExecutionContext): Promise<Hex> {
+  const { network, client: readClient, assertReady } = executionContext(context);
   const hash = await withNamedLock(`tx:${params.from.toLowerCase()}`, async () => {
-    const client = await walletClientFor(params.from, network);
+    const client = await walletClientFor(params.from, network, assertReady);
     return client.sendTransaction({
       account: client.account,
       chain: client.chain,

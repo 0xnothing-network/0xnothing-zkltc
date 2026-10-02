@@ -1,0 +1,83 @@
+{
+  "url": "http://localhost:3300/DOGEOSxPIXEL",
+  "startedAt": "2026-10-02T00:12:05.096Z",
+  "checks": [
+    {
+      "name": "blank canvas metadata and selected size persist through reload",
+      "pass": true,
+      "durationMs": 2886
+    },
+    {
+      "name": "template, resize and imported metadata have reversible undo and redo",
+      "pass": true,
+      "durationMs": 1523
+    },
+    {
+      "name": "primary strokes interpolate, ignore right/secondary pointers and avoid no-op history",
+      "pass": true,
+      "durationMs": 1352
+    },
+    {
+      "name": "primary pointerup paints its final coordinate without consuming no-op history",
+      "pass": true,
+      "durationMs": 1314
+    },
+    {
+      "name": "fill no-ops do not consume history and eyedropper does not alter art",
+      "pass": true,
+      "durationMs": 1368
+    },
+    {
+      "name": "cancelled pointer commits exactly once and editable shortcuts leave tools unchanged",
+      "pass": true,
+      "durationMs": 1252
+    },
+    {
+      "name": "invalid JSON imports preserve draft and imported text cannot execute markup",
+      "pass": true,
+      "durationMs": 1295
+    },
+    {
+      "name": "async import cannot overwrite drawing made while reading its file",
+      "pass": true,
+      "durationMs": 1223
+    },
+    {
+      "name": "navigation flushes a draft before its debounce timeout",
+      "pass": true,
+      "durationMs": 1268
+    },
+    {
+      "name": "corrupt drafts and denied/quota storage leave studio usable",
+      "pass": true,
+      "durationMs": 4002
+    },
+    {
+      "name": "65,536-run draft restores, persists and exports without truncation",
+      "pass": true,
+      "durationMs": 2661
+    },
+    {
+      "name": "PNG and JSON exports preserve current canvas and import round-trips",
+      "pass": true,
+      "durationMs": 1796
+    },
+    {
+      "name": "image source dimensions are checked before bitmap decode",
+      "pass": true,
+      "durationMs": 2035
+    },
+    {
+      "name": "256-grid stroke performance and storage messages remain bounded on mobile",
+      "pass": true,
+      "durationMs": 2287
+    }
+  ],
+  "errors": [],
+  "performance": {
+    "stroke256DurationMs": 851,
+    "longTasksMs": []
+  },
+  "passed": true,
+  "finishedAt": "2026-10-02T00:12:31.360Z"
+}

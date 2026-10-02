@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "checks": [
+    "injected wallet connection",
+    "wrong network",
+    "switch to DogeOS",
+    "real owned NFT reads",
+    "real transaction simulation",
+    "user rejection resets pending state",
+    "account change clears stale NFT data",
+    "provider disconnect"
+  ],
+  "signedTransactions": 0,
+  "errors": []
+}

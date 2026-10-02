@@ -2,19 +2,21 @@
 
 import { memo, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useConfig, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { parseEther, formatEther } from "viem";
 import {
-  PIXEL_NFT_CONTRACT_ADDRESS,
   PIXEL_MARKETPLACE_ADDRESS,
-  getExplorerUrl,
+  getTokenExplorerUrl,
   getMarketplaceTxUrl,
 } from "@/lib/contract";
 import { PixelNFTABI } from "@/lib/abi";
 import { MarketplaceAbi } from "@/lib/marketplaceAbi";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
+import { LITVM_CHAIN_ID } from "@/lib/chainSwitch";
+import { createWalletSessionGuard } from "@/lib/walletSession";
 
 export interface OwnedNft {
+  collection: `0x${string}`;
   tokenId: bigint;
   name: string;
   imageUrl: string;
@@ -40,7 +42,7 @@ export const OwnedNftCard = memo(function OwnedNftCard({ nft, isPaused, onChange
       className="nft-card group bg-[#1A1A2E] rounded-xl sm:rounded-2xl overflow-hidden border border-[#2D2D44] hover:border-indigo-500/50 transition-[border-color,box-shadow,transform] duration-300 hover:shadow-xl hover:shadow-indigo-500/10"
     >
       <Link
-        href={getExplorerUrl(nft.tokenId)}
+        href={getTokenExplorerUrl(nft.collection, nft.tokenId)}
         target="_blank"
         rel="noopener noreferrer"
         className="block relative aspect-square bg-[#0F0F23] flex items-center justify-center overflow-hidden"
@@ -94,6 +96,7 @@ export const OwnedNftCard = memo(function OwnedNftCard({ nft, isPaused, onChange
           />
         ) : mode === "list" ? (
           <ListForSaleControl
+            collection={nft.collection}
             tokenId={nft.tokenId}
             price={price}
             onPriceChange={setPrice}
@@ -124,6 +127,7 @@ export const OwnedNftCard = memo(function OwnedNftCard({ nft, isPaused, onChange
 });
 
 function ListForSaleControl({
+  collection,
   tokenId,
   price,
   onPriceChange,
@@ -131,6 +135,7 @@ function ListForSaleControl({
   onSuccess,
   disabled,
 }: {
+  collection: `0x${string}`;
   tokenId: bigint;
   price: string;
   onPriceChange: (s: string) => void;
@@ -138,10 +143,14 @@ function ListForSaleControl({
   onSuccess: () => void;
   disabled: boolean;
 }) {
+  const { address, isConnected, chainId } = useAccount();
+  const walletConfig = useConfig();
+  const [sessionError, setSessionError] = useState("");
+  const submissionRef = useRef<{ account: `0x${string}`; collection: `0x${string}`; tokenId: bigint; price: bigint; assertWalletUnchanged: () => void } | null>(null);
   const { writeContractAsync, isPending, data: approveHash, error: approveErr } =
     useWriteContract();
   const { data: approveReceipt, isLoading: waitingApprove, error: approveReceiptErr } =
-    useWaitForTransactionReceipt({ hash: approveHash });
+    useWaitForTransactionReceipt({ chainId: LITVM_CHAIN_ID, hash: approveHash });
   const {
     writeContractAsync: writeListAsync,
     isPending: listing,
@@ -149,7 +158,7 @@ function ListForSaleControl({
     error: listErr,
   } = useWriteContract();
   const { data: listReceipt, isLoading: waitingList, error: listReceiptErr } =
-    useWaitForTransactionReceipt({ hash: listHash });
+    useWaitForTransactionReceipt({ chainId: LITVM_CHAIN_ID, hash: listHash });
   const firedRef = useRef(false);
   const submitLockRef = useRef(false);
   const handledApprovalRef = useRef<`0x${string}` | undefined>(undefined);
@@ -187,19 +196,24 @@ function ListForSaleControl({
   const busy = isPending || waitingApprove || listing || waitingList;
 
   const doList = useCallback(async () => {
-    if (priceWei === null) return;
+    const submission = submissionRef.current;
+    if (!submission) return;
     try {
+      submission.assertWalletUnchanged();
       await writeListAsync({
+        account: submission.account,
+        chainId: LITVM_CHAIN_ID,
         address: PIXEL_MARKETPLACE_ADDRESS,
         abi: MarketplaceAbi,
         functionName: "list",
-        args: [PIXEL_NFT_CONTRACT_ADDRESS, tokenId, priceWei],
+        args: [submission.collection, submission.tokenId, submission.price],
       });
-    } catch {
+    } catch (error) {
+      setSessionError(error instanceof Error ? error.message : "Unable to list this NFT");
       releaseAction(submitLockRef);
       // surfaced via listErr
     }
-  }, [priceWei, writeListAsync, tokenId]);
+  }, [writeListAsync]);
 
   useEffect(() => {
     if (approved && approveHash && price && !firedRef.current && !listing && !listHash && handledApprovalRef.current !== approveHash) {
@@ -210,16 +224,27 @@ function ListForSaleControl({
 
   const handleSubmit = async () => {
     firedRef.current = false;
-    if (!priceValid) return;
+    if (priceWei === null || disabled) return;
+    if (!isConnected || !address || chainId !== LITVM_CHAIN_ID) {
+      setSessionError("Connect your wallet on LitVM LiteForge before listing.");
+      return;
+    }
     if (!tryAcquireAction(submitLockRef)) return;
     try {
+      setSessionError("");
+      const assertWalletUnchanged = createWalletSessionGuard(walletConfig, address, LITVM_CHAIN_ID);
+      assertWalletUnchanged();
+      submissionRef.current = { account: address, collection, tokenId, price: priceWei, assertWalletUnchanged };
       await writeContractAsync({
-        address: PIXEL_NFT_CONTRACT_ADDRESS,
+        account: address,
+        chainId: LITVM_CHAIN_ID,
+        address: collection,
         abi: PixelNFTABI,
         functionName: "approve",
         args: [PIXEL_MARKETPLACE_ADDRESS, tokenId],
       });
-    } catch {
+    } catch (error) {
+      setSessionError(error instanceof Error ? error.message : "Unable to approve this NFT");
       releaseAction(submitLockRef);
       // surfaced via approveErr
     }
@@ -275,9 +300,9 @@ function ListForSaleControl({
           Approval tx ↗
         </a>
       ) : null}
-      {approveErr || listErr || approveReceiptErr || listReceiptErr || approveReceipt?.status === "reverted" || listReceipt?.status === "reverted" ? (
+      {sessionError || approveErr || listErr || approveReceiptErr || listReceiptErr || approveReceipt?.status === "reverted" || listReceipt?.status === "reverted" ? (
         <p className="text-xs text-red-300 break-all">
-          {(approveErr || listErr || approveReceiptErr || listReceiptErr)?.message ||
+          {sessionError || (approveErr || listErr || approveReceiptErr || listReceiptErr)?.message ||
             (approveReceipt?.status === "reverted"
               ? "Approval transaction reverted"
               : "Listing transaction reverted")}
@@ -296,9 +321,13 @@ function CancelListingControl({
   disabled: boolean;
   onSuccess: () => void;
 }) {
+  const { address, isConnected, chainId } = useAccount();
+  const walletConfig = useConfig();
+  const [sessionError, setSessionError] = useState("");
   const { writeContractAsync, isPending, data: txHash, error } =
     useWriteContract();
   const { data: receipt, isLoading: waiting, error: receiptError } = useWaitForTransactionReceipt({
+    chainId: LITVM_CHAIN_ID,
     hash: txHash,
   });
   const firedRef = useRef(false);
@@ -317,15 +346,24 @@ function CancelListingControl({
 
   const handleCancel = async () => {
     firedRef.current = false;
+    if (disabled || !isConnected || !address || chainId !== LITVM_CHAIN_ID) {
+      setSessionError("Connect your wallet on LitVM LiteForge before cancelling.");
+      return;
+    }
     if (!tryAcquireAction(cancelLockRef)) return;
     try {
+      setSessionError("");
+      createWalletSessionGuard(walletConfig, address, LITVM_CHAIN_ID)();
       await writeContractAsync({
+        account: address,
+        chainId: LITVM_CHAIN_ID,
         address: PIXEL_MARKETPLACE_ADDRESS,
         abi: MarketplaceAbi,
         functionName: "cancelListing",
         args: [listingId],
       });
-    } catch {
+    } catch (error) {
+      setSessionError(error instanceof Error ? error.message : "Unable to cancel this listing");
       releaseAction(cancelLockRef);
       // surfaced via error
     }
@@ -350,9 +388,9 @@ function CancelListingControl({
           "REMOVE LISTING"
         )}
       </button>
-      {error || receiptError || receipt?.status === "reverted" ? (
+      {sessionError || error || receiptError || receipt?.status === "reverted" ? (
         <p className="text-xs text-red-300 break-all">
-          {(error || receiptError)?.message || "Cancel transaction reverted"}
+          {sessionError || (error || receiptError)?.message || "Cancel transaction reverted"}
         </p>
       ) : null}
     </div>

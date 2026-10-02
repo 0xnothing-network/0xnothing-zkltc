@@ -1,0 +1,76 @@
+{
+  "passed": true,
+  "verifiedAt": "2026-10-01T22:44:18.190Z",
+  "block": "8213418",
+  "chainId": 6281971,
+  "contracts": {
+    "DogeosPixel": {
+      "address": "0x5f99636850e62d41e03b29ba53b5dc285d4ceab8",
+      "bytecodeMatches": true,
+      "abiMatches": true,
+      "runtimeBytes": 14883,
+      "codeHash": "0xcb5b12af77701b433fe555c6d63cf84a06053df0722ad1e3550c6abead486017",
+      "immutableRanges": []
+    },
+    "PixelMarket": {
+      "address": "0xc1f82f63ee635154e5655afe2fcba4a5e85b1e6b",
+      "bytecodeMatches": true,
+      "abiMatches": true,
+      "runtimeBytes": 5608,
+      "codeHash": "0x798b497686e9442bc2c326fcf1a5344015ef00de30d1669778447703c5db0143",
+      "immutableRanges": [
+        {
+          "start": 377,
+          "length": 32
+        },
+        {
+          "start": 1389,
+          "length": 32
+        },
+        {
+          "start": 1761,
+          "length": 32
+        },
+        {
+          "start": 2486,
+          "length": 32
+        },
+        {
+          "start": 3761,
+          "length": 32
+        },
+        {
+          "start": 4475,
+          "length": 32
+        },
+        {
+          "start": 4643,
+          "length": 32
+        },
+        {
+          "start": 4876,
+          "length": 32
+        },
+        {
+          "start": 5187,
+          "length": 32
+        },
+        {
+          "start": 3829,
+          "length": 32
+        },
+        {
+          "start": 5273,
+          "length": 32
+        }
+      ]
+    }
+  },
+  "accounting": {
+    "held": "0",
+    "escrow": "0",
+    "credits": "0",
+    "solvent": true
+  },
+  "signedTransactions": 0
+}

@@ -1,13 +1,13 @@
 import { type ReactNode } from "react";
 import { FALLBACK_TOKEN_LOGO } from "../../../config/assets";
 import { t } from "../../../core/i18n";
-import { loadPixelNfts } from "../../../core/services/nfts";
+import { loadPixelNfts, pixelNftKey } from "../../../core/services/nfts";
 import { Empty, Note } from "../../components/kit";
 import { useLiveRead } from "../../hooks/useLiveRead";
 import { useWallet } from "../../state/WalletContext";
 
 /**
- * The NFT tab: 0xPixel, the one collection on this chain. The artwork is built
+ * The NFT tab includes current and legacy 0xPixel collections. Artwork is built
  * from the on-chain pixel string, so a card is drawn without touching IPFS, a
  * metadata API or any host other than the RPC node.
  *
@@ -46,9 +46,9 @@ export function NftGrid(): ReactNode {
       <div className="w-nft-grid" aria-busy={read.busy}>
         {rows.map((nft) => (
           <a
-            key={nft.tokenId.toString()}
+            key={pixelNftKey(nft.collection, nft.tokenId)}
             className="w-nft"
-            href={`#/send?nft=${nft.tokenId.toString()}`}
+            href={`#/send?nft=${nft.tokenId.toString()}&collection=${nft.collection}`}
           >
             <img
               src={nft.image || FALLBACK_TOKEN_LOGO}
@@ -64,7 +64,7 @@ export function NftGrid(): ReactNode {
             <span className="w-nft-meta">
               <span className="w-nft-name">{nft.name}</span>
               <span className="w-nft-id">
-                #{nft.tokenId.toString()} · {nft.gridSize}×{nft.gridSize}
+                {nft.collectionName} #{nft.tokenId.toString()} · {nft.gridSize}×{nft.gridSize}
               </span>
             </span>
           </a>

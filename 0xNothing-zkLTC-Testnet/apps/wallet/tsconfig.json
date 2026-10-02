@@ -27,7 +27,6 @@
   "include": [
     "src",
     "tests",
-    "vite.config.ts",
-    "../../quantum-wallet/sdk/src"
+    "vite.config.ts"
   ]
 }

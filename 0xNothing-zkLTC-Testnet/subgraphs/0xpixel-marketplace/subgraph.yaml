@@ -28,6 +28,31 @@ dataSources:
         - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleTransfer
   - kind: ethereum
+    name: PixelNFTV2
+    network: liteforge
+    source:
+      address: "0xd83cb7acef921f98b6b983cbb712a583869da9eb"
+      abi: PixelNFT
+      startBlock: 56305414
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      file: ./src/mapping.ts
+      entities:
+        - Token
+        - Account
+        - TransferEvent
+        - MarketplaceStats
+      abis:
+        - name: PixelNFT
+          file: ./abis/PixelNFT.json
+      eventHandlers:
+        - event: Minted(indexed address,indexed uint256,string)
+          handler: handleMinted
+        - event: Transfer(indexed address,indexed address,indexed uint256)
+          handler: handleTransfer
+  - kind: ethereum
     name: Marketplace
     network: liteforge
     source:

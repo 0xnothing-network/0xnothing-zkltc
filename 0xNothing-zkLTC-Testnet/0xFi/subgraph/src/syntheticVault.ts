@@ -133,14 +133,15 @@ function refreshMarket(address: Address, timestamp: BigInt, includeGovernance: b
     market.debtCeilingSynthetic = ZERO_BI;
     market.mintPaused = true;
     market.withdrawPaused = true;
+    market.governanceReady = false;
     governance = true;
   }
   // The ceiling and both pause flags only move through DebtCeilingUpdated /
   // MintPauseUpdated / WithdrawPauseUpdated, so user actions skip those three reads.
-  // Both pauses still being true is the pessimistic default left by a reverted read,
-  // so retry rather than reporting the vault as paused forever. safetyReserve has no
-  // event of its own and stays on the per-action refresh.
-  if (market.mintPaused && market.withdrawPaused) governance = true;
+  // Track completion independently from pause values, so partial failures retry
+  // even when another flag was successfully unpaused. safetyReserve has no event
+  // of its own and stays on the per-action refresh.
+  if (!market.governanceReady) governance = true;
   const safetyReserve = contract.try_safetyReserve();
   const collateral = contract.try_totalCollateralNusd();
   const userCollateral = contract.try_totalUserCollateralNusd();
@@ -167,6 +168,7 @@ function refreshMarket(address: Address, timestamp: BigInt, includeGovernance: b
     if (!ceiling.reverted) market.debtCeilingSynthetic = ceiling.value;
     if (!mintPaused.reverted) market.mintPaused = mintPaused.value;
     if (!withdrawPaused.reverted) market.withdrawPaused = withdrawPaused.value;
+    market.governanceReady = !ceiling.reverted && !mintPaused.reverted && !withdrawPaused.reverted;
   }
   market.updatedAt = timestamp;
   market.save();

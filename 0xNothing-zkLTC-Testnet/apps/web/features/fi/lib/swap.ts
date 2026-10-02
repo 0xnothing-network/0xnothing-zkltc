@@ -127,32 +127,6 @@ export function computeExecutionImpactBps({
   return (spotOutput - amountOut) * 10_000n / spotOutput;
 }
 
-/** Import-field copy. The tone drives the field's `data-state` styling only. */
-export function importedTokenStatus(
-  value: string,
-  detected: SwapAsset | undefined,
-  imported: ImportedSwapAsset,
-): { message: string; tone: string } {
-  if (!value.trim()) return { message: "Paste a token address to import it.", tone: "neutral" };
-  if (imported.status === "invalid" || imported.status === "unsupported" || imported.status === "unavailable") {
-    return { message: imported.error ?? "Token could not be recognized.", tone: "danger" };
-  }
-  if (imported.status === "loading") return { message: "Checking Explorer…", tone: "neutral" };
-  if (imported.status !== "ready" || !detected) return { message: "Checking token…", tone: "neutral" };
-  if (imported.metadataSource === "explorer") {
-    return { message: `${detected.symbol} · Explorer verified`, tone: "positive" };
-  }
-  const explorerCopy = imported.explorerStatus === "not-indexed"
-    ? "Explorer not indexed"
-    : imported.explorerStatus === "unavailable"
-      ? "Explorer unavailable"
-      : "Explorer metadata invalid";
-  return {
-    message: `${detected.symbol} · On-chain metadata · ${explorerCopy}`,
-    tone: "positive",
-  };
-}
-
 /** Every NUSD-bridged shape reads the same to the user, oracle leg or pool hop. */
 function routesThroughNusd(kind: SwapRouteKind): boolean {
   return kind === "via-nusd" || kind === "oracle-mint" || kind === "oracle-redeem";

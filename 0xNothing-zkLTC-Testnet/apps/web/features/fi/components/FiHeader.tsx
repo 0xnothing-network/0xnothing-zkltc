@@ -45,6 +45,7 @@ const NAV_ITEMS = [
   { href: "/lend", label: "Lend", icon: PiggyBank },
   { href: "/borrow", label: "Borrow", icon: HandCoins },
   { href: "/synth", label: "Synth", icon: Vault },
+  { href: "/rwa", label: "RWA", icon: Coins },
 ] as const;
 
 function activePath(pathname: string, href: string): boolean {

@@ -28,12 +28,20 @@ export const CONTRACTS = {
   nusdOracleAdapter: "0x3579B31e3241DE60F5F9462B3E0d759F346a49c8",
   diaLtcFeed: "0x45dDa5d881BD2C917976CCfde74fFd6f6412da29",
   pumpFactory: "0x4a0Eaf310e3659aA9B360fD44e90208c31Dbe0e2",
-  pixelNft: "0x33A32b9b2BEe864f9e42BFa39cA7BDC72f655988",
+  pixelNft: "0xd83cb7acef921f98b6b983cbb712a583869da9eb",
+  pixelLegacyNft: "0x33A32b9b2BEe864f9e42BFa39cA7BDC72f655988",
   pixelMarketplace: "0x13337cadA78d53C90E3c0EcE44C17c467C1a86F4",
 } as const satisfies Record<string, Address>;
 
 /** First block of the 0xFi deployment — the floor for any log scan. */
 export const FI_DEPLOYMENT_BLOCK = 35_303_686n;
-export const PIXEL_START_BLOCK = 24_867_130n;
+export const PIXEL_START_BLOCK = 56_305_414n;
+export const PIXEL_LEGACY_START_BLOCK = 24_867_130n;
+
+/** NFT identity always includes its collection: both collections start at #1. */
+export const PIXEL_COLLECTIONS = [
+  { address: CONTRACTS.pixelNft, name: "0xPixel V2", startBlock: PIXEL_START_BLOCK },
+  { address: CONTRACTS.pixelLegacyNft, name: "0xPixel", startBlock: PIXEL_LEGACY_START_BLOCK },
+].filter((collection) => !/^0x0{40}$/iu.test(collection.address));
 
 export const IPFS_GATEWAY_URL = "https://dweb.link/ipfs/";

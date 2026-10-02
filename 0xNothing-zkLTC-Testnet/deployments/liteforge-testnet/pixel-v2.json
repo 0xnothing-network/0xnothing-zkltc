@@ -1,0 +1,46 @@
+{
+  "chainId": 4441,
+  "deployer": "0x58633401dCc383F010688e950878000000000000",
+  "transactionHash": "0xc305351d7bbe4395b821a67a7299e468bdcc3365d0d5b749b1d090568fa91758",
+  "sourceSha256": "9cb5dcba80183ae9f3783ceca6b6c66ab75dfce4d52d083e85dd425bb0cb2d31",
+  "runtimeHash": "0xeb4bc952af1c2c7bff86da9f96ba104860b3d6a6f91b96af0efc573bc2c4579a",
+  "creationHash": "0x47f1f12c08b14f80a7042f578b75e1f21a006057d0eb82d17be81aeb3c6f364c",
+  "submittedAt": "2026-09-30T17:17:09.063Z",
+  "status": "deployed",
+  "address": "0xd83cb7acef921f98b6b983cbb712a583869da9eb",
+  "startBlock": "56305414",
+  "gasUsed": "3670354",
+  "effectiveGasPrice": "272499000",
+  "deploymentCostZkLTC": "0.001000167794646",
+  "verifiedRuntime": true,
+  "capabilities": {
+    "version": "2",
+    "maxGrid": "256",
+    "maxRuns": "4096",
+    "metadata": true,
+    "royalty": true,
+    "name": "0xPixel"
+  },
+  "smoke": {
+    "transactionHash": "0xb373aa7038d2d34e0e2e0064e058c8adb0877b0c15a3dd8103606ef60ee23c7f",
+    "status": "verified",
+    "tokenId": "1",
+    "owner": "0x58633401dCc383F010688e950878000000000000",
+    "startBlock": "56305427",
+    "gasUsed": "8598531",
+    "effectiveGasPrice": "274240000",
+    "mintCostZkLTC": "0.00235806114144",
+    "metadataBytes": 321873,
+    "svgBytes": 180634,
+    "gridSize": 256,
+    "runCount": 4096,
+    "description": "Bản kiểm chứng 256×256 với 4.096 đoạn màu: hình ảnh và mô tả lưu hoàn toàn on-chain."
+  },
+  "sourceVerification": {
+    "status": "pending-explorer-indexing",
+    "indexedBlocks": 46935036,
+    "indexedBlocksRatio": "0.83",
+    "message": "Explorer does not recognize the new address yet; Etherscan-compatible and V2 standard-input verification rejected it as not indexed. Runtime is independently verified against the compiled artifact via chain4441 RPC.",
+    "standardInput": "output/pixel-v2-2026-10-01/standard-input.json"
+  }
+}

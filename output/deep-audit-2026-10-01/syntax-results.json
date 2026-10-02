@@ -1,0 +1,557 @@
+[
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/check-rwa-markets.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/generate-rwa-abi.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/tests/gaugeSchedule.test.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/tests/marketRefresh.test.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/contracts/scripts/deploy-pixel-v2.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/deployments/liteforge-testnet/pixel-v2-smoke-metadata.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/deployments/liteforge-testnet/pixel-v2.abi.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/deployments/liteforge-testnet/pixel-v2.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/shared/rwa/markets.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Mainnet/config/networks/zkltc-mainnet.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Mainnet/deployments/zkltc-mainnet/deployments.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/package-lock.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/package.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/scripts/check-deploy-ready.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/scripts/config.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/scripts/configure.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/subgraph.config.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/tsconfig.json",
+    "check": "jsonc-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/config/liteforge-testnet.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/deployments/direct-governance.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/deployments/guard-removal.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/deployments/latest.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/deployments/lending-fixed-rate.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/deployments/lending-v2.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/deployments/predicted.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/deployments/synth-safety-reserve.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/package-lock.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/package.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/activate-all.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/activate-graduation-automation.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/activate-lending-fixed-rate.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/activate-synth-safety-reserve.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/activate.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/audit-live.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/bootstrap-canonical-liquidity.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/check-scripts.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/configure-lending-collateral.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/deploy-graduation-controller.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/deploy-nusd-points.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/deploy.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/direct-governance.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/finalize-direct-governance.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/finalize-lending-fixed-rate.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/finalize-synth-safety-reserve.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/graduation-keeper.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/lib/graduation-keeper-policy.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/lib/graduation-runtime.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/lib/lending-implementation.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/lib/main-pump-publication.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/lib/preflight-topology.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/lib/private-key.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/lib/public-environment.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/lib/rpc.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/lib/spawn-step.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/migrate-lending-fixed-rate.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/migrate-synth-safety-reserve.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/preflight.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/prepare-graduation.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/test/operations.test.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/package.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/scripts/check-deploy-ready.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/scripts/check-live-indexer.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/scripts/configure.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/subgraph.config.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/tsconfig.json",
+    "check": "jsonc-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/wallet/package-lock.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/wallet/package.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/wallet/public/_locales/de/messages.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/wallet/public/_locales/en/messages.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/wallet/public/_locales/es/messages.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/wallet/public/_locales/fr/messages.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/wallet/public/_locales/ja/messages.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/wallet/public/_locales/ko/messages.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/wallet/public/_locales/ru/messages.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/wallet/public/_locales/vi/messages.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/wallet/public/_locales/zh_CN/messages.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/wallet/public/manifest.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/wallet/public/theme-boot.js",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/wallet/scripts/build-all.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/wallet/scripts/build-inject.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/wallet/scripts/generate-icons.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/wallet/tsconfig.json",
+    "check": "jsonc-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/web/eslint.config.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/web/features/fi/config/testnet.generated.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/web/package-lock.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/web/package.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/web/postcss.config.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/web/tsconfig.json",
+    "check": "jsonc-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/apps/web/vercel.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/config/networks/liteforge-testnet.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/deployments/liteforge-testnet/deployments.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpixel-marketplace/package-lock.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpixel-marketplace/package.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpixel-marketplace/tests/mapping.test.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/package-lock.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/package.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/scripts/check-deploy-ready.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/scripts/config.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/scripts/configure.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/subgraph.config.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/tsconfig.json",
+    "check": "jsonc-parse",
+    "ok": true
+  },
+  {
+    "file": "package-lock.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "package.json",
+    "check": "json-parse",
+    "ok": true
+  },
+  {
+    "file": "scripts/check-pump-subgraph-parity.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "scripts/clean-generated.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "scripts/lib/evm-rpc.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "scripts/lib/generated-cleanup.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "scripts/lib/http-json.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "scripts/lib/pump-subgraph-parity.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "scripts/lib/subgraph-manifest.mjs",
+    "check": "node-syntax",
+    "ok": true
+  },
+  {
+    "file": "scripts/test/tooling.test.mjs",
+    "check": "node-syntax",
+    "ok": true
+  }
+]

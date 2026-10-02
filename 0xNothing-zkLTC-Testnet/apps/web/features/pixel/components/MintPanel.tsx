@@ -3,6 +3,7 @@
 import { memo, useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   useAccount,
+  useConfig,
   useSendTransaction,
   useWaitForTransactionReceipt,
   useReadContract,
@@ -10,15 +11,18 @@ import {
   useSwitchChain,
 } from "wagmi";
 import { decodeEventLog, encodeFunctionData } from "viem";
-import { publicClient, PIXEL_NFT_CONTRACT_ADDRESS, getMarketplaceTxUrl } from "@/lib/contract";
-import { PixelNFTABI } from "@/lib/abi";
+import { publicClient, getMarketplaceTxUrl } from "@/lib/contract";
+import { PixelV2ABI } from "@/lib/pixelV2Abi";
+import { pixelDataToV2PackedBytes } from "@/lib/pixelV2";
+import { PIXEL_MINT_ADDRESS, PIXEL_V2_ENABLED, pixelUtf8Bytes } from "@/lib/pixelCollections";
 import { PixelButton } from "@/features/pixel/components/PixelButton";
-import { pixelDataToPNG, pixelDataToPackedBytes } from "@/lib/gridParser";
+import { pixelDataToPNG } from "@/lib/gridParser";
 import { useToast } from "@/components/Toast";
 import { normalizeError } from "@/lib/errors";
 import { LITVM_CHAIN_ID } from "@/lib/chainSwitch";
 import { PixelLoadingIndicator } from "@/components/PageLoader";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
+import { createWalletSessionGuard } from "@/lib/walletSession";
 
 interface MintPanelProps {
   pixelData: string[][];
@@ -38,8 +42,9 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
   const [mounted, setMounted] = useState(false);
 
   const { address, isConnected, chainId } = useAccount();
+  const walletConfig = useConfig();
   const { switchChain } = useSwitchChain();
-  const wcClient = usePublicClient();
+  const wcClient = usePublicClient({ chainId: LITVM_CHAIN_ID });
   const { sendTransactionAsync } = useSendTransaction();
   const toast = useToast();
 
@@ -50,7 +55,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
   // where the chain changes between mount and submit.
 
   const { data: mintReceipt, error: mintReceiptError, isLoading: isConfirming } =
-    useWaitForTransactionReceipt({ hash: txHash ?? undefined });
+    useWaitForTransactionReceipt({ chainId: LITVM_CHAIN_ID, hash: txHash ?? undefined });
 
   const firedRef = useRef(false);
   const mintLockRef = useRef(false);
@@ -75,6 +80,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
 
   const [previewBase64, setPreviewBase64] = useState("");
   const [debouncedPackedBytes, setDebouncedPackedBytes] = useState<`0x${string}`>("0x");
+  const [encodingError, setEncodingError] = useState("");
 
   // PNG encoding and byte packing are deferred until the current stroke is idle.
   useEffect(() => {
@@ -82,6 +88,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     if (!hasDrawing) {
       setPreviewBase64("");
+      setEncodingError("");
       setDebouncedPackedBytes("0x");
       return;
     }
@@ -90,21 +97,27 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
     const snapshot = pixelData;
     debounceTimerRef.current = setTimeout(() => {
       setPreviewBase64(pixelDataToPNG(snapshot, gridSize));
-      setDebouncedPackedBytes(pixelDataToPackedBytes(snapshot, gridSize));
-      preparedPixelDataRef.current = snapshot;
+      try {
+        setDebouncedPackedBytes(pixelDataToV2PackedBytes(snapshot, gridSize));
+        setEncodingError("");
+        preparedPixelDataRef.current = snapshot;
+      } catch (error) {
+        setEncodingError(error instanceof Error ? error.message : "Unable to encode artwork");
+      }
     }, DEBOUNCE_MS);
   }, [gridSize, hasDrawing, pixelData]);
 
   const { data: isOriginal, isError: originalCheckFailed, refetch: retryOriginalCheck } = useReadContract({
-    address: PIXEL_NFT_CONTRACT_ADDRESS,
-    abi: PixelNFTABI,
-    functionName: "checkOriginal",
+    chainId: LITVM_CHAIN_ID,
+    address: PIXEL_MINT_ADDRESS,
+    abi: PixelV2ABI,
+    functionName: "checkOriginalPacked",
     args: [debouncedPackedBytes, BigInt(gridSize)],
     query: {
-      enabled: debouncedPackedBytes !== "0x",
+      enabled: PIXEL_V2_ENABLED && debouncedPackedBytes !== "0x",
     },
   });
-  const isCheckingOriginal = hasDrawing && (
+  const isCheckingOriginal = PIXEL_V2_ENABLED && !encodingError && hasDrawing && (
     debouncedPackedBytes === "0x" || isCanvasUpdating || (isOriginal === undefined && !originalCheckFailed)
   );
 
@@ -127,9 +140,10 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
       try {
         let tokenId: bigint | null = null;
         for (const log of mintReceipt.logs) {
+          if (log.address.toLowerCase() !== PIXEL_MINT_ADDRESS.toLowerCase()) continue;
           try {
             const decoded = decodeEventLog({
-              abi: PixelNFTABI,
+              abi: PixelV2ABI,
               data: log.data,
               topics: log.topics,
             });
@@ -181,7 +195,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
       toast.warning("Connect your wallet", "Click CONNECT WALLET in the top-right to begin.");
       return;
     }
-    if (chainId && chainId !== LITVM_CHAIN_ID) {
+    if (chainId !== LITVM_CHAIN_ID) {
       toast.show({
         title: "Wrong Network",
         description: "Please switch to LitVM to mint",
@@ -189,6 +203,14 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
         duration: 3000,
       });
       switchChain?.({ chainId: LITVM_CHAIN_ID });
+      return;
+    }
+    if (!PIXEL_V2_ENABLED) {
+      toast.info("Mint unavailable", "The new pixel collection is being prepared.");
+      return;
+    }
+    if (encodingError || pixelUtf8Bytes(name.trim()) > 64 || pixelUtf8Bytes(description) > 1024) {
+      toast.warning("Check your artwork", encodingError || "Name must fit 64 UTF-8 bytes and description 1,024 UTF-8 bytes.");
       return;
     }
     if (!name.trim()) {
@@ -219,22 +241,24 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
     if (toastIdsRef.current.submitted) toast.dismiss(toastIdsRef.current.submitted);
 
     try {
+      const assertWalletUnchanged = createWalletSessionGuard(walletConfig, address, LITVM_CHAIN_ID);
+      assertWalletUnchanged();
       const packedPixelBytes = debouncedPackedBytes;
 
       const data = encodeFunctionData({
-        abi: PixelNFTABI,
-        functionName: "mint",
-        args: [name.trim(), BigInt(gridSize), packedPixelBytes],
+        abi: PixelV2ABI,
+        functionName: "mintPacked",
+        args: [name.trim(), description, BigInt(gridSize), packedPixelBytes],
       });
 
       const client = wcClient ?? publicClient;
       const [estimatedGas, latestBlock] = await Promise.all([
         client.estimateContractGas({
           account: address,
-          address: PIXEL_NFT_CONTRACT_ADDRESS,
-          abi: PixelNFTABI,
-          functionName: "mint",
-          args: [name.trim(), BigInt(gridSize), packedPixelBytes],
+          address: PIXEL_MINT_ADDRESS,
+          abi: PixelV2ABI,
+          functionName: "mintPacked",
+          args: [name.trim(), description, BigInt(gridSize), packedPixelBytes],
         }),
         client.getBlock(),
       ]);
@@ -244,8 +268,11 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
         throw new Error("Artwork is too complex to mint within the current block gas limit");
       }
 
+      assertWalletUnchanged();
       const hash = await sendTransactionAsync({
-        to: PIXEL_NFT_CONTRACT_ADDRESS,
+        account: address,
+        chainId: LITVM_CHAIN_ID,
+        to: PIXEL_MINT_ADDRESS,
         value: 0n,
         data,
         gas: gasLimit,
@@ -277,6 +304,8 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
     isConnected,
     address,
     name,
+    description,
+    encodingError,
     hasDrawing,
     isOriginal,
     gridSize,
@@ -288,9 +317,14 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
     toast,
     chainId,
     switchChain,
+    walletConfig,
   ]);
 
   const canMint =
+    PIXEL_V2_ENABLED &&
+    !encodingError &&
+    pixelUtf8Bytes(name.trim()) <= 64 &&
+    pixelUtf8Bytes(description) <= 1024 &&
     !isLoading &&
     !isConfirming &&
     !isCanvasUpdating &&
@@ -299,10 +333,10 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
     debouncedPackedBytes !== "0x" &&
     isOriginal === true;
 
+  const runCount = Math.max(0, debouncedPackedBytes.length - 2) / 12;
   const gridByteSize = useMemo(() => {
-    const pixels = gridSize * gridSize;
-    return ((pixels * 7) / 1024).toFixed(1);
-  }, [gridSize]);
+    return (Math.max(0, debouncedPackedBytes.length - 2) / 2 / 1024).toFixed(1);
+  }, [debouncedPackedBytes]);
 
   if (!mounted) {
     return (
@@ -412,6 +446,9 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
           </div>
         </div>
 
+        <p className="text-[11px] text-[#94A3B8]">{runCount.toLocaleString()}/4,096 color runs · fully on-chain</p>
+        {encodingError ? <p className="text-xs text-red-300" role="alert">{encodingError}</p> : null}
+        {pixelUtf8Bytes(name.trim()) > 64 || pixelUtf8Bytes(description) > 1024 ? <p className="text-xs text-red-300" role="alert">Name: {pixelUtf8Bytes(name.trim())}/64 UTF-8 bytes · Description: {pixelUtf8Bytes(description)}/1024 UTF-8 bytes</p> : null}
         <div className="h-px bg-[#2D2D44]" />
 
         {!isConnected ? (
@@ -437,9 +474,9 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
               <input
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value.slice(0, 32))}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="Artwork name"
-                maxLength={32}
+                maxLength={64}
                 className="w-full bg-[#1A1A2E] border border-[#2D2D44] rounded-xl px-3.5 py-3 sm:py-2.5 text-white placeholder-[#374151] focus:outline-none focus:border-indigo-500/50 transition-all text-sm"
                 style={{ fontFamily: "var(--font-departure)" }}
               />
@@ -448,15 +485,16 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
             <div>
               <textarea
                 value={description}
-                onChange={(e) => setDescription(e.target.value.slice(0, 256))}
-                placeholder="Description (optional, not stored on-chain)"
-                maxLength={256}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Description (stored on-chain)"
+                maxLength={1024}
                 rows={2}
                 className="w-full bg-[#1A1A2E] border border-[#2D2D44] rounded-xl px-3.5 py-3 sm:py-2.5 text-white placeholder-[#374151] focus:outline-none focus:border-indigo-500/50 transition-all resize-none text-sm"
                 style={{ fontFamily: "var(--font-departure)" }}
               />
             </div>
 
+            <p className="text-[11px] text-[#94A3B8]">Name: {pixelUtf8Bytes(name.trim())}/64 UTF-8 bytes · Description: {pixelUtf8Bytes(description)}/1,024 UTF-8 bytes</p>
             <PixelButton
               variant="indigo"
               onClick={originalCheckFailed ? () => { void retryOriginalCheck(); } : handleMint}

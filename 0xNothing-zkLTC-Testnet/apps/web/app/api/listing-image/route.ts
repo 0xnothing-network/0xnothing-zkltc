@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { PixelNFTABI } from "@/lib/abi";
-import { PIXEL_NFT_CONTRACT_ADDRESS, publicClient } from "@/lib/contract";
+import { publicClient } from "@/lib/contract";
 import { getPixelImageUrl } from "@/lib/pixelImage";
+import { resolvePixelCollection } from "@/lib/pixelCollections";
 import { normalizeUint256TokenId } from "@/lib/tokenId";
 import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
@@ -10,6 +11,8 @@ export const revalidate = 60;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  const collection = resolvePixelCollection(searchParams.get("collection"));
+  if (!collection) return NextResponse.json({ error: "Unsupported collection" }, { status: 400 });
   const raw = searchParams.get("tokenId");
   const tokenId = raw ? normalizeUint256TokenId(raw) : undefined;
   if (!tokenId) {
@@ -18,12 +21,12 @@ export async function GET(request: Request) {
   let imageUrl = "";
   try {
     const tokenData = await publicClient.readContract({
-      address: PIXEL_NFT_CONTRACT_ADDRESS,
+      address: collection,
       abi: PixelNFTABI,
       functionName: "tokenData",
       args: [BigInt(tokenId)],
     }) as readonly [string, bigint, string, `0x${string}`, bigint, string];
-    if (tokenData[2]) imageUrl = getPixelImageUrl(tokenId);
+    if (tokenData[2]) imageUrl = getPixelImageUrl(tokenId, collection);
   } catch {
     // Preserve the legacy endpoint contract for missing token IDs.
   }

@@ -1,0 +1,64 @@
+{
+  "checks": [
+    {
+      "name": "discovery has a shared 20-provider cap including injected fallback",
+      "passed": true,
+      "durationMs": 1496
+    },
+    {
+      "name": "blank/oversized provider identities and names are rejected",
+      "passed": true,
+      "durationMs": 628
+    },
+    {
+      "name": "different UUIDs for the same provider do not create duplicate choices",
+      "passed": true,
+      "durationMs": 604
+    },
+    {
+      "name": "the first valid provider retains a duplicated UUID",
+      "passed": true,
+      "durationMs": 630
+    },
+    {
+      "name": "network switch accepts its own genuine chainChanged notification",
+      "passed": true,
+      "durationMs": 803
+    },
+    {
+      "name": "disconnect cancels the add-chain continuation of a pending switch",
+      "passed": true,
+      "durationMs": 826
+    },
+    {
+      "name": "account changes cancel interactive continuations from the previous account",
+      "passed": true,
+      "durationMs": 895
+    },
+    {
+      "name": "reconnecting the same provider cannot revive its previous switch operation",
+      "passed": true,
+      "durationMs": 999
+    },
+    {
+      "name": "replacing the provider cannot revive the previous switch operation",
+      "passed": true,
+      "durationMs": 1310
+    },
+    {
+      "name": "disconnect during chain addition prevents the subsequent switch request",
+      "passed": true,
+      "durationMs": 1004
+    },
+    {
+      "name": "disconnect unlocks other wallets even if its initial account request never settles",
+      "passed": true,
+      "durationMs": 1498
+    }
+  ],
+  "errors": [],
+  "signedTransactions": 0,
+  "startedAt": "2026-10-02T00:17:11.451Z",
+  "passed": true,
+  "finishedAt": "2026-10-02T00:17:22.212Z"
+}

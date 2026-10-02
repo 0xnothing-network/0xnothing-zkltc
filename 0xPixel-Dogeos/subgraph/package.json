@@ -1,0 +1,30 @@
+{
+  "name": "dogeos-pixel-subgraph",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "prepare:manifest": "node ../scripts/subgraph-manifest.mjs",
+    "codegen": "graph codegen",
+    "build": "npm run prepare:manifest && graph codegen && graph build",
+    "create:local": "graph create --node http://127.0.0.1:8020 dogeos-pixel",
+    "deploy:local": "graph deploy --node http://127.0.0.1:8020 --ipfs http://127.0.0.1:5001 --version-label v1.0.0 dogeos-pixel"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-ts": "0.38.2"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "0.98.1"
+  },
+  "overrides": {
+    "@graphprotocol/graph-cli": {
+      "glob": "11.1.0",
+      "yaml": "2.9.1",
+      "js-yaml": "4.3.2",
+      "undici": "7.30.0",
+      "immutable": "5.1.9",
+      "gluegun": "5.2.2",
+      "decompress": "npm:@xhmikosr/decompress@11.1.4",
+      "jayson": "5.0.0"
+    }
+  }
+}

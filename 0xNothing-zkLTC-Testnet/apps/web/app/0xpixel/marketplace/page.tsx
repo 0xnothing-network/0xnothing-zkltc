@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { useAccount, usePublicClient, useSwitchChain, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useConfig, usePublicClient, useSwitchChain, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { formatEther } from "viem";
 import {
   PIXEL_MARKETPLACE_ADDRESS,
@@ -16,6 +16,7 @@ import { useToast } from "@/components/Toast";
 import { LITVM_CHAIN_ID } from "@/lib/chainSwitch";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { fetchJson } from "@/lib/http";
+import { createWalletSessionGuard } from "@/lib/walletSession";
 
 type SortKey = "newest" | "price-asc" | "price-desc";
 type ActivityFilter = "all" | "sold" | "minted" | "listed" | "cancelled";
@@ -42,6 +43,7 @@ interface ListingsResponse {
 }
 
 interface MarketActivityEvent {
+  collection?: `0x${string}`;
   id: string;
   listingId: string;
   tokenId: string;
@@ -57,12 +59,13 @@ interface MarketActivityEvent {
 
 interface ActivityResponse {
   events: MarketActivityEvent[];
+  partialHistory?: boolean;
   error?: string;
 }
 
 const PAGE_SIZE = 20;
 const ACTIVITY_PAGE_SIZE = 24;
-const LISTINGS_CACHE_KEY = "0xpixel-marketplace-listings-v1";
+const LISTINGS_CACHE_KEY = "0xpixel-marketplace-listings-v2";
 const LISTINGS_FRESH_FOR_MS = 5_000;
 const LISTINGS_SESSION_MAX_AGE_MS = 5 * 60_000;
 
@@ -445,6 +448,7 @@ function MarketplaceActivity({ refreshKey = 0 }: { refreshKey?: number }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [partialHistory, setPartialHistory] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const loadedCountRef = useRef(0);
   const loadMoreLockRef = useRef(false);
@@ -482,6 +486,7 @@ function MarketplaceActivity({ refreshKey = 0 }: { refreshKey?: number }) {
       });
       if (ctrl.signal.aborted || abortRef.current !== ctrl) return;
       setError(null);
+      setPartialHistory(body.partialHistory === true);
 
       setEvents((prev) => {
         if (skip > 0) return appendUniqueEvents(prev, body.events);
@@ -586,6 +591,11 @@ function MarketplaceActivity({ refreshKey = 0 }: { refreshKey?: number }) {
         </div>
       </div>
 
+      {partialHistory && !error ? (
+        <p className="border-t border-[#2D2D44] px-4 py-3 text-xs text-[#94A3B8]" role="status">
+          Recent activity is available. Earlier activity is still loading.
+        </p>
+      ) : null}
       {error ? (
         <div className="p-5 text-center">
           <p className="text-sm text-red-300" style={{ fontFamily: "var(--font-departure)" }}>
@@ -639,7 +649,7 @@ function ActivityRow({ event }: { event: MarketActivityEvent }) {
   return (
     <article className="marketplace-activity-row grid grid-cols-[44px_minmax(0,1fr)] gap-3 p-3 sm:grid-cols-[56px_minmax(0,1fr)_auto] sm:items-center sm:gap-4 sm:p-4">
       <a
-        href={getTokenExplorerUrl(PIXEL_NFT_CONTRACT_ADDRESS, event.tokenId)}
+        href={getTokenExplorerUrl(event.collection ?? PIXEL_NFT_CONTRACT_ADDRESS, event.tokenId)}
         target="_blank"
         rel="noopener noreferrer"
         className="h-11 w-11 overflow-hidden rounded-lg border border-[#2D2D44] bg-[#0F0F23] sm:h-14 sm:w-14"
@@ -667,7 +677,7 @@ function ActivityRow({ event }: { event: MarketActivityEvent }) {
             {label}
           </span>
           <a
-            href={getTokenExplorerUrl(PIXEL_NFT_CONTRACT_ADDRESS, event.tokenId)}
+            href={getTokenExplorerUrl(event.collection ?? PIXEL_NFT_CONTRACT_ADDRESS, event.tokenId)}
             target="_blank"
             rel="noopener noreferrer"
             className="min-w-0 truncate text-sm font-bold text-white transition-colors hover:text-[#AAAADD] sm:text-base"
@@ -755,8 +765,9 @@ function ListingCard({
   const toast = useToast();
   const [busy, setBusy] = useState<"buy" | "cancel" | null>(null);
   const { address, isConnected, chainId } = useAccount();
+  const walletConfig = useConfig();
   const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
-  const publicClient = usePublicClient();
+  const publicClient = usePublicClient({ chainId: LITVM_CHAIN_ID });
   const handledTxRef = useRef<`0x${string}` | null>(null);
   const actionLockRef = useRef(false);
 
@@ -771,7 +782,7 @@ function ListingCard({
     isLoading: isConfirming,
     isSuccess: isConfirmed,
   } =
-    useWaitForTransactionReceipt({ hash: txHash });
+    useWaitForTransactionReceipt({ chainId: LITVM_CHAIN_ID, hash: txHash });
 
   useEffect(() => {
     if (!isConfirmed || !txHash || !receipt || handledTxRef.current === txHash) return;
@@ -809,7 +820,7 @@ function ListingCard({
       toast.warning("Connect wallet", "Connect your wallet before buying.");
       return;
     }
-    if (chainId && chainId !== LITVM_CHAIN_ID) {
+    if (chainId !== LITVM_CHAIN_ID) {
       toast.info("Wrong network", "Switching to LitVM...");
       switchChain?.({ chainId: LITVM_CHAIN_ID });
       return;
@@ -822,6 +833,8 @@ function ListingCard({
 
     try {
       setBusy("buy");
+      const assertWalletUnchanged = createWalletSessionGuard(walletConfig, address, LITVM_CHAIN_ID);
+      assertWalletUnchanged();
       const currentListing = await publicClient.readContract({
         address: PIXEL_MARKETPLACE_ADDRESS,
         abi: MarketplaceAbi,
@@ -860,7 +873,10 @@ function ListingCard({
         value: currentPrice,
       });
 
+      assertWalletUnchanged();
       const hash = await writeContractAsync({
+        account: address,
+        chainId: LITVM_CHAIN_ID,
         address: PIXEL_MARKETPLACE_ADDRESS,
         abi: MarketplaceAbi,
         functionName: "buy",
@@ -889,13 +905,26 @@ function ListingCard({
     switchChain,
     toast,
     writeContractAsync,
+    walletConfig,
   ]);
 
   const handleCancel = useCallback(async () => {
+    if (!isConnected || !address) {
+      toast.warning("Connect wallet", "Connect your wallet before cancelling.");
+      return;
+    }
+    if (chainId !== LITVM_CHAIN_ID) {
+      toast.info("Wrong network", "Switching to LitVM...");
+      switchChain?.({ chainId: LITVM_CHAIN_ID });
+      return;
+    }
     if (!tryAcquireAction(actionLockRef)) return;
     try {
       setBusy("cancel");
+      createWalletSessionGuard(walletConfig, address, LITVM_CHAIN_ID)();
       const hash = await writeContractAsync({
+        account: address,
+        chainId: LITVM_CHAIN_ID,
         address: PIXEL_MARKETPLACE_ADDRESS,
         abi: MarketplaceAbi,
         functionName: "cancelListing",
@@ -912,7 +941,7 @@ function ListingCard({
       releaseAction(actionLockRef);
       setBusy(null);
     }
-  }, [listing.listingId, writeContractAsync, toast]);
+  }, [address, chainId, isConnected, listing.listingId, switchChain, walletConfig, writeContractAsync, toast]);
 
   return (
     <div className="bg-[#1A1A2E] rounded-xl sm:rounded-2xl border border-[#2D2D44] overflow-hidden hover:border-[#8888ff]/40 transition-all hover:shadow-lg hover:shadow-[#8888ff]/10">

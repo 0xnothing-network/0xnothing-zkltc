@@ -11,7 +11,7 @@ import { t } from "../i18n";
 import { persistentStore } from "../platform/storage";
 import { STORAGE_KEYS } from "../platform/storageKeys";
 import { withNamedLock } from "../platform/locks";
-import { activeNetwork, publicClient } from "../rpc/client";
+import { activeNetwork, publicClient, publicClientFor } from "../rpc/client";
 
 /**
  * The asset list: the built-ins plus whatever the user imported by address.
@@ -129,7 +129,7 @@ export async function listTokens(network: WalletNetwork = activeNetwork): Promis
   return [
     ...(network.builtin ? BUILTIN_TOKENS : [nativeTokenFor(network)]),
     ...stored
-      .filter((entry) => !BUILTIN_IDS.has(entry.address.toLowerCase()))
+      .filter((entry) => !network.builtin || !BUILTIN_IDS.has(entry.address.toLowerCase()))
       .filter((entry) => (entry.networkId ?? LITVM_NETWORK.id) === network.id)
       .map((entry) => customToken(entry)),
   ];
@@ -206,7 +206,7 @@ async function readOne<T>(run: () => Promise<T>): Promise<T | undefined> {
 export async function lookupToken(
   address: string,
   network: WalletNetwork = activeNetwork,
-  client: typeof publicClient = publicClient,
+  client: typeof publicClient = publicClientFor(network),
 ): Promise<TokenMetadata> {
   const trimmed = address.trim();
   if (!isAddress(trimmed)) throw new Error(t("err.badAddress"));
@@ -243,7 +243,7 @@ export async function addCustomToken(
   if (!isAddress(trimmed)) throw new Error(t("err.badAddress"));
   const token = trimmed as Address;
   const id = token.toLowerCase();
-  if (BUILTIN_IDS.has(id)) throw new Error(t("err.tokenBuiltin"));
+  if (network.builtin && BUILTIN_IDS.has(id)) throw new Error(t("err.tokenBuiltin"));
   const meta = await lookupToken(token, network);
   return withNamedLock(TOKENS_LOCK, async () => {
     const stored = await readStored();

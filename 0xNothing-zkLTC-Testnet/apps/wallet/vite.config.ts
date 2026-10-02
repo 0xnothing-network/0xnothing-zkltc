@@ -12,7 +12,7 @@ const pkg = JSON.parse(
  *
  * The service worker is emitted as ESM because MV3 allows
  * `"background": { "type": "module" }`; the dapp-facing content/inpage scripts
- * cannot be ESM, so they are built separately as IIFE by vite.config.inject.ts.
+ * cannot be ESM, so they are built separately as IIFE by scripts/build-inject.mjs.
  *
  * No @vitejs/plugin-react on purpose: Vite's built-in JSX transform (Oxc as of
  * Vite 8) covers everything this app needs and keeps the dependency surface of a
@@ -27,10 +27,6 @@ export default defineConfig({
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
-    // The 0xQuantum SDK lives at ../../quantum-wallet/sdk and resolves viem
-    // through its own node_modules junction (apps/web). Dedupe forces every
-    // `viem` import — wallet code and SDK alike — onto this app's single copy.
-    dedupe: ["viem"],
   },
   // Stated rather than inherited from tsconfig.json: the bundle's JSX runtime is
   // not something to leave to whichever tsconfig the transform happens to find.

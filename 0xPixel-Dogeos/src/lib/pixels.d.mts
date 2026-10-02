@@ -1,0 +1,13 @@
+export const PALETTE: string[];
+export const GRID_SIZES: readonly number[];
+export type PixelDocument={name:string;description:string;grid:number;cells:(string|null)[]};
+export function encodePixels(cells:(string|null)[],grid:number):`0x${string}`;
+export function decodePixels(hex:string,grid:number):(string|null)[];
+export function pixelSVG(hex:string,grid:number):string;
+export function floodFill(cells:(string|null)[],grid:number,x:number,y:number,color:string|null):(string|null)[];
+export function linePoints(x0:number,y0:number,x1:number,y1:number):number[][];
+export function template(kind:string,grid?:number):(string|null)[];
+export function pixelStats(cells:(string|null)[],grid:number):{painted:number;runs:number};
+export function pixelDocument(cells:(string|null)[],grid:number,name?:string,description?:string):{version:2;name:string;description:string;grid:number;pixels:`0x${string}`}|{version:3;name:string;description:string;grid:number;cells:(string|null)[]};
+export function parsePixelDocument(value:unknown):PixelDocument;
+export function imageDimensions(bytes:Uint8Array,type:string):{width:number;height:number};

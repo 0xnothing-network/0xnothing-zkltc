@@ -35,16 +35,19 @@ test("originality is only advertised after a successful check and failures offer
       },
       "react/jsx-runtime": { jsx, jsxs: jsx },
       wagmi: {
+        useConfig: () => ({}),
         useAccount: () => ({ address: "0xtest", isConnected: true, chainId: 4441 }),
         useSendTransaction: () => ({}), useWaitForTransactionReceipt: () => ({}),
         useReadContract: () => ({ ...check, refetch: () => { retries++; } }),
         usePublicClient: () => ({}), useSwitchChain: () => ({}),
       },
-      viem: {}, "@/lib/contract": {}, "@/lib/abi": {},
+      viem: {}, "@/lib/contract": {}, "@/lib/pixelV2Abi": {},
+      "@/lib/pixelV2": {},
+      "@/lib/pixelCollections": { PIXEL_V2_ENABLED: true, pixelUtf8Bytes: (value: string) => new TextEncoder().encode(value).length },
       "@/features/pixel/components/PixelButton": { PixelButton: "pixel-button" },
       "@/lib/gridParser": {}, "@/components/Toast": { useToast: () => ({}) },
       "@/lib/errors": {}, "@/lib/chainSwitch": { LITVM_CHAIN_ID: 4441 },
-      "@/components/PageLoader": {}, "@/lib/actionLock": {},
+      "@/components/PageLoader": {}, "@/lib/actionLock": {}, "@/lib/walletSession": {},
     },
   );
   const render = () => { stateIndex = 0; return MintPanel({ pixelData: [["#ffffff"]], gridSize: 1, onMintSuccess() {} }); };
@@ -70,7 +73,7 @@ test("rejecting a listing after approval never opens another wallet request auto
   let attempts = 0;
   const refs: { current: unknown }[] = [];
   let effects: (() => unknown)[] = [];
-  let approvalHash = "0xapproval1";
+  let approvalHash: string | undefined;
   const { OwnedNftCard } = evaluateModule<{ OwnedNftCard: (props: Record<string, unknown>) => Element }>(
     new URL("../../features/pixel/components/OwnedNftCard.tsx", import.meta.url),
     {
@@ -85,15 +88,18 @@ test("rejecting a listing after approval never opens another wallet request auto
       "react/jsx-runtime": { jsx, jsxs: jsx },
       "next/link": {},
       wagmi: {
+        useConfig: () => ({}), useAccount: () => ({ address: "0xtest", isConnected: true, chainId: 4441 }),
         useWriteContract: () => writeIndex++ === 0
           ? { data: approvalHash, writeContractAsync: async () => approvalHash }
           : { isPending: false, writeContractAsync: async () => { attempts++; throw new Error("User rejected"); } },
         useWaitForTransactionReceipt: ({ hash }: { hash?: string }) => ({ data: hash ? { status: "success" } : undefined }),
       },
       viem: { parseEther: () => 1n, formatEther: () => "1" },
-      "@/lib/contract": { getExplorerUrl: () => "", getMarketplaceTxUrl: () => "" },
+      "@/lib/contract": { getTokenExplorerUrl: () => "", getMarketplaceTxUrl: () => "" },
       "@/lib/abi": {},
       "@/lib/marketplaceAbi": {},
+      "@/lib/chainSwitch": { LITVM_CHAIN_ID: 4441 },
+      "@/lib/walletSession": { createWalletSessionGuard: () => () => {} },
       "@/lib/actionLock": { releaseAction: (ref: { current: boolean }) => { ref.current = false; }, tryAcquireAction: () => true },
     },
   );
@@ -101,12 +107,17 @@ test("rejecting a listing after approval never opens another wallet request auto
   const control = find(tree, (element) => typeof element.type === "function" && "onPriceChange" in element.props)!;
   assert.ok(control);
   firstRender = false;
-  const render = async () => {
+  const render = async (submit = false) => {
     writeIndex = 0; refIndex = 0; effects = [];
-    (control.type as (props: Record<string, unknown>) => Element)({ ...control.props, price: "1" });
+    const element = (control.type as (props: Record<string, unknown>) => Element)({ ...control.props, price: "1" });
+    if (submit) {
+      await (find(element, (value) => value.type === "button" && value.props.children !== "CANCEL")!.props.onClick as () => Promise<void>)();
+    }
     for (const effect of effects) effect();
     await Promise.resolve();
   };
+  await render(true);
+  approvalHash = "0xapproval1";
   await render();
   await render();
   await render();

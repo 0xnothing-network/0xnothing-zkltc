@@ -147,6 +147,7 @@ type SyntheticMarket @entity(immutable: false) {
   debtCeilingSynthetic: BigInt!
   mintPaused: Boolean!
   withdrawPaused: Boolean!
+  governanceReady: Boolean!
   updatedAt: BigInt!
   actions: [SyntheticAction!]! @derivedFrom(field: "market")
 }
@@ -190,6 +191,7 @@ type LendingMarket @entity(immutable: false) {
   supplyPaused: Boolean!
   borrowPaused: Boolean!
   collateralWithdrawalPaused: Boolean!
+  governanceReady: Boolean!
   updatedAt: BigInt!
   actions: [LendingAction!]! @derivedFrom(field: "market")
 }

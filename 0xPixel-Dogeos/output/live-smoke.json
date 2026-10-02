@@ -1,0 +1,195 @@
+{
+  "passed": true,
+  "network": "DogeOS Chikyū Testnet",
+  "chainId": 6281971,
+  "contracts": {
+    "nft": "0x5f99636850e62d41e03b29ba53b5dc285d4ceab8",
+    "market": "0xc1f82f63ee635154e5655afe2fcba4a5e85b1e6b"
+  },
+  "testBuyer": "0xd40D564AcC61f908d9C593ADc6F98e0B1c67B7c1",
+  "checked": [
+    "Minted",
+    "CollectionCreated",
+    "TokenCollectionChanged",
+    "Listed",
+    "Sold",
+    "OfferMade",
+    "OfferAccepted",
+    "OfferCancelled",
+    "Withdrawn"
+  ],
+  "royaltyAndFeeVerified": true,
+  "secondaryOwnerCollectionVerified": true,
+  "supply": 6,
+  "activeListings": 6,
+  "refundHash": "0x29575a3f1ff517e92876dab3a48ef65d9a1ca62ecedaad41950f831ebfa44ff7",
+  "testBuyerReserveDOGE": "0.106660032644112463",
+  "accounting": {
+    "held": "0",
+    "escrow": "0",
+    "credits": "0"
+  },
+  "transactions": [
+    {
+      "type": "Minted",
+      "hash": "0xd2aa71aaadd3ab38c3217f041f4e42391dadec81c6ce7b406e135b96db5b5d14",
+      "block": 8204932
+    },
+    {
+      "type": "Minted",
+      "hash": "0xef934a538ea0a3ca75251034c26ebf91713e4a68fda1297077e2925fd19da13a",
+      "block": 8204934
+    },
+    {
+      "type": "Minted",
+      "hash": "0x19d42aa3ec89e2cbc607f877ae86bdb585e4d6bc2209787c17cef9a3cee31c6a",
+      "block": 8204936
+    },
+    {
+      "type": "Minted",
+      "hash": "0x90288a226943fe7afeccd5740a881581b8bdbc12fbf78310c1e9ddb9714b0a7c",
+      "block": 8204938
+    },
+    {
+      "type": "Minted",
+      "hash": "0x1c2ecadaffb562ac7b5ccaadcd86ae84d53daef865e953f625587e3bd3c43e33",
+      "block": 8204940
+    },
+    {
+      "type": "Minted",
+      "hash": "0x311106f6374de6e325d4e3c06804baaac3c8366fd5ba5d8f2ed5f9150e69968c",
+      "block": 8204942
+    },
+    {
+      "type": "CollectionCreated",
+      "hash": "0xa41b68c927301ebc36bfc871571427b33eb6cc8ea24222c7ccaa33c02e35cc7d",
+      "block": 8204944
+    },
+    {
+      "type": "TokenCollectionChanged",
+      "hash": "0x5d098fef5c8ab1b0fd59ff4a0ed16b0ee792dc1485353b83b44800bba2fa6868",
+      "block": 8204946
+    },
+    {
+      "type": "TokenCollectionChanged",
+      "hash": "0x240fed3211b463eff15402b7cb971c44fbe27f345ab0fc499d53eee5e96e2957",
+      "block": 8204948
+    },
+    {
+      "type": "TokenCollectionChanged",
+      "hash": "0x0ea529a94c76e76125216d4d28ff5e756ff64ebe65a698363e4616f6d385bee4",
+      "block": 8204950
+    },
+    {
+      "type": "TokenCollectionChanged",
+      "hash": "0x9fc2d85414cb4c6f80a5a63c64aa3b8a835f18bee1a305ef063ff79d1a7535ea",
+      "block": 8204952
+    },
+    {
+      "type": "TokenCollectionChanged",
+      "hash": "0x1e3f9dc431a024bfa37abdc114a96ddd40d8c881f53fa64dd7b79bd720ba6921",
+      "block": 8204954
+    },
+    {
+      "type": "TokenCollectionChanged",
+      "hash": "0xb1f3dee0b0a76b7e073e3e1a91e3962c1c86e2b0790d1b44a69c645ddbd35067",
+      "block": 8204956
+    },
+    {
+      "type": "Listed",
+      "hash": "0x279bcf220e22dc396a7eac33f0b72bc9a7cf27ace3033f5ba1fd3e4f09ae4a2b",
+      "block": 8204961
+    },
+    {
+      "type": "Listed",
+      "hash": "0x12d8f547a6bfc466ac107ff7f57cdf51cd8717b116a927306ce2d546cd429e31",
+      "block": 8205015
+    },
+    {
+      "type": "Sold",
+      "hash": "0x0b07d7e810769bcf7124cd241b7bf80c6dfae3feb13c6d46c831f5fae8bccf51",
+      "block": 8205017
+    },
+    {
+      "type": "CollectionCreated",
+      "hash": "0xff3ca53cbe0c51c6345505f67ef46a6c99dbb6318932014ec16982bb7855d465",
+      "block": 8205019
+    },
+    {
+      "type": "TokenCollectionChanged",
+      "hash": "0x1530b442a3c4bff6ee2650d36615d4babba195e16b858e8cce76f69ccb464bd4",
+      "block": 8205021
+    },
+    {
+      "type": "Listed",
+      "hash": "0x6270dc5eab7fbfb561d12d89b119545968252b1bfb5b55d2ab43f62c436dc702",
+      "block": 8205025
+    },
+    {
+      "type": "OfferMade",
+      "hash": "0xa9947ff4b0344d516b80685810f51ac273d261a6ad2e4ba24404875b7ba76e81",
+      "block": 8205026
+    },
+    {
+      "type": "OfferAccepted",
+      "hash": "0x8671f7962f352fbd07a97d1567112c3fa946c04b38861ba8714dc1bbb6dbfc95",
+      "block": 8205028
+    },
+    {
+      "type": "TokenCollectionChanged",
+      "hash": "0xb5ebd822476dcc801c09c67508d77e2fc2f8cb8d30e87f0bb3756148146ce1b2",
+      "block": 8205030
+    },
+    {
+      "type": "OfferMade",
+      "hash": "0x9681b5023f54b5f9fadc7cbf0bc0e0a50f96c3d2c39c2cdd206759424a7ee235",
+      "block": 8205032
+    },
+    {
+      "type": "OfferCancelled",
+      "hash": "0xa43f327ddaf9579edef19de899264357516655d85e4c65e344f5f116d4614dbd",
+      "block": 8205034
+    },
+    {
+      "type": "Withdrawn",
+      "hash": "0x4062ccfdf100cb8cc980ee407cd7d86871b83afce3ab330298ae065f61eb8386",
+      "block": 8205036
+    },
+    {
+      "type": "Withdrawn",
+      "hash": "0xffa4f65774d9e8b6d050dabcc7f40e37e9449f529ee5fb9cbe8b7f98a7bcc9e2",
+      "block": 8205038
+    },
+    {
+      "type": "Listed",
+      "hash": "0x9282f3b5ac4b9120173eb9e3f20fadbcbba60a41b41cb79e3b4822f8766c4b70",
+      "block": 8205042
+    },
+    {
+      "type": "Listed",
+      "hash": "0xf26a84752eab7f80018ff338df423e11eb99032ee8d914bad9dfe74f31d09e7d",
+      "block": 8205045
+    },
+    {
+      "type": "Listed",
+      "hash": "0x9fb57f0ecd565175dcb91c271318a700b5be47995857ec4bfe6864b65e71b1c4",
+      "block": 8205049
+    },
+    {
+      "type": "Listed",
+      "hash": "0x38ce41e8f985b6de6d502fdfbfdc1748f779d4f6de30475cf4e96b2cc8610390",
+      "block": 8205053
+    },
+    {
+      "type": "Listed",
+      "hash": "0xf871dd92de35660cbd5b03d38e77c447815fb4c0af2e8e40e30fa85446852e55",
+      "block": 8205056
+    },
+    {
+      "type": "Listed",
+      "hash": "0xab80e49ccb94796ef663eff9a598d9358f09ed1f4529482a8011612e7ca4e941",
+      "block": 8205060
+    }
+  ],
+  "finished": "2026-10-01T15:50:10.075Z"
+}

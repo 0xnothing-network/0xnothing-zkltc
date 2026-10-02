@@ -53,9 +53,16 @@ export function formatRateWad(rateWad: bigint, digits = 2): string {
 
 /** Returns null instead of throwing: every caller is a text input. */
 export function parseAmount(input: string, decimals: number): bigint | null {
-  const cleaned = input.trim().replace(/,/gu, "");
-  if (cleaned.length === 0) return null;
-  if (!/^\d*(\.\d*)?$/u.test(cleaned)) return null;
+  if (!Number.isInteger(decimals) || decimals < 0 || decimals > 36) return null;
+  const trimmed = input.trim();
+  // Keep valid copied thousands grouping, but never turn "1,2" into "12".
+  if (trimmed.includes(",") && !/^\d{1,3}(?:,\d{3})+(?:\.\d*)?$/u.test(trimmed)) return null;
+  const cleaned = trimmed.replace(/,/gu, "");
+  if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/u.test(cleaned)) return null;
+  // viem rounds excess decimal places. A wallet must preserve the entered
+  // quantity exactly; trailing zeros are the only safe excess precision.
+  const fraction = cleaned.split(".")[1]?.replace(/0+$/u, "") ?? "";
+  if (fraction.length > decimals) return null;
   try {
     const value = parseUnits(cleaned as `${number}`, decimals);
     return value < 0n ? null : value;

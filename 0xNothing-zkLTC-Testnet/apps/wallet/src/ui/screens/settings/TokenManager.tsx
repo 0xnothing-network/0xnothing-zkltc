@@ -27,7 +27,7 @@ export function TokenManager(): ReactNode {
   const custom = tokens.filter((token) => !token.builtin);
   const preview = useLiveRead(
     valid ? () => lookupToken(trimmed, network) : null,
-    [trimmed, valid, network.id],
+    [trimmed, valid, network.id, network.rpcUrl],
     {
       live: false,
     },
@@ -45,7 +45,7 @@ export function TokenManager(): ReactNode {
     setBusy("add");
     setError(null);
     try {
-      await addCustomToken(candidate);
+      await addCustomToken(candidate, network);
       setInput("");
       await reload();
       setAdding(false);
@@ -63,7 +63,7 @@ export function TokenManager(): ReactNode {
     setBusy(id);
     setError(null);
     try {
-      await removeCustomToken(id);
+      await removeCustomToken(id, network);
       await reload();
     } catch (cause) {
       setError(describeError(cause));

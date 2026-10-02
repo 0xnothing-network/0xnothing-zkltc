@@ -30,7 +30,7 @@ test("replacing an activity request clears load-more and ignores the cancelled r
     "react/jsx-runtime": { jsx, jsxs: jsx },
     wagmi: { useAccount: () => ({}) }, viem: {}, "@/lib/contract": {},
     "@/lib/marketplaceAbi": {}, "@/features/pixel/components/Skeleton": {},
-    "@/components/Toast": {}, "@/lib/chainSwitch": {}, "@/lib/actionLock": {},
+    "@/components/Toast": {}, "@/lib/chainSwitch": {}, "@/lib/actionLock": {}, "@/lib/walletSession": {},
     "@/lib/http": { fetchJson: (_url: string, options: { signal: AbortSignal }) => new Promise((resolve) => {
       requests.push({ signal: options.signal, resolve: async (response) => resolve(await (response as Response).json()) });
     }) },
@@ -47,9 +47,10 @@ test("replacing an activity request clears load-more and ignores the cancelled r
   const fresh = fetchActivity(0);
   assert.equal(requests[0].signal.aborted, true);
   assert.equal(states[3], false, "the replacement owns and resets the loading indicator");
-  requests[1].resolve({ ok: true, json: async () => ({ events: [{ id: "fresh" }] }) });
+  requests[1].resolve({ ok: true, json: async () => ({ events: [{ id: "fresh" }], partialHistory: true }) });
   await fresh;
   requests[0].resolve({ ok: true, json: async () => ({ events: [{ id: "cancelled" }] }) });
   await old;
   assert.deepEqual(JSON.parse(JSON.stringify(states[1])), [{ id: "fresh" }]);
+  assert.equal(states[6], true, "partial-history status must survive a current API response");
 });

@@ -1,11 +1,14 @@
 import { type Address, createPublicClient, createWalletClient, http } from "viem";
+import { toAccount } from "viem/accounts";
 import {
   LITVM_NETWORK,
   networkIdentity,
+  resolveNetwork,
   type WalletNetwork,
   viemChainFor,
 } from "../../config/networks";
-import { signerFor } from "../keyring/vault";
+import { t } from "../i18n";
+import { isUnlocked, readAccounts, readSettings, signerFor, WalletLockedError } from "../keyring/vault";
 
 /**
  * Signing retains the existing retry window. Live reads use a shorter budget
@@ -50,10 +53,42 @@ export function publicClientFor(network: WalletNetwork) {
     : clientFor(network);
 }
 
-/** A signing client for one account. Built per use; nothing is cached. */
-export async function walletClientFor(address: Address, network: WalletNetwork = activeNetwork) {
+/** A signing client holds public metadata only, even while RPC preparation waits. */
+export async function walletClientFor(
+  address: Address,
+  network: WalletNetwork = activeNetwork,
+  assertReady?: () => Promise<void>,
+) {
+  const expectedNetwork = networkIdentity(network);
+  async function signingAccount() {
+    const signer = await signerFor(address);
+    await assertReady?.();
+    const [state, settings] = await Promise.all([readAccounts(), readSettings()]);
+    if (!(await isUnlocked())) throw new WalletLockedError();
+    if (networkIdentity(activeNetwork) !== expectedNetwork
+      || networkIdentity(resolveNetwork(settings.networkId, settings.customNetworks)) !== expectedNetwork
+      || (state.active ?? state.accounts[0]?.address)?.toLowerCase() !== address.toLowerCase()) {
+      throw new Error(t("err.quoteStale"));
+    }
+    return signer;
+  }
+  // Fail early if this action is already stale, then resolve a fresh key for
+  // each signature after viem has finished nonce, gas and fee preparation.
+  await signingAccount();
+  const account = toAccount({
+    address,
+    sign: async (params) => (await signingAccount()).sign(params),
+    signAuthorization: async (params) => {
+      const signer = await signingAccount();
+      if (!signer.signAuthorization) throw new Error("Account does not support authorization signing");
+      return signer.signAuthorization(params);
+    },
+    signMessage: async (params) => (await signingAccount()).signMessage(params),
+    signTransaction: async (transaction, options) => (await signingAccount()).signTransaction(transaction, options),
+    signTypedData: async (params) => (await signingAccount()).signTypedData(params),
+  });
   return createWalletClient({
-    account: await signerFor(address),
+    account,
     chain: viemChainFor(network),
     transport: transportFor(network),
   });

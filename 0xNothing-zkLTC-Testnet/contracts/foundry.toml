@@ -5,6 +5,8 @@ script = "script"
 out = "out"
 cache_path = "cache"
 libs = ["lib"]
+remappings = ["@openzeppelin/contracts/=../0xFi/contracts/lib/openzeppelin-contracts/contracts/"]
+allow_paths = ["../0xFi/contracts/lib/openzeppelin-contracts/contracts"]
 solc_version = "0.8.34"
 evm_version = "paris"
 optimizer = true

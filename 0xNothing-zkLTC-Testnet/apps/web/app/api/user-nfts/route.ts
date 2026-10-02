@@ -14,6 +14,7 @@ import {
 } from "@/lib/marketplaceSubgraph";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { publicErrorMessage } from "@/lib/server/publicError";
+import { PIXEL_COLLECTIONS } from "@/lib/pixelCollections";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ const nftCache = createBoundedCache<NativeNft[]>({
 });
 
 export interface NativeNft {
+  collection: `0x${string}`;
   tokenId: string;
   name: string;
   imageUrl: string;
@@ -47,11 +49,17 @@ async function fetchNativeNfts(address: string, force = false): Promise<NativeNf
 }
 
 async function loadNativeNfts(address: string, fresh: boolean): Promise<NativeNft[]> {
-  if (hasMarketplaceSubgraph()) {
+  const inventories = await Promise.all(PIXEL_COLLECTIONS.map((entry) => loadCollectionNfts(address, fresh, entry.address)));
+  return inventories.flat();
+}
+
+async function loadCollectionNfts(address: string, fresh: boolean, collection: `0x${string}`): Promise<NativeNft[]> {
+  // The existing published index covers V1. V2 must read RPC until a new index is published.
+  if (collection.toLowerCase() === PIXEL_NFT_CONTRACT_ADDRESS.toLowerCase() && hasMarketplaceSubgraph()) {
     try {
       const payload = await fetchUserNftsFromSubgraph(address, 5_000, fresh);
       if (await isSubgraphFresh(payload)) {
-        return payload.tokens;
+        return payload.tokens.map((token) => ({ ...token, collection }));
       }
       console.warn(
         `[user-nfts] subgraph is stale at block ${payload.indexedBlock ?? "unknown"}; using RPC`
@@ -62,7 +70,7 @@ async function loadNativeNfts(address: string, fresh: boolean): Promise<NativeNf
   }
 
   // Get token IDs first
-  const tokenIds = await getUserTokenIds(address);
+  const tokenIds = await getUserTokenIds(address, collection);
   if (tokenIds.length === 0) {
     return [];
   }
@@ -72,7 +80,7 @@ async function loadNativeNfts(address: string, fresh: boolean): Promise<NativeNf
     publicClient.multicall({
       allowFailure: true,
       contracts: tokenIds.map((tokenId) => ({
-        address: PIXEL_NFT_CONTRACT_ADDRESS,
+        address: collection,
         abi: PixelNFTABI,
         functionName: "tokenData" as const,
         args: [tokenId] as const,
@@ -85,7 +93,7 @@ async function loadNativeNfts(address: string, fresh: boolean): Promise<NativeNf
         address: PIXEL_MARKETPLACE_ADDRESS,
         abi: MarketplaceAbi,
         functionName: "getListingByToken" as const,
-        args: [PIXEL_NFT_CONTRACT_ADDRESS, n] as const,
+        args: [collection, n] as const,
       })),
     }),
   ]);
@@ -115,10 +123,11 @@ async function loadNativeNfts(address: string, fresh: boolean): Promise<NativeNf
     }
 
     return {
+      collection,
       tokenId: tokenId.toString(),
       name: data?.[0] ?? "Untitled",
       imageUrl: data?.[2] && data?.[1]
-        ? getPixelImageUrl(tokenId)
+        ? getPixelImageUrl(tokenId, collection)
         : "",
       listing,
     };

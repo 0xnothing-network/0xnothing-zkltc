@@ -21,6 +21,7 @@ import {
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const PIXEL_COLLECTION = Address.fromString('0x33A32b9b2BEe864f9e42BFa39cA7BDC72f655988');
+const PIXEL_V2_COLLECTION = Address.fromString('0xd83cb7acef921f98b6b983cbb712a583869da9eb');
 const STATS_ID = 'global';
 const ZERO_BI = BigInt.fromI32(0);
 const ONE_BI = BigInt.fromI32(1);
@@ -131,7 +132,8 @@ function getOrCreateToken(
 }
 
 function hydrateTokenData(token: Token): void {
-  if (!token.collection.equals(PIXEL_COLLECTION)) return;
+  const isV2 = token.collection.equals(PIXEL_V2_COLLECTION);
+  if (!token.collection.equals(PIXEL_COLLECTION) && !isV2) return;
 
   // PixelNFT writes _tokenData[id] once inside mint() and never mutates it, so the
   // eth_call only has to run the first time a token is seen. Transfers and listings
@@ -139,9 +141,9 @@ function hydrateTokenData(token: Token): void {
   // dominates indexing latency. A null/empty pixelData still retries, so a token first
   // observed while the call reverted is backfilled by its next event.
   const pixelData = token.pixelData;
-  if (pixelData !== null && pixelData.length > 0) return;
+  if (pixelData !== null && pixelData.length > 0 && (!isV2 || token.description !== null)) return;
 
-  const contract = PixelNFT.bind(PIXEL_COLLECTION);
+  const contract = PixelNFT.bind(Address.fromBytes(token.collection));
   const result = contract.try_tokenData(token.tokenId);
   if (result.reverted) return;
 
@@ -154,6 +156,10 @@ function hydrateTokenData(token: Token): void {
   token.creator = data.getCreator();
   token.creatorAccount = accountId(data.getCreator());
   token.artworkHash = data.getArtworkHash();
+  if (isV2) {
+    const packedResult = contract.try_tokenPackedData(token.tokenId);
+    if (!packedResult.reverted) token.description = packedResult.value.getDescription();
+  }
 }
 
 function closeActiveListingForToken(token: Token, timestamp: BigInt): void {

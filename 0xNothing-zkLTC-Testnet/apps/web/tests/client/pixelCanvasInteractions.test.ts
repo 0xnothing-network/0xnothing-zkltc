@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { pixelCellSize } from "../../lib/pixelV2.ts";
 import { evaluateModule } from "../helpers/evaluateModule.ts";
 
 type Element = { type: string | ((props: Record<string, unknown>) => Element); props: Record<string, unknown> };
@@ -29,6 +30,7 @@ test("symmetry hover preview matches painted cells for every brush size, includi
               useState: (initial: unknown) => [[1, { x: 0, y: 0 }, "pencil", brushSize, symmetry, 0][stateIndex++] ?? initial, () => {}],
             },
             "react/jsx-runtime": { jsx, jsxs: jsx },
+            "@/lib/pixelV2": { pixelCellSize },
             "@/lib/gridParser": {}, "@/components/Toast": { useToast: () => ({}) },
           },
           { requestAnimationFrame: (fn: () => void) => { frames.push(fn); return frames.length; }, cancelAnimationFrame() {} },
@@ -78,6 +80,7 @@ test("copy-grid export keeps the menu usable on clipboard failure and closes onl
           },
         },
         "react/jsx-runtime": { jsx, jsxs: jsx },
+        "@/lib/pixelV2": { pixelCellSize },
         "@/lib/gridParser": { pixelDataToJSON: () => "grid-data" },
         "@/components/Toast": { useToast: () => ({ error: (title: string) => errors.push(title) }) },
       },

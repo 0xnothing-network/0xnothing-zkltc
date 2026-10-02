@@ -1,3 +1,4 @@
+import { PIXEL_V2_ENABLED } from "@/lib/pixelCollections";
 import { NextResponse } from "next/server";
 import {
   fetchMarketplaceActivityFromSubgraph,
@@ -13,7 +14,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type ActivityPayload = { events: SubgraphMarketEventDTO[] };
+type ActivityPayload = { events: SubgraphMarketEventDTO[]; partialHistory?: boolean };
 
 const ACTIVITY_TTL = 3_000;
 const ACTIVITY_CACHE_MAX_ENTRIES = 256;
@@ -70,7 +71,7 @@ async function loadMarketplaceActivity(
   eventTypes: SubgraphMarketEventType[],
   fresh: boolean,
 ): Promise<ActivityPayload> {
-  if (hasMarketplaceSubgraph()) {
+  if (!PIXEL_V2_ENABLED && hasMarketplaceSubgraph()) {
     try {
       const payload = await fetchMarketplaceActivityFromSubgraph({
         limit,

@@ -1,0 +1,62 @@
+{
+  "passed": true,
+  "verifiedAt": "2026-10-02T00:14:30.169Z",
+  "endpoint": "https://api.goldsky.com/api/public/project_cmupqw08z0f4301vmcyh60xs9/subgraphs/dogeos-pixel/prod/gn",
+  "website": "http://localhost:3300/DOGEOSxPIXEL/",
+  "meta": {
+    "block": {
+      "number": 8215220,
+      "hash": "0x4a727e27188f9885c0f005c3336c816bfadf02c1366ecb8805eee10be1015d36"
+    },
+    "hasIndexingErrors": false
+  },
+  "websiteIndexedBlock": 8215220,
+  "stats": {
+    "minted": "6",
+    "collections": "2",
+    "sales": "2",
+    "volume": "30000000000000000",
+    "royalties": "300000000000000",
+    "fees": "300000000000000"
+  },
+  "samples": {
+    "pixels": 6,
+    "collections": 2,
+    "listings": 9,
+    "offers": 2,
+    "sales": 2,
+    "accounts": 2,
+    "activities": 40
+  },
+  "filters": [
+    {
+      "filter": "owner",
+      "returned": 6,
+      "total": 6,
+      "source": "subgraph"
+    },
+    {
+      "filter": "search",
+      "returned": 1,
+      "total": 1,
+      "source": "subgraph"
+    },
+    {
+      "filter": "listed",
+      "returned": 6,
+      "total": 6,
+      "source": "subgraph"
+    },
+    {
+      "filter": "collection",
+      "returned": 6,
+      "total": 6,
+      "source": "subgraph"
+    }
+  ],
+  "checks": [
+    "Healthy index, minted and collection counts, discovery, metadata, owners, membership, and active listings match chain-validated website data.",
+    "Collection metadata and counts, sale totals, positive offer amounts, and nonnegative account credits are consistent.",
+    "Owner, name search, listed, and available collection filters use Goldsky and match its results."
+  ]
+}

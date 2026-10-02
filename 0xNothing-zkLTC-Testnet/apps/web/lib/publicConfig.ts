@@ -7,6 +7,9 @@ export const LITVM_EXPLORER_URL = "https://liteforge.explorer.caldera.xyz" as co
 export const MULTICALL3_ADDRESS: Address = "0xca11bde05977b3631167028862be2a173976ca11";
 
 export const PIXEL_NFT_ADDRESS: Address = "0x33A32b9b2BEe864f9e42BFa39cA7BDC72f655988";
+/** Promoted only after the V2 deployment receipt and code are verified. */
+export const PIXEL_V2_NFT_ADDRESS: Address = "0xd83cb7acef921f98b6b983cbb712a583869da9eb";
+export const PIXEL_V2_START_BLOCK = 56_305_414n;
 export const PIXEL_MARKETPLACE_ADDRESS: Address = "0x13337cadA78d53C90E3c0EcE44C17c467C1a86F4";
 
 export const PIXEL_START_BLOCK = 24_867_130n;

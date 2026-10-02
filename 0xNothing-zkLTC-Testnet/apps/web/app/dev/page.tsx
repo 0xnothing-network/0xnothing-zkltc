@@ -40,6 +40,7 @@ import { STEADY_LIVE_MS } from "@/lib/liveData";
 import { jitteredPollInterval } from "@/lib/pollJitter";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { ConnectWalletButton } from "@fi/components/ConnectWalletButton";
+import { RwaDashboard } from "@fi/components/RwaDashboard";
 import { parseAmount } from "@fi/lib/format";
 import { PointsAdminPanel } from "./PointsAdminPanel";
 import styles from "./dev.module.css";
@@ -454,6 +455,11 @@ export default function DevPage() {
               <p>Pump, 0xFi and Pixel each enforce their own authorization rules. Confirm the destination, recipient and chain in the wallet before signing.</p>
             </div>
           </div>
+        </section>
+
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}><div><span className={styles.eyebrow}>RWA</span><h2>Trading reserves</h2></div></div>
+          <RwaDashboard admin />
         </section>
 
         <section className={styles.section}>

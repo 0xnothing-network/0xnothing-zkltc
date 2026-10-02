@@ -80,6 +80,13 @@ test("marketplace uses verified RPC metadata when indexed metadata has no image"
         },
       },
       "@/lib/marketplaceAbi": { MarketplaceAbi: [], marketplaceNftKey: (address: string, tokenId: string) => `${address}:${tokenId}` },
+      "@/lib/pixelCollections": {
+        PIXEL_COLLECTIONS: [{ address: collection, version: 1 }],
+        PIXEL_V2_ENABLED: false,
+        isPixelCollection: (address: string) => address === collection,
+        isPixelV2Collection: () => false,
+        pixelTokenKey: (address: string, tokenId: string) => `${address}:${tokenId}`,
+      },
       "@/lib/abi": { PixelNFTABI: [] },
       "@/lib/pixelImage": { getPixelImageUrl: (tokenId: string) => `/api/pixel-image?tokenId=${tokenId}` },
       "@/lib/marketplaceSubgraph": {

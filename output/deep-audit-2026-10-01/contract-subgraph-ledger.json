@@ -1,0 +1,1464 @@
+{
+  "scope": "contracts-subgraphs",
+  "graftSavedTokens": 194411,
+  "productionSolidityChanged": false,
+  "mainnetNonPixelSourceHashMatches": 18,
+  "limits": "This ledger distinguishes bounded manual definition review from API-only and automated-only coverage. No claim that all 133 owned source files were fully manually read in this bounded pass. Existing invariant handlers do not cover every oracle/governance/malicious-token path.",
+  "checks": [
+    "Fi subgraph 22/22 regression tests, codegen and build passed",
+    "All fuzz tests: Testnet6/Mainnet4/Fi8, each2048runs passed",
+    "Existing strengthened invariants: Testnet6+Fi11, each256runs x128depth passed"
+  ],
+  "newTestFiles": [
+    "0xNothing-zkLTC-Testnet/0xFi/subgraph/tests/marketRefresh.test.mjs",
+    "0xNothing-zkLTC-Testnet/0xFi/subgraph/tests/gaugeSchedule.test.mjs"
+  ],
+  "files": [
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/script/DeployRwaMarket.s.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/rwa/RwaMarket.sol",
+      "category": "source",
+      "review": "manual-bounded-review",
+      "notes": "deep manual: constructor, quote, buy/sell, exact transfers, floor/fee/daily limit; L16-L190"
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/rwa/RwaPriceOracle.sol",
+      "category": "source",
+      "review": "manual-bounded-review",
+      "notes": "deep manual: distinct source configuration, age/round/price/deviation checks; L10-L71"
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/risk/RwaMarket.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/check-rwa-markets.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/generate-rwa-abi.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/scripts/deploy-pixel-v2.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/0xpixel/PixelBase64.sol",
+      "category": "source",
+      "review": "prior-deep-review-plus-current-fuzz",
+      "notes": "Reviewed in preceding V2 deployment task; frozen bytecode/source preserved; current differential Base64 and packing fuzz at 2,048 runs."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/0xpixel/PixelData.sol",
+      "category": "source",
+      "review": "prior-deep-review-plus-current-fuzz",
+      "notes": "Reviewed in preceding V2 deployment task; frozen bytecode/source preserved; current differential Base64 and packing fuzz at 2,048 runs."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/0xpixel/PixelERC721.sol",
+      "category": "source",
+      "review": "prior-deep-review-plus-current-fuzz",
+      "notes": "Reviewed in preceding V2 deployment task; frozen bytecode/source preserved; current differential Base64 and packing fuzz at 2,048 runs."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/0xpixel/PixelRenderer.sol",
+      "category": "source",
+      "review": "prior-deep-review-plus-current-fuzz",
+      "notes": "Reviewed in preceding V2 deployment task; frozen bytecode/source preserved; current differential Base64 and packing fuzz at 2,048 runs."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/0xpixel/ZeroXPixelV2.sol",
+      "category": "source",
+      "review": "prior-deep-review-plus-current-fuzz",
+      "notes": "Reviewed in preceding V2 deployment task; frozen bytecode/source preserved; current differential Base64 and packing fuzz at 2,048 runs."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/test/0xPixelV2.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/deployments/liteforge-testnet/pixel-v2-smoke-metadata.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/deployments/liteforge-testnet/pixel-v2.abi.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/deployments/liteforge-testnet/pixel-v2.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/config/networks/zkltc-mainnet.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/foundry.toml",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/script/DeployMainnet.s.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/src/common/Clones.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/src/common/MathX.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/src/common/ReentrancyGuard.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/src/common/RoleControl.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/src/common/SafeTransferLib.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/src/common/TwoStepAdmin.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/src/graduation/GraduationRouter.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/src/graduation/PermanentLiquidityLocker.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/src/graduation/interfaces/IGraduationAdapter.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/src/graduation/interfaces/IGraduationRouter.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/src/graduation/interfaces/ILPLocker.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/src/nusd/DIAOracleAdapter.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/src/nusd/NUSD.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/src/nusd/NativeCollateralVault.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/src/nusd/OracleNUSD.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/src/nusd/interfaces/IDIAAggregatorV3.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/src/pump/PumpToken.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/src/pump/ZeroXPump.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/test/InvariantBase.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/test/TestBase.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/test/fork/MainnetDIA.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/test/fuzz/ZeroXPumpFuzz.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/test/invariant/NativeCollateralVaultInvariant.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/test/invariant/ZeroXPumpInvariant.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/test/mocks/MockDIAFeed.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/test/mocks/MockGraduationAdapter.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/test/unit/ConstructorValidation.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/test/unit/DIAOracleAdapter.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/test/unit/MathX.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/test/unit/NUSD.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/test/unit/NativeCollateralVault.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/test/unit/OracleNUSD.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/test/unit/SafeTransferLib.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/contracts/test/unit/ZeroXPump.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/deployments/zkltc-mainnet/deployments.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/package-lock.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/package.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/schema.graphql",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/scripts/check-deploy-ready.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/scripts/config.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/scripts/configure.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/src/mapping.ts",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/src/tokenMapping.ts",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/subgraph.config.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/subgraph.template.yaml",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/subgraph.yaml",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/tests/event-builders.ts",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/tests/mapping.test.ts",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/tsconfig.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/config/liteforge-testnet.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/deployments/direct-governance.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/deployments/guard-removal.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/deployments/latest.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/deployments/lending-fixed-rate.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/deployments/lending-v2.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/deployments/predicted.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/deployments/synth-safety-reserve.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/foundry.toml",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/script/Deploy0xFi.s.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/script/DeployCommunityTools.s.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/script/DisableTimelockTestnet.s.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/script/MigrateLendingFixedRate.s.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/script/MigrateRemoveGuard.s.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/script/MigrateSynthSafetyReserve.s.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/access/EmergencyGuardian.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/amm/WzkLTC.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/amm/ZeroXFiFactory.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/amm/ZeroXFiPair.sol",
+      "category": "source",
+      "review": "manual-bounded-review",
+      "notes": "deep manual: L11-L198 including LP mint/burn, authorized swap, bootstrap, reserve update"
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/amm/ZeroXFiRouter.sol",
+      "category": "source",
+      "review": "graph-api-review",
+      "notes": "Definition signatures/spans reviewed; relevant existing tests strengthened where specified. Full source manual reread is not claimed."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/farming/GaugeFactory.sol",
+      "category": "source",
+      "review": "manual-bounded-review",
+      "notes": "deep manual: L21-L172 including canonical pair binding, mint fee queues and flushing"
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/farming/LiquidityGauge.sol",
+      "category": "source",
+      "review": "manual-bounded-review",
+      "notes": "deep manual: L9-L190 including reward schedule pause/resume, accounting and stake callbacks"
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/graduation/PumpGraduationController.sol",
+      "category": "source",
+      "review": "graph-api-review",
+      "notes": "Definition signatures/spans reviewed; relevant existing tests strengthened where specified. Full source manual reread is not claimed."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/graduation/ZeroXFiGraduationAdapter.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/interfaces/IGraduationAdapter.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/interfaces/IWzkLTC.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/interfaces/IZeroXFiFactory.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/interfaces/IZeroXFiPair.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/lending/PooledNUSDLendingPool.sol",
+      "category": "source",
+      "review": "manual-bounded-review",
+      "notes": "deep manual: accounting/activation/caps/shares/borrow/repay/liquidation/bad debt/protocol interest/exact transfers; L133-L856 plus graph declarations"
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/locking/CommunityLiquidityLocker.sol",
+      "category": "source",
+      "review": "graph-api-review",
+      "notes": "Definition signatures/spans reviewed; relevant existing tests strengthened where specified. Full source manual reread is not claimed."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/metadata/TokenMetadataRegistry.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/oracle/DIAOracleV2Adapter.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/oracle/LitVMDIAFeeds.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/oracle/interfaces/IDIAAggregatorV3.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/oracle/interfaces/IPriceOracle.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/rewards/NusdPointsStaking.sol",
+      "category": "source",
+      "review": "graph-api-review",
+      "notes": "Definition signatures/spans reviewed; relevant existing tests strengthened where specified. Full source manual reread is not claimed."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/synth/SynthSafetyReserve.sol",
+      "category": "source",
+      "review": "manual-bounded-review",
+      "notes": "deep manual: binding, allocations/releases/losses/hysteresis/backing checks/exact transfers; L17-L239"
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/synth/SyntheticAsset.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/src/synth/SyntheticVault.sol",
+      "category": "source",
+      "review": "manual-bounded-review",
+      "notes": "deep manual: all contract definitions L33-L856, sponsorship/user-first losses/repay/release/fee/health/quotes"
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/fork/LegacyAmmRouterLiveFork.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/fork/PumpGraduationLiveFork.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/helpers/TestBase.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/integration/AmmRouter.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/integration/Farming.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/integration/GraduationAdapter.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/integration/NusdPointsStaking.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/integration/PumpGraduationController.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/invariant/AmmInvariant.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/invariant/RiskInvariant.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/mocks/CommunityLiquidityLockerMocks.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/mocks/FarmingMocks.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/mocks/GraduationMocks.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/mocks/PumpGraduationControllerMocks.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/mocks/RiskMocks.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/mocks/SynthSafetyReserveMocks.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/mocks/TokenMetadataMocks.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/mocks/TokenMocks.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/risk/OracleAndGuard.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/risk/PooledNUSDLendingPool.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/risk/SynthSafetyReserve.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/risk/SyntheticVault.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/unit/CommunityLiquidityLocker.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/contracts/test/unit/TokenMetadataRegistry.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/package-lock.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/package.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/activate-all.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/activate-graduation-automation.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/activate-lending-fixed-rate.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/activate-synth-safety-reserve.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/activate.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/audit-live.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/bootstrap-canonical-liquidity.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/check-scripts.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/configure-lending-collateral.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/deploy-graduation-controller.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/deploy-nusd-points.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/deploy.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/direct-governance.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/finalize-direct-governance.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/finalize-lending-fixed-rate.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/finalize-synth-safety-reserve.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/graduation-keeper.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/lib/graduation-keeper-policy.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/lib/graduation-runtime.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/lib/lending-implementation.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/lib/main-pump-publication.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/lib/preflight-topology.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/lib/private-key.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/lib/public-environment.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/lib/rpc.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/lib/spawn-step.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/migrate-lending-fixed-rate.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/migrate-synth-safety-reserve.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/preflight.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/prepare-graduation.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/scripts/test/operations.test.mjs",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/package.json",
+      "category": "configuration",
+      "review": "manual-bounded-review",
+      "notes": "full configuration reviewed; regression tests now part of check"
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/schema.graphql",
+      "category": "configuration",
+      "review": "manual-bounded-review",
+      "notes": "schema reviewed; added persisted governanceReady"
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/scripts/check-deploy-ready.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/scripts/check-live-indexer.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/scripts/configure.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/src/factory.ts",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/src/gauge.ts",
+      "category": "source",
+      "review": "manual-bounded-review",
+      "notes": "deep manual: all handlers; fixed missing paused/resumed events"
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/src/gaugeFactory.ts",
+      "category": "source",
+      "review": "manual-bounded-review",
+      "notes": "deep manual: L6-L41 event initialization/funding"
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/src/helpers.ts",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/src/lending.ts",
+      "category": "source",
+      "review": "manual-bounded-review",
+      "notes": "deep manual refreshMarket L104-L151 and saveAction L75-L102; all callers traced; fixed/readiness regressions"
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/src/pair.ts",
+      "category": "source",
+      "review": "graph-api-review",
+      "notes": "Definition signatures/spans reviewed; relevant existing tests strengthened where specified. Full source manual reread is not claimed."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/src/syntheticVault.ts",
+      "category": "source",
+      "review": "manual-bounded-review",
+      "notes": "deep manual refreshMarket L113-L173; all callers traced; fixed/readiness regressions"
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/subgraph.config.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/subgraph.template.yaml",
+      "category": "configuration",
+      "review": "manual-bounded-review",
+      "notes": "gauge event wiring L242-L265 reviewed and fixed"
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/subgraph.yaml",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/0xFi/subgraph/tsconfig.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/config/networks/liteforge-testnet.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/foundry.toml",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/script/DeployTestnet.s.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/scripts/Finalize-TestnetDeployment.ps1",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/0xpixel/reference/0xMarketplace.deployed.sol",
+      "category": "source",
+      "review": "immutable-reference",
+      "notes": "Deployment reference preserved; marketplace API surface inspected. No editable deployment source assumption."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/0xpixel/reference/0xPixel.deployed.sol",
+      "category": "source",
+      "review": "immutable-reference",
+      "notes": "Deployment reference preserved; marketplace API surface inspected. No editable deployment source assumption."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/common/Clones.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/common/MathX.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/common/ReentrancyGuard.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/common/RoleControl.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/common/SafeTransferLib.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/common/TwoStepAdmin.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/graduation/GraduationRouter.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/graduation/PermanentLiquidityLocker.sol",
+      "category": "source",
+      "review": "graph-api-review",
+      "notes": "Definition signatures/spans reviewed; relevant existing tests strengthened where specified. Full source manual reread is not claimed."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/graduation/interfaces/IGraduationAdapter.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/graduation/interfaces/IGraduationRouter.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/graduation/interfaces/ILPLocker.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/nusd/DIAOracleAdapter.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/nusd/NUSD.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/nusd/NativeCollateralVault.sol",
+      "category": "source",
+      "review": "graph-api-review",
+      "notes": "Definition signatures/spans reviewed; relevant existing tests strengthened where specified. Full source manual reread is not claimed."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/nusd/OracleNUSD.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/nusd/interfaces/IDIAAggregatorV3.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/pump/PumpToken.sol",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/src/pump/ZeroXPump.sol",
+      "category": "source",
+      "review": "graph-api-review",
+      "notes": "Definition signatures/spans reviewed; relevant existing tests strengthened where specified. Full source manual reread is not claimed."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/test/InvariantBase.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/test/TestBase.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/test/fork/LitVMDIA.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/test/fuzz/ZeroXPumpFuzz.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/test/invariant/NativeCollateralVaultInvariant.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/test/invariant/ZeroXPumpInvariant.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/test/mocks/MockDIAFeed.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/test/mocks/MockGraduationAdapter.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/test/unit/ConstructorValidation.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/test/unit/DIAOracleAdapter.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/test/unit/MathX.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/test/unit/NUSD.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/test/unit/NativeCollateralVault.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/test/unit/OracleNUSD.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/test/unit/SafeTransferLib.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/contracts/test/unit/ZeroXPump.t.sol",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/deployments/liteforge-testnet/deployments.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpixel-marketplace/package-lock.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpixel-marketplace/package.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpixel-marketplace/schema.graphql",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpixel-marketplace/src/mapping.ts",
+      "category": "source",
+      "review": "manual-bounded-review",
+      "notes": "deep manual event lifecycle/hydration L109-L456; helper API reviewed via graph"
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpixel-marketplace/subgraph.yaml",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpixel-marketplace/tests/mapping.test.mjs",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/package-lock.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/package.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/schema.graphql",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/scripts/check-deploy-ready.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/scripts/config.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/scripts/configure.mjs",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/src/mapping.ts",
+      "category": "source",
+      "review": "graph-api-review",
+      "notes": "Definition signatures/spans reviewed; relevant existing tests strengthened where specified. Full source manual reread is not claimed."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/src/tokenMapping.ts",
+      "category": "source",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/subgraph.config.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/subgraph.template.yaml",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/subgraph.yaml",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/tests/event-builders.ts",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/tests/mapping.test.ts",
+      "category": "test",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    },
+    {
+      "file": "0xNothing-zkLTC-Testnet/subgraphs/0xpump/tsconfig.json",
+      "category": "configuration",
+      "review": "automated-only",
+      "notes": "Included in inventory and applicable root verification; not claimed as fully manually read in this bounded agent audit."
+    }
+  ]
+}

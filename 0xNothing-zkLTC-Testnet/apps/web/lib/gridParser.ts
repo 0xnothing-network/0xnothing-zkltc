@@ -44,60 +44,6 @@ export function pixelDataToOnchainText(pixelData: string[][], gridSize: number):
   return lines.join(" ");
 }
 
-/**
- * Pack pixelData into RLE binary form for on-chain storage.
- *
- * Format: rows of runs. Each pixel is a horizontal run of identical color.
- * Each run = 5 bytes: [x(1)] [y(1)] [count(1)] [r,g,b(3)]
- *   - count: number of consecutive pixels (1..64), unsigned
- *   - x: starting x, 0..63
- *   - y: row index, 0..63
- *
- * Worst case (alternating colors per pixel): 64*64 runs * 5B = 20480 bytes
- * (same as previous format).
- * Realistic art: typically 60-90% smaller.
- *
- * Returns "0x" + lowercase hex string, suitable for viem bytes arg.
- */
-export function pixelDataToPackedBytes(pixelData: string[][], gridSize: number): `0x${string}` {
-  const parts: number[] = [];
-  for (let y = 0; y < gridSize; y++) {
-    let x = 0;
-    while (x < gridSize) {
-      const color = pixelData[y]?.[x];
-      if (!color || color === "transparent") {
-        x++;
-        continue;
-      }
-      const m = /^#?([0-9a-fA-F]{6})$/.exec(color);
-      if (!m) {
-        x++;
-        continue;
-      }
-      const rgb = parseInt(m[1], 16);
-      const r = (rgb >> 16) & 0xff;
-      const g = (rgb >> 8) & 0xff;
-      const b = rgb & 0xff;
-      // Count run length within same row + same color
-      let count = 1;
-      while (
-        x + count < gridSize &&
-        pixelData[y]?.[x + count] === color
-      ) {
-        count++;
-        if (count === 64) break;
-      }
-      parts.push(x & 0xff, y & 0xff, count & 0xff, r, g, b);
-      x += count;
-    }
-  }
-  let hex = "0x";
-  for (let i = 0; i < parts.length; i++) {
-    hex += parts[i].toString(16).padStart(2, "0");
-  }
-  return hex as `0x${string}`;
-}
-
 /** Convert pixelData 2D array to a compact JSON string matching AIPromptGenerator's input format. */
 export function pixelDataToJSON(pixelData: string[][], gridSize: number): string {
   return pixelDataToOnchainText(pixelData, gridSize).replaceAll(" ", "\n");

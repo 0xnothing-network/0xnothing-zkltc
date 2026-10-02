@@ -1,0 +1,47 @@
+{
+  "provider": "Goldsky",
+  "projectName": "dogosxpixel",
+  "projectId": "project_cmupqw08z0f4301vmcyh60xs9",
+  "name": "dogeos-pixel",
+  "version": "1.0.1",
+  "tag": "prod",
+  "network": "dogeos-testnet",
+  "chainId": 6281971,
+  "endpoint": "https://api.goldsky.com/api/public/project_cmupqw08z0f4301vmcyh60xs9/subgraphs/dogeos-pixel/prod/gn",
+  "versionEndpoint": "https://api.goldsky.com/api/public/project_cmupqw08z0f4301vmcyh60xs9/subgraphs/dogeos-pixel/1.0.1/gn",
+  "status": "healthy",
+  "synced": true,
+  "checkedAt": "2026-10-02T00:14:30.169Z",
+  "dataSources": {
+    "DogeosPixel": {
+      "address": "0x5f99636850e62d41e03b29ba53b5dc285d4ceab8",
+      "transactionHash": "0xdcd698cd7d50fd7f759c44cac475625bf27555742975d9f35f87702d078e9397",
+      "startBlock": 8204635,
+      "gasUsed": "3351396"
+    },
+    "PixelMarket": {
+      "address": "0xc1f82f63ee635154e5655afe2fcba4a5e85b1e6b",
+      "transactionHash": "0xc11891d3751f6f3cd218671d78211389670768083fda78514409aab92a161e31",
+      "startBlock": 8204637,
+      "gasUsed": "1289712"
+    }
+  },
+  "verifiedAt": "2026-10-02T00:14:30.169Z",
+  "meta": {
+    "block": {
+      "number": 8215220,
+      "hash": "0x4a727e27188f9885c0f005c3336c816bfadf02c1366ecb8805eee10be1015d36"
+    },
+    "hasIndexingErrors": false
+  },
+  "indexedCounts": {
+    "pixels": 6,
+    "collections": 2,
+    "listings": 9,
+    "offers": 2,
+    "sales": 2,
+    "accounts": 2,
+    "activities": 40
+  },
+  "websiteSource": "subgraph"
+}

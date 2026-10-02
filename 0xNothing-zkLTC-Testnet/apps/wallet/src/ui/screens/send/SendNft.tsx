@@ -1,10 +1,11 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { FALLBACK_TOKEN_LOGO } from "../../../config/assets";
 import { txUrl } from "../../../config/chain";
+import { CONTRACTS, PIXEL_COLLECTIONS } from "../../../config/contracts";
 import { t } from "../../../core/i18n";
 import { describeError } from "../../../core/lib/errors";
 import { shortenAddress } from "../../../core/lib/format";
-import { loadPixelNfts, transferPixelNft } from "../../../core/services/nfts";
+import { findPixelNft, loadPixelNfts, transferPixelNft } from "../../../core/services/nfts";
 import { validateRecipient } from "../../../core/services/transfer";
 import { Button, Empty, Note, Panel, Row, Rows } from "../../components/kit";
 import { Screen } from "../../components/Screen";
@@ -20,7 +21,7 @@ import { useWallet } from "../../state/WalletContext";
  * chosen and the only decision left is where it goes — and `transferNFT` is
  * final, which is why the address is echoed back before the button is armed.
  */
-export function SendNft({ tokenId }: { tokenId: string }): ReactNode {
+export function SendNft({ tokenId, collection }: { tokenId: string; collection: string | null }): ReactNode {
   const { address, network, notify, refresh, tick } = useWallet();
   const read = useLiveRead(address ? () => loadPixelNfts(address) : null, [
     address,
@@ -38,8 +39,10 @@ export function SendNft({ tokenId }: { tokenId: string }): ReactNode {
   const [reviewIdentity, setReviewIdentity] = useState<string | null>(null);
   const confirmGate = useActionGate();
 
-  const valid = /^\d+$/u.test(tokenId);
-  const nft = read.data?.find((entry) => entry.tokenId.toString() === tokenId) ?? null;
+  // Existing bookmarks without a collection refer to the original NFT contract.
+  const selectedCollection = collection ?? CONTRACTS.pixelLegacyNft;
+  const valid = /^\d+$/u.test(tokenId) && PIXEL_COLLECTIONS.some((entry) => entry.address.toLowerCase() === selectedCollection.toLowerCase());
+  const nft = read.data ? findPixelNft(read.data, selectedCollection, tokenId) : null;
   const recipient = validateRecipient(to);
   const self = recipient !== null && address !== null
     && recipient.toLowerCase() === address.toLowerCase();
@@ -50,6 +53,8 @@ export function SendNft({ tokenId }: { tokenId: string }): ReactNode {
     to,
     recipient,
     tokenId,
+    selectedCollection,
+    nft?.collection,
     nft?.tokenId,
     nft?.name,
   ]);
@@ -58,7 +63,7 @@ export function SendNft({ tokenId }: { tokenId: string }): ReactNode {
   useEffect(() => {
     setReviewOpen(false);
     setReviewIdentity(null);
-  }, [address, network.id, network.rpcUrl, to, tokenId]);
+  }, [address, network.id, network.rpcUrl, to, tokenId, selectedCollection]);
 
   if (!network.builtin) {
     return (
@@ -92,6 +97,7 @@ export function SendNft({ tokenId }: { tokenId: string }): ReactNode {
       to: recipient,
       tokenId: nft.tokenId,
       name: nft.name,
+      collection: nft.collection,
     };
     const submittedNetwork = network;
     setBusy(true);
@@ -130,7 +136,7 @@ export function SendNft({ tokenId }: { tokenId: string }): ReactNode {
                 {nft.name}
                 <br />
                 <span className="w-nft-id">
-                  #{nft.tokenId.toString()} · {nft.gridSize}×{nft.gridSize}
+                  {nft.collectionName} #{nft.tokenId.toString()} · {nft.gridSize}×{nft.gridSize}
                 </span>
               </span>
               <img
@@ -201,7 +207,7 @@ export function SendNft({ tokenId }: { tokenId: string }): ReactNode {
         >
           <div className="w-summary">
             <span className="w-summary-label">{nft.name}</span>
-            <span className="w-summary-value">#{nft.tokenId.toString()}</span>
+            <span className="w-summary-value">{nft.collectionName} #{nft.tokenId.toString()}</span>
           </div>
           <Panel>
             <Rows>
