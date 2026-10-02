@@ -83,8 +83,11 @@ export async function prepareDogeos() {
   const sourcePackage=JSON.parse(await readFile(path.join(sourceRoot,'package.json'),'utf8'));
   if(!sourcePackage.scripts?.build)throw new Error('The DogeOS source needs its frontend build script.');
   if(!await exists(path.join(sourceRoot,'server','embedded.mjs')))throw new Error('The DogeOS embedded handler is missing. Complete server/embedded.mjs before building Next.');
-  const required=['node_modules/vite/bin/vite.js','node_modules/typescript/bin/tsc','node_modules/esbuild/lib/main.js'];
-  if(!(await Promise.all(required.map(file=>exists(path.join(sourceRoot,file))))).every(Boolean))await runNpm(['ci'],sourceRoot);
+  const required=['node_modules/vite/bin/vite.js','node_modules/vite/client.d.ts','node_modules/typescript/bin/tsc','node_modules/esbuild/lib/main.js'];
+  // Hosting sets NODE_ENV=production (or npm_config_omit=dev). Build tools must
+  // still be installed before compiling the frontend and embedded backend.
+  if(!(await Promise.all(required.map(file=>exists(path.join(sourceRoot,file))))).every(Boolean))await runNpm(['ci','--include=dev'],sourceRoot);
+  if(!(await Promise.all(required.map(file=>exists(path.join(sourceRoot,file))))).every(Boolean))throw new Error('DogeOS build dependencies are missing after npm ci --include=dev.');
   await runNpm(['run','build'],sourceRoot);
   const esbuild=await import(pathToFileURL(path.join(sourceRoot,'node_modules/esbuild/lib/main.js')).href);
   const result=await assembleDogeosArtifacts({sourceRoot,appRoot,build:esbuild.build||esbuild.default.build});
