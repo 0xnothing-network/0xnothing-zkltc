@@ -1,8 +1,10 @@
 "use client";
 
+import { useProtocolReceipt } from "@/lib/useProtocolReceipt";
+
 import { memo, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { useAccount, useConfig, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useConfig, useWriteContract } from "wagmi";
 import { parseEther, formatEther } from "viem";
 import {
   PIXEL_MARKETPLACE_ADDRESS,
@@ -150,7 +152,7 @@ function ListForSaleControl({
   const { writeContractAsync, isPending, data: approveHash, error: approveErr } =
     useWriteContract();
   const { data: approveReceipt, isLoading: waitingApprove, error: approveReceiptErr } =
-    useWaitForTransactionReceipt({ chainId: LITVM_CHAIN_ID, hash: approveHash });
+    useProtocolReceipt({ chainId: LITVM_CHAIN_ID, hash: approveHash });
   const {
     writeContractAsync: writeListAsync,
     isPending: listing,
@@ -158,7 +160,7 @@ function ListForSaleControl({
     error: listErr,
   } = useWriteContract();
   const { data: listReceipt, isLoading: waitingList, error: listReceiptErr } =
-    useWaitForTransactionReceipt({ chainId: LITVM_CHAIN_ID, hash: listHash });
+    useProtocolReceipt({ chainId: LITVM_CHAIN_ID, hash: listHash });
   const firedRef = useRef(false);
   const submitLockRef = useRef(false);
   const handledApprovalRef = useRef<`0x${string}` | undefined>(undefined);
@@ -292,7 +294,7 @@ function ListForSaleControl({
       </div>
       {approveHash ? (
         <a
-          href={getMarketplaceTxUrl(approveHash)}
+          href={getMarketplaceTxUrl(approveReceipt?.transactionHash ?? approveHash)}
           target="_blank"
           rel="noopener noreferrer"
           className="block text-center text-[10px] text-indigo-300 hover:text-indigo-200 underline"
@@ -326,7 +328,7 @@ function CancelListingControl({
   const [sessionError, setSessionError] = useState("");
   const { writeContractAsync, isPending, data: txHash, error } =
     useWriteContract();
-  const { data: receipt, isLoading: waiting, error: receiptError } = useWaitForTransactionReceipt({
+  const { data: receipt, isLoading: waiting, error: receiptError } = useProtocolReceipt({
     chainId: LITVM_CHAIN_ID,
     hash: txHash,
   });

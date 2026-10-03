@@ -17,6 +17,7 @@
     "typecheck:wallet": "npm --prefix 0xNothing-zkLTC-Testnet/apps/wallet run typecheck",
     "test:wallet": "npm --prefix 0xNothing-zkLTC-Testnet/apps/wallet run test",
     "verify:wallet": "npm run test:wallet && npm run typecheck:wallet && npm run build:wallet",
+    "verify:dogeos": "npm --prefix 0xPixel-Dogeos run verify",
     "test:contracts": "npm run test:contracts:testnet && npm run test:contracts:mainnet",
     "test:contracts:testnet": "forge test --root 0xNothing-zkLTC-Testnet/contracts",
     "test:contracts:mainnet": "forge test --root 0xNothing-zkLTC-Mainnet/contracts",
@@ -29,6 +30,6 @@
     "check:fi:scripts": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi run check:scripts",
     "check:fi": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi run build",
     "audit:fi:report": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi run audit:live:report",
-    "verify": "npm run test:tooling && npm run test:web && npm run test:contracts && npm run check:pixel-subgraph && npm run check:pump-subgraphs && npm run check:fi && npm run verify:wallet"
+    "verify": "npm run test:tooling && npm run test:web && npm run test:contracts && npm run check:pixel-subgraph && npm run check:pump-subgraphs && npm run check:fi && npm run verify:wallet && npm run verify:dogeos"
   }
 }

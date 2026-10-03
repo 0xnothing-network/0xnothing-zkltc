@@ -12,15 +12,14 @@ export function PixelLoadingIndicator({ compact = false }: { compact?: boolean }
   );
 }
 
-export function PageLoader({ embedded = false }: { embedded?: boolean }) {
+export function PageLoader({ embedded = false, label = "Loading workspace" }: { embedded?: boolean; label?: string }) {
   return (
-    <div className={`pixel-shell flex flex-col items-center justify-center overflow-hidden ${embedded ? "min-h-[calc(100dvh-64px)]" : "min-h-[100dvh]"}`} role="status" aria-label="Loading">
-      <div className="pixel-grid-bg" />
-      <div className="pixel-noise" />
+    <div className={`pixel-shell pixel-page-loader flex flex-col items-center justify-center ${embedded ? "min-h-[calc(100dvh-64px)]" : "min-h-[100dvh]"}`} role="status" aria-live="polite">
       <div className="pixel-loader-card">
         <div className="pixel-loader-logo" aria-hidden="true">N</div>
+        <span className="pixel-loader-brand" aria-hidden="true">0xNothing</span>
         <PixelLoadingIndicator />
-        <span className="pixel-loader-label">LOADING</span>
+        <span className="pixel-loader-label">{label}</span>
       </div>
     </div>
   );

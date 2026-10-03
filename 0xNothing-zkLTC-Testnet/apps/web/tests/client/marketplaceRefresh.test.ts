@@ -31,6 +31,7 @@ test("replacing an activity request clears load-more and ignores the cancelled r
     wagmi: { useAccount: () => ({}) }, viem: {}, "@/lib/contract": {},
     "@/lib/marketplaceAbi": {}, "@/features/pixel/components/Skeleton": {},
     "@/components/Toast": {}, "@/lib/chainSwitch": {}, "@/lib/actionLock": {}, "@/lib/walletSession": {},
+    "@/lib/useProtocolReceipt": { useProtocolReceipt: () => ({ isLoading: false, isSuccess: false }) },
     "@/lib/http": { fetchJson: (_url: string, options: { signal: AbortSignal }) => new Promise((resolve) => {
       requests.push({ signal: options.signal, resolve: async (response) => resolve(await (response as Response).json()) });
     }) },

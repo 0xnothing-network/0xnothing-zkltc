@@ -51,6 +51,7 @@ async function runFixture(mode) {
     if(mode==='cold')throw new Error('Network is unavailable in cold static fixture.');
     const payload=JSON.parse(options.body);
     if(target.includes('graph')) {
+      if(mode==='oversized-graph')return new Response('{}',{headers:{'Content-Length':String(16*1024*1024+1)}});
       if(mode==='graph-offline')return Response.json({errors:[{message:'Unavailable fixture'}]},{status:503});
       const query=payload.query;
       if(query.includes('BootstrapRows')) {
@@ -139,5 +140,5 @@ if(fixtureMode) {
   test('embedded healthy Graph snapshot skips deployment history and preserves API shapes',async()=>{const result=await isolated('seed');assert.equal(result.source,'subgraph');});
   test('embedded Graph ahead of RPC pins the canonical common block without historical replay',async()=>{const result=await isolated('ahead');assert.equal(result.source,'subgraph');});
   test('embedded RPC tail updates live owners, invalidated listings and cancelled offers',async()=>{const result=await isolated('tail');assert.equal(result.source,'rpc');});
-  for(const mode of ['bad-hash','changing-hash','index-errors','bad-stats','chain-count','bad-address','bad-approval','bad-number','graph-offline'])test('embedded rejects '+mode+' Graph checkpoint and replays RPC',async()=>{await isolated(mode);});
+  for(const mode of ['bad-hash','changing-hash','index-errors','bad-stats','chain-count','bad-address','bad-approval','bad-number','graph-offline','oversized-graph'])test('embedded rejects '+mode+' Graph checkpoint and replays RPC',async()=>{await isolated(mode);});
 }

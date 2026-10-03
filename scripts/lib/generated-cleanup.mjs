@@ -16,6 +16,7 @@ export const GENERATED_DIRECTORIES = Object.freeze([
   "0xNothing-zkLTC-Testnet/0xFi/contracts/out",
   "0xNothing-zkLTC-Testnet/0xFi/subgraph/build",
   "0xNothing-zkLTC-Testnet/apps/wallet/dist",
+  "0xNothing-zkLTC-Testnet/apps/web/.dogeos",
   "0xNothing-zkLTC-Testnet/apps/web/.next",
   "0xNothing-zkLTC-Testnet/apps/web/.next-dev",
   "0xNothing-zkLTC-Testnet/apps/web/.open-next",
@@ -24,6 +25,11 @@ export const GENERATED_DIRECTORIES = Object.freeze([
   "0xNothing-zkLTC-Testnet/subgraphs/0xpixel-marketplace/build",
   "0xNothing-zkLTC-Testnet/subgraphs/0xpump/build",
   "0xNothing-zkLTC-Testnet/subgraphs/0xpump/generated",
+  "0xPixel-Dogeos/contracts/cache",
+  "0xPixel-Dogeos/contracts/out",
+  "0xPixel-Dogeos/dist",
+  "0xPixel-Dogeos/subgraph/build",
+  "0xPixel-Dogeos/subgraph/generated",
 ]);
 
 export function parseCleanupArguments(args) {

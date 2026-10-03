@@ -1,5 +1,13 @@
 # 0xNothing Frontend Optimization Progress
 
+## 2026-10-03 — full web upgrade, Testnet and Mainnet release source
+
+The current audit, fixes, UI polish, verification results and remaining mainnet
+release gates are recorded in [UPGRADE_PROGRESS.md](../../../../UPGRADE_PROGRESS.md).
+This batch is authorized to improve UI copy/layout while preserving the existing
+pixel/mono identity; the historical no-UI-change constraint below applies to the
+earlier 2026-08 batches.
+
 **Started:** 2026-08-16
 **Last verified:** 2026-08-26
 **Scope:** `apps/web` (Next.js 15 App Router, wagmi 3.7.5, TanStack Query 5, React 19), plus the

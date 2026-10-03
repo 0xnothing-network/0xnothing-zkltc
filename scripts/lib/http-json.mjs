@@ -14,6 +14,9 @@ export async function readLimitedJsonResponse(response, {
   const limit = checkedLimit(maxBytes);
   const contentLength = response.headers?.get?.("content-length");
   if (/^\d+$/u.test(contentLength || "") && Number(contentLength) > limit) {
+    if (typeof response.body?.cancel === "function") {
+      await response.body.cancel().catch(() => undefined);
+    }
     throw new Error(`${label} response exceeds ${limit} bytes`);
   }
 
@@ -27,13 +30,13 @@ export async function readLimitedJsonResponse(response, {
         const { done, value } = await reader.read();
         if (done) break;
         bytesRead += value.byteLength;
-        if (bytesRead > limit) {
-          await reader.cancel();
-          throw new Error(`${label} response exceeds ${limit} bytes`);
-        }
+        if (bytesRead > limit) throw new Error(`${label} response exceeds ${limit} bytes`);
         text += decoder.decode(value, { stream: true });
       }
       text += decoder.decode();
+    } catch (error) {
+      await reader.cancel(error).catch(() => undefined);
+      throw error;
     } finally {
       reader.releaseLock();
     }

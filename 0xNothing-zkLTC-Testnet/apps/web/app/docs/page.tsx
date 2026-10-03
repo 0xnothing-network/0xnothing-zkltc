@@ -131,7 +131,7 @@ const isOriginal = await publicClient.readContract({
   args: [pixelData, 32n],
 });`;
 
-const SWAP_CODE = `import { parseAbi, type Address, type PublicClient, type WalletClient } from "viem";
+const SWAP_CODE = `import { parseAbi, type Address, type Hash, type PublicClient, type WalletClient } from "viem";
 
 const routerAbi = parseAbi([
   "function getAmountsOut(uint256 amountIn, address[] path) view returns (uint256[] amounts)",
@@ -169,6 +169,28 @@ export async function swapErc20(params: {
   }
   if (amountIn <= 0n || slippageBps < 0n || slippageBps >= 10_000n) {
     throw new Error("Invalid swap parameters");
+  }
+
+  // A wallet cancellation can have a successful receipt. Confirm the intended
+  // action, allowing only gas-price speed-ups with unchanged calldata/value.
+  async function confirmAction(hash: Hash) {
+    let changedIntent = false;
+    let repricedHash: Hash | undefined;
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash,
+      checkReplacement: true,
+      onReplaced: ({ reason, transactionReceipt }) => {
+        if (reason !== "repriced") changedIntent = true;
+        else repricedHash = transactionReceipt.transactionHash;
+      },
+    });
+    if (changedIntent || receipt.status !== "success") {
+      throw new Error("The requested transaction did not complete");
+    }
+    if (receipt.transactionHash !== hash && receipt.transactionHash !== repricedHash) {
+      throw new Error("Unverified replacement transaction");
+    }
+    return receipt;
   }
 
   const paths: Address[][] = [[tokenIn, tokenOut]];
@@ -213,8 +235,7 @@ export async function swapErc20(params: {
       args: [contracts.fiRouter, amountIn],
     });
     const approvalHash = await walletClient.writeContract(approval.request);
-    const approvalReceipt = await publicClient.waitForTransactionReceipt({ hash: approvalHash });
-    if (approvalReceipt.status !== "success") throw new Error("Approval reverted");
+    await confirmAction(approvalHash);
   }
 
   const deadline = BigInt(Math.floor(Date.now() / 1_000) + 20 * 60);
@@ -226,10 +247,9 @@ export async function swapErc20(params: {
     args: [amountIn, amountOutMin, best.path, account, deadline],
   });
   const hash = await walletClient.writeContract(simulation.request);
-  const receipt = await publicClient.waitForTransactionReceipt({ hash });
-  if (receipt.status !== "success") throw new Error("0xFi swap reverted");
+  const receipt = await confirmAction(hash);
 
-  return { hash, receipt, path: best.path, quotedOut: best.amountOut, amountOutMin };
+  return { hash: receipt.transactionHash, receipt, path: best.path, quotedOut: best.amountOut, amountOutMin };
 }`;
 
 const NUSD_CODE = `const nusdAbi = parseAbi([

@@ -29,6 +29,7 @@ import { PumpConfigNotice, PumpErrorState, PumpInlineLoading } from "@/features/
 import { useToast } from "@/components/Toast";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { createPumpWalletGuard } from "@/features/pump/walletSession";
+import { waitForProtocolReceipt } from "@/lib/transactionReceipt";
 
 interface TokenMetadata {
   description?: string;
@@ -177,8 +178,7 @@ function GraduationAction({ market, onComplete }: { market: PumpMarket; onComple
         functionName: "graduateReady",
         args: [market.tokenAddress],
       });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      if (receipt.status !== "success") throw new Error("Graduation reverted");
+      await waitForProtocolReceipt(publicClient, hash);
       toast.success("Graduated", "The 0xFi pool is live.");
       onComplete();
     } catch (error) {

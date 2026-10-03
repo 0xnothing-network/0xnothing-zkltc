@@ -1,0 +1,101 @@
+.nothing-recovery-page {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2rem;
+  max-width: 76rem;
+  margin-inline: auto;
+  padding: clamp(1.5rem, 5vw, 4rem);
+  background: var(--background, #101113);
+  color: var(--foreground, #f1f2f3);
+  font-family: "Departure Mono", ui-monospace, monospace;
+}
+
+.nothing-recovery-brand {
+  font-size: 0.875rem;
+  letter-spacing: 0.05em;
+}
+
+.nothing-recovery-content {
+  width: min(100%, 44rem);
+  margin-block: auto;
+}
+
+.nothing-recovery-code,
+.nothing-recovery-reference {
+  color: var(--muted, #a6adb7);
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+}
+
+.nothing-recovery-content h1 {
+  margin-block: 1.25rem 1.5rem;
+  font-size: clamp(1.875rem, 5vw, 3.5rem);
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.nothing-recovery-content > p:not(.nothing-recovery-code):not(.nothing-recovery-reference) {
+  max-width: 56ch;
+  font-size: 0.875rem;
+  line-height: 1.8;
+}
+
+.nothing-recovery-note {
+  margin-top: 0.875rem;
+  color: var(--muted, #a6adb7);
+}
+
+.nothing-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-block: 2rem 1.25rem;
+}
+
+.nothing-recovery-actions > * {
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  min-height: 3rem;
+  padding: 0.875rem 1.125rem;
+  border: 1px solid var(--border-strong, #565e68);
+  font-size: 0.75rem;
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease;
+}
+
+.nothing-recovery-actions button {
+  cursor: pointer;
+  background: var(--primary, #e6eee9);
+  color: var(--background, #101113);
+}
+
+.nothing-recovery-actions > *:hover {
+  border-color: var(--primary, #e6eee9);
+}
+
+.nothing-recovery-actions a:hover {
+  background: var(--surface, #181a1d);
+}
+
+.nothing-recovery-page :is(a, button):focus-visible {
+  outline: 2px solid var(--primary, #e6eee9);
+  outline-offset: 5px;
+}
+
+.nothing-recovery-docs {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 2.75rem;
+  color: var(--muted, #a6adb7);
+  font-size: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nothing-recovery-actions > * { transition: none; }
+}

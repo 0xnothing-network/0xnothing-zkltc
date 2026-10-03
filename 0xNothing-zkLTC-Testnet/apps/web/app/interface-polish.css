@@ -52,6 +52,61 @@
   border-top: 2px solid var(--pixel-ui-border-strong);
   background: var(--pixel-ui-panel);
 }
+
+/* Keyboard focus stays inside scrollable navigation; filled actions use an outer ring. */
+:is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product)
+  :is(.fi-nav a, .fi-nav-mobile a, .pump-nav-link, .pixel-nav, .pixel-nav-mobile):focus-visible {
+  outline-offset: -4px;
+}
+:is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product)
+  :is(a, button, input, select, textarea, summary) {
+  scroll-margin-block: 120px 40px;
+}
+:is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product)
+  :is(.fi-button, .pump-button, .pixel-btn, .pixel-btn-soft):disabled {
+  transform: none !important;
+  filter: none !important;
+}
+:is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product)
+  button[aria-busy="true"] { cursor: progress; }
+:is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product)
+  :is(input, select, textarea)[aria-invalid="true"] {
+  border-color: var(--error);
+  outline-color: var(--error);
+}
+:is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product)
+  :is(.fi-inline-state, .pump-notice, .pixel-collection-empty) {
+  overflow-wrap: anywhere;
+}
+:is(.fi-root.fi-root, .pump-shell.pump-shell) :is(.fi-table-wrap, .pump-table-wrap) {
+  max-width: 100%;
+  scroll-padding-inline: 12px;
+}
+.fi-root.fi-root .fi-table tbody tr:focus-within,
+.pump-shell.pump-shell .pump-table tbody tr:focus-within { background: #c1efaa0c; }
+/* Native selects retain 16px text on phones, so the sort needs room for its full value. */
+@media (max-width: 480px) {
+  .pump-shell.pump-shell .pump-market-controls {
+    grid-template-columns: minmax(150px, .9fr) minmax(0, 1.1fr);
+  }
+}
+@media (max-width: 350px) {
+  .pump-shell.pump-shell .pump-market-controls { grid-template-columns: minmax(0, 1fr); }
+  .pump-shell.pump-shell .pump-market-controls .pump-search { grid-column: 1; grid-row: 3; }
+}
+@media (pointer: coarse) {
+  :is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product)
+    :is(.fi-segmented button, .fi-inline-retry, .fi-slippage-options button,
+    .pump-segmented button, .pump-inline-options button, .pixel-nav-icon, .pixel-menu-toggle) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+@media (forced-colors: active) {
+  :is(.fi-root, .pump-shell, .pixel-product, .nothing-home) :focus-visible {
+    outline: 2px solid Highlight !important;
+  }
+}
 @media (prefers-reduced-motion: no-preference) {
   .fi-root.fi-root .fi-swap-asset-picker { animation: ui-menu-enter 150ms var(--ui-ease); }
   .fi-root.fi-root :is(.fi-loading-line, .fi-loading-amount, .fi-loading-button, .fi-amount-quote-skeleton),

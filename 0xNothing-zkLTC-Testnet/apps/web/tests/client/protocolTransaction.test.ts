@@ -4,13 +4,16 @@ import { evaluateModule } from "../helpers/evaluateModule.ts";
 import type { useProtocolTransaction } from "../../features/fi/lib/hooks/useProtocolTransaction.ts";
 import { isBlockSyncedQueryKey } from "../../lib/liveData.ts";
 import { deliveredTokenAmount } from "../../../../shared/transactions/tokenDelivery.ts";
+import { ReceiptConfirmationError, waitForProtocolReceipt } from "../../lib/transactionReceipt.ts";
+import type { ReplacementReturnType, WaitForTransactionReceiptParameters } from "viem";
 
 const ACCOUNT = "0x1111111111111111111111111111111111111111";
 const OTHER = "0x2222222222222222222222222222222222222222";
 const HASH = `0x${"a".repeat(64)}`;
+const REPLACEMENT_HASH = `0x${"b".repeat(64)}`;
 const call = { address: ACCOUNT, abi: [], functionName: "deposit" } as const;
 
-function harness(options: { changeAt?: "simulation" | "receipt"; chainId?: number; signer?: string; logs?: unknown[] } = {}) {
+function harness(options: { changeAt?: "simulation" | "receipt"; chainId?: number; signer?: string; logs?: unknown[]; replacement?: "cancelled" | "replaced" | "repriced" } = {}) {
   const account = { isConnected: true, address: ACCOUNT, chainId: 4441, connector: { uid: "wallet-a" } };
   let state: { phase: string; message: string; hash?: string };
   let writes = 0;
@@ -27,9 +30,14 @@ function harness(options: { changeAt?: "simulation" | "receipt"; chainId?: numbe
       if (options.changeAt === "simulation") account.address = OTHER;
       return { request };
     },
-    waitForTransactionReceipt: async () => {
+    waitForTransactionReceipt: async (parameters: WaitForTransactionReceiptParameters) => {
       if (options.changeAt === "receipt") account.address = OTHER;
-      return { status: "success", logs: options.logs ?? [] };
+      const receipt = { status: "success", transactionHash: options.replacement ? REPLACEMENT_HASH : HASH, logs: options.logs ?? [] };
+      if (options.replacement) parameters.onReplaced?.({
+        reason: options.replacement,
+        transactionReceipt: receipt,
+      } as ReplacementReturnType);
+      return receipt;
     },
   };
   const evaluated = evaluateModule<{ useProtocolTransaction: typeof useProtocolTransaction }>(
@@ -53,6 +61,7 @@ function harness(options: { changeAt?: "simulation" | "receipt"; chainId?: numbe
       "@fi/config/deployment": { deployment: { chain: { id: 4441 } } },
       "@fi/lib/errors": { readableError: (error: Error) => error.message },
       "@/lib/liveData": { isBlockSyncedQueryKey },
+      "@/lib/transactionReceipt": { ReceiptConfirmationError, waitForProtocolReceipt },
       "../../../../../../shared/transactions/tokenDelivery": { deliveredTokenAmount },
     },
   );
@@ -122,4 +131,22 @@ test("an unchanged wallet completes the existing transaction flow", async () => 
   assert.equal(run.refreshes(["readContracts", { contracts: [{ functionName: "redemptionReserve" }] }]), true);
   assert.equal(run.refreshes(["readContract", { functionName: "symbol" }]), false);
   assert.equal(run.refreshes(["pump-markets"]), false);
+});
+
+test("a wallet cancellation or different replacement stops the next route stage", async () => {
+  for (const replacement of ["cancelled", "replaced"] as const) {
+    const run = harness({ replacement });
+    assert.equal(await run.tx.execute({ stages: [{ call }, { call }] }), undefined);
+    assert.equal(run.result().writes, 1);
+    assert.equal(run.result().state.phase, "error");
+    assert.equal(run.result().state.hash, REPLACEMENT_HASH);
+    assert.equal(run.result().invalidations, 1);
+  }
+});
+
+test("a sped-up transaction reports the actual confirmed hash", async () => {
+  const run = harness({ replacement: "repriced" });
+  assert.equal(await run.tx.execute({ call }), REPLACEMENT_HASH);
+  assert.equal(run.result().state.hash, REPLACEMENT_HASH);
+  assert.equal(run.result().state.phase, "success");
 });

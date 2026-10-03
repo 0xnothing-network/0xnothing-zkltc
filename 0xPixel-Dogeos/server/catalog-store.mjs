@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { parseEventLogs } from 'viem';
 import { queryParams, tokenId } from './validation.mjs';
+import { readLimitedJsonResponse } from '../../scripts/lib/http-json.mjs';
 
 const CACHE_VERSION = 2;
 const same = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
@@ -148,7 +149,7 @@ export async function createCatalogStore({ dep, nft, market, client, cacheFile, 
     }
     const response = await fetch(graphEndpoint(), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ query: `query Catalog($where: Pixel_filter!, $first: Int!, $skip: Int!) { _meta { block { number hash } hasIndexingErrors } pixels(first:$first,skip:$skip,where:$where,orderBy:tokenId,orderDirection:desc){ id } stats(id:"global"){minted} }`, variables: { where, first: query.limit + 1, skip: query.offset } }), signal: AbortSignal.timeout(6000) });
     if (!response.ok) return false;
-    const { data, errors } = await response.json();
+    const { data, errors } = await readLimitedJsonResponse(response, { label: 'DogeOS subgraph' });
     const meta = data?._meta;
     if (errors?.length || !meta || meta.hasIndexingErrors || meta.block.number < snapshot.block - 15 || meta.block.number < snapshot.eventBlock || !Array.isArray(data.pixels) || BigInt(data.stats?.minted ?? -1) !== BigInt(Object.values(snapshot.tokens).filter(item => item.minted).length)) return false;
     if (meta.block.hash) {
@@ -162,11 +163,13 @@ export async function createCatalogStore({ dep, nft, market, client, cacheFile, 
   async function catalog(raw = {}) {
     const query = queryParams(raw);
     await sync();
-    const snapshot = state, now = Math.floor(Date.now() / 1000), items = candidates(query, snapshot, now);
+    const snapshot = state, generation = artGeneration, now = Math.floor(Date.now() / 1000), items = candidates(query, snapshot, now);
     const selected = items.slice(query.offset, query.offset + query.limit + 1);
     let graphBlock = false;
     try { graphBlock = await graphDiscovery(query, snapshot, selected, now); } catch {}
+    if (generation !== artGeneration) throw new Error('Chain changed while reading catalogue; retry.');
     const tokens = await mapLimit(selected.slice(0, query.limit), item => token(item.id, BigInt(snapshot.block)));
+    if (generation !== artGeneration) throw new Error('Chain changed while reading catalogue; retry.');
     return { tokens: query.listed === 'true' ? tokens.filter(item => item.listing) : tokens, total: items.length, next: selected.length > query.limit ? query.offset + query.limit : null, collections: collections(snapshot), activity: snapshot.activity.slice(0, 40), indexedBlock: graphBlock || snapshot.block, source: graphBlock ? 'subgraph' : 'rpc', supply: Object.values(snapshot.tokens).filter(item => item.minted).length };
   }
   async function offerList(raw = {}) {
@@ -178,11 +181,12 @@ export async function createCatalogStore({ dep, nft, market, client, cacheFile, 
     return query.format==='page'?{offers,total:items.length,next:query.offset+query.limit<items.length?query.offset+query.limit:null}:offers;
   }
   async function collectionPage(raw={}) {
-    const query=queryParams(raw,'collections');await sync();const snapshot=state;
+    const query=queryParams(raw,'collections');await sync();const snapshot=state,generation=artGeneration;
     const items=collections(snapshot).filter(collection=>(!query.owner||same(collection.owner,query.owner))&&(!query.search||collection.name.toLowerCase().includes(query.search.toLowerCase()))).sort((a,b)=>compare(BigInt(b.id),BigInt(a.id)));
     const selected=items.slice(query.offset,query.offset+query.limit),members=new Map(selected.map(collection=>[collection.id,[]]));
     for(const item of Object.values(snapshot.tokens).filter(item=>item.minted).sort((a,b)=>compare(BigInt(b.id),BigInt(a.id)))){const group=members.get(item.collectionId);if(group&&group.length<3)group.push(item.id);}
     const previews=await mapLimit([...members.values()].flat(),async id=>{const {name,grid,pixels}=await artwork(id,BigInt(snapshot.block));return {id,name,grid,pixels};});
+    if(generation!==artGeneration)throw new Error('Chain changed while reading collections; retry.');
     const byId=new Map(previews.map(preview=>[preview.id,preview]));
     return {collections:selected.map(collection=>({...collection,previews:members.get(collection.id).map(id=>byId.get(id))})),total:items.length,next:query.offset+query.limit<items.length?query.offset+query.limit:null,indexedBlock:snapshot.block};
   }

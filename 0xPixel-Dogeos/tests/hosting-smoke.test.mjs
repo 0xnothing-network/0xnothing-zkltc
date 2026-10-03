@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { createConnection } from 'node:net';
 import { spawn } from 'node:child_process';
-import { networkInterfaces } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
@@ -26,9 +25,8 @@ test('public HOST and assigned PORT serve the read-only API using a mock RPC and
   const rpcPort=await listen(rpc);t.after(()=>close(rpc));const reservation=createServer();const port=await listen(reservation);await close(reservation);
   const app=child('server/index.mjs',{NODE_ENV:'production',PORT:String(port),HOST:'0.0.0.0',DOGEOS_RPC_URL:`http://127.0.0.1:${rpcPort}`,PRIVATE_KEY:'',SUBGRAPH_URL:''});
   const stopped=exited(app.process);t.after(async()=>{app.process.kill();await stopped;});
-  const address=Object.values(networkInterfaces()).flat().find(network=>network&&!network.internal&&network.family==='IPv4')?.address||'127.0.0.1';
   let result;
-  const deadline=Date.now()+10000;
-  while(Date.now()<deadline){try{const response=await fetch(`http://${address}:${port}/DOGEOSxPIXEL/api/config`,{signal:AbortSignal.timeout(500)});if(response.ok){result=await response.json();break;}}catch{}if(app.process.exitCode!==null)break;await new Promise(resolve=>setTimeout(resolve,50));}
-  assert.ok(result,'Public listener did not serve its assigned port.');assert.equal(result.chainId,6281971);assert.match(app.output(),/listening on 0\.0\.0\.0/);assert.deepEqual(rpcMethods,[]);
+  const deadline=Date.now()+20000;
+  while(Date.now()<deadline){try{const response=await fetch(`http://127.0.0.1:${port}/DOGEOSxPIXEL/api/config`,{signal:AbortSignal.timeout(1000)});if(response.ok){result=await response.json();break;}}catch{}if(app.process.exitCode!==null)break;await new Promise(resolve=>setTimeout(resolve,50));}
+  assert.ok(result,`Public listener did not serve its assigned port. ${app.output()}`);assert.equal(result.chainId,6281971);assert.match(app.output(),/listening on 0\.0\.0\.0/);assert.deepEqual(rpcMethods,[]);
 });

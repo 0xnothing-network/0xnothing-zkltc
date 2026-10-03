@@ -8,13 +8,14 @@ import {
 import { getPixelImageUrl } from "@/lib/pixelImage";
 import { MarketplaceAbi } from "@/lib/marketplaceAbi";
 import { PixelNFTABI } from "@/lib/abi";
+import { PixelV2ABI } from "@/lib/pixelV2Abi";
 import {
   fetchUserNftsFromSubgraph,
   hasMarketplaceSubgraph,
 } from "@/lib/marketplaceSubgraph";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { publicErrorMessage } from "@/lib/server/publicError";
-import { PIXEL_COLLECTIONS } from "@/lib/pixelCollections";
+import { PIXEL_COLLECTIONS, isPixelV2Collection } from "@/lib/pixelCollections";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +24,9 @@ export const revalidate = 0;
 const CACHE_TTL = 3_000;
 const CACHE_MAX_ENTRIES = 1024;
 const MAX_SUBGRAPH_BLOCK_LAG = 128n;
+// Viem batches by calldata bytes, which do not account for large art returned
+// by these getters. Bound the token count too, including the 256 x 256 grids.
+const NFT_DETAILS_BATCH_SIZE = 20;
 const nftCache = createBoundedCache<NativeNft[]>({
   maxEntries: CACHE_MAX_ENTRIES,
   ttlMs: CACHE_TTL,
@@ -70,68 +74,83 @@ async function loadCollectionNfts(address: string, fresh: boolean, collection: `
   }
 
   // Get token IDs first
-  const tokenIds = await getUserTokenIds(address, collection);
+  const tokenIds = await getUserTokenIds(address, collection, fresh);
   if (tokenIds.length === 0) {
     return [];
   }
 
-  // Fetch token data and listing data in parallel for maximum speed
-  const [tokenDataResults, listingResults] = await Promise.all([
-    publicClient.multicall({
-      allowFailure: true,
-      contracts: tokenIds.map((tokenId) => ({
-        address: collection,
-        abi: PixelNFTABI,
-        functionName: "tokenData" as const,
-        args: [tokenId] as const,
-      })),
-    }),
-    // All listing data in single multicall
-    publicClient.multicall({
-      allowFailure: true,
-      contracts: tokenIds.map((n) => ({
-        address: PIXEL_MARKETPLACE_ADDRESS,
-        abi: MarketplaceAbi,
-        functionName: "getListingByToken" as const,
-        args: [collection, n] as const,
-      })),
-    }),
-  ]);
+  const tokens: NativeNft[] = [];
+  const packedV2 = isPixelV2Collection(collection);
+  for (let offset = 0; offset < tokenIds.length; offset += NFT_DETAILS_BATCH_SIZE) {
+    const batch = tokenIds.slice(offset, offset + NFT_DETAILS_BATCH_SIZE);
+    // Read the packed V2 getter directly: tokenData converts binary art to a
+    // legacy hex string on-chain and is needlessly expensive for wallet lists.
+    const [tokenDataResults, listingResults] = await Promise.all([
+      publicClient.multicall({
+        allowFailure: true,
+        contracts: batch.map((tokenId) => packedV2 ? {
+          address: collection,
+          abi: PixelV2ABI,
+          functionName: "tokenPackedData" as const,
+          args: [tokenId] as const,
+        } : {
+          address: collection,
+          abi: PixelNFTABI,
+          functionName: "tokenData" as const,
+          args: [tokenId] as const,
+        }),
+      }),
+      // Listing reads share the same bounded batch and retain token order.
+      publicClient.multicall({
+        allowFailure: true,
+        contracts: batch.map((n) => ({
+          address: PIXEL_MARKETPLACE_ADDRESS,
+          abi: MarketplaceAbi,
+          functionName: "getListingByToken" as const,
+          args: [collection, n] as const,
+        })),
+      }),
+    ]);
 
-  const tokens: NativeNft[] = tokenIds.map((tokenId, i) => {
-    const tokenResult = tokenDataResults[i];
-    const data = tokenResult?.status === "success"
-      ? tokenResult.result as readonly [string, bigint, string, string, bigint, string]
-      : null;
-    let listing: NativeNft["listing"] = null;
+    tokens.push(...batch.map((tokenId, i): NativeNft => {
+      const tokenResult = tokenDataResults[i];
+      const legacy = tokenResult?.status === "success"
+        ? tokenResult.result as readonly [string, bigint, string, string, bigint, string] : null;
+      const packed = tokenResult?.status === "success"
+        ? tokenResult.result as readonly [string, string, bigint, string, string, bigint, string] : null;
+      const name = packedV2 ? packed?.[0] : legacy?.[0];
+      const grid = packedV2 ? packed?.[2] : legacy?.[1];
+      const pixels = packedV2 ? packed?.[3] : legacy?.[2];
+      let listing: NativeNft["listing"] = null;
 
-    const r = listingResults[i];
-    if (r.status === "success" && r.result) {
-      const [listingId, listingData] = r.result as readonly [bigint, {
-        collection: `0x${string}`;
-        tokenId: bigint;
-        price: bigint;
-        seller: `0x${string}`;
-        active: boolean;
-      }];
-      if (listingId !== 0n && listingData.active) {
-        listing = {
-          listingId: listingId.toString(),
-          price: listingData.price.toString(),
-        };
+      const r = listingResults[i];
+      if (r?.status === "success" && r.result) {
+        const [listingId, listingData] = r.result as readonly [bigint, {
+          collection: `0x${string}`;
+          tokenId: bigint;
+          price: bigint;
+          seller: `0x${string}`;
+          active: boolean;
+        }];
+        if (listingId !== 0n && listingData.active) {
+          listing = {
+            listingId: listingId.toString(),
+            price: listingData.price.toString(),
+          };
+        }
       }
-    }
 
-    return {
-      collection,
-      tokenId: tokenId.toString(),
-      name: data?.[0] ?? "Untitled",
-      imageUrl: data?.[2] && data?.[1]
-        ? getPixelImageUrl(tokenId, collection)
-        : "",
-      listing,
-    };
-  });
+      return {
+        collection,
+        tokenId: tokenId.toString(),
+        name: name ?? "Untitled",
+        imageUrl: pixels && grid
+          ? getPixelImageUrl(tokenId, collection)
+          : "",
+        listing,
+      };
+    }));
+  }
 
   return tokens;
 }

@@ -45,8 +45,8 @@ test('packaging bundles CJS dependencies, preserves import.meta.url depth and co
       'deployments/chikyu.json','dist/assets/main.js','dist/index.html','server/embedded.mjs','src/generated/DogeosPixel.json','src/generated/PixelMarket.json',
     ]);
     assert.equal(result.files,6);
-    const module=await import(pathToFileURL(path.join(result.artifactRoot,'server/embedded.mjs')).href);
-    assert.deepEqual(module.handleEmbedded(),{cjs:true,deployment:{chainId:6281971},nft:{abi:[],name:'DogeosPixel'},market:{abi:[],name:'PixelMarket'}});
+    const embeddedModule=await import(pathToFileURL(path.join(result.artifactRoot,'server/embedded.mjs')).href);
+    assert.deepEqual(embeddedModule.handleEmbedded(),{cjs:true,deployment:{chainId:6281971},nft:{abi:[],name:'DogeosPixel'},market:{abi:[],name:'PixelMarket'}});
     for(const file of await filesIn(result.artifactRoot))assert.ok(!(await readFile(path.join(result.artifactRoot,file),'utf8')).includes('DO_NOT_COPY_SOURCE_PRIVATE_FIXTURE'));
   } finally {await cleanup(state.root);}
 });

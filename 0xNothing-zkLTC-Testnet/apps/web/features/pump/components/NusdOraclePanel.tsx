@@ -25,6 +25,7 @@ import {
 } from "@/features/pump/format";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { createPumpWalletGuard } from "@/features/pump/walletSession";
+import { waitForProtocolReceipt } from "@/lib/transactionReceipt";
 
 type OracleMode = "mint" | "redeem";
 
@@ -316,8 +317,7 @@ export function NusdOraclePanel() {
             });
           })();
 
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      if (receipt.status !== "success") throw new Error("NUSD transaction reverted");
+      await waitForProtocolReceipt(publicClient, hash);
       await refresh();
       if (mode === "mint") {
         setMintAmount("");

@@ -56,13 +56,14 @@ test("fresh legacy inventory still merges V2 RPC inventory with matching collect
       publicClient: {
         getBlockNumber: async () => 100n,
         multicall: async ({ contracts }: { contracts: Array<{ functionName: string; args: unknown[] }> }) => contracts.map((contract) => {
-          if (contract.functionName === "tokenData") return { status: "success", result: ["V2 Art", 256n, "pixels", owner, 2n, ""] };
+          if (contract.functionName === "tokenPackedData") return { status: "success", result: ["V2 Art", "Description", 256n, "pixels", owner, 2n, ""] };
           listed.push(String(contract.args[0]));
           return { status: "success", result: [0n, { active: false }] };
         }),
       },
     },
     "@/lib/pixelImage": { getPixelImageUrl }, "@/lib/marketplaceAbi": { MarketplaceAbi: [] }, "@/lib/abi": { PixelNFTABI: [] },
+    "@/lib/pixelV2Abi": { PixelV2ABI: [] },
     "@/lib/marketplaceSubgraph": {
       hasMarketplaceSubgraph: () => true,
       fetchUserNftsFromSubgraph: async () => ({ tokens: [{ tokenId: "1", name: "Legacy Art", imageUrl: "old.svg", listing: null }], indexedBlock: 100, hasIndexingErrors: false }),

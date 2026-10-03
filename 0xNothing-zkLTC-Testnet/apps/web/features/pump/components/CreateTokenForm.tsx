@@ -36,6 +36,7 @@ import { useToast } from "@/components/Toast";
 import { PumpConfigNotice } from "@/features/pump/components/PumpStates";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { createPumpWalletGuard } from "@/features/pump/walletSession";
+import { waitForProtocolReceipt } from "@/lib/transactionReceipt";
 
 type CreateStage = "idle" | "switching" | "hashing" | "approving" | "reserving" | "uploading" | "creating" | "confirming";
 
@@ -219,8 +220,7 @@ export function CreateTokenForm() {
             functionName: "approve",
             args: [PUMP_FACTORY_ADDRESS, maxUint256],
           });
-          const approvalReceipt = await publicClient.waitForTransactionReceipt({ hash: approvalHash });
-          if (approvalReceipt.status !== "success") throw new Error("NUSD approval reverted");
+          await waitForProtocolReceipt(publicClient, approvalHash);
         }
 
         const recoveredBeforeFee = await readCreatedToken();
@@ -253,8 +253,7 @@ export function CreateTokenForm() {
             functionName: "reserveMarket",
             args: [contentHash],
           });
-          const reservationReceipt = await publicClient.waitForTransactionReceipt({ hash: reservationHash });
-          if (reservationReceipt.status !== "success") throw new Error("Creation reservation reverted");
+          await waitForProtocolReceipt(publicClient, reservationHash);
           reservationReady = true;
         }
       }
@@ -302,8 +301,7 @@ export function CreateTokenForm() {
         args: [name.trim(), symbol.trim().toUpperCase(), metadata.metadataURI, metadata.imageURI, contentHash],
       });
       setStage("confirming");
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      if (receipt.status !== "success") throw new Error("Market creation reverted");
+      const receipt = await waitForProtocolReceipt(publicClient, hash);
 
       let token: Address | null = null;
       for (const log of receipt.logs) {

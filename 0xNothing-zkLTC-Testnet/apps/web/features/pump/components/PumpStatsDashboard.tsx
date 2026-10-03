@@ -27,6 +27,7 @@ import { useToast } from "@/components/Toast";
 import { getTransactionExplorerUrl, publicClient } from "@/lib/contract";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { createPumpWalletGuard } from "@/features/pump/walletSession";
+import { waitForProtocolReceipt } from "@/lib/transactionReceipt";
 
 function usd(value: string, fractionDigits = 2): string {
   return `$${formatWad(value, fractionDigits)}`;
@@ -303,14 +304,13 @@ function DeveloperFeePanel({
         args: [address, claimable],
         chainId: PUMP_CHAIN_ID,
       });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      if (receipt.status !== "success") throw new Error("Fee claim transaction reverted.");
+      const receipt = await waitForProtocolReceipt(publicClient, hash);
 
       toast.show({
         title: "Fees claimed",
         description: `${formatWad(claimable, 6)} NUSD was sent to ${shortAddress(address)}.`,
         kind: "success",
-        href: getTransactionExplorerUrl(hash),
+        href: getTransactionExplorerUrl(receipt.transactionHash),
         hrefLabel: "View transaction",
       });
       await claimableQuery.refetch();

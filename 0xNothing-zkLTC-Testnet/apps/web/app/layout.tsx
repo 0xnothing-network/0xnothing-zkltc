@@ -54,7 +54,7 @@ export default function RootLayout({
       </head>
       <body className={`${jetbrainsMono.variable} font-sans antialiased`}>
         <a href="#main-content" className="skip-link">Skip to content</a>
-        <div id="main-content">{children}</div>
+        <div id="main-content" tabIndex={-1}>{children}</div>
         {vercelAnalyticsEnabled ? <Analytics /> : null}
       </body>
     </html>

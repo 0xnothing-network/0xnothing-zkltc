@@ -76,10 +76,14 @@ export async function GET(request: Request) {
 
   try {
     const result = await fetchMetadataBatch(uniqueIds, collection);
+    // Nulls include transient failed RPC reads, retained locally for just 2s.
+    // A public 30s CDN response would otherwise turn that retryable miss into
+    // a much longer outage even after the RPC recovered.
+    const hasMissingMetadata = Object.values(result).some((value) => value === null);
     return NextResponse.json(
       { tokens: result },
       {
-        headers: publicCdnCacheHeaders(
+        headers: hasMissingMetadata ? { "Cache-Control": "no-store", "Cloudflare-CDN-Cache-Control": "no-store" } : publicCdnCacheHeaders(
           "public, s-maxage=30, stale-while-revalidate=30",
           30,
           30,

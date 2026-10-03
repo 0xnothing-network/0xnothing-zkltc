@@ -83,8 +83,14 @@ const userNftCache = createBoundedCache<bigint[] | null>({
   maxEntries: USER_NFT_CACHE_MAX,
   ttlMs: CACHE_TTL_SUCCESS,
 });
+// Track the newest enumeration with the same bounded wallet/collection budget.
+// Evicted request tokens cannot write, so an old RPC response remains harmless
+// even if new identities displaced its bookkeeping while it was in flight.
+const enumerationTokens = createBoundedCache<symbol>({
+  maxEntries: USER_NFT_CACHE_MAX,
+});
 
-export async function getUserTokenIds(address: string, collection: `0x${string}` = PIXEL_NFT_CONTRACT_ADDRESS): Promise<bigint[]> {
+export async function getUserTokenIds(address: string, collection: `0x${string}` = PIXEL_NFT_CONTRACT_ADDRESS, force = false): Promise<bigint[]> {
   if (!address || typeof address !== "string" || !address.match(/^0x[0-9a-fA-F]{40}$/)) {
     return [];
   }
@@ -92,7 +98,9 @@ export async function getUserTokenIds(address: string, collection: `0x${string}`
 
   const cacheKey = `${collection.toLowerCase()}:${addr}`;
   const cached = userNftCache.get(cacheKey);
-  if (cached) return cached;
+  if (!force && cached) return cached;
+  const requestToken = Symbol();
+  enumerationTokens.set(cacheKey, requestToken);
 
   try {
     const balance = (await withRetry(() =>
@@ -109,7 +117,7 @@ export async function getUserTokenIds(address: string, collection: `0x${string}`
     const n = Number(balance);
 
     if (n === 0) {
-      userNftCache.set(cacheKey, []);
+      if (enumerationTokens.get(cacheKey) === requestToken) userNftCache.set(cacheKey, []);
       return [];
     }
 
@@ -152,14 +160,16 @@ export async function getUserTokenIds(address: string, collection: `0x${string}`
     if (ids.length !== n) {
       throw new Error(`Incomplete NFT enumeration: expected ${n}, received ${ids.length}`);
     }
-    userNftCache.set(cacheKey, ids);
+    if (enumerationTokens.get(cacheKey) === requestToken) userNftCache.set(cacheKey, ids);
     return ids.sort((a, b) => (a === b ? 0 : a < b ? -1 : 1));
   } catch (err) {
     console.error("[Contract] getUserTokenIds error:", err);
     // A previously enumerated list is better than an error, even past its ttl.
     const stale = userNftCache.entry(cacheKey);
-    if (stale?.value) return stale.value;
-    userNftCache.set(cacheKey, null);
+    if (!force && stale?.value) return stale.value;
+    // A forced post-transaction refresh must not present an old inventory as
+    // current. Preserve the previous entry for ordinary stale fallback reads.
+    if (!force && enumerationTokens.get(cacheKey) === requestToken) userNftCache.set(cacheKey, null);
     throw err;
   }
 }

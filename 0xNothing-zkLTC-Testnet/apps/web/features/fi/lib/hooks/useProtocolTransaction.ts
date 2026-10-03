@@ -15,6 +15,7 @@ import { erc20Abi } from "@fi/lib/abis/erc20";
 import { deployment } from "@fi/config/deployment";
 import { readableError } from "@fi/lib/errors";
 import { isBlockSyncedQueryKey } from "@/lib/liveData";
+import { ReceiptConfirmationError, waitForProtocolReceipt } from "@/lib/transactionReceipt";
 import { deliveredTokenAmount } from "../../../../../../shared/transactions/tokenDelivery";
 
 export type TransactionPhase =
@@ -176,8 +177,8 @@ export function useProtocolTransaction() {
               await assertWalletReady();
               const approvalHash = await activeWallet.writeContract(approvalSimulation.request);
               submittedHash = approvalHash;
-              const approvalReceipt = await publicClient.waitForTransactionReceipt({ hash: approvalHash });
-              if (approvalReceipt.status !== "success") throw new Error("Token approval reverted");
+              const approvalReceipt = await waitForProtocolReceipt(publicClient, approvalHash);
+              submittedHash = approvalReceipt.transactionHash;
               confirmedStep = true;
             }
           }
@@ -200,10 +201,10 @@ export function useProtocolTransaction() {
           const hash = await activeWallet.writeContract(simulation.request);
           submittedHash = hash;
           setState({ phase: "confirming", message: "Submitted · Confirming on-chain", hash });
-          const receipt = await publicClient.waitForTransactionReceipt({ hash });
-          if (receipt.status !== "success") throw new Error("Transaction reverted");
+          const receipt = await waitForProtocolReceipt(publicClient, hash);
+          submittedHash = receipt.transactionHash;
           confirmedStep = true;
-          lastHash = hash;
+          lastHash = receipt.transactionHash;
           if (stage.deliveredToken) {
             delivered = deliveredTokenAmount(receipt, stage.deliveredToken, address);
           }
@@ -213,6 +214,10 @@ export function useProtocolTransaction() {
         return lastHash;
 
       } catch (error) {
+        if (error instanceof ReceiptConfirmationError) {
+          submittedHash = error.hash;
+          confirmedStep = true;
+        }
         setState({ phase: "error", message: readableError(error), hash: submittedHash });
         return undefined;
       } finally {

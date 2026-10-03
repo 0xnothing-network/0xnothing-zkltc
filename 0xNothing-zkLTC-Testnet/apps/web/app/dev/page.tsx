@@ -1,5 +1,7 @@
 "use client";
 
+import { useProtocolReceipt } from "@/lib/useProtocolReceipt";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowSquareOut,
@@ -23,7 +25,6 @@ import {
   useReadContracts,
   useSimulateContract,
   useSwitchChain,
-  useWaitForTransactionReceipt,
   useWriteContract,
 } from "wagmi";
 import { formatUnits, getAddress, isAddress, type Address } from "viem";
@@ -140,7 +141,7 @@ export default function DevPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
   const [txDomain, setTxDomain] = useState<RefreshDomain | undefined>();
-  const txReceipt = useWaitForTransactionReceipt({ chainId: litvm.id, hash: txHash });
+  const txReceipt = useProtocolReceipt({ chainId: litvm.id, hash: txHash });
 
   const nusd = deployment.contracts.nusd;
   const pump = deployment.contracts.pump;

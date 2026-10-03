@@ -12,6 +12,7 @@ import {
   useWriteContract,
 } from "wagmi";
 import { createPumpWalletGuard } from "@/features/pump/walletSession";
+import { waitForProtocolReceipt } from "@/lib/transactionReceipt";
 import { nusdAbi, pumpTokenAbi, zeroXPumpAbi } from "@/features/pump/abis";
 import {
   NUSD_CONFIGURED,
@@ -167,6 +168,10 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
       );
       return;
     }
+    if (quotePending || quoteError) {
+      toast.warning("Quote not ready", "Wait for a quote for the amount currently entered.");
+      return;
+    }
     if (amountWei <= 0n || quoteOutput <= 0n) {
       toast.warning("Enter an amount", "Enter a valid trade amount and wait for a quote.");
       return;
@@ -185,33 +190,25 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
         const hash = mode === "buy"
           ? await writeContractAsync({ account: address, chainId: PUMP_CHAIN_ID, address: PUMP_NUSD_ADDRESS, abi: nusdAbi, functionName: "approve", args: [PUMP_FACTORY_ADDRESS, maxUint256] })
           : await writeContractAsync({ account: address, chainId: PUMP_CHAIN_ID, address: market.tokenAddress, abi: pumpTokenAbi, functionName: "approve", args: [PUMP_FACTORY_ADDRESS, maxUint256] });
-        const receipt = await publicClient.waitForTransactionReceipt({ hash });
-        if (receipt.status !== "success") throw new Error("Token approval reverted");
+        await waitForProtocolReceipt(publicClient, hash);
         toast.info("Approval confirmed", "Confirm the trade transaction in your wallet.");
       }
 
       const minimumOutput = (quoteOutput * (PUMP_BPS_DENOMINATOR - slippageBps)) / PUMP_BPS_DENOMINATOR;
       const deadline = BigInt(Math.floor(Date.now() / 1000) + 20 * 60);
       assertWalletUnchanged();
-      const hash = mode === "buy"
-        ? await writeContractAsync({
-            account: address,
-            chainId: PUMP_CHAIN_ID,
-            address: PUMP_FACTORY_ADDRESS,
-            abi: zeroXPumpAbi,
-            functionName: "buy",
-            args: [market.tokenAddress, amountWei, minimumOutput, deadline],
-          })
-        : await writeContractAsync({
-            account: address,
-            chainId: PUMP_CHAIN_ID,
-            address: PUMP_FACTORY_ADDRESS,
-            abi: zeroXPumpAbi,
-            functionName: "sell",
-            args: [market.tokenAddress, amountWei, minimumOutput, deadline],
-          });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      if (receipt.status !== "success") throw new Error("Trade reverted");
+      const request = {
+        account: address,
+        chainId: PUMP_CHAIN_ID,
+        address: PUMP_FACTORY_ADDRESS,
+        abi: zeroXPumpAbi,
+        functionName: mode === "buy" ? "buy" : "sell",
+        args: [market.tokenAddress, amountWei, minimumOutput, deadline],
+      } as const;
+      await publicClient.simulateContract(request);
+      assertWalletUnchanged();
+      const hash = await writeContractAsync(request);
+      await waitForProtocolReceipt(publicClient, hash);
       toast.success(`${mode === "buy" ? "Buy" : "Sell"} confirmed`, "The trade settled on the 0xPump curve.");
       setAmount("");
       await refresh();
@@ -233,13 +230,13 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
   return (
     <aside className="pump-panel pump-trade-panel">
       <div className="pump-segmented pump-trade-tabs" role="group" aria-label="Trade side">
-        <button type="button" disabled={market.status !== "TRADING"} className={mode === "buy" ? "active buy" : ""} aria-pressed={mode === "buy"} onClick={() => { setMode("buy"); setAmount(""); }}>Buy</button>
-        <button type="button" disabled={market.status === "GRADUATED"} className={mode === "sell" ? "active sell" : ""} aria-pressed={mode === "sell"} onClick={() => { setMode("sell"); setAmount(""); }}>Sell</button>
+        <button type="button" disabled={pending || market.status !== "TRADING"} className={mode === "buy" ? "active buy" : ""} aria-pressed={mode === "buy"} onClick={() => { setMode("buy"); setAmount(""); }}>Buy</button>
+        <button type="button" disabled={pending || market.status === "GRADUATED"} className={mode === "sell" ? "active sell" : ""} aria-pressed={mode === "sell"} onClick={() => { setMode("sell"); setAmount(""); }}>Sell</button>
       </div>
 
       <label className="pump-amount-field">
-        <span><span>{mode === "buy" ? "Maximum spend" : "You pay"}</span><button type="button" onClick={() => setAmount(formatUnits(sourceBalance, 18))}>Max {displayAmount(sourceBalance)}</button></span>
-        <span><input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.0" /><strong>{mode === "buy" ? "NUSD" : market.symbol}</strong></span>
+        <span><span>{mode === "buy" ? "Maximum spend" : "You pay"}</span><button type="button" disabled={pending} onClick={() => setAmount(formatUnits(sourceBalance, 18))}>Max {displayAmount(sourceBalance)}</button></span>
+        <span><input inputMode="decimal" disabled={pending} value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.0" /><strong>{mode === "buy" ? "NUSD" : market.symbol}</strong></span>
       </label>
 
       <div className="pump-quote-arrow" aria-hidden="true">&darr;</div>
@@ -252,7 +249,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
       <div className="pump-trade-details">
         {mode === "buy" ? <div><span>Actual spend</span><strong>${displayAmount(actualInput)}</strong></div> : null}
         <div><span>Protocol fee</span><strong>${displayAmount(quoteFee)} (0.1%)</strong></div>
-        <div><span>Slippage</span><span className="pump-inline-options">{[50n, 100n, 200n].map((value) => <button key={value.toString()} type="button" className={slippageBps === value ? "active" : ""} aria-pressed={slippageBps === value} onClick={() => setSlippageBps(value)}>{Number(value) / 100}%</button>)}</span></div>
+        <div><span>Slippage</span><span className="pump-inline-options">{[50n, 100n, 200n].map((value) => <button key={value.toString()} type="button" disabled={pending} className={slippageBps === value ? "active" : ""} aria-pressed={slippageBps === value} onClick={() => setSlippageBps(value)}>{Number(value) / 100}%</button>)}</span></div>
         {mode === "buy" && buyQuote.data?.[4] ? <p>This buy reaches the $6,000 READY target.</p> : null}
       </div>
 

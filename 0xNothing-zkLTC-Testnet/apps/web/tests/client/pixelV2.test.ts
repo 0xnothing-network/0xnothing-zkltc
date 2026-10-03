@@ -95,6 +95,7 @@ test("mint preflight passes immutable description and V2 bytes to the estimate a
       usePublicClient: () => client, useReadContract: () => ({ data: true }), useWaitForTransactionReceipt: () => ({}),
       useSendTransaction: () => ({ sendTransactionAsync: async (call: typeof sends[number]) => { sends.push(call); return "0xtx"; } }),
     },
+    "@/lib/useProtocolReceipt": { useProtocolReceipt: () => ({}) },
     viem: { encodeFunctionData: (call: typeof encoded[number]) => { encoded.push(call); return "0xcalldata"; } },
     "@/lib/contract": { publicClient: client, getMarketplaceTxUrl: () => "tx" }, "@/lib/pixelV2Abi": { PixelV2ABI: [] },
     "@/lib/pixelV2": { pixelDataToV2PackedBytes },

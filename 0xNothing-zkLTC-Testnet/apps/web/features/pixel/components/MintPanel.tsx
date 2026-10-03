@@ -1,11 +1,12 @@
 "use client";
 
+import { useProtocolReceipt } from "@/lib/useProtocolReceipt";
+
 import { memo, useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   useAccount,
   useConfig,
   useSendTransaction,
-  useWaitForTransactionReceipt,
   useReadContract,
   usePublicClient,
   useSwitchChain,
@@ -55,7 +56,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
   // where the chain changes between mount and submit.
 
   const { data: mintReceipt, error: mintReceiptError, isLoading: isConfirming } =
-    useWaitForTransactionReceipt({ chainId: LITVM_CHAIN_ID, hash: txHash ?? undefined });
+    useProtocolReceipt({ chainId: LITVM_CHAIN_ID, hash: txHash ?? undefined });
 
   const firedRef = useRef(false);
   const mintLockRef = useRef(false);

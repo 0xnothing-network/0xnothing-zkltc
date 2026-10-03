@@ -6,6 +6,7 @@ import { isAddress } from 'viem';
 import { publicClient, deployment, assertDogeosChain } from '../scripts/runtime.mjs';
 import { createCatalogStore } from './catalog-store.mjs';
 import { queryParams, tokenId } from './validation.mjs';
+import { readLimitedJsonResponse } from '../../scripts/lib/http-json.mjs';
 
 export const dep = await deployment();
 export const nft = JSON.parse(await readFile(new URL('../src/generated/DogeosPixel.json', import.meta.url), 'utf8'));
@@ -26,7 +27,7 @@ async function graph(query,variables={},deadline) {
   const signal=deadline?AbortSignal.any([AbortSignal.timeout(6000),deadline]):AbortSignal.timeout(6000);
   const response=await fetch(process.env.SUBGRAPH_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({query,variables}),signal});
   if(!response.ok)throw new Error('Subgraph unavailable.');
-  const result=await response.json();
+  const result=await readLimitedJsonResponse(response,{label:'DogeOS subgraph',maxBytes:16*1024*1024});
   if(result.errors?.length||!result.data)throw new Error('Invalid subgraph response.');
   return result.data;
 }

@@ -4,6 +4,7 @@ import { setImmediate } from "node:timers/promises";
 import { QueryClient, QueryObserver, type QueryObserverOptions } from "@tanstack/react-query";
 import * as viem from "viem";
 import { evaluateModule } from "../helpers/evaluateModule.ts";
+import { waitForProtocolReceipt } from "../../lib/transactionReceipt.ts";
 
 const ACCOUNT = `0x${"1".repeat(40)}` as const;
 const OTHER = `0x${"2".repeat(40)}` as const;
@@ -11,6 +12,7 @@ const TOKEN = `0x${"3".repeat(40)}` as const;
 const FACTORY = `0x${"4".repeat(40)}` as const;
 const NUSD = `0x${"5".repeat(40)}` as const;
 const HASH = `0x${"a".repeat(64)}` as const;
+const REPLACEMENT_HASH = `0x${"b".repeat(64)}` as const;
 const config = { PUMP_CHAIN_ID: 4441, PUMP_CONFIGURED: true, NUSD_CONFIGURED: true, PUMP_FACTORY_ADDRESS: FACTORY, PUMP_NUSD_ADDRESS: NUSD, PUMP_BPS_DENOMINATOR: 10_000n };
 const market = { tokenAddress: TOKEN, creator: ACCOUNT, name: "Token", symbol: "TOKEN", status: "TRADING", priceNusd: "1" };
 
@@ -145,10 +147,12 @@ function descendants(value: unknown): ElementNode[] {
   return [element, ...descendants(element.props.children)];
 }
 
-function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect", mode = "buy") {
+function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect", mode = "buy", replacement?: "cancelled" | "replaced" | "repriced", options: { quoteSettling?: boolean; simulationError?: boolean; simulationChange?: boolean } = {}) {
   const account = { address: ACCOUNT as string, isConnected: true, chainId: 4441, connector: { uid: "wallet-a" } };
   const writes: Array<{ functionName: string; account?: string; chainId?: number }> = [];
   const errors: Error[] = [];
+  const simulations: Array<{ functionName: string }> = [];
+  let successes = 0;
   const readOptions: Array<{ chainId?: number }> = [];
   const publicClientOptions: Array<{ chainId?: number } | undefined> = [];
   let done = false;
@@ -171,14 +175,21 @@ function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect",
       wagmi: {
         useConfig: () => ({}),
         useAccount: () => ({ ...account }),
-        usePublicClient: (options: { chainId?: number } | undefined) => {
-          publicClientOptions.push(options);
-          return { waitForTransactionReceipt: async () => {
+        usePublicClient: (clientOptions: { chainId?: number } | undefined) => {
+          publicClientOptions.push(clientOptions);
+          return { simulateContract: async (request: { functionName: string }) => {
+            simulations.push(request);
+            if (options.simulationError) throw new Error("Curve is no longer trading");
+            if (options.simulationChange) account.address = OTHER;
+            return { request };
+          }, waitForTransactionReceipt: async (parameters: viem.WaitForTransactionReceiptParameters) => {
             if (change === "account") account.address = OTHER;
             if (change === "chain") account.chainId = 1;
             if (change === "connector") account.connector = { uid: "wallet-b" };
             if (change === "disconnect") account.isConnected = false;
-            return { status: "success" };
+            const receipt = { status: "success", transactionHash: replacement ? REPLACEMENT_HASH : HASH };
+            if (replacement) parameters.onReplaced?.({ reason: replacement, transactionReceipt: receipt } as viem.ReplacementReturnType);
+            return receipt;
           } };
         },
         useReadContract: (options: { functionName: string; chainId?: number }) => {
@@ -192,10 +203,11 @@ function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect",
         useWriteContract: () => ({ writeContractAsync: async (request: typeof writes[number]) => { writes.push(request); return HASH; } }),
       },
       "@/features/pump/walletSession": guardModule,
+      "@/lib/transactionReceipt": { waitForProtocolReceipt },
       "@/features/pump/abis": { zeroXPumpAbi: [], pumpTokenAbi: [], nusdAbi: [] },
       "@/features/pump/config": config,
       "@/features/pump/format": { formatCompactNumber: String },
-      "@/components/Toast": { useToast: () => ({ info() {}, success() {}, warning() {}, error() {}, handleError: (error: Error) => errors.push(error) }) },
+      "@/components/Toast": { useToast: () => ({ info() {}, success() { successes += 1; }, warning() {}, error() {}, handleError: (error: Error) => errors.push(error) }) },
       "@/lib/liveData": { invalidateAfterPumpTrade: async () => {} },
       "@/lib/actionLock": { tryAcquireAction: (ref: { current: boolean }) => ref.current ? false : (ref.current = true), releaseAction: (ref: { current: boolean }) => { ref.current = false; } },
       // A settled pass-through, which is what the real hook returns once the
@@ -204,7 +216,7 @@ function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect",
       // harness answers positionally from a four-entry list, so the hook would
       // read `undefined` and report itself forever pending, gating the quote
       // off and stalling the trade these tests exist to follow.
-      "@/lib/useDebouncedValue": { useDebouncedValue: (value: unknown) => ({ value, pending: false }) },
+      "@/lib/useDebouncedValue": { useDebouncedValue: (value: unknown) => ({ value, pending: options.quoteSettling ?? false }) },
     },
   );
   return {
@@ -214,9 +226,46 @@ function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect",
       for (let index = 0; index < 30 && !done; index += 1) await setImmediate();
       assert.equal(done, true, "trade handler completed");
     },
-    writes, errors, readOptions, publicClientOptions,
+    writes, errors, readOptions, publicClientOptions, simulations, successes: () => successes,
   };
 }
+
+for (const replacement of ["cancelled", "replaced"] as const) {
+  test(`Pump stops after a successful ${replacement} approval receipt`, async () => {
+    const run = tradeHarness(undefined, "buy", replacement);
+    await run.run();
+    assert.equal(run.writes.length, 1);
+    assert.equal(run.errors.length, 1);
+    assert.equal(run.successes(), 0);
+  });
+}
+
+test("Pump accepts a speed-up while continuing the intended approval and trade", async () => {
+  const run = tradeHarness(undefined, "buy", "repriced");
+  await run.run();
+  assert.equal(run.writes.length, 2);
+  assert.equal(run.errors.length, 0);
+  assert.equal(run.successes(), 1);
+});
+
+test("Pump checks the current curve after approval before sending the trade", async () => {
+  const run = tradeHarness(undefined, "buy", undefined, { simulationError: true });
+  await run.run();
+  assert.equal(run.simulations.length, 1);
+  assert.equal(run.simulations[0].functionName, "buy");
+  assert.equal(run.writes.length, 1);
+  assert.equal(run.writes[0].functionName, "approve");
+  assert.match(run.errors[0].message, /Curve is no longer trading/);
+  assert.equal(run.successes(), 0);
+});
+
+test("Pump checks the wallet again after the trade simulation", async () => {
+  const run = tradeHarness(undefined, "sell", undefined, { simulationChange: true });
+  await run.run();
+  assert.equal(run.simulations[0].functionName, "sell");
+  assert.equal(run.writes.length, 1);
+  assert.match(run.errors[0].message, /Wallet changed/);
+});
 
 for (const change of ["account", "chain", "connector", "disconnect"] as const) {
   test(`Pump stops approval-to-trade continuation after wallet ${change} changes`, async () => {
@@ -276,7 +325,7 @@ function componentHarness(name: PumpComponent, changeAt?: "simulation" | "upload
       if (changeAt === "simulation" || (changeAt === "creationSimulation" && functionName === "createMarket")) account.address = OTHER;
       return {};
     },
-    waitForTransactionReceipt: async () => ({ status: "success", logs: [] }),
+    waitForTransactionReceipt: async () => ({ status: "success", transactionHash: HASH, logs: [] }),
   };
   let metadataQuery: { queryFn: (options: { signal: AbortSignal }) => Promise<unknown> } | undefined;
   let metadataData: unknown;
@@ -311,6 +360,7 @@ function componentHarness(name: PumpComponent, changeAt?: "simulation" | "upload
         useWriteContract: () => ({ writeContractAsync: async (request: typeof writes[number]) => { writes.push(request); return HASH; } }),
       },
       "@/features/pump/walletSession": guardModule,
+      "@/lib/transactionReceipt": { waitForProtocolReceipt },
       "@/features/pump/config": pumpConfig,
       "@/features/pump/abis": { zeroXPumpAbi: [], nusdAbi: [], diaOracleAdapterAbi: [], pumpGraduationControllerAbi: [], pumpGraduationRouterAbi: [] },
       "@/features/pump/hooks/useIpfsUpload": { useIpfsUpload: () => ({ upload: async () => {

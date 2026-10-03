@@ -11,7 +11,7 @@ const maker='0x1111111111111111111111111111111111111111',buyer='0x22222222222222
 const dep={chainId:6281971,DogeosPixel:{address:'0x3333333333333333333333333333333333333333',startBlock:1},PixelMarket:{address:'0x4444444444444444444444444444444444444444',startBlock:1}};
 const now=()=>BigInt(Math.floor(Date.now()/1000)+10000);
 
-async function fixture(t,{syncInterval=0}={}) {
+async function fixture(t,{syncInterval=0,graphEndpoint=()=>''}={}) {
   const directory=await mkdtemp(path.join(tmpdir(),'dogeos-index-'));t.after(()=>rm(directory,{recursive:true,force:true}));
   let head=1n,logs=[],branch='a',failHash=false,metadata='Doge';
   const reads=[];
@@ -24,7 +24,7 @@ async function fixture(t,{syncInterval=0}={}) {
   const event=(eventName,args,blockNumber=head)=>({address:eventName==='Listed'?dep.PixelMarket.address:dep.DogeosPixel.address,blockNumber,logIndex:logs.length,transactionHash:'0x'+String(logs.length+1).padStart(64,'0'),eventName,args});
   const add=(name,args)=>logs.push(event(name,args));
   const mint=(id=1n)=>{add('Transfer',{tokenId:id,from:zero,to:maker});add('Minted',{tokenId:id,creator:maker,name:metadata+' '+id});};
-  const store=await createCatalogStore({dep,nft:[],market:[],client,cacheFile:path.join(directory,'catalog.json'),syncInterval,graphEndpoint:()=>'',decode:log=>log});
+  const store=await createCatalogStore({dep,nft:[],market:[],client,cacheFile:path.join(directory,'catalog.json'),syncInterval,graphEndpoint,decode:log=>log});
   return {store,client,reads,add,mint,directory,advance:()=>head++,fail:()=>{failHash=true;},reorg:()=>{branch='c';metadata='Reorg';logs=[];},setLogs:value=>{logs=value;}};
 }
 
@@ -127,4 +127,28 @@ test('checkpoint identity includes marketplace address and a new deployment cann
 test('standalone token reads invalidate forked artwork during the sync cooldown',async t=>{
   const f=await fixture(t,{syncInterval:60000});f.mint();assert.equal((await f.store.catalog()).tokens[0].name,'Doge 1');
   f.reorg();f.mint();const standalone=await f.store.token('1');assert.equal(standalone.name,'Reorg 1');assert.ok(f.reads.every(request=>request.blockNumber===1n));
+});
+
+test('a catalogue waiting for Graph cannot mix its old checkpoint with a new fork',async context=>{
+  const testFixture=await fixture(context,{graphEndpoint:()=> 'https://graph.fixture.invalid'});testFixture.mint();await testFixture.store.sync();
+  let started,release;
+  const ready=new Promise(resolve=>{started=resolve;}),gate=new Promise(resolve=>{release=resolve;});
+  context.mock.method(globalThis,'fetch',async()=>{started();await gate;return Response.json({errors:[{message:'Retry'}]});});
+  context.after(()=>release());
+  const pending=testFixture.store.catalog();await ready;
+  testFixture.reorg();testFixture.mint(2n);await testFixture.store.sync();release();
+  await assert.rejects(pending,/Chain changed/);
+  assert.deepEqual((await testFixture.store.catalog()).tokens.map(token=>token.name),['Reorg 2']);
+});
+
+test('an oversized Graph discovery response is cancelled before falling back to RPC',async context=>{
+  const testFixture=await fixture(context,{graphEndpoint:()=> 'https://graph.fixture.invalid'});testFixture.mint();
+  let cancelled=false;
+  context.mock.method(globalThis,'fetch',async()=>new Response(new ReadableStream({
+    start(controller){controller.enqueue(new Uint8Array(1024*1024+1));},
+    cancel(){cancelled=true;},
+  })));
+  const pending=testFixture.store.catalog();
+  const result=await Promise.race([pending,new Promise((_resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Graph body was not bounded.')),1000);context.after(()=>clearTimeout(timer));})]);
+  assert.equal(cancelled,true);assert.equal(result.source,'rpc');assert.equal(result.tokens[0].name,'Doge 1');
 });

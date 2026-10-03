@@ -1,7 +1,9 @@
 "use client";
 
+import { useProtocolReceipt } from "@/lib/useProtocolReceipt";
+
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { useAccount, useConfig, usePublicClient, useSwitchChain, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useConfig, usePublicClient, useSwitchChain, useWriteContract } from "wagmi";
 import { formatEther } from "viem";
 import {
   PIXEL_MARKETPLACE_ADDRESS,
@@ -782,7 +784,7 @@ function ListingCard({
     isLoading: isConfirming,
     isSuccess: isConfirmed,
   } =
-    useWaitForTransactionReceipt({ chainId: LITVM_CHAIN_ID, hash: txHash });
+    useProtocolReceipt({ chainId: LITVM_CHAIN_ID, hash: txHash });
 
   useEffect(() => {
     if (!isConfirmed || !txHash || !receipt || handledTxRef.current === txHash) return;
@@ -800,7 +802,7 @@ function ListingCard({
     toast.show({
       title: `${action} successful`,
       description: `${meta?.name || `Token #${listing.tokenId}`}`,
-      href: getMarketplaceTxUrl(txHash),
+      href: getMarketplaceTxUrl(receipt.transactionHash ?? txHash),
       hrefLabel: "View on Explorer",
     });
     releaseAction(actionLockRef);
