@@ -53,12 +53,12 @@ Per-asset debt ceilings, minimum collateral ratios, DIA freshness checks, and
 independent pause switches limit blast radius.
 
 Mint output is calculated from the DIA USD price. The user-provided NUSD remains
-collateral at the quoted 1:1 USD value; the separate 0.1% NUSD fee is 0.1% of
-this mint's oracle notional (one ceil, plus a 1-wei dust bound), pulled in
+collateral at the quoted 1:1 USD value; the separate 0.1% NUSD fee is pulled in
 addition, bounded by a caller-supplied maximum, and never enters either the user
 or Safety Reserve collateral ledger. Deposits merge into the account's single
 position. `repayAndWithdraw` reduces debt before the collateral check so a full
-close can repay all synth and withdraw all user NUSD atomically.
+close can repay all synth and withdraw all user NUSD atomically. The fee UI
+prints full token precision so the mint notional is not shown as the fee.
 
 Each position records user-owned NUSD separately from protocol-reserve NUSD. In
 the default mode, the user supplies the full 150% minimum. The shared

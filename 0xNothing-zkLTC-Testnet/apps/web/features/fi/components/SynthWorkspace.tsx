@@ -262,13 +262,35 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
   }
 
   async function closePosition() {
-    if (!vault || !address || !synthAddress || activationBlocked || withdrawPaused) return;
-    if (synthDebt !== undefined && synthDebt > 0n && synthBalance.data !== undefined && synthBalance.data < synthDebt) {
+    if (!vault || !address || !synthAddress) {
+      toast.show("Cannot close", "Connect a wallet and wait for the vault to load.", "warning");
       return;
     }
+    if (activationBlocked) {
+      toast.show("Cannot close", "The vault is not ready yet.", "warning");
+      return;
+    }
+    if (withdrawPaused) {
+      toast.show("Cannot close", "Collateral withdrawals are paused by governance.", "warning");
+      return;
+    }
+    if (synthDebt !== undefined && synthDebt > 0n && synthBalance.data !== undefined && synthBalance.data < synthDebt) {
+      toast.show("Cannot close", `Hold the outstanding ${synth} to repay that debt first.`, "warning");
+      return;
+    }
+
+    const latestReads = await walletReads.refetch();
+    const latestPosition = latestReads.data?.[0]?.result as Position | undefined;
+    const latestUserCollateral = latestPosition?.[0];
+    const latestDebt = latestPosition?.[2];
+    if (latestUserCollateral === undefined) {
+      toast.show("Cannot close", "Could not refresh your collateral. Try again.", "error");
+      return;
+    }
+
     const hash = await tx.execute({
-      approval: synthDebt && synthDebt > 0n
-        ? { token: synthAddress, spender: vault, amount: synthDebt }
+      approval: latestDebt && latestDebt > 0n
+        ? { token: synthAddress, spender: vault, amount: latestDebt }
         : undefined,
       call: {
         address: vault,
@@ -278,16 +300,19 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
         // (or 0 when already debt-free) then the exact stored user NUSD. The
         // upgraded vault also accepts max-uint collateral as "all safe after repay".
         args: [
-          synthDebt && synthDebt > 0n ? maxUint256 : 0n,
-          userCollateral ?? 0n,
+          latestDebt && latestDebt > 0n ? maxUint256 : 0n,
+          latestUserCollateral,
           address,
         ] as const,
       },
     });
+    // execute() only returns a hash after the receipt confirms.
     if (hash) {
       toast.show("Position closed", `All ${synth} debt repaid, then your NUSD withdrawn.`, "success");
       setAmountText("");
       refreshPosition();
+    } else {
+      toast.show("Close failed", "The close transaction did not confirm. Try again.", "error");
     }
   }
 

@@ -123,8 +123,21 @@ contract SyntheticVaultFeeAndCloseTest is TestBase {
             assertLe(feeNusd * 100, notionalNusd, "above dust, fee cannot approach 100 percent of value");
         }
         uint256 expected = Math.mulDiv(amountSynthetic, priceWad, (WAD * BPS) / MINT_FEE_BPS, Math.Rounding.Ceil);
-        if (expected > notionalNusd * MINT_FEE_BPS / BPS + 1) expected = notionalNusd * MINT_FEE_BPS / BPS + 1;
         assertEq(feeNusd, expected, "quote matches single-ceil 0.1 percent formula");
+    }
+
+    /// @dev Proves the rewrite is an identity: `ceil(a*p/1e21)` equals the
+    /// stacked `ceil(ceil(a*p/1e18)/1000)` the live vault already charged.
+    function testFuzzSingleCeilFeeEqualsStackedOldFormula(uint128 rawAmount, uint128 rawPrice) public {
+        uint256 amountSynthetic = bound(uint256(rawAmount), 1, type(uint128).max);
+        uint256 priceWad = bound(uint256(rawPrice), 1, type(uint128).max);
+
+        uint256 newFee = Math.mulDiv(amountSynthetic, priceWad, (WAD * BPS) / MINT_FEE_BPS, Math.Rounding.Ceil);
+        uint256 oldFee = _mulDivUp(_mulDivUp(amountSynthetic, priceWad, WAD), MINT_FEE_BPS, BPS);
+        assertEq(newFee, oldFee, "ceil(a*p/1e21) equals ceil(ceil(a*p/1e18)/1000)");
+
+        ethOracle.setPrice(priceWad);
+        assertEq(vault.quoteMintFee(amountSynthetic), oldFee, "vault still quotes the pre-rewrite fee");
     }
 
     function testOpenAddThenAtomicFullClose() public {
@@ -175,6 +188,41 @@ contract SyntheticVaultFeeAndCloseTest is TestBase {
         (uint256 userAfter,, uint256 debtAfter) = vault.positions(ALICE);
         assertEq(debtAfter, 0, "repay ran before the collateral check");
         assertEq(userAfter, 0, "full user collateral withdrawn after debt hit zero");
+    }
+
+    /// @dev Regression vs main: at 150% CR, `maxUserCollateralWithdrawable` is 0.
+    /// Main still forwards `type(uint256).max` into `_withdrawCollateral`, which
+    /// reverts `InvalidAmount` and rolls the repay back. Exact-amount close
+    /// (`testAtomicCloseUsesPostRepayCollateralCheck`) already succeeded on main.
+    function testMaxUintFullCloseAtMinimumRatioSucceeds() public {
+        vm.prank(ALICE);
+        vault.depositAndMint(150 ether, 0.05 ether, type(uint256).max, ALICE);
+        assertEq(vault.maxUserCollateralWithdrawable(ALICE), 0, "min-ratio position has no free collateral");
+        assertEq(neth.balanceOf(ALICE), 0.05 ether, "wallet holds the debt");
+
+        uint256 nusdBefore = nusd.balanceOf(ALICE);
+        vm.prank(ALICE);
+        uint256 repaid = vault.repayAndWithdraw(type(uint256).max, type(uint256).max, ALICE);
+
+        (uint256 userAfter,, uint256 debtAfter) = vault.positions(ALICE);
+        assertEq(repaid, 0.05 ether, "all debt repaid in the same call");
+        assertEq(userAfter + debtAfter, 0, "position fully closed");
+        assertEq(neth.balanceOf(ALICE), 0, "synth burned");
+        assertEq(nusd.balanceOf(ALICE), nusdBefore + 150 ether, "user NUSD returned after repay");
+    }
+
+    function testMaxUintWithdrawRevertsWhenDebtRemainsAndNothingIsWithdrawable() public {
+        vm.prank(ALICE);
+        vault.depositAndMint(150 ether, 0.05 ether, type(uint256).max, ALICE);
+        assertEq(vault.maxUserCollateralWithdrawable(ALICE), 0, "nothing free while debt remains at min CR");
+
+        vm.expectRevert(SyntheticVault.InsufficientCollateral.selector);
+        vm.prank(ALICE);
+        vault.repayAndWithdraw(0, type(uint256).max, ALICE);
+
+        (uint256 userAfter,, uint256 debtAfter) = vault.positions(ALICE);
+        assertEq(userAfter, 150 ether, "collateral unchanged after the revert");
+        assertEq(debtAfter, 0.05 ether, "debt unchanged after the revert");
     }
 
     function testRepayAndWithdrawMaxSkipsZeroDebtRepay() public {
