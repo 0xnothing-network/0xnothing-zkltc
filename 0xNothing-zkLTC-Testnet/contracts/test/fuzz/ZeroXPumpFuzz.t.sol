@@ -104,6 +104,29 @@ contract ZeroXPumpFuzzTest is TestBase {
         assertEq(uint8(lifecycle), uint8(ZeroXPump.Lifecycle.READY), "market ready");
     }
 
+    function testFuzzLaunchProtectionCapsBuysOnlyInsideWindow(
+        uint256 rawWindow,
+        uint256 rawCap,
+        uint256 rawElapsed,
+        uint256 rawNusdIn
+    ) public {
+        uint256 window = bound(rawWindow, 1, 1 hours);
+        uint256 cap = bound(rawCap, 1e12, 1_000 ether);
+        uint256 maxNusdIn = bound(rawNusdIn, 1e12, 1_400 ether);
+        pump.setLaunchProtection(window, cap);
+        (,,,,,, uint64 createdAt,,,,) = pump.markets(token);
+        uint256 elapsed = bound(rawElapsed, 0, 2 hours);
+        vm.warp(uint256(createdAt) + elapsed);
+
+        vm.prank(TRADER);
+        (, uint256 spent) = pump.buy(token, maxNusdIn, 0, type(uint256).max);
+        if (elapsed < window) {
+            assertEq(spent, maxNusdIn < cap ? maxNusdIn : cap, "capped inside window");
+        } else {
+            assertEq(spent, maxNusdIn, "uncapped after window");
+        }
+    }
+
     function _virtualProduct() internal view returns (uint256 product) {
         (,,, uint256 virtualToken, uint256 virtualNusd,,,,,,) = pump.markets(token);
         product = virtualToken * virtualNusd;

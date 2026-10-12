@@ -441,6 +441,121 @@ contract ZeroXPumpTest is TestBase {
         assertEq(trade.curveProgressBps, pump.curveProgressBps(token), "progress");
     }
 
+    function testViewsReportRegistryAndAccounting() public {
+        address first = _createMarket();
+        address second = _createMarket();
+        assertEq(pump.createFee(), 1 ether, "create fee");
+        assertEq(pump.tradeFeeBps(), 10, "trade fee");
+        assertEq(pump.nusd(), address(nusd), "nusd");
+        assertEq(pump.totalMarkets(), 2, "market count");
+        address[] memory all = pump.getAllTokens();
+        assertEq(all.length, 2, "all tokens");
+        assertEq(all[1], second, "registry order");
+        assertEq(pump.getTokensByCreator(CREATOR)[0], first, "creator registry");
+        assertEq(pump.getTokensByCreator(TRADER).length, 0, "empty creator");
+        assertEq(pump.accountedNusdBalance(), nusd.balanceOf(address(pump)), "accounted balance");
+        assertEq(pump.curveProgressBps(first), 0, "no progress");
+    }
+
+    function testTradeGuardsRejectBadInputs() public {
+        address token = _createMarket();
+        uint256 expired = block.timestamp - 1;
+
+        vm.startPrank(TRADER);
+        vm.expectRevert(ZeroXPump.DeadlineExpired.selector);
+        pump.buy(token, 1 ether, 0, expired);
+        vm.expectRevert(ZeroXPump.InvalidAmount.selector);
+        pump.buy(token, 0, 0, block.timestamp);
+        vm.expectRevert(ZeroXPump.SlippageExceeded.selector);
+        pump.buy(token, 1 ether, type(uint256).max, block.timestamp);
+        vm.expectRevert(ZeroXPump.MarketNotFound.selector);
+        pump.buy(address(0x1234), 1 ether, 0, block.timestamp);
+
+        (uint256 bought,) = pump.buy(token, 1 ether, 0, block.timestamp);
+        PumpToken(token).approve(address(pump), bought);
+        vm.expectRevert(ZeroXPump.DeadlineExpired.selector);
+        pump.sell(token, bought, 0, expired);
+        vm.expectRevert(ZeroXPump.InvalidAmount.selector);
+        pump.sell(token, 0, 0, block.timestamp);
+        vm.expectRevert(ZeroXPump.SlippageExceeded.selector);
+        pump.sell(token, bought, type(uint256).max, block.timestamp);
+        vm.stopPrank();
+
+        (uint256 tokenOut,,,,) = pump.quoteBuy(token, 0);
+        assertEq(tokenOut, 0, "zero quote");
+        (uint256 curveOut,,) = pump.quoteSell(token, 0);
+        assertEq(curveOut, 0, "zero sell quote");
+    }
+
+    function testGraduateGuardsRejectBadInputs() public {
+        address token = _createMarket();
+        vm.expectRevert(ZeroXPump.MarketNotReady.selector);
+        pump.graduate(token, address(adapter), 1, block.timestamp);
+        vm.expectRevert(ZeroXPump.DeadlineExpired.selector);
+        pump.graduate(token, address(adapter), 1, block.timestamp - 1);
+
+        vm.prank(TRADER);
+        pump.buy(token, 50_000 ether, 0, block.timestamp);
+        vm.expectRevert(ZeroXPump.InvalidAmount.selector);
+        pump.graduate(token, address(0), 1, block.timestamp);
+        vm.expectRevert(ZeroXPump.InvalidAmount.selector);
+        pump.graduate(token, address(adapter), 0, block.timestamp);
+        assertEq(pump.curveProgressBps(token), 10_000, "full progress");
+    }
+
+    function testGraduatedMarketReportsFullProgressAndRejectsTrades() public {
+        _enableAdapter();
+        address token = _createMarket();
+        vm.prank(TRADER);
+        (uint256 bought,) = pump.buy(token, 50_000 ether, 0, type(uint256).max);
+        pump.graduate(token, address(adapter), 1, type(uint256).max);
+        assertEq(pump.curveProgressBps(token), 10_000, "graduated progress");
+
+        vm.startPrank(TRADER);
+        PumpToken(token).approve(address(pump), bought);
+        vm.expectRevert(ZeroXPump.MarketNotTrading.selector);
+        pump.sell(token, 1, 0, type(uint256).max);
+        vm.expectRevert(ZeroXPump.MarketNotTrading.selector);
+        pump.buy(token, 1 ether, 0, type(uint256).max);
+        vm.stopPrank();
+    }
+
+    function testProtocolFeeWithdrawalGuards() public {
+        _createMarket();
+        vm.prank(TRADER);
+        vm.expectRevert(TwoStepAdmin.Unauthorized.selector);
+        pump.withdrawProtocolFees(TRADER, 1);
+        vm.expectRevert(ZeroXPump.InsufficientProtocolFees.selector);
+        pump.withdrawProtocolFees(address(0), 1);
+        vm.expectRevert(ZeroXPump.InsufficientProtocolFees.selector);
+        pump.withdrawProtocolFees(address(this), 0);
+        vm.expectRevert(ZeroXPump.InsufficientProtocolFees.selector);
+        pump.withdrawProtocolFees(address(this), 1 ether + 1);
+        vm.prank(TRADER);
+        vm.expectRevert(TwoStepAdmin.Unauthorized.selector);
+        pump.setPaused(true);
+    }
+
+    function testCreateRejectsInvalidMetadata() public {
+        bytes32 commitment = keccak256("metadata");
+        vm.startPrank(CREATOR);
+        pump.reserveMarket(commitment);
+        vm.expectRevert(ZeroXPump.InvalidCommitment.selector);
+        pump.reserveMarket(bytes32(0));
+        vm.expectRevert(ZeroXPump.InvalidMetadata.selector);
+        pump.createMarket("", "SYM", "ipfs://meta", "ipfs://img", commitment);
+        vm.expectRevert(ZeroXPump.InvalidMetadata.selector);
+        pump.createMarket("Name", "", "ipfs://meta", "ipfs://img", commitment);
+        vm.expectRevert(ZeroXPump.InvalidMetadata.selector);
+        pump.createMarket("Name", "SYMBOL_LONGER_THAN_16", "ipfs://meta", "ipfs://img", commitment);
+        vm.expectRevert(ZeroXPump.InvalidMetadata.selector);
+        pump.createMarket("Name", "SYM", "https://meta", "ipfs://img", commitment);
+        vm.expectRevert(ZeroXPump.InvalidMetadata.selector);
+        pump.createMarket("Name", "SYM", "ipfs://meta", "ipfs:/", commitment);
+        pump.createMarket("Name", "SYM", "ipfs://meta", "ipfs://img", commitment);
+        vm.stopPrank();
+    }
+
     function _expectedCreationData() internal pure returns (bytes memory) {
         return abi.encode(
             "Nothing Meme",
