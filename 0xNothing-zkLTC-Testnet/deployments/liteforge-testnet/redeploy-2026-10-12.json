@@ -1,0 +1,24 @@
+{
+  "chainId": 4441,
+  "sourceCommit": "7fd80b0",
+  "deployer": "0x58633401dCc383F010688e950878000000000000",
+  "pump": {
+    "DIAOracleAdapter": {"address": "0x6d18728bCB57c3Ce7DFb5A522fF22836280D6C98", "tx": "0x2c0e5924259e4a923dcf6b1389887d696fdb06f1150fef9e537eba2c8fa4d242"},
+    "OracleNUSD": {"address": "0x677D63c78E77E0b1971530e1494Caee4Bd7d631e", "tx": "0x6f4f276a60e19aea4203594ec197f605814f00da897a3029bf24847c1edcc311"},
+    "PermanentLiquidityLocker": {"address": "0xa043b8EA35D338d2BA7e709075722E865225c9f9", "tx": "0xc4499262d3a5a312850b92e48aa0cbc4dfb9aab32a5dc2cdacaf651fb421fd3d"},
+    "GraduationRouter": {"address": "0x09Aa07357ac20121b60454A7b75d0C76EdeD72b9", "tx": "0x0ad3f0715cf0140013a82f85858c15729516892899e3495cd3f9b6328666c39a"},
+    "ZeroXPump": {"address": "0x4749773fB552315d8aCf18A052847567e0E88030", "tx": "0x656f694ce15ed273cecddf00c79c3ff1656879c2f748994352d11de7940955f4"},
+    "setLaunchProtection(900, 50 NUSD)": "0x59f200b22b95fecd2c39ded715fe6af0c079d390c45721967b57edc0c9438110",
+    "router.bindPump": "0xf210735ee8fb58ee322d030049d8c2412a7e2860d302e92ef1ca28ef5aa68838",
+    "locker.bindRouter": "0xa6ec28def4fcb3a712b11305ee971b6f424790f1aaf0cc7daf974140ada4b89b",
+    "adapter.syncPrice": "0x6e42ab429a0af84b45301d3cb9f25b6b29c17dc1dbdec4c2438eec6ca71247f7"
+  },
+  "fi": {
+    "ZeroXFiFactory": {"address": "0xd7426d800707786adb71eFd40431ddAacec8EcE7", "tx": "0xa7ee36351dce57a32bf6989ef5a211453eecae2504aba9f8bec5e4bf2557fd69"},
+    "ZeroXFiRouter": {"address": "0xb49A0d60c20Fab6AdfC0B9a77C10cb1cAFBaf811", "tx": "0x9e45fe9580be312f5c14eba180e190e9455791224a1f6bc10e01ed9a63ef37b2"},
+    "ZeroXFiGraduationAdapter": {"address": "0x2da1c50DAa37Ecc56dEF8B92366Ad28Eb95a184D", "tx": "0xf313be0098d7cec8c817e29d7d3b9bd2c62eac63f2fb225fa1d9db4ae4721bce"},
+    "factory.bindGraduationAdapter": "0x3663d0921069cfd7bb23ea573878e05c122e725a7a313a777cc2695183ca819c",
+    "PumpGraduationController": {"address": "0x8a8f0532cc59a3c6404090ebFd8de90ecE514728", "tx": "0x12c6a5202bdf1cb3aa6f070bb0f4943d6a7cb79eb9e4e5267b08c9ceba8e9059"}
+  },
+  "notes": "Graduation disabled: pump.graduationAdapter unset and router adapter not scheduled. WzkLTC reused (0xE93d4373CE1eDA3df6c3Ab7ed3ab07A07aA5939F). Other 0xFi modules (lending, synths, gauges) still reference the old NUSD."
+}

@@ -1,0 +1,222 @@
+{
+  "chainId": 4441,
+  "script": "0xFi/contracts/script/Deploy0xFi.s.sol (env-driven, SCHEDULE_PUMP_GRADUATION=false)",
+  "nusd": "0x677D63c78E77E0b1971530e1494Caee4Bd7d631e",
+  "pump": "0x4749773fB552315d8aCf18A052847567e0E88030",
+  "pumpGraduationRouter": "0x09Aa07357ac20121b60454A7b75d0C76EdeD72b9",
+  "deploymentBlock": 60287622,
+  "transactions": [
+    {
+      "contract": "DIAOracleV2Adapter",
+      "function": null,
+      "address": "0x04d35f2656f282469d2f236314b861c665153d9f",
+      "tx": "0xcd78ff82738fab6293bf24a9e4be3f0bac1542098e57336fc11f85a2c0065d59"
+    },
+    {
+      "contract": "DIAOracleV2Adapter",
+      "function": null,
+      "address": "0x86c78ad79319e8f89e2961fd72a4deb09b573b94",
+      "tx": "0x0a745ec96f343385cfa040072f2e07d49b1f5a67c658e2dc2b2fc05f2e74252f"
+    },
+    {
+      "contract": "DIAOracleV2Adapter",
+      "function": null,
+      "address": "0x270822948de3d101303fd62ff859903989f274fa",
+      "tx": "0xaab6f4eb11eb911d2667a570194cdb973030b9d15a38b150943b538aadcc3db9"
+    },
+    {
+      "contract": "WzkLTC",
+      "function": null,
+      "address": "0x3d09bce3c571679125c1ecad0cfb227ac9ea4e69",
+      "tx": "0xa4eeec48e917686e9e436d1ebcb652a327db74496c993641e2a2cfede5ffa229"
+    },
+    {
+      "contract": "ZeroXFiFactory",
+      "function": null,
+      "address": "0xc3b99e993ebaf776bff01fa8a019fe6d4334de52",
+      "tx": "0xbb374b719592de51c0be88f563c40a83091e738f9a74e8943ca6b26747181619"
+    },
+    {
+      "contract": "ZeroXFiRouter",
+      "function": null,
+      "address": "0x1a5a1901c193175aa7d25502f4736d550d969458",
+      "tx": "0xe9131a429ee6aa469c93008a73060f7abfeb532370735038c4a72896fa5a8bee"
+    },
+    {
+      "contract": "ZeroXFiFactory",
+      "function": "bindRouter(address)",
+      "address": "0xc3b99e993ebaf776bff01fa8a019fe6d4334de52",
+      "tx": "0x8ae0a3a317f8f227650b01bcc3e76fc8007d7c93115458e6d2375e6a52dd4aef"
+    },
+    {
+      "contract": "ZeroXFiGraduationAdapter",
+      "function": null,
+      "address": "0x8c10229478cb5f912e506e1c79547b0344d191ca",
+      "tx": "0xb43e62f6255b74ff51c71a4ef880ae92c49af24b75ecaf3def511d6c68dca4b7"
+    },
+    {
+      "contract": "ZeroXFiFactory",
+      "function": "bindGraduationAdapter(address)",
+      "address": "0xc3b99e993ebaf776bff01fa8a019fe6d4334de52",
+      "tx": "0xbf75a9586344deffd8657f67eca0d098a4eebd08eb778b5e4e0eb85c97154945"
+    },
+    {
+      "contract": "GaugeFactory",
+      "function": null,
+      "address": "0x6a9aa46d15757351ec12a8b97b48c4ebc6caa1f5",
+      "tx": "0x263be514985f0c0cc143a5b71f3528216db9446052c9fb208fb5c48af1057e53"
+    },
+    {
+      "contract": "SynthSafetyReserve",
+      "function": null,
+      "address": "0x4ca3c7100877dab03c2cc3e7e88e32b4db0630bd",
+      "tx": "0x677563eca4533683250bd34d12e2ad43abcf14524b7af7d3dfd267b9ec867e29"
+    },
+    {
+      "contract": "SyntheticAsset",
+      "function": null,
+      "address": "0x18a8877a2937eacab552b5e370f635a62f81b1d7",
+      "tx": "0xa5d02d710e76d27e1d2bd884d24a2909e32f3628ae1883a7c7a32cfb0f424dcf"
+    },
+    {
+      "contract": "SyntheticAsset",
+      "function": null,
+      "address": "0x6df5aec35747102422d68945e4ee20f18cc88372",
+      "tx": "0xbbec716e000316257a8d02b8fc69d0880b6a10e9c01c0ebfa56aca9aadea7a57"
+    },
+    {
+      "contract": "SyntheticVault",
+      "function": null,
+      "address": "0xba9f9c4c9d260fc93c2449dd66ad1c5ada23536e",
+      "tx": "0x5bc63718d95b275b21d9fe5512dfc7b888ad3bdeb5d7837c348293b275a3cad4"
+    },
+    {
+      "contract": "SyntheticVault",
+      "function": null,
+      "address": "0xb33a0ba988b5e4c3a23875b5614083685586bb2b",
+      "tx": "0xd0789a867b93df307c705b245c74010326b25ddccd0816f86b53bd2b2303ebe5"
+    },
+    {
+      "contract": "SynthSafetyReserve",
+      "function": "bindVaults(address,address)",
+      "address": "0x4ca3c7100877dab03c2cc3e7e88e32b4db0630bd",
+      "tx": "0xa6250e025371c39e70de363f88c7fe07f5eb5b607d173ea64b953994c76d68f2"
+    },
+    {
+      "contract": "SyntheticAsset",
+      "function": "bindVault(address)",
+      "address": "0x18a8877a2937eacab552b5e370f635a62f81b1d7",
+      "tx": "0x1ad36d237479e2f48bd9b5d26262b42f01ce801ab30a7bc0870fcd5b99631b8c"
+    },
+    {
+      "contract": "SyntheticAsset",
+      "function": "bindVault(address)",
+      "address": "0x6df5aec35747102422d68945e4ee20f18cc88372",
+      "tx": "0x7253b82d8679105b9e4dbf3bf2e20efca58987ec6a704265024629ab420283c7"
+    },
+    {
+      "contract": "PooledNUSDLendingPool",
+      "function": null,
+      "address": "0x34acc957ef5bacee97b9056be2c5a910ee7022b8",
+      "tx": "0x492bb82bf510250eafd3323f39993b2f2325444efd463b782ee561a49ba34293"
+    },
+    {
+      "contract": "PooledNUSDLendingPool",
+      "function": "configureCollateral(address,address,uint256,uint16,uint16,uint16,uint16,bool)",
+      "address": "0x34acc957ef5bacee97b9056be2c5a910ee7022b8",
+      "tx": "0x1fccd784b9fe147772297adbb524018e93e6aaeadeedae03e33109df9eabf589"
+    },
+    {
+      "contract": "PooledNUSDLendingPool",
+      "function": "configureCollateral(address,address,uint256,uint16,uint16,uint16,uint16,bool)",
+      "address": "0x34acc957ef5bacee97b9056be2c5a910ee7022b8",
+      "tx": "0xe3845754475a09daeedaeffe561dd667668a3d7f1e3a1846d0848796de14e398"
+    },
+    {
+      "contract": "PooledNUSDLendingPool",
+      "function": "configureCollateral(address,address,uint256,uint16,uint16,uint16,uint16,bool)",
+      "address": "0x34acc957ef5bacee97b9056be2c5a910ee7022b8",
+      "tx": "0x188a3fd1d06e6a0e48c5d14dd6e6ba512b78f9dfccb74015cd9bf7ebd258a979"
+    },
+    {
+      "contract": "ZeroXFiFactory",
+      "function": "createPair(address,address)",
+      "address": "0xc3b99e993ebaf776bff01fa8a019fe6d4334de52",
+      "tx": "0x34774035ea90d1db0cce47225b4142a6849fa53da3015307e92eb641c94a495d"
+    },
+    {
+      "contract": "ZeroXFiFactory",
+      "function": "createPair(address,address)",
+      "address": "0xc3b99e993ebaf776bff01fa8a019fe6d4334de52",
+      "tx": "0x85dd85a13fab1350b49991e0f2a90635272a553b0da554e7bf2e2e5a9db45def"
+    },
+    {
+      "contract": "ZeroXFiFactory",
+      "function": "createPair(address,address)",
+      "address": "0xc3b99e993ebaf776bff01fa8a019fe6d4334de52",
+      "tx": "0x91ab25b73106033d4c6008bd5cba0ae2e1de4a8dabc7f4c639209ce750c4e62b"
+    },
+    {
+      "contract": "GaugeFactory",
+      "function": "createGauge(address)",
+      "address": "0x6a9aa46d15757351ec12a8b97b48c4ebc6caa1f5",
+      "tx": "0x1ce6d429c05afbf0af8ddafa877e49596dc461ed68bb2776f976394b728cbdcb"
+    },
+    {
+      "contract": "GaugeFactory",
+      "function": "createGauge(address)",
+      "address": "0x6a9aa46d15757351ec12a8b97b48c4ebc6caa1f5",
+      "tx": "0xe83c423d60861d1e8fd1fe49ae9801ace447ac1d2ef4612a19c473af6d5af9db"
+    },
+    {
+      "contract": "GaugeFactory",
+      "function": "createGauge(address)",
+      "address": "0x6a9aa46d15757351ec12a8b97b48c4ebc6caa1f5",
+      "tx": "0x0f4a465f7355a0b7e311accb9995cd446a4f9678af58ff46fc23176c7d646709"
+    },
+    {
+      "contract": "GaugeFactory",
+      "function": "bindMintFeeVault(address,address)",
+      "address": "0x6a9aa46d15757351ec12a8b97b48c4ebc6caa1f5",
+      "tx": "0xbba6adf9261097152ad1c6fd082cf0aa4ee32357b3efd0dea0881901a5a3c76f"
+    },
+    {
+      "contract": "GaugeFactory",
+      "function": "bindMintFeeVault(address,address)",
+      "address": "0x6a9aa46d15757351ec12a8b97b48c4ebc6caa1f5",
+      "tx": "0x2526d963e9e686827bebc5f6efae2748e2da1b2ccbeea1044c224c5daa462611"
+    },
+    {
+      "contract": "SyntheticAsset",
+      "function": "renounceOwnership()",
+      "address": "0x18a8877a2937eacab552b5e370f635a62f81b1d7",
+      "tx": "0x9833eaa56ec1673bbc1a38277787325818620e45573c04218a3f7e3e68107b75"
+    },
+    {
+      "contract": "SyntheticAsset",
+      "function": "renounceOwnership()",
+      "address": "0x6df5aec35747102422d68945e4ee20f18cc88372",
+      "tx": "0x7379bb17887385fd7c1593e543a4525a820d152b3029e847779132ff9979dab6"
+    }
+  ],
+  "extra": {
+    "PumpGraduationController": {
+      "address": "0xEe7C17f0BFeD4E3Bb4134A9C09c49170FC6E22DC",
+      "tx": "0x3154f8d8e48310e81e15804ec730860c30fec0506846e19aee43d414b08653e4"
+    },
+    "NusdPointsStaking": {
+      "address": "0xA5B2f5c3c67198Bf1B99aA6837CdFe33dA85f480",
+      "tx": "0x652b023414e7898c45eb608ef7d94d5ce0c0279619fe1127a2fd04a186da9618",
+      "redemptionSigner": "0x6493d7ae09D3d7B2BB4eb918168e20289982acD0"
+    },
+    "CommunityLiquidityLocker": {
+      "address": "0x64dAB112Bc18994E85b6ee66cf4A081Ca037Bb7E",
+      "tx": "0x28ecbe0ad7bb5aa0678386a374445fad43f82bc1621f4d5193256a30e70d5f71"
+    },
+    "TokenMetadataRegistry": {
+      "address": "0x26733109E4Fff89d0f619C0645e8BF807ce4D09b",
+      "tx": "0xb5aabf364b0f0bb83d3ad30a8bbbfae5433ff7767cfee09b08db381edd0b8a59"
+    }
+  },
+  "superseded": "Interim factory/router/adapter/controller from the first PR #6 commit (0xd742…, 0xb49A…, 0x2da1…, 0x8a8f…) are unused."
+}

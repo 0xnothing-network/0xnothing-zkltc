@@ -8,9 +8,9 @@ dataSources:
     name: ZeroXPump
     network: liteforge
     source:
-      address: "0x4a0eaf310e3659aa9b360fd44e90208c31dbe0e2"
+      address: "0x4749773fB552315d8aCf18A052847567e0E88030"
       abi: ZeroXPump
-      startBlock: 32907625
+      startBlock: 60286373
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9

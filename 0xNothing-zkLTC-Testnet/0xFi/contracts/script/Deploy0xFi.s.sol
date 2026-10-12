@@ -16,6 +16,8 @@ interface VmDeploy0xFi {
     function addr(uint256 privateKey) external returns (address keyAddress);
     function envUint(string calldata key) external returns (uint256 value);
     function envOr(string calldata key, uint256 defaultValue) external returns (uint256 value);
+    function envOr(string calldata key, address defaultValue) external returns (address value);
+    function envOr(string calldata key, bool defaultValue) external returns (bool value);
     function serializeAddress(string calldata objectKey, string calldata valueKey, address value)
         external
         returns (string memory json);
@@ -57,9 +59,12 @@ contract Deploy0xFi {
     uint256 private constant PUMP_ROUTER_DELAY = 2 days;
     uint256 private constant ORACLE_MAX_AGE = 90 minutes;
 
-    address private constant NUSD = 0x5317e21aba902c6c7087a84457bc02fFe99604d1;
-    address private constant PUMP = 0x4a0Eaf310e3659aA9B360fD44e90208c31Dbe0e2;
-    address private constant PUMP_GRADUATION_ROUTER = 0xDCf571C4b03A86c5e15B48864C1aCbB6A8085904;
+    // Defaults are the hardened Pump stack (main @7fd80b0) on LiteForge 4441; override via env.
+    address private NUSD;
+    address private PUMP;
+    address private PUMP_GRADUATION_ROUTER;
+    /// @dev Scheduling the adapter/enable on the Pump router is opt-in (SCHEDULE_PUMP_GRADUATION=true).
+    bool private schedulePumpGraduation;
     address private constant DIA_LTC_USD = 0x45dDa5d881BD2C917976CCfde74fFd6f6412da29;
     address private constant DIA_BTC_USD = 0x7d0445782E383223c7B4B660bb96b87213e9b605;
     address private constant DIA_ETH_USD = 0xc760B46beF9eD3F9A3d2b825164324D6703F0185;
@@ -92,6 +97,13 @@ contract Deploy0xFi {
 
         uint256 privateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(privateKey);
+        NUSD = vm.envOr("NUSD_ADDRESS", 0x677D63c78E77E0b1971530e1494Caee4Bd7d631e);
+        PUMP = vm.envOr("PUMP_ADDRESS", 0x4749773fB552315d8aCf18A052847567e0E88030);
+        PUMP_GRADUATION_ROUTER = vm.envOr("PUMP_GRADUATION_ROUTER_ADDRESS", 0x09Aa07357ac20121b60454A7b75d0C76EdeD72b9);
+        schedulePumpGraduation = vm.envOr("SCHEDULE_PUMP_GRADUATION", false);
+        if (NUSD.code.length == 0 || PUMP.code.length == 0 || PUMP_GRADUATION_ROUTER.code.length == 0) {
+            revert UnexpectedConfiguration();
+        }
         uint256 nbtcDebtCeiling = vm.envOr("NBTC_DEBT_CEILING", uint256(0.01 ether));
         uint256 nethDebtCeiling = vm.envOr("NETH_DEBT_CEILING", uint256(0.25 ether));
         uint256 lendingSupplyCap = vm.envOr("LENDING_SUPPLY_CAP_NUSD", uint256(5000 ether));
@@ -182,13 +194,15 @@ contract Deploy0xFi {
         deployment.gaugeFactory.bindMintFeeVault(address(deployment.nbtcVault), deployment.nbtcNusdPair);
         deployment.gaugeFactory.bindMintFeeVault(address(deployment.nethVault), deployment.nethNusdPair);
 
-        if (
-            !pumpRouter.isAdapterAllowed(address(deployment.graduationAdapter))
-                && pumpRouter.adapterActivationTime(address(deployment.graduationAdapter)) == 0
-        ) {
-            pumpRouter.scheduleAdapter(address(deployment.graduationAdapter));
+        if (schedulePumpGraduation) {
+            if (
+                !pumpRouter.isAdapterAllowed(address(deployment.graduationAdapter))
+                    && pumpRouter.adapterActivationTime(address(deployment.graduationAdapter)) == 0
+            ) {
+                pumpRouter.scheduleAdapter(address(deployment.graduationAdapter));
+            }
+            if (!pumpRouter.enabled() && pumpRouter.enableAt() == 0) pumpRouter.scheduleEnable();
         }
-        if (!pumpRouter.enabled() && pumpRouter.enableAt() == 0) pumpRouter.scheduleEnable();
 
         deployment.nbtc.renounceOwnership();
         deployment.neth.renounceOwnership();
@@ -291,8 +305,8 @@ contract Deploy0xFi {
             || pumpRouter.adapterActivationTime(address(deployment.graduationAdapter)) != 0;
         bool routerReadyOrScheduled = pumpRouter.enabled() || pumpRouter.enableAt() != 0;
         if (
-            pumpRouter.admin() != deployer || pumpRouter.minimumDelay() != PUMP_ROUTER_DELAY || !adapterReadyOrScheduled
-                || !routerReadyOrScheduled
+            pumpRouter.admin() != deployer || pumpRouter.minimumDelay() != PUMP_ROUTER_DELAY
+                || (schedulePumpGraduation && (!adapterReadyOrScheduled || !routerReadyOrScheduled))
         ) revert UnexpectedConfiguration();
     }
 

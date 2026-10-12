@@ -11,10 +11,10 @@
     "decimals": 18
   },
   "existingContracts": {
-    "nusd": "0x5317e21aba902c6c7087a84457bc02ffe99604d1",
-    "pump": "0x4a0eaf310e3659aa9b360fd44e90208c31dbe0e2",
-    "pumpGraduationRouter": "0xdcf571c4b03a86c5e15b48864c1acbb6a8085904",
-    "pumpLiquidityLocker": "0x85d7d920f7267696522e56e9ccee409a18f7f2f2"
+    "nusd": "0x677D63c78E77E0b1971530e1494Caee4Bd7d631e",
+    "pump": "0x4749773fB552315d8aCf18A052847567e0E88030",
+    "pumpGraduationRouter": "0x09Aa07357ac20121b60454A7b75d0C76EdeD72b9",
+    "pumpLiquidityLocker": "0xa043b8EA35D338d2BA7e709075722E865225c9f9"
   },
   "pumpGraduation": {
     "minimumDelaySeconds": 172800
@@ -47,35 +47,35 @@
     "governance": "0x58633401dCc383F010688e950878000000000000",
     "guardian": "0x58633401dCc383F010688e950878000000000000",
     "coreOwnershipStatus": "direct-deployer-owner-no-pending",
-    "deploymentBlock": "35303686",
+    "deploymentBlock": "60287622",
     "finalizedAt": "2026-07-31T13:45:34.036Z",
     "contracts": {
       "timelock": "0x5F4145733F1B7Eb25f176A9B95e27fB6E2205F22",
-      "ltcOracle": "0x54361dB5F9DF455B448E882Ce65612D5e418f3Ee",
-      "btcOracle": "0x781178849cE1D131EFbedff1EF52323A6E117813",
-      "ethOracle": "0x8E9BD05a80542B171719ac0d749a7A609D69E324",
-      "wzkLTC": "0xE93d4373CE1eDA3df6c3Ab7ed3ab07A07aA5939F",
-      "dexFactory": "0xe33fE815c2e12DC83b69397CeD12b09849Fa9C0D",
-      "dexRouter": "0x7b17035A4aC3A32f2A18a16e2F43A5f8C66275b0",
-      "pumpGraduationAdapter": "0x935e05f60a05110c29eFA7e3a632dfe38123963e",
-      "gaugeFactory": "0x36F425fddc59d281c6ddEaDAc34B32E6f039EB13",
-      "nBTC": "0x0CBc1e968db77885DCa648D7bD0e80fCc94cB9Cf",
-      "nETH": "0xD504bB9430d94ccFF87e12e94fd6C0074D0E8aCb",
-      "nBTCVault": "0x3694a78B1E890E72F47933856B59EBa81EeCAb84",
-      "nETHVault": "0x43dB27A73a1CB305BFBee4CfAb7F0869000A1517",
-      "lendingPool": "0x7CB638F8e10f1bd200A3c5C3fD014C3FD97BA914",
-      "wzkLtcNusdPair": "0x8dd79c3966c8392b08b609FAEce029c3329f9E9E",
-      "nBTCNusdPair": "0x548db4D485127d2196393FE93DB1298fCDA24126",
-      "nETHNusdPair": "0xC7aCe4e674e2a64c5daC0c09E97BCFCb17BD2CDB",
-      "wzkLtcNusdGauge": "0x0A183F6D225B888CfDBcC03f4afd78Ea244CfF03",
-      "nBTCNusdGauge": "0x34bf0e2b0149b605FC4C0FBed9092a56Ba6449A6",
-      "nETHNusdGauge": "0x618be8aF1D3EBa92E54eeDbd0b9C1E0606df29C2",
-      "pumpGraduationController": "0x2112Cea76b76817626cA58B205b3dC5560F05857",
-      "synthFeeGaugeFactory": "0xA6bd4C009ABBDEA193CF6381BeB62e2F5eDF8999",
-      "synthSafetyReserve": "0x4860577842199DB1f783f5620Ac90B990d235F47",
-      "nusdPointsStaking": "0xDf009d9c2Bc0C2f8ee55A047074edB166C1D3282",
-      "lpLocker": "0x7d105ecfc67cb288f2dbdf94f7aa2057d3b3fd9a",
-      "tokenMetadataRegistry": "0xd1087b62922263c10a251ffca6ee27c2b1368089"
+      "ltcOracle": "0x04D35f2656F282469D2f236314B861c665153d9f",
+      "btcOracle": "0x86C78Ad79319e8f89e2961FD72a4DEB09B573b94",
+      "ethOracle": "0x270822948De3D101303FD62fF859903989F274FA",
+      "wzkLTC": "0x3d09BcE3C571679125C1Ecad0cfB227ac9Ea4e69",
+      "dexFactory": "0xc3B99e993eBAF776BFF01fa8a019Fe6d4334de52",
+      "dexRouter": "0x1A5a1901C193175aA7D25502f4736D550D969458",
+      "pumpGraduationAdapter": "0x8c10229478cB5F912E506E1C79547B0344d191CA",
+      "gaugeFactory": "0x6a9aA46d15757351eC12A8B97b48C4Ebc6CAa1f5",
+      "nBTC": "0x18A8877a2937eacAB552B5E370F635a62F81B1d7",
+      "nETH": "0x6Df5aEC35747102422d68945E4ee20f18cc88372",
+      "nBTCVault": "0xba9f9c4C9d260fC93C2449Dd66Ad1C5Ada23536E",
+      "nETHVault": "0xb33a0bA988B5E4c3a23875b5614083685586Bb2B",
+      "lendingPool": "0x34ACc957ef5BACEE97b9056BE2C5A910eE7022b8",
+      "wzkLtcNusdPair": "0xf0f796f06084B73Ee8b6D81160d55c657EBcb903",
+      "nBTCNusdPair": "0xCdc08816208e08e8327195aaE1EE7a7b4D871AEc",
+      "nETHNusdPair": "0xce25e0898aAA3777Ec99ff24Dd7Ea6396c2F099E",
+      "wzkLtcNusdGauge": "0x060308f052aEd142a2D04020F888bf6c1CF1394F",
+      "nBTCNusdGauge": "0xCFd3D16F48F85AC8B59aC8FFAA7ba434B53e202b",
+      "nETHNusdGauge": "0xde79b4Fb84E1EFF657A6Ef76B467F4bc5f9ba928",
+      "pumpGraduationController": "0xEe7C17f0BFeD4E3Bb4134A9C09c49170FC6E22DC",
+      "synthFeeGaugeFactory": "0x6a9aA46d15757351eC12A8B97b48C4Ebc6CAa1f5",
+      "synthSafetyReserve": "0x4CA3c7100877dAb03c2Cc3E7E88e32B4db0630Bd",
+      "nusdPointsStaking": "0xA5B2f5c3c67198Bf1B99aA6837CdFe33dA85f480",
+      "lpLocker": "0x64dAB112Bc18994E85b6ee66cf4A081Ca037Bb7E",
+      "tokenMetadataRegistry": "0x26733109E4Fff89d0f619C0645e8BF807ce4D09b"
     },
     "pumpGraduationControllerDeploymentBlock": "36095543",
     "pumpGraduationControllerDeploymentHash": "0x4897cb0a7e5fed3686ec99cad78f9df91eb551f122a78f019fb32918079941d2",
@@ -125,7 +125,7 @@
     },
     "lendingFixedRateMigration": {
       "previousPool": "0x099Fe8b7611A294eD33e6D96a0b958E189143622",
-      "pool": "0x7CB638F8e10f1bd200A3c5C3fD014C3FD97BA914",
+      "pool": "0x34ACc957ef5BACEE97b9056BE2C5A910eE7022b8",
       "block": "37981388",
       "finalizedAt": "2026-08-08T08:26:43.053Z",
       "migratedNusd": "19999999999999998000",
@@ -160,10 +160,10 @@
     "lendingRiskActionsEnabled": true,
     "synthSafetyReserveStatus": "threshold-hysteresis-24h-delay",
     "synthSafetyReserveMigration": {
-      "reserve": "0x4860577842199DB1f783f5620Ac90B990d235F47",
-      "synthFeeGaugeFactory": "0xA6bd4C009ABBDEA193CF6381BeB62e2F5eDF8999",
+      "reserve": "0x4CA3c7100877dAb03c2Cc3E7E88e32B4db0630Bd",
+      "synthFeeGaugeFactory": "0x6a9aA46d15757351eC12A8B97b48C4Ebc6CAa1f5",
       "previousDexRouter": "0xc572A6779ccd69032d9Ce5f74fC47878A6D9c9E3",
-      "dexRouter": "0x7b17035A4aC3A32f2A18a16e2F43A5f8C66275b0",
+      "dexRouter": "0x1A5a1901C193175aA7D25502f4736D550D969458",
       "previousNBTC": "0xc44B6027eBc4859d2E7e2bCF17188C29b1BC1655",
       "previousNETH": "0x60590B1f4F17969B8c52c2c0B533404Bbb62206b",
       "previousNBTCVault": "0x620fB32a1e113aA3D1121baC0c65f919569dF1d3",
@@ -172,14 +172,14 @@
       "previousNETHNusdPair": "0x5cB49442b1684C39FC9348022114FEef6FdB3617",
       "previousNBTCNusdGauge": "0x622eAf97dfe1f284850a462039568aCF52c2B0B4",
       "previousNETHNusdGauge": "0xa28656a5277Db9Bcf0Bd8fe0312A52Dd3e7a55c8",
-      "nBTC": "0x0CBc1e968db77885DCa648D7bD0e80fCc94cB9Cf",
-      "nETH": "0xD504bB9430d94ccFF87e12e94fd6C0074D0E8aCb",
-      "nBTCVault": "0x3694a78B1E890E72F47933856B59EBa81EeCAb84",
-      "nETHVault": "0x43dB27A73a1CB305BFBee4CfAb7F0869000A1517",
-      "nBTCNusdPair": "0x548db4D485127d2196393FE93DB1298fCDA24126",
-      "nETHNusdPair": "0xC7aCe4e674e2a64c5daC0c09E97BCFCb17BD2CDB",
-      "nBTCNusdGauge": "0x34bf0e2b0149b605FC4C0FBed9092a56Ba6449A6",
-      "nETHNusdGauge": "0x618be8aF1D3EBa92E54eeDbd0b9C1E0606df29C2",
+      "nBTC": "0x18A8877a2937eacAB552B5E370F635a62F81B1d7",
+      "nETH": "0x6Df5aEC35747102422d68945E4ee20f18cc88372",
+      "nBTCVault": "0xba9f9c4C9d260fC93C2449Dd66Ad1C5Ada23536E",
+      "nETHVault": "0xb33a0bA988B5E4c3a23875b5614083685586Bb2B",
+      "nBTCNusdPair": "0xCdc08816208e08e8327195aaE1EE7a7b4D871AEc",
+      "nETHNusdPair": "0xce25e0898aAA3777Ec99ff24Dd7Ea6396c2F099E",
+      "nBTCNusdGauge": "0xCFd3D16F48F85AC8B59aC8FFAA7ba434B53e202b",
+      "nETHNusdGauge": "0xde79b4Fb84E1EFF657A6Ef76B467F4bc5f9ba928",
       "block": "37983218",
       "finalizedAt": "2026-08-08T08:34:57.739Z",
       "transactionHashes": [
@@ -225,25 +225,25 @@
       "activationTransactions": [
         {
           "id": "nbtc-vault",
-          "target": "0x3694a78B1E890E72F47933856B59EBa81EeCAb84",
+          "target": "0xba9f9c4C9d260fC93C2449Dd66Ad1C5Ada23536E",
           "block": "37983516",
           "transactionHash": "0x061383a72bc68fa2f788156e2f42f8df81b658913305886619a00a8ce51d043b"
         },
         {
           "id": "neth-vault",
-          "target": "0x43dB27A73a1CB305BFBee4CfAb7F0869000A1517",
+          "target": "0xb33a0bA988B5E4c3a23875b5614083685586Bb2B",
           "block": "37983520",
           "transactionHash": "0xa515289f330edd0c5d51cab8d7cb2f4d8deb5d99bfb009ca829c046a9a0bfb90"
         },
         {
           "id": "nbtc-gauge",
-          "target": "0x34bf0e2b0149b605FC4C0FBed9092a56Ba6449A6",
+          "target": "0xCFd3D16F48F85AC8B59aC8FFAA7ba434B53e202b",
           "block": "37983524",
           "transactionHash": "0x042c9a5bb8bd3f4c729ebd71a76eee51ab2766eb464b0314bf555703a1546821"
         },
         {
           "id": "neth-gauge",
-          "target": "0x618be8aF1D3EBa92E54eeDbd0b9C1E0606df29C2",
+          "target": "0xde79b4Fb84E1EFF657A6Ef76B467F4bc5f9ba928",
           "block": "37983528",
           "transactionHash": "0x08e2e7e0853f50f1b846ab6399e181794a5d496ea6b98ea7a7eadd6eda8772c2"
         }
@@ -256,32 +256,32 @@
       "actions": [
         {
           "id": "nbtc-vault",
-          "target": "0x3694a78B1E890E72F47933856B59EBa81EeCAb84",
+          "target": "0xba9f9c4C9d260fC93C2449Dd66Ad1C5Ada23536E",
           "block": "37983516",
           "transactionHash": "0x061383a72bc68fa2f788156e2f42f8df81b658913305886619a00a8ce51d043b"
         },
         {
           "id": "neth-vault",
-          "target": "0x43dB27A73a1CB305BFBee4CfAb7F0869000A1517",
+          "target": "0xb33a0bA988B5E4c3a23875b5614083685586Bb2B",
           "block": "37983520",
           "transactionHash": "0xa515289f330edd0c5d51cab8d7cb2f4d8deb5d99bfb009ca829c046a9a0bfb90"
         },
         {
           "id": "nbtc-gauge",
-          "target": "0x34bf0e2b0149b605FC4C0FBed9092a56Ba6449A6",
+          "target": "0xCFd3D16F48F85AC8B59aC8FFAA7ba434B53e202b",
           "block": "37983524",
           "transactionHash": "0x042c9a5bb8bd3f4c729ebd71a76eee51ab2766eb464b0314bf555703a1546821"
         },
         {
           "id": "neth-gauge",
-          "target": "0x618be8aF1D3EBa92E54eeDbd0b9C1E0606df29C2",
+          "target": "0xde79b4Fb84E1EFF657A6Ef76B467F4bc5f9ba928",
           "block": "37983528",
           "transactionHash": "0x08e2e7e0853f50f1b846ab6399e181794a5d496ea6b98ea7a7eadd6eda8772c2"
         }
       ]
     },
     "lendingFixedRateActivation": {
-      "pool": "0x7CB638F8e10f1bd200A3c5C3fD014C3FD97BA914",
+      "pool": "0x34ACc957ef5BACEE97b9056BE2C5A910eE7022b8",
       "block": "37983632",
       "activatedAt": "2026-08-08T08:35:52.000Z",
       "transactionHash": "0xaf6154ffcce8d0cc8479be0465a26c8e172593a13badfb1d1847df9e6e0bd189"
