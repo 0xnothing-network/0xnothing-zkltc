@@ -24,6 +24,7 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
     error ContractPaused();
     error SellsPaused();
     error SellPauseCooldown();
+    error SellPauseLifetimeExceeded();
     error GraduationDisabled();
     error AssetTransferMismatch();
     error InsufficientProtocolFees();
@@ -43,6 +44,7 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
     uint256 public constant MAX_LAUNCH_PROTECTION_WINDOW = 1 hours;
     uint256 public constant MAX_SELL_PAUSE = 24 hours;
     uint256 public constant SELL_PAUSE_COOLDOWN = 72 hours;
+    uint256 public constant MAX_SELL_PAUSE_LIFETIME = 72 hours;
     uint256 public constant MINIMUM_LIQUIDITY = 1_000;
     uint256 public constant GRADUATION_SLIPPAGE_BPS = 100;
 
@@ -122,6 +124,8 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
     uint256 public sellPausedUntil;
     /// @notice Earliest time a new sell pause may be armed. Prevents rolling 24h pauses into a perpetual lock.
     uint256 public sellPauseReadyAt;
+    /// @notice Cumulative duration of armed sell pauses. Capped at `MAX_SELL_PAUSE_LIFETIME`.
+    uint256 public sellPauseUsed;
 
     /// @notice Timestamp at which each market last entered READY.
     mapping(address => uint256) public readyAt;
@@ -331,7 +335,8 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
     /// @notice Sells stay available while `paused` so holders can always exit a TRADING curve. A READY market
     ///         is frozen for graduation only while graduation is possible, and then only until `readyExitDelay`.
     ///         The separate emergency `sellPause` can halt sells for at most `MAX_SELL_PAUSE` and auto-expires;
-    ///         a new halt cannot start until `SELL_PAUSE_COOLDOWN` after that expiry.
+    ///         a new halt cannot start until `SELL_PAUSE_COOLDOWN` after that expiry, and total armed duration
+    ///         cannot exceed `MAX_SELL_PAUSE_LIFETIME`.
     function sell(address token, uint256 tokenIn, uint256 minNusdOut, uint256 deadline)
         external
         nonReentrant
@@ -452,7 +457,9 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
     /// @notice Emergency sell halt. `durationSeconds == 0` clears an active halt. Otherwise sells are blocked
     ///         until `block.timestamp + durationSeconds`, at most `MAX_SELL_PAUSE` (24 hours). After a halt is
     ///         armed, a new one cannot start until `SELL_PAUSE_COOLDOWN` (72 hours) after that halt's expiry.
-    ///         Early lift does not shorten the cooldown. The halt expires automatically with no keeper.
+    ///         Early lift does not shorten the cooldown. Armed durations count against
+    ///         `MAX_SELL_PAUSE_LIFETIME` (72 hours) and are not refunded. The halt expires automatically
+    ///         with no keeper.
     function setSellPause(uint256 durationSeconds) external onlyAdmin {
         if (durationSeconds > MAX_SELL_PAUSE) revert InvalidConfiguration();
         if (durationSeconds == 0) {
@@ -461,8 +468,10 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
             return;
         }
         if (block.timestamp < sellPauseReadyAt) revert SellPauseCooldown();
+        if (durationSeconds > MAX_SELL_PAUSE_LIFETIME - sellPauseUsed) revert SellPauseLifetimeExceeded();
         sellPausedUntil = block.timestamp + durationSeconds;
         sellPauseReadyAt = sellPausedUntil + SELL_PAUSE_COOLDOWN;
+        sellPauseUsed += durationSeconds;
         emit SellPauseUpdated(sellPausedUntil, durationSeconds);
     }
 

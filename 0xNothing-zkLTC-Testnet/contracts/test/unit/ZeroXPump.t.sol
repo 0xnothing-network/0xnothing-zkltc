@@ -503,6 +503,27 @@ contract ZeroXPumpTest is TestBase {
         vm.warp(readyAt);
         pump.setSellPause(1 hours);
         assertTrue(pump.sellsPaused(), "armed after cooldown");
+        assertEq(pump.sellPauseUsed(), 2 hours, "lifetime consumed");
+    }
+
+    function testSellPauseLifetimeCapBlocksFurtherHalts() public {
+        pump.setSellPause(24 hours);
+        vm.warp(pump.sellPauseReadyAt());
+        pump.setSellPause(24 hours);
+        vm.warp(pump.sellPauseReadyAt());
+        pump.setSellPause(23 hours);
+        vm.warp(pump.sellPauseReadyAt());
+        vm.expectRevert(ZeroXPump.SellPauseLifetimeExceeded.selector);
+        pump.setSellPause(2 hours);
+        pump.setSellPause(1 hours);
+        assertEq(pump.sellPauseUsed(), 72 hours, "lifetime exhausted");
+        vm.warp(pump.sellPauseReadyAt());
+        vm.expectRevert(ZeroXPump.SellPauseLifetimeExceeded.selector);
+        pump.setSellPause(1);
+        pump.setSellPause(0);
+        assertFalse(pump.sellsPaused(), "clear still works");
+        vm.expectRevert(ZeroXPump.SellPauseLifetimeExceeded.selector);
+        pump.setSellPause(1 hours);
     }
 
     function testLaunchProtectionIsOffByDefault() public {
