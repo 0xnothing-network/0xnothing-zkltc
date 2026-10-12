@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { formatFixedAmount, formatUnlockTime, parseAmount } from "../../features/fi/lib/format.ts";
+import { formatAmount, formatFixedAmount, formatTokenAmount, formatUnlockTime, parseAmount } from "../../features/fi/lib/format.ts";
 
 test("LP unlock dates preserve valid uint64 values outside the Date range", () => {
   assert.equal(formatUnlockTime(undefined), "--");
@@ -25,6 +25,15 @@ test("transaction amounts reject invalid scales and uint256 overflow", () => {
   assert.equal(parseAmount("1", 1.5), undefined);
   assert.equal(parseAmount(((1n << 256n) - 1n).toString(), 0), (1n << 256n) - 1n);
   assert.equal(parseAmount((1n << 256n).toString(), 0), undefined);
+});
+
+test("small synth mint fees keep their magnitude instead of looking like the notional", () => {
+  const feeNusd = 127_755_805_967_939n;
+  const displayed = formatTokenAmount(feeNusd);
+  assert.notEqual(displayed, "0.1278");
+  assert.match(displayed, /^0\.00012775/);
+  assert.ok(Number(displayed.replaceAll(",", "")) < 0.001);
+  assert.ok(formatAmount(feeNusd) === "0" || formatAmount(feeNusd) === "0.0001");
 });
 
 test("fixed amounts round half-up to exactly two decimals", () => {

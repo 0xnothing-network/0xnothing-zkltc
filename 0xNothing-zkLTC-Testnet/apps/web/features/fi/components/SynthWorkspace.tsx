@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { formatUnits, zeroAddress, type Address } from "viem";
+import { formatUnits, maxUint256, zeroAddress, type Address } from "viem";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { AmountField } from "@fi/components/AmountField";
@@ -244,16 +244,43 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
         withdraw: "NUSD collateral withdrawn",
       };
       const detail = mode === "mint" && minimumMintAmount
-        ? `${formatTokenAmount(minimumMintAmount)} ${synth} received with a ${formatAmount(maximumMintDebit)} NUSD maximum debit.`
+        ? `${formatTokenAmount(minimumMintAmount)} ${synth} received with a ${formatTokenAmount(maximumMintFee)} NUSD maximum fee.`
         : "Vault position updated.";
       toast.show(labels[mode], detail, "success");
       setAmountText("");
-      void reads.refetch();
-      void walletReads.refetch();
-      void reserveReads.refetch();
-      void safetyReserveState.refetch();
-      void nusdBalance.refetch();
-      void synthBalance.refetch();
+      void refreshPosition();
+    }
+  }
+
+  function refreshPosition() {
+    void reads.refetch();
+    void walletReads.refetch();
+    void reserveReads.refetch();
+    void safetyReserveState.refetch();
+    void nusdBalance.refetch();
+    void synthBalance.refetch();
+  }
+
+  async function closePosition() {
+    if (!vault || !address || !synthAddress || activationBlocked || withdrawPaused) return;
+    if (synthDebt !== undefined && synthDebt > 0n && synthBalance.data !== undefined && synthBalance.data < synthDebt) {
+      return;
+    }
+    const hash = await tx.execute({
+      approval: synthDebt && synthDebt > 0n
+        ? { token: synthAddress, spender: vault, amount: synthDebt }
+        : undefined,
+      call: {
+        address: vault,
+        abi: synthVaultAbi,
+        functionName: "repayAndWithdraw",
+        args: [maxUint256, maxUint256, address] as const,
+      },
+    });
+    if (hash) {
+      toast.show("Position closed", `All ${synth} debt repaid, then your NUSD withdrawn.`, "success");
+      setAmountText("");
+      refreshPosition();
     }
   }
 
@@ -286,6 +313,24 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
             <div className="fi-position-row"><span>Locked collateral</span><strong>{formatAmount(userCollateral)} NUSD</strong></div>
             <div className="fi-position-row"><span>Withdrawable</span><strong>{formatAmount(maxWithdrawable)} NUSD</strong></div>
           </dl>
+          {isConnected && configured && ((userCollateral ?? 0n) > 0n || (synthDebt ?? 0n) > 0n) ? (
+            <button
+              type="button"
+              className="fi-button fi-button-block fi-button-muted"
+              disabled={
+                activationBlocked
+                || withdrawPaused === true
+                || tx.pending
+                || (synthDebt !== undefined && synthDebt > 0n && synthBalance.data !== undefined && synthBalance.data < synthDebt)
+              }
+              onClick={() => { void closePosition(); }}
+            >
+              {tx.pending ? "Processing" : "Close position"}
+            </button>
+          ) : null}
+          {synthDebt !== undefined && synthDebt > 0n && synthBalance.data !== undefined && synthBalance.data < synthDebt ? (
+            <div className="fi-inline-state fi-inline-warning"><div><strong>Hold the outstanding {synth}</strong><span>Close repays that debt first, then withdraws your NUSD.</span></div></div>
+          ) : null}
           <details className="fi-pool-details">
             <summary>Reserve details</summary>
             <dl>
@@ -354,7 +399,8 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
                     <summary>Mint details</summary>
                     <dl>
                       <div><dt>Collateral locked</dt><dd>{formatAmount(amount)} NUSD</dd></div>
-                      <div><dt>Maximum fee</dt><dd>{formatAmount(maximumMintFee)} NUSD</dd></div>
+                      <div><dt>Maximum fee</dt><dd>{formatTokenAmount(maximumMintFee)} NUSD</dd></div>
+                      <div><dt>Fee basis</dt><dd>0.1% of this mint's oracle NUSD value</dd></div>
                       <div><dt>Reserve added</dt><dd>{formatAmount(reserveRequired)} NUSD</dd></div>
                       <div><dt>Backing</dt><dd>{mintQuote ? quoteUsesSponsorship ? "1:1 + reserve" : "150% safety" : "--"}</dd></div>
                     </dl>

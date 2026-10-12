@@ -29,10 +29,14 @@ position backing remains 150%. Below the safety threshold, the user supplies the
 full 150%. User-owned and reserve-owned NUSD are accounted separately; users can
 never withdraw reserve collateral.
 
-Synth minting charges an additional 0.1% of the oracle-priced NUSD notional.
-The fee is not collateral and does not reduce the 1:1 mint amount. It is routed
-to the matching synth/NUSD gauge for LP stakers; fees queue when nobody is
-staked, so an empty gauge cannot burn the reward clock.
+Synth minting charges an additional 0.1% of this mint's oracle-priced NUSD
+notional (the DIA value of the synth just minted — not the NUSD deposited, and
+not existing debt). The only implicit minimum is 1 wei of NUSD, and the fee
+cannot exceed 0.1% of notional plus that 1 wei. It is not collateral and does
+not reduce the 1:1 mint amount. It is routed to the matching synth/NUSD gauge
+for LP stakers; fees queue when nobody is staked, so an empty gauge cannot burn
+the reward clock. Full close is `repayAndWithdraw(max, max, recipient)`: debt
+is reduced first, then remaining user NUSD is withdrawn without an oracle read.
 
 Official 0xFi swaps charge 0.5% per pool for that pool's LPs and 0.1% protocol
 fee once per route. A route that needs an intermediary also pays one additional

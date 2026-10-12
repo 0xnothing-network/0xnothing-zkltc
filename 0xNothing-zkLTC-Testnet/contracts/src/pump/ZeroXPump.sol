@@ -315,6 +315,10 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
         }
     }
 
+    /// @notice Admin-only graduation entry. This is not a user/UX path: callers
+    /// cannot pick an adapter once `PumpGraduationController` is Pump admin.
+    /// Permissionless graduation is `graduateReady(token)` on that controller,
+    /// which pins the router, adapter, terminal reserves, and LP recipient.
     function graduate(address token, address adapter, uint256 minimumLp, uint256 deadline)
         external
         onlyAdmin

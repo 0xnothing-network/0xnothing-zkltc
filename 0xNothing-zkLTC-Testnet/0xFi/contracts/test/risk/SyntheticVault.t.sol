@@ -433,7 +433,7 @@ contract SyntheticVaultTest is TestBase {
         uint256 aliceBefore = nusd.balanceOf(ALICE);
         uint256 feeNusd = vault.quoteMintFee(1 ether);
         assertEq(feeNusd, 100 ether, "0.1 percent oracle notional fee");
-        assertEq(vault.quoteMintFee(1), 100, "small mints retain nonzero precision");
+        assertEq(vault.quoteMintFee(1), 100, "1 wei nBTC at $100k is still exact 0.1 percent");
 
         vm.prank(ALICE);
         vault.depositAndMint(150_000 ether, 1 ether, feeNusd, ALICE);
