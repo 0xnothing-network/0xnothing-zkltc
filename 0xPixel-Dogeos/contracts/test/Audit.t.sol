@@ -222,6 +222,7 @@ contract ContractAuditTest {
         vm.prank(bob); market.cancelOffer(offer);
         vm.expectRevert(PixelMarket.InvalidTerms.selector); vm.prank(bob); market.withdraw(payable(address(0)));
         require(market.credits(bob) == 1 ether, "zero recipient destroyed credit");
+        // Forces a balance without calling receive(), replacing the former selfdestruct force-send.
         vm.deal(address(market), address(market).balance + 123);
         vm.prank(bob); market.withdraw(payable(carol));
         require(market.totalCredits() == 0 && market.totalOfferEscrow() == 0 && address(market).balance == 123, "forced value affected liabilities");
