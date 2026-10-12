@@ -1,6 +1,75 @@
 # Testnet deployment runbook
 
-Contract and subgraph deployment is intentionally the final phase.
+Contract and subgraph deployment is intentionally the final phase. Do not pass
+`--broadcast` until an explicit go-ahead. This document's forge command is the
+canonical Pump/OracleNUSD deploy path for LiteForge (chain ID 4441).
+
+## 0. Forge script path (no broadcast)
+
+From `0xNothing-zkLTC-Testnet/contracts`, using Foundry 1.8.x on PATH:
+
+```bash
+export PRIVATE_KEY="$(cast wallet new | awk '/Private key/{print $3}')" # throwaway, simulation only
+export LITVM_RPC_URL=https://liteforge.rpc.caldera.xyz/infra-partner-http
+./scripts/preflight-testnet-oracle.sh
+forge script script/DeployTestnet.s.sol:DeployTestnet --rpc-url "$LITVM_RPC_URL"
+```
+
+PowerShell:
+
+```powershell
+$env:PRIVATE_KEY = (cast wallet new | Select-String "Private key").ToString().Split(" ")[-1]
+$env:LITVM_RPC_URL = "https://liteforge.rpc.caldera.xyz/infra-partner-http"
+cast chain-id --rpc-url $env:LITVM_RPC_URL
+cast call 0x45dDa5d881BD2C917976CCfde74fFd6f6412da29 "latestRoundData()((uint80,int256,uint256,uint256,uint80))" --rpc-url $env:LITVM_RPC_URL
+forge script script/DeployTestnet.s.sol:DeployTestnet --rpc-url $env:LITVM_RPC_URL
+```
+
+The script reverts unless `block.chainid == 4441`. It always writes
+`contracts/deployments/latest.json` with `broadcasted: false`; that file is
+prediction-only and must not be used as a subgraph start block. Copy
+`contracts/.env.example` to `contracts/.env` for local values. Foundry loads
+`.env` automatically; `.env` is gitignored.
+
+| Variable | Required | Default | Meaning |
+| --- | --- | --- | --- |
+| `PRIVATE_KEY` | yes | none | Deployer key. Needed even without `--broadcast` because the script calls `vm.envUint` / `vm.addr`. |
+| `LITVM_RPC_URL` | yes (forge CLI) | none | RPC for `--rpc-url`. Not read by the Solidity script. Alias: `forge script ... --rpc-url liteforge` after setting this. |
+| `PROTOCOL_ADMIN` | no | deployer | Pump admin and OracleNUSD default-admin/pauser. If different from the deployer, that address must later `acceptAdmin()` on `GraduationRouter` and `DIAOracleAdapter`. |
+| `DIA_LTC_USD_FEED` | no | `0x45dDa5d881BD2C917976CCfde74fFd6f6412da29` | LiteForge DIA LTC/USD AggregatorV3. |
+| `DIA_MAX_PRICE_AGE` | no | `3600` (60 min) | Oracle staleness window in seconds. On-chain cap is 300–7200. The live feed publishes about every 50 minutes; values below 3600 halt mint/redeem between updates. |
+| `DIA_MIN_PRICE_WAD` | no | `1e18` (1 USD) | Inclusive minimum accepted LTC/USD. |
+| `DIA_MAX_PRICE_WAD` | no | `10000e18` | Inclusive maximum accepted LTC/USD. |
+| `DIA_MAX_DEVIATION_BPS` | no | `2000` | Max move per `maxPriceAge` vs the last synced anchor. `0` disables. |
+| `GRADUATION_TIMELOCK` | no | `172800` (2 days) | `GraduationRouter.minimumDelay`. |
+| `PUMP_TOKEN_TOTAL_SUPPLY` | no | `1_000_000_000e18` | Fixed supply of every Pump token. |
+| `NUSD_DEBT_CEILING` | no | `1_000_000e18` | Passed to `OracleNUSD.supplyCeilingNusd`. |
+
+Not env-overridable: chain ID `4441`, initial virtual reserve `1,500 NUSD`, READY
+market-cap target `6,000 NUSD`, create fee `1 NUSD`, trade fee `10` bps. Launch
+protection stays off (`launchProtectionWindow == 0`); the pump admin may call
+`setLaunchProtection` after deploy. Graduation delays default to
+`permissionlessGraduationDelay = 1 hour` and `readyExitDelay = 7 days`.
+
+The script does **not** call `syncPrice()`. The live DIA aggregator uses shanghai
+PUSH0, which reverts with `NotActivated` inside this project's paris Foundry EVM
+and would block both simulation and `--broadcast`. Preflight the live feed with
+`scripts/preflight-testnet-oracle.sh` (or the `cast call latestRoundData` above).
+After an approved broadcast, arm the deviation breaker on-chain:
+
+```bash
+cast send "$DIA_ORACLE_ADAPTER" "syncPrice()" --rpc-url "$LITVM_RPC_URL" --private-key "$PRIVATE_KEY"
+```
+
+Deviation checks are skipped while the adapter anchor is still zero; min/max
+bounds still apply, so mint/redeem are not unpriced. Anyone may call `syncPrice()`.
+
+`DeployTestnet.s.sol` does not deploy 0xFi. `ZeroXFiFactory.pump` is immutable, so
+a live Pump replacement also needs a new 0xFi factory, `ZeroXFiGraduationAdapter`
+bound to that pump, router adapter allowlisting, and `PumpGraduationController`
+as Pump/router admin before the keeper (`npm run pump:keeper:check` in `0xFi`)
+can call `graduateReady`. Do not fold those delayed 0xFi transactions into this
+script.
 
 ## 1. Preflight
 
@@ -55,10 +124,11 @@ Record the endpoint in the deployment manifest and web configuration. Do not red
 - Upload that exact logo and metadata, then create the token without a second fee.
 - Confirm changed content cannot use the first reservation and a same-content retry can.
 - Buy and sell with the `0.1%` fee and confirm contract/subgraph agreement.
-- Confirm the market moves to `READY` at a `6,000 NUSD` market cap. Before 0xFi
-  activation, confirm migration is unavailable; after activation, confirm the
-  exact pinned adapter/controller/admin bindings before testing graduation.
-- Sell once from `READY` and confirm the contract, subgraph, and UI all reopen
-  the curve as `TRADING`.
+- Confirm the market moves to `READY` at a `6,000 NUSD` market cap. Buys and
+  sells are frozen. Before 0xFi activation, confirm migration is unavailable;
+  after activation, confirm the pinned adapter/controller/admin bindings, then
+  graduate through `graduateReady` (the same call the keeper uses).
+- Confirm a READY sell reverts until `readyExitDelay`; after that delay a sell
+  reopens the curve as `TRADING` in the contract, subgraph, and UI.
 - Confirm 0xPixel mint, gallery, marketplace, history, and fallback behavior remain unchanged.
 - Confirm removed legacy routes return `404`.

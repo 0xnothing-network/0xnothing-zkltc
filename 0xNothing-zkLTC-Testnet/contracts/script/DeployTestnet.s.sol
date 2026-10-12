@@ -83,7 +83,12 @@ contract DeployTestnet {
 
         deployment.diaOracleAdapter =
             new DIAOracleAdapter(diaFeed, maxPriceAge, deployer, minPriceWad, maxPriceWad, maxDeviationBps);
-        deployment.diaOracleAdapter.syncPrice();
+        // Do not call syncPrice() here. The live LiteForge DIA aggregator uses shanghai
+        // PUSH0, which reverts with NotActivated in this project's paris EVM and would
+        // block both `forge script` simulation and `--broadcast`. Arm the breaker after
+        // deploy with `cast send <adapter> "syncPrice()"`. Deviation is skipped while the
+        // anchor is zero; bounds still apply. Preflight the live feed with
+        // `scripts/preflight-testnet-oracle.sh` (or the cast calls in docs/DEPLOYMENT.md).
         deployment.oracleNusd = new OracleNUSD(deployment.diaOracleAdapter, protocolAdmin, supplyCeilingNusd);
 
         deployment.locker = new PermanentLiquidityLocker(deployer);
@@ -150,6 +155,13 @@ contract DeployTestnet {
         vm.serializeUint(objectKey, "graduationReserveThresholdNusd", deployment.pump.graduationReserveThresholdNusd());
         vm.serializeUint(objectKey, "createFeeNusd", deployment.pump.createFee());
         vm.serializeUint(objectKey, "tradeFeeBps", deployment.pump.tradeFeeBps());
+        vm.serializeUint(objectKey, "maxPriceAge", deployment.diaOracleAdapter.maxPriceAge());
+        vm.serializeUint(objectKey, "minPriceWad", deployment.diaOracleAdapter.minPriceWad());
+        vm.serializeUint(objectKey, "maxPriceWad", deployment.diaOracleAdapter.maxPriceWad());
+        vm.serializeUint(objectKey, "maxDeviationBps", deployment.diaOracleAdapter.maxDeviationBps());
+        vm.serializeUint(objectKey, "permissionlessGraduationDelay", deployment.pump.permissionlessGraduationDelay());
+        vm.serializeUint(objectKey, "readyExitDelay", deployment.pump.readyExitDelay());
+        vm.serializeUint(objectKey, "launchProtectionWindow", deployment.pump.launchProtectionWindow());
         vm.serializeBool(objectKey, "graduationRouterEnabled", deployment.router.enabled());
         vm.serializeUint(objectKey, "graduationRouterEnableAt", deployment.router.enableAt());
         string memory json = vm.serializeAddress(objectKey, "pump", address(deployment.pump));

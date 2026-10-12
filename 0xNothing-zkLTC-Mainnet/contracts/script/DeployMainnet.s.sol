@@ -88,7 +88,9 @@ contract DeployMainnet {
 
         deployment.oracle =
             new DIAOracleAdapter(diaFeed, maxPriceAge, deployer, minPriceWad, maxPriceWad, maxDeviationBps);
-        deployment.oracle.syncPrice();
+        // Do not call syncPrice() here: paris-EVM simulation cannot execute shanghai DIA
+        // bytecode (PUSH0 / NotActivated) and would block `--broadcast`. Arm the breaker
+        // after deploy with `cast send <adapter> "syncPrice()"`.
         deployment.oracleNusd = new OracleNUSD(deployment.oracle, protocolAdmin, NUSD_SUPPLY_CEILING);
 
         deployment.locker = new PermanentLiquidityLocker(deployer);

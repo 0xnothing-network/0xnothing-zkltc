@@ -34,6 +34,14 @@ $env:FOUNDRY_SKIP='["src/0xpixel/**","test/0xPixelV2.t.sol"]'
 forge coverage --root 0xNothing-zkLTC-Testnet/contracts --no-match-path test/0xPixelV2.t.sol --report summary --no-match-coverage "(test|script)/"
 ```
 
+## Testnet Pump deploy dry run
+
+The canonical LiteForge (chain ID 4441) path is `forge script
+script/DeployTestnet.s.sol:DeployTestnet --rpc-url $LITVM_RPC_URL` from
+`0xNothing-zkLTC-Testnet/contracts`, without `--broadcast`. Exact environment
+variables are listed in `0xNothing-zkLTC-Testnet/docs/DEPLOYMENT.md` and
+`0xNothing-zkLTC-Testnet/contracts/.env.example`.
+
 ## Generated outputs
 
 Preview the directories that can be regenerated safely:

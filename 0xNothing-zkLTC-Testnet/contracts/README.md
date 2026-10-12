@@ -33,19 +33,29 @@ the risk model is documented in `docs/ARCHITECTURE.md` and `docs/SECURITY.md`.
 
 ## Deployment dry run
 
+Copy `.env.example` to `.env` in this directory, then from this directory:
+
+```bash
+forge script script/DeployTestnet.s.sol:DeployTestnet --rpc-url "$LITVM_RPC_URL"
+```
+
 ```powershell
 forge script script/DeployTestnet.s.sol:DeployTestnet --rpc-url $env:LITVM_RPC_URL
 ```
 
-Required: `PRIVATE_KEY`. Optional settings are `PROTOCOL_ADMIN`,
-`DIA_LTC_USD_FEED`, `DIA_MAX_PRICE_AGE` (default 60 minutes, at most 2 hours),
-`DIA_MIN_PRICE_WAD` (default `1e18`), `DIA_MAX_PRICE_WAD` (default `10_000e18`),
-`DIA_MAX_DEVIATION_BPS` (default `2000`), `GRADUATION_TIMELOCK`,
-`PUMP_TOKEN_TOTAL_SUPPLY`, and `NUSD_DEBT_CEILING`. The release curve fixes the
-initial virtual market cap at `1,500 NUSD` and the READY market-cap target at
-`6,000 NUSD`; they are not deployment-time environment overrides.
-`NUSD_DEBT_CEILING` is retained as the deployment environment name for
-compatibility, but its value is passed to `OracleNUSD.supplyCeilingNusd`.
+Required: `PRIVATE_KEY` (even without `--broadcast`) and `LITVM_RPC_URL` for
+`--rpc-url` (the Solidity script does not read it; it requires chain ID 4441).
+Optional settings, with defaults, are `PROTOCOL_ADMIN` (deployer),
+`DIA_LTC_USD_FEED` (`0x45dDa5d881BD2C917976CCfde74fFd6f6412da29`),
+`DIA_MAX_PRICE_AGE` (`3600` seconds, on-chain cap 5 minutes–2 hours),
+`DIA_MIN_PRICE_WAD` (`1e18`), `DIA_MAX_PRICE_WAD` (`10_000e18`),
+`DIA_MAX_DEVIATION_BPS` (`2000`), `GRADUATION_TIMELOCK` (`2 days`),
+`PUMP_TOKEN_TOTAL_SUPPLY` (`1_000_000_000e18`), and `NUSD_DEBT_CEILING`
+(`1_000_000e18`). The release curve fixes the initial virtual market cap at
+`1,500 NUSD` and the READY market-cap target at `6,000 NUSD`; they are not
+deployment-time environment overrides. `NUSD_DEBT_CEILING` is retained as the
+deployment environment name for compatibility, but its value is passed to
+`OracleNUSD.supplyCeilingNusd`. The full table lives in `docs/DEPLOYMENT.md`.
 
 The script rejects any chain other than LitVM testnet chain ID `4441`. Its
 `deployments/latest.json` is prediction-only and always records
@@ -56,9 +66,11 @@ OracleNUSD; it does not deploy NativeCollateralVault. OracleNUSD is passed to
 ZeroXPump as both its NUSD and vault address. When
 `PROTOCOL_ADMIN` differs from the deployer, the admin must call `acceptAdmin()`
 on the router and on DIAOracleAdapter before scheduling any future DEX adapter.
-The script calls `syncPrice()` once, so it fails fast if the feed is stale or out
-of bounds. Do not use `--broadcast`
-until the deployment phase has been explicitly approved.
+Do not call `syncPrice()` through this paris-EVM script: the live DIA aggregator
+uses PUSH0 and reverts with `NotActivated` in local simulation, which would also
+block `--broadcast`. Run `scripts/preflight-testnet-oracle.sh` first, then after
+an approved broadcast `cast send <adapter> "syncPrice()"`. Do not use
+`--broadcast` until the deployment phase has been explicitly approved.
 
 The initial deployment deliberately leaves liquidity migration unavailable. On
 the live testnet the router has since completed its delayed enable and its 0xFi
