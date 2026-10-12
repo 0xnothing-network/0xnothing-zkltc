@@ -56,7 +56,7 @@ contract NativeCollateralVaultInvariantTest is InvariantBase {
         vm.warp(1_000_000);
         MockDIAFeed feed = new MockDIAFeed(18);
         feed.setRound(1, 100 ether, block.timestamp, 1);
-        DIAOracleAdapter oracle = new DIAOracleAdapter(address(feed), 2 hours);
+        DIAOracleAdapter oracle = new DIAOracleAdapter(address(feed), 2 hours, address(this), 1, type(uint256).max, 0);
         nusd = new NUSD(address(this));
         vault = new NativeCollateralVault(
             address(nusd), address(oracle), address(this), 17_500, 15_000, 800, 5_000, 1_000_000 ether

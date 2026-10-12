@@ -2,6 +2,14 @@
 pragma solidity ^0.8.24;
 
 interface Vm {
+    struct Log {
+        bytes32[] topics;
+        bytes data;
+        address emitter;
+    }
+
+    function recordLogs() external;
+    function getRecordedLogs() external returns (Log[] memory logs);
     function deal(address account, uint256 newBalance) external;
     function prank(address sender) external;
     function startPrank(address sender) external;
@@ -9,6 +17,7 @@ interface Vm {
     function warp(uint256 newTimestamp) external;
     function expectRevert() external;
     function expectRevert(bytes4 selector) external;
+    function expectPartialRevert(bytes4 selector) external;
     function expectRevert(bytes calldata revertData) external;
     function assume(bool condition) external;
     function createSelectFork(string calldata rpcUrl) external returns (uint256 forkId);

@@ -77,13 +77,18 @@ contract DeployMainnet {
         address deployer = vm.addr(privateKey);
         address protocolAdmin = vm.envOr("PROTOCOL_ADMIN", deployer);
         address diaFeed = vm.envAddress("DIA_LTC_USD_FEED");
-        uint256 maxPriceAge = vm.envOr("DIA_MAX_PRICE_AGE", uint256(90 minutes));
+        uint256 maxPriceAge = vm.envUint("DIA_MAX_PRICE_AGE");
+        uint256 minPriceWad = vm.envUint("DIA_MIN_PRICE_WAD");
+        uint256 maxPriceWad = vm.envUint("DIA_MAX_PRICE_WAD");
+        uint256 maxDeviationBps = vm.envUint("DIA_MAX_DEVIATION_BPS");
         uint256 routerDelay = vm.envOr("GRADUATION_TIMELOCK", uint256(7 days));
         uint256 totalSupply = vm.envOr("PUMP_TOKEN_TOTAL_SUPPLY", uint256(1_000_000_000 ether));
 
         vm.startBroadcast(privateKey);
 
-        deployment.oracle = new DIAOracleAdapter(diaFeed, maxPriceAge);
+        deployment.oracle =
+            new DIAOracleAdapter(diaFeed, maxPriceAge, deployer, minPriceWad, maxPriceWad, maxDeviationBps);
+        deployment.oracle.syncPrice();
         deployment.oracleNusd = new OracleNUSD(deployment.oracle, protocolAdmin, NUSD_SUPPLY_CEILING);
 
         deployment.locker = new PermanentLiquidityLocker(deployer);
@@ -122,6 +127,7 @@ contract DeployMainnet {
 
         if (protocolAdmin != deployer) {
             deployment.router.transferAdmin(protocolAdmin);
+            deployment.oracle.transferAdmin(protocolAdmin);
         }
 
         vm.stopBroadcast();

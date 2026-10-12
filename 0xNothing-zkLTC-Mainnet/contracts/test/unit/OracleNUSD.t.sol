@@ -20,7 +20,7 @@ contract OracleNUSDTest is TestBase {
         vm.warp(1_000_000);
         feed = new MockDIAFeed(18);
         feed.setRound(1, 50 ether, block.timestamp, 1);
-        oracle = new DIAOracleAdapter(address(feed), 90 minutes);
+        oracle = new DIAOracleAdapter(address(feed), 90 minutes, address(this), 1, type(uint256).max, 0);
         nusd = new OracleNUSD(oracle, address(this), type(uint256).max);
 
         vm.deal(USER, 20 ether);

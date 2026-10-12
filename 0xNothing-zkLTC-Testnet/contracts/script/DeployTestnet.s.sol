@@ -70,14 +70,20 @@ contract DeployTestnet {
         address deployer = vm.addr(privateKey);
         address protocolAdmin = vm.envOr("PROTOCOL_ADMIN", deployer);
         address diaFeed = vm.envOr("DIA_LTC_USD_FEED", DEFAULT_DIA_LTC_USD_FEED);
-        uint256 maxPriceAge = vm.envOr("DIA_MAX_PRICE_AGE", uint256(90 minutes));
+        // The LiteForge DIA feed publishes roughly every 50 minutes; a shorter window halts mint and redeem.
+        uint256 maxPriceAge = vm.envOr("DIA_MAX_PRICE_AGE", uint256(60 minutes));
+        uint256 minPriceWad = vm.envOr("DIA_MIN_PRICE_WAD", uint256(1 ether));
+        uint256 maxPriceWad = vm.envOr("DIA_MAX_PRICE_WAD", uint256(10_000 ether));
+        uint256 maxDeviationBps = vm.envOr("DIA_MAX_DEVIATION_BPS", uint256(2_000));
         uint256 routerDelay = vm.envOr("GRADUATION_TIMELOCK", uint256(2 days));
         uint256 totalSupply = vm.envOr("PUMP_TOKEN_TOTAL_SUPPLY", uint256(1_000_000_000 ether));
         uint256 supplyCeilingNusd = vm.envOr("NUSD_DEBT_CEILING", uint256(1_000_000 ether));
 
         vm.startBroadcast(privateKey);
 
-        deployment.diaOracleAdapter = new DIAOracleAdapter(diaFeed, maxPriceAge);
+        deployment.diaOracleAdapter =
+            new DIAOracleAdapter(diaFeed, maxPriceAge, deployer, minPriceWad, maxPriceWad, maxDeviationBps);
+        deployment.diaOracleAdapter.syncPrice();
         deployment.oracleNusd = new OracleNUSD(deployment.diaOracleAdapter, protocolAdmin, supplyCeilingNusd);
 
         deployment.locker = new PermanentLiquidityLocker(deployer);
@@ -113,6 +119,7 @@ contract DeployTestnet {
 
         if (protocolAdmin != deployer) {
             deployment.router.transferAdmin(protocolAdmin);
+            deployment.diaOracleAdapter.transferAdmin(protocolAdmin);
         }
 
         vm.stopBroadcast();
