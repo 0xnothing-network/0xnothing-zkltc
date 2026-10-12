@@ -1,11 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createBoundedCache } from "../../lib/boundedCache.ts";
+import { LITVM_CHAIN_ID } from "../../lib/chainSwitch.ts";
+import { isValidExternalHref, normalizeExternalHref } from "../../lib/safeExternalHref.ts";
 import { readLimitedBytes } from "../../lib/server/readLimitedBytes.ts";
 import { evaluateModule } from "../helpers/evaluateModule.ts";
 
 const config = evaluateModule<{ normalizePumpIpfsPath: (value: string) => string }>(
-  new URL("../../features/pump/config.ts", import.meta.url), { "@/lib/publicConfig": {} },
+  new URL("../../features/pump/config.ts", import.meta.url),
+  {
+    "@/lib/publicConfig": {},
+    "@/lib/chainSwitch": { LITVM_CHAIN_ID },
+    "@/lib/safeExternalHref": { isValidExternalHref, normalizeExternalHref },
+  },
 );
 const cid = "bafkreig3eedskjp45hcwf47bhfcwxtlw5fayiwmxcc472hvysunyhy2dqy";
 function harness(fetcher: (url: string, options: RequestInit) => Promise<Response>) {

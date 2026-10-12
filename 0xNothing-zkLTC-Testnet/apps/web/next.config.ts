@@ -110,19 +110,6 @@ const nextConfig: NextConfig = {
         },
       };
     }
-    if (process.env.ANALYZE === "1" && !isServer) {
-      try {
-        const { BundleAnalyzerPlugin } = require("webpack-bundle-analyzer") as typeof import("webpack-bundle-analyzer");
-        config.plugins = config.plugins ?? [];
-        config.plugins.push(new BundleAnalyzerPlugin({
-          analyzerMode: "static",
-          reportFilename: "bundle-report.html",
-          openAnalyzer: false,
-        }));
-      } catch {
-        // Optional: `ANALYZE=1` is useful when webpack-bundle-analyzer is installed.
-      }
-    }
     return config;
   },
   images: {
