@@ -1,7 +1,9 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
 import { TestBase } from "../TestBase.sol";
 import { NusdNftMarketplace } from "../../src/0xpixel/NusdNftMarketplace.sol";
+import { DeployNusdMarketplace } from "../../script/DeployNusdMarketplace.s.sol";
 import { MarketplaceNusdMock, MarketplaceNftMock, MarketplaceNftBuyerMock } from "../mocks/NusdMarketplaceMocks.sol";
 import { ZeroXPixelV2 } from "../../src/0xpixel/ZeroXPixelV2.sol";
 
@@ -25,9 +27,9 @@ contract NusdNftMarketplaceTest is TestBase {
         nft.mint(OTHER, 2);
         nusd.mint(BUYER, 1000 ether);
         vm.prank(SELLER);
-        nft.setApprovalForAll(address(market), true);
+        nft.approve(address(market), 1);
         vm.prank(OTHER);
-        nft.setApprovalForAll(address(market), true);
+        nft.approve(address(market), 2);
         vm.prank(BUYER);
         nusd.approve(address(market), 1000 ether);
     }
@@ -188,6 +190,8 @@ contract NusdNftMarketplaceTest is TestBase {
         vm.prank(BUYER);
         market.buy(listingId, 100 ether, 100 ether);
         vm.prank(OTHER);
+        nft.approve(address(market), 1);
+        vm.prank(OTHER);
         market.list(address(nft), 1, 50 ether);
         assertEq(market.activeListingCount(), 1, "STALE_LISTING_NOT_REMOVED");
         _solvent();
@@ -196,7 +200,7 @@ contract NusdNftMarketplaceTest is TestBase {
     function testRevokedNftApprovalCanBeInvalidatedWithoutSpendingNusd() public {
         uint256 listingId = _list(100 ether);
         vm.prank(SELLER);
-        nft.setApprovalForAll(address(market), false);
+        nft.approve(address(0), 1);
         vm.prank(OTHER);
         market.invalidateListing(listingId);
         assertEq(market.activeListingCount(), 0, "REVOKED_LISTING_STILL_ACTIVE");
@@ -309,7 +313,7 @@ contract NusdNftMarketplaceTest is TestBase {
 
     function testFuzzSettlementConservesEveryNusd(uint256 rawPrice, uint256 rawRoyaltyBps) public {
         uint256 price = bound(rawPrice, 1, 1000 ether);
-        uint256 royaltyBps = bound(rawRoyaltyBps, 0, 9000);
+        uint256 royaltyBps = bound(rawRoyaltyBps, 0, 1000);
         nft.setRoyalty(CREATOR, royaltyBps);
         uint256 listingId = _list(price);
         vm.prank(BUYER);
@@ -431,5 +435,207 @@ contract NusdNftMarketplaceTest is TestBase {
         }
         assertEq(nusd.balanceOf(BUYER), 1000 ether, "SEQUENCE_LOST_NUSD");
         _solvent();
+    }
+
+    function testListingDoesNotReviveWhenNftReturnsToSeller() public {
+        uint256 listingId = _list(1 ether);
+        vm.prank(SELLER);
+        nft.setApprovalForAll(address(market), true);
+        vm.prank(SELLER);
+        nft.transferFrom(SELLER, OTHER, 1);
+        vm.prank(OTHER);
+        nft.transferFrom(OTHER, SELLER, 1);
+        vm.expectRevert(NusdNftMarketplace.NotPurchasable.selector);
+        vm.prank(BUYER);
+        market.buy(listingId, 1 ether, 1 ether);
+        assertEq(nft.ownerOf(1), SELLER, "RETURNED_NFT_SOLD_AT_STALE_PRICE");
+        assertEq(nusd.balanceOf(BUYER), 1000 ether, "STALE_LISTING_CHARGED_BUYER");
+        vm.prank(OTHER);
+        market.invalidateListing(listingId);
+        vm.prank(SELLER);
+        nft.approve(address(market), 1);
+        vm.prank(SELLER);
+        uint256 relisted = market.list(address(nft), 1, 50 ether);
+        vm.prank(BUYER);
+        market.buy(relisted, 50 ether, 50 ether);
+        assertEq(nft.ownerOf(1), BUYER, "FRESH_LISTING_NOT_PURCHASABLE");
+        _solvent();
+    }
+
+    function testOperatorApprovalCannotActivateListingsButCanAcceptOffers() public {
+        vm.prank(SELLER);
+        nft.approve(address(0), 1);
+        vm.prank(SELLER);
+        nft.setApprovalForAll(address(market), true);
+        vm.expectRevert(NusdNftMarketplace.NotPurchasable.selector);
+        vm.prank(SELLER);
+        market.list(address(nft), 1, 100 ether);
+        uint256 offerId = _offer(100 ether);
+        vm.prank(SELLER);
+        market.acceptOffer(offerId, 99.6 ether);
+        assertEq(nft.ownerOf(1), BUYER, "OPERATOR_APPROVED_OFFER_NOT_SETTLED");
+        _solvent();
+    }
+
+    function testApprovingAnotherAddressForTheNftDisablesItsListing() public {
+        uint256 listingId = _list(100 ether);
+        vm.prank(SELLER);
+        nft.setApprovalForAll(address(market), true);
+        vm.prank(SELLER);
+        nft.approve(OTHER, 1);
+        vm.expectRevert(NusdNftMarketplace.NotPurchasable.selector);
+        vm.prank(BUYER);
+        market.buy(listingId, 100 ether, 100 ether);
+        vm.expectRevert(NusdNftMarketplace.NotPurchasable.selector);
+        vm.prank(SELLER);
+        market.updateListingPrice(listingId, 90 ether);
+        vm.prank(OTHER);
+        market.invalidateListing(listingId);
+        assertEq(market.activeListingCount(), 0, "DISABLED_LISTING_STILL_ACTIVE");
+        _solvent();
+    }
+
+    function testRoyaltyRaisedAfterListingCannotDrainSellerProceeds() public {
+        nft.setRoyalty(CREATOR, 100);
+        uint256 listingId = _list(100 ether);
+        nft.setRoyalty(CREATOR, 9_000);
+        vm.expectRevert(NusdNftMarketplace.InvalidRoyalty.selector);
+        vm.prank(BUYER);
+        market.buy(listingId, 100 ether, 100 ether);
+        assertEq(nft.ownerOf(1), SELLER, "OVERSIZED_ROYALTY_SETTLED");
+        nft.setRoyalty(CREATOR, 1_000);
+        vm.prank(BUYER);
+        market.buy(listingId, 100 ether, 100 ether);
+        assertEq(market.credits(SELLER), 89.6 ether, "SELLER_FLOOR_NOT_HONOURED");
+        assertEq(market.credits(CREATOR), 10 ether, "CAPPED_ROYALTY_NOT_PAID");
+        _solvent();
+    }
+
+    function testFuzzRoyaltyAboveCapAlwaysReverts(uint256 rawPrice, uint256 rawRoyaltyBps) public {
+        uint256 price = bound(rawPrice, 10_000, 1000 ether);
+        nft.setRoyalty(CREATOR, bound(rawRoyaltyBps, 1_001, 10_000));
+        uint256 listingId = _list(price);
+        vm.expectRevert(NusdNftMarketplace.InvalidRoyalty.selector);
+        market.quoteSale(address(nft), 1, price);
+        vm.expectRevert(NusdNftMarketplace.InvalidRoyalty.selector);
+        vm.prank(BUYER);
+        market.buy(listingId, price, price);
+        uint256 offerId = _offer(price);
+        vm.expectRevert(NusdNftMarketplace.InvalidRoyalty.selector);
+        vm.prank(SELLER);
+        market.acceptOffer(offerId, 0);
+        assertEq(nft.ownerOf(1), SELLER, "CAPPED_ROYALTY_SETTLED");
+        _solvent();
+    }
+
+    function testFuzzFeeAndRoyaltySplitIsExactForAnyFee(uint256 rawPrice, uint256 rawFeeBps, uint256 rawRoyaltyBps) public {
+        uint256 price = bound(rawPrice, 1, type(uint128).max);
+        uint16 feeBps = uint16(bound(rawFeeBps, 0, 500));
+        uint256 royaltyBps = bound(rawRoyaltyBps, 0, 1_000);
+        address[] memory collections = new address[](1);
+        collections[0] = address(nft);
+        NusdNftMarketplace custom = new NusdNftMarketplace(address(nusd), address(this), TREASURY, feeBps, collections);
+        nft.setRoyalty(CREATOR, royaltyBps);
+        (uint256 fee,, uint256 royalty, uint256 proceeds) = custom.quoteSale(address(nft), 1, price);
+        assertEq(fee, price * feeBps / 10_000, "FEE_NOT_FLOORED");
+        assertEq(royalty, price * royaltyBps / 10_000, "ROYALTY_ALTERED");
+        assertEq(fee + royalty + proceeds, price, "SPLIT_NOT_EXACT");
+        assertGe(proceeds, price - price * 500 / 10_000 - price / 10, "SELLER_FLOOR_BROKEN");
+        nusd.mint(BUYER, price);
+        vm.prank(BUYER);
+        nusd.approve(address(custom), price);
+        vm.prank(SELLER);
+        nft.approve(address(custom), 1);
+        vm.prank(SELLER);
+        uint256 listingId = custom.list(address(nft), 1, price);
+        vm.prank(BUYER);
+        custom.buy(listingId, price, price);
+        assertEq(custom.credits(SELLER), proceeds, "SELLER_CREDIT_MISMATCH");
+        assertEq(custom.credits(TREASURY), fee, "FEE_CREDIT_MISMATCH");
+        assertEq(custom.credits(CREATOR), royalty, "ROYALTY_CREDIT_MISMATCH");
+        assertEq(nusd.balanceOf(address(custom)), custom.totalLiabilitiesNusd(), "CUSTOM_MARKET_UNBACKED");
+        assertEq(custom.totalCreditsNusd(), price, "CUSTOM_MARKET_CREDIT_SUM");
+    }
+
+    function testCancelledOrReplacedListingCannotBeBoughtByPendingBuyer() public {
+        uint256 listingId = _list(100 ether);
+        vm.prank(SELLER);
+        market.cancelListing(listingId);
+        vm.expectRevert(NusdNftMarketplace.Inactive.selector);
+        vm.prank(BUYER);
+        market.buy(listingId, 100 ether, 100 ether);
+        vm.prank(SELLER);
+        uint256 relisted = market.list(address(nft), 1, 150 ether);
+        vm.expectRevert(NusdNftMarketplace.Inactive.selector);
+        vm.prank(BUYER);
+        market.buy(listingId, 100 ether, 100 ether);
+        vm.expectRevert(NusdNftMarketplace.Inactive.selector);
+        vm.prank(SELLER);
+        market.cancelListing(listingId);
+        assertEq(nusd.balanceOf(BUYER), 1000 ether, "PENDING_BUYER_CHARGED");
+        assertEq(market.tokenToListingId(address(nft), 1), relisted, "RELIST_NOT_INDEXED");
+        _solvent();
+    }
+
+    function testPriceCutAlsoRequiresBuyerToReviewTheNewPrice() public {
+        uint256 listingId = _list(100 ether);
+        vm.prank(SELLER);
+        market.updateListingPrice(listingId, 60 ether);
+        vm.expectRevert(NusdNftMarketplace.PriceChanged.selector);
+        vm.prank(BUYER);
+        market.buy(listingId, 100 ether, 100 ether);
+        vm.prank(BUYER);
+        market.buy(listingId, 60 ether, 60 ether);
+        assertEq(nusd.balanceOf(BUYER), 940 ether, "BUYER_NOT_CHARGED_REVIEWED_PRICE");
+        _solvent();
+    }
+
+    function testSaleThroughOneRouteClosesTheOtherWithoutLosingFunds() public {
+        nusd.mint(OTHER, 200 ether);
+        vm.prank(OTHER);
+        nusd.approve(address(market), 200 ether);
+        uint256 listingId = _list(100 ether);
+        vm.prank(OTHER);
+        uint256 offerId = market.makeOffer(address(nft), 1, 120 ether, uint64(block.timestamp + 1 days), 120 ether);
+        vm.prank(BUYER);
+        market.buy(listingId, 100 ether, 100 ether);
+        vm.expectRevert(NusdNftMarketplace.Inactive.selector);
+        vm.prank(OTHER);
+        market.buy(listingId, 100 ether, 100 ether);
+        vm.expectRevert(NusdNftMarketplace.NotPurchasable.selector);
+        vm.prank(SELLER);
+        market.acceptOffer(offerId, 0);
+        assertEq(market.escrowedNusd(), 120 ether, "FAILED_ACCEPT_RELEASED_ESCROW");
+        vm.prank(BUYER);
+        nft.approve(address(market), 1);
+        vm.prank(BUYER);
+        market.acceptOffer(offerId, 0);
+        assertEq(nft.ownerOf(1), OTHER, "NEW_OWNER_COULD_NOT_ACCEPT");
+        assertEq(nusd.balanceOf(OTHER), 80 ether, "OFFERER_CHARGED_TWICE");
+        _solvent();
+    }
+
+    function testAcceptedOfferClosesTheSellersListing() public {
+        uint256 listingId = _list(150 ether);
+        uint256 offerId = _offer(100 ether);
+        vm.prank(SELLER);
+        market.acceptOffer(offerId, 99.6 ether);
+        assertEq(market.activeListingCount(), 0, "SOLD_NFT_STILL_LISTED");
+        assertEq(market.tokenToListingId(address(nft), 1), 0, "SOLD_NFT_STILL_INDEXED");
+        vm.expectRevert(NusdNftMarketplace.Inactive.selector);
+        vm.prank(OTHER);
+        market.buy(listingId, 150 ether, 150 ether);
+        _solvent();
+    }
+
+    function testDeployScriptPinsCanonicalNusdAndRefusesOtherChains() public {
+        DeployNusdMarketplace script = new DeployNusdMarketplace();
+        assertEq(script.NUSD(), 0x677D63c78E77E0b1971530e1494Caee4Bd7d631e, "DEPLOY_SCRIPT_NUSD");
+        assertEq(script.PIXEL_V1(), 0x33A32b9b2BEe864f9e42BFa39cA7BDC72f655988, "DEPLOY_SCRIPT_PIXEL_V1");
+        assertEq(script.PIXEL_V2(), 0xd83cb7aCEF921f98b6B983cBB712a583869Da9eB, "DEPLOY_SCRIPT_PIXEL_V2");
+        assertEq(uint256(script.PLATFORM_FEE_BPS()), 40, "DEPLOY_SCRIPT_FEE");
+        vm.expectRevert(DeployNusdMarketplace.WrongChain.selector);
+        script.run();
+        assertEq(market.IMPLEMENTATION_ID(), keccak256("0xpixel.nusd.marketplace.v2"), "IMPLEMENTATION_MARKER");
     }
 }

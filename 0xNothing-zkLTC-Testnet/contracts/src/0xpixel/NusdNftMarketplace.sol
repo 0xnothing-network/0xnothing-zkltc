@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -47,11 +48,13 @@ contract NusdNftMarketplace is ReentrancyGuard, Ownable2Step, Pausable {
     error InsufficientProceeds();
     error WalletPaymentExceeded();
 
-    bytes32 public constant IMPLEMENTATION_ID = keccak256("0xpixel.nusd.marketplace.v1");
+    bytes32 public constant IMPLEMENTATION_ID = keccak256("0xpixel.nusd.marketplace.v2");
     uint256 public constant MAX_PRICE = type(uint128).max;
     uint256 public constant MAX_OFFER_DURATION = 30 days;
     uint256 public constant MAX_PAGE_SIZE = 100;
     uint16 public constant MAX_FEE_BPS = 500;
+    /// @dev Bounds what a collection can take from a seller who is not present when a listing is bought.
+    uint16 public constant MAX_ROYALTY_BPS = 1_000;
 
     IERC20 public immutable nusd;
     address public immutable feeRecipient;
@@ -106,11 +109,11 @@ contract NusdNftMarketplace is ReentrancyGuard, Ownable2Step, Pausable {
     function list(address collection, uint256 tokenId, uint256 price) external nonReentrant whenNotPaused returns (uint256 listingId) {
         _requireCollection(collection);
         _requirePrice(price);
-        if (!_ownsAndApproves(collection, tokenId, msg.sender)) revert NotPurchasable();
+        if (!_isListable(collection, tokenId, msg.sender)) revert NotPurchasable();
         uint256 previousId = tokenToListingId[collection][tokenId];
         if (previousId != 0 && listings[previousId].active) {
             Listing memory previous = listings[previousId];
-            if (_ownsAndApproves(collection, tokenId, previous.seller)) revert AlreadyListed();
+            if (_isListable(collection, tokenId, previous.seller)) revert AlreadyListed();
             _removeListing(previousId);
             emit ListingInvalidated(previousId);
         }
@@ -128,7 +131,7 @@ contract NusdNftMarketplace is ReentrancyGuard, Ownable2Step, Pausable {
         if (listing.seller != msg.sender) revert Unauthorized();
         _requireCollection(listing.collection);
         _requirePrice(price);
-        if (!_ownsAndApproves(listing.collection, listing.tokenId, listing.seller)) revert NotPurchasable();
+        if (!_isListable(listing.collection, listing.tokenId, listing.seller)) revert NotPurchasable();
         listing.price = price;
         emit ListingPriceUpdated(listingId, price);
     }
@@ -143,7 +146,7 @@ contract NusdNftMarketplace is ReentrancyGuard, Ownable2Step, Pausable {
     function invalidateListing(uint256 listingId) external nonReentrant {
         Listing memory listing = listings[listingId];
         if (!listing.active) revert Inactive();
-        if (collectionAllowed[listing.collection] && _ownsAndApproves(listing.collection, listing.tokenId, listing.seller)) revert NotPurchasable();
+        if (collectionAllowed[listing.collection] && _isListable(listing.collection, listing.tokenId, listing.seller)) revert NotPurchasable();
         _removeListing(listingId);
         emit ListingInvalidated(listingId);
     }
@@ -154,7 +157,7 @@ contract NusdNftMarketplace is ReentrancyGuard, Ownable2Step, Pausable {
         if (listing.price != expectedPrice) revert PriceChanged();
         if (listing.seller == msg.sender) revert Unauthorized();
         _requireCollection(listing.collection);
-        if (!_ownsAndApproves(listing.collection, listing.tokenId, listing.seller)) revert NotPurchasable();
+        if (!_isListable(listing.collection, listing.tokenId, listing.seller)) revert NotPurchasable();
         _removeListing(listingId);
         _fund(msg.sender, listing.price, maxWalletPayment);
         _settle(listing.collection, listing.tokenId, listing.seller, msg.sender, listing.price, 0);
@@ -183,7 +186,7 @@ contract NusdNftMarketplace is ReentrancyGuard, Ownable2Step, Pausable {
         if (block.timestamp >= offer.expiresAt) revert InvalidExpiry();
         if (offer.offerer == msg.sender) revert Unauthorized();
         _requireCollection(offer.collection);
-        if (!_ownsAndApproves(offer.collection, offer.tokenId, msg.sender)) revert NotPurchasable();
+        if (!_ownsAndApproves(offer.collection, offer.tokenId, msg.sender, true)) revert NotPurchasable();
         _removeOffer(offerId);
         escrowedNusd -= offer.price;
         uint256 listingId = tokenToListingId[offer.collection][offer.tokenId];
@@ -225,7 +228,7 @@ contract NusdNftMarketplace is ReentrancyGuard, Ownable2Step, Pausable {
         fee = price * platformFeeBps / 10_000;
         if (ERC165Checker.supportsInterface(collection, type(IERC2981).interfaceId)) {
             (royaltyReceiver, royalty) = IERC2981(collection).royaltyInfo(tokenId, price);
-            if (royalty > price - fee || (royalty != 0 && (royaltyReceiver == address(0) || royaltyReceiver == address(this)))) revert InvalidRoyalty();
+            if (royalty > price * MAX_ROYALTY_BPS / 10_000 || (royalty != 0 && (royaltyReceiver == address(0) || royaltyReceiver == address(this)))) revert InvalidRoyalty();
         }
         sellerProceeds = price - fee - royalty;
     }
@@ -327,7 +330,13 @@ contract NusdNftMarketplace is ReentrancyGuard, Ownable2Step, Pausable {
         if (price == 0 || price > MAX_PRICE) revert InvalidPrice();
     }
 
-    function _ownsAndApproves(address collection, uint256 tokenId, address seller) private view returns (bool) {
+    /// @dev Listings ignore operator approvals. ERC-721 clears a token approval on every transfer, so a
+    /// listing cannot become purchasable again at its old price when the NFT later returns to the seller.
+    function _isListable(address collection, uint256 tokenId, address seller) private view returns (bool) {
+        return _ownsAndApproves(collection, tokenId, seller, false);
+    }
+
+    function _ownsAndApproves(address collection, uint256 tokenId, address seller, bool allowOperator) private view returns (bool) {
         IERC721 nft = IERC721(collection);
         try nft.ownerOf(tokenId) returns (address currentOwner) {
             if (currentOwner != seller) return false;
@@ -335,6 +344,7 @@ contract NusdNftMarketplace is ReentrancyGuard, Ownable2Step, Pausable {
         try nft.getApproved(tokenId) returns (address approved) {
             if (approved == address(this)) return true;
         } catch { return false; }
+        if (!allowOperator) return false;
         try nft.isApprovedForAll(seller, address(this)) returns (bool approved) { return approved; }
         catch { return false; }
     }

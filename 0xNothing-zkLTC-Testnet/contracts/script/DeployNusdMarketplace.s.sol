@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
 import { NusdNftMarketplace } from "../src/0xpixel/NusdNftMarketplace.sol";
@@ -12,7 +13,7 @@ contract DeployNusdMarketplace {
     error WrongChain();
 
     VmNusdMarketplaceDeploy private constant vm = VmNusdMarketplaceDeploy(address(uint160(uint256(keccak256("hevm cheat code")))));
-    address public constant NUSD = 0x5317e21aba902c6c7087a84457bc02fFe99604d1;
+    address public constant NUSD = 0x677D63c78E77E0b1971530e1494Caee4Bd7d631e;
     address public constant PIXEL_V1 = 0x33A32b9b2BEe864f9e42BFa39cA7BDC72f655988;
     address public constant PIXEL_V2 = 0xd83cb7aCEF921f98b6B983cBB712a583869Da9eB;
     uint16 public constant PLATFORM_FEE_BPS = 40;
