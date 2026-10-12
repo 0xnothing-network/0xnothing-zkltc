@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { LITVM_RPC_URL, PUBLIC_APP_URL } from "@/lib/publicConfig";
@@ -10,6 +11,27 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
   preload: false,
 });
+
+// Silver Standard UI fonts (ui-redesign-spec §4.2). Bundled locally so builds
+// never depend on Google Fonts being reachable.
+const geist = localFont({
+  src: "./fonts/Geist.ttf",
+  variable: "--font-geist",
+  weight: "100 900",
+  display: "swap",
+});
+
+const geistMono = localFont({
+  src: "./fonts/GeistMono.ttf",
+  variable: "--font-geist-mono",
+  weight: "100 900",
+  display: "swap",
+  preload: false,
+});
+
+// Only an explicit stored choice switches theme: legacy product CSS is still
+// dark-only, so the OS preference is not applied until the restyle lands.
+const themeScript = `try{var t=localStorage.getItem("0xn-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
 
 // Every contract read leaves the browser for this origin, and the first one only
 // starts after hydration. Opening the socket while the document parses removes a
@@ -41,8 +63,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" data-scroll-behavior="smooth">
+    <html lang="en" className="dark" data-theme="dark" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <link rel="preconnect" href={rpcOrigin} crossOrigin="anonymous" />
         <link
           rel="preload"
@@ -52,7 +75,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
       </head>
-      <body className={`${jetbrainsMono.variable} font-sans antialiased`}>
+      <body className={`${jetbrainsMono.variable} ${geist.variable} ${geistMono.variable} font-sans antialiased`}>
         <a href="#main-content" className="skip-link">Skip to content</a>
         <div id="main-content" tabIndex={-1}>{children}</div>
         {vercelAnalyticsEnabled ? <Analytics /> : null}

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function FiLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <Providers withToast={false}>
-      <div className="fi-root">
+      <div className="fi-root" data-product="fi">
         <PixelMist product="fi" />
         <ToastProvider>
           <div className="fi-shell">

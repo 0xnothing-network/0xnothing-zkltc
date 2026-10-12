@@ -10,7 +10,7 @@ export default function PixelLayout({
 }) {
   return (
     <Providers>
-      <div className="pixel-product">
+      <div className="pixel-product" data-product="pixel">
         <PixelHeader />
         {children}
       </div>

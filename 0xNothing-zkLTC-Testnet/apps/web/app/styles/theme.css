@@ -1,0 +1,98 @@
+/* Tailwind v4 mapping for the Silver Standard tokens (ui-redesign-spec §10, Phase 0).
+ *
+ * Utilities: bg-bg, bg-surface-1..3, border-line(-strong), text-fg/-fg-2/-fg-3,
+ * bg-accent text-accent-ink text-accent-text bg-accent-soft, text-positive/negative/
+ * warning/info (+ -bg fills), font-ui / font-num / font-brand, rounded-ui-*,
+ * shadow-e1..e3, ease-ui, duration-fast/base/slow.
+ *
+ * Radii are namespaced (`rounded-ui-lg`) instead of overriding Tailwind's
+ * default `rounded-lg` scale, which existing 0xPixel markup still relies on.
+ * Font stacks are literal (not var(--font-ui)) so the theme variable can never
+ * resolve to itself; they mirror tokens.css.
+ */
+@import "./tokens.css";
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-overlay: var(--overlay);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--text-1);
+  --color-fg-2: var(--text-2);
+  --color-fg-3: var(--text-3);
+  --color-fg-disabled: var(--text-disabled);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-text: var(--accent-text);
+  --color-accent-soft: var(--accent-soft);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-positive-bg: var(--positive-bg);
+  --color-negative-bg: var(--negative-bg);
+  --color-warning-bg: var(--warning-bg);
+  --color-info-bg: var(--info-bg);
+  --color-hf-safe: var(--hf-safe);
+  --color-hf-caution: var(--hf-caution);
+  --color-hf-risk: var(--hf-risk);
+  --color-hf-liq: var(--hf-liq);
+  --color-focus: var(--focus);
+
+  --font-ui: var(--font-geist), "Geist", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-num: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  --font-brand: "Departure Mono", var(--font-geist-mono), ui-monospace, monospace;
+
+  --radius-ui-xs: 4px;
+  --radius-ui-sm: 6px;
+  --radius-ui-md: 10px;
+  --radius-ui-lg: 14px;
+  --radius-ui-xl: 20px;
+
+  --shadow-e1: var(--e-1);
+  --shadow-e2: var(--e-2);
+  --shadow-e3: var(--e-3);
+
+  --ease-ui: cubic-bezier(.2,.7,.2,1);
+}
+
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility eyebrow {
+  font-family: var(--font-brand);
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+@utility edge-hi {
+  box-shadow: var(--e-1);
+}
+
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
+@keyframes ui-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@utility skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: ui-shimmer 1.4s linear infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}

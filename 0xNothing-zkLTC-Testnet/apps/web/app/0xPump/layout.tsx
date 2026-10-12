@@ -6,7 +6,7 @@ import "./globals.css";
 export default function PumpLayout({ children }: { children: React.ReactNode }) {
   return (
     <Providers>
-      <div className="pump-shell">
+      <div className="pump-shell" data-product="pump">
         <PixelMist product="pump" />
         <div className="pump-surface">
           <PumpHeader />
