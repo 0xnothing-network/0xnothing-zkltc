@@ -54,23 +54,6 @@ test("generated cleanup never targets Graph bindings tracked by Git", () => {
   );
 });
 
-test("workspace verification and cleanup include the standalone DogeOS project", async () => {
-  const manifest = JSON.parse(await readFile(new URL("../../package.json", import.meta.url), "utf8"));
-  assert.match(manifest.scripts.verify, /\bnpm run verify:dogeos\b/);
-  assert.equal(manifest.scripts["verify:dogeos"], "npm --prefix 0xPixel-Dogeos run verify");
-  for (const directory of [
-    "0xNothing-zkLTC-Testnet/apps/web/.dogeos",
-    "0xPixel-Dogeos/contracts/cache",
-    "0xPixel-Dogeos/contracts/out",
-    "0xPixel-Dogeos/dist",
-    "0xPixel-Dogeos/subgraph/build",
-    "0xPixel-Dogeos/subgraph/generated",
-  ]) {
-    assert.ok(GENERATED_DIRECTORIES.includes(directory), directory);
-  }
-  assert.equal(GENERATED_DIRECTORIES.includes("0xPixel-Dogeos/src/generated"), false);
-});
-
 test("generated cleanup dry-run is non-mutating and real cleanup is scoped", async (t) => {
   const workspaceRoot = await temporaryDirectory(t, "0xn-cleanup-");
   const generated = path.join(workspaceRoot, "project", "build");

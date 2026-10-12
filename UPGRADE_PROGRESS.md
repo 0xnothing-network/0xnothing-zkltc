@@ -24,7 +24,7 @@
 
 - Git ban đầu sạch, branch `main`.
 - Web: **153/153** kiểm thử đạt; TypeScript đạt.
-- Lint thất bại **54 errors, 1431 warnings**: cấu hình quét cả bundle sinh ra ở `.dogeos`; test đóng gói đặt biến tên `module`, vi phạm quy tắc Next.js.
+- Lint thất bại **54 errors, 1431 warnings**: cấu hình quét cả artifact sinh ra.
 - Frontend hiện đang cấu hình **LitVM LiteForge Testnet, chain ID 4441**.
 - Mainnet config vẫn `blocked-until-official-network-values-are-published`: chain ID/RPC/explorer, oracle, stablecoin, settlement route, DEX và adapter chưa có giá trị chính thức trong repo. Graduation Mainnet đang tắt.
 
@@ -32,7 +32,6 @@
 
 - [x] Rà cấu trúc, ranh giới sản phẩm và mô hình release Testnet/Mainnet.
 - [x] Ghi nhận baseline và sửa lint quét artifact sinh ra.
-- [x] Đưa kiểm thử đóng gói DogeOS vào lệnh `test:web`.
 - [x] Thêm trang khôi phục lỗi toàn web và lỗi root layout, giữ phong cách hiện tại; skip-link có đích nhận focus.
 - [x] Xử lý giao dịch bị hủy/thay thế, tránh báo thành công sai hoặc chạy tiếp thao tác nhiều bước.
 - [x] Sửa cache làm mới NFT sau mint/transfer; giới hạn payload RPC inventory.
@@ -67,14 +66,13 @@
 - Bố cục home thích ứng desktop, 390px và 320px; không tràn ngang. Mobile Pump sort không còn cắt nhãn “Last trade”.
 - Focus bàn phím nhìn rõ trên button/link/control, touch target tốt hơn, feedback disabled/pressed nhất quán, hỗ trợ reduced motion/forced colors. Loader dùng cùng surface và có loading text cho screen reader.
 - Thêm root/route error boundary với retry/home/docs; thông báo nhắc kiểm tra giao dịch đã gửi trước khi thử lại. Skip-link có đích nhận focus.
-- ESLint bỏ qua `.dogeos` được sinh ra; sửa biến `module` trong test đóng gói. `test:web` chạy cả test đóng gói, không chỉ test TypeScript.
 - Không thêm dependency hoặc thay framework, font nhận diện, địa chỉ triển khai hay logic hợp đồng.
 
 ## Kết quả kiểm tra
 
 | Kiểm tra | Kết quả |
 | --- | --- |
-| Web: `npm run test:web` | **180/180 đạt**, từ baseline 153 test; bao gồm đóng gói, receipt/race regressions |
+| Web: `npm run test:web` | **180/180 đạt**, từ baseline 153 test; bao gồm receipt/race regressions |
 | Pixel checks sau sửa link Explorer | **7/7 đạt** |
 | Web: `npm run lint:web` | Đạt, không lỗi/cảnh báo |
 | Web: `npm run typecheck:web` | Đạt |
