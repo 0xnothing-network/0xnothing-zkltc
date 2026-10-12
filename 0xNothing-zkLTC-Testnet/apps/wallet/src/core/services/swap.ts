@@ -146,9 +146,15 @@ async function pumpPaused(client: SwapClient): Promise<boolean> {
     .catch(() => true);
 }
 
-/** READY sells stay frozen until `readyExitDelay`. Unreadable clocks fail closed. */
+/** READY sells stay frozen until `readyExitDelay` only while graduation is possible. Unreadable state fails closed. */
 async function pumpReadyExitOpen(client: SwapClient, token: Address): Promise<boolean> {
   try {
+    const possible = await client.readContract({
+      address: CONTRACTS.pumpFactory,
+      abi: zeroXPumpAbi,
+      functionName: "graduationPossible",
+    });
+    if (possible === false) return true;
     const [readyAt, delay] = await Promise.all([
       client.readContract({
         address: CONTRACTS.pumpFactory,

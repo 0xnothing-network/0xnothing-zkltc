@@ -34,6 +34,8 @@ contract DeployTestnet {
     error UnexpectedOracleNusdConfiguration();
     error UnexpectedPumpConfiguration();
     error UnsafeInitialGraduationState();
+    error InvalidOracleParameters();
+    error InvalidLaunchProtection();
 
     VmDeploy private constant vm = VmDeploy(address(uint160(uint256(keccak256("hevm cheat code")))));
 
@@ -78,6 +80,11 @@ contract DeployTestnet {
         uint256 routerDelay = vm.envOr("GRADUATION_TIMELOCK", uint256(2 days));
         uint256 totalSupply = vm.envOr("PUMP_TOKEN_TOTAL_SUPPLY", uint256(1_000_000_000 ether));
         uint256 supplyCeilingNusd = vm.envOr("NUSD_DEBT_CEILING", uint256(1_000_000 ether));
+        uint256 launchWindow = vm.envOr("LAUNCH_PROTECTION_WINDOW", uint256(15 minutes));
+        uint256 launchMaxBuyNusd = vm.envOr("LAUNCH_MAX_BUY_NUSD", uint256(50 ether));
+
+        validateOracleParameters(maxPriceAge, minPriceWad, maxPriceWad, maxDeviationBps);
+        validateLaunchProtection(launchWindow, launchMaxBuyNusd);
 
         vm.startBroadcast(privateKey);
 
@@ -85,10 +92,11 @@ contract DeployTestnet {
             new DIAOracleAdapter(diaFeed, maxPriceAge, deployer, minPriceWad, maxPriceWad, maxDeviationBps);
         // Do not call syncPrice() here. The live LiteForge DIA aggregator uses shanghai
         // PUSH0, which reverts with NotActivated in this project's paris EVM and would
-        // block both `forge script` simulation and `--broadcast`. Arm the breaker after
-        // deploy with `cast send <adapter> "syncPrice()"`. Deviation is skipped while the
-        // anchor is zero; bounds still apply. Preflight the live feed with
-        // `scripts/preflight-testnet-oracle.sh` (or the cast calls in docs/DEPLOYMENT.md).
+        // block both `forge script` simulation and `--broadcast`. After an approved
+        // broadcast, `syncPrice()` MUST be called on-chain (`cast send <adapter>
+        // "syncPrice()"`). Deviation is skipped while the anchor is zero; bounds still
+        // apply. Preflight the live feed with `scripts/preflight-testnet-oracle.sh`
+        // (or the cast calls in docs/DEPLOYMENT.md).
         deployment.oracleNusd = new OracleNUSD(deployment.diaOracleAdapter, protocolAdmin, supplyCeilingNusd);
 
         deployment.locker = new PermanentLiquidityLocker(deployer);
@@ -97,11 +105,14 @@ contract DeployTestnet {
             address(deployment.oracleNusd),
             address(deployment.oracleNusd),
             address(deployment.router),
-            protocolAdmin,
+            deployer,
             totalSupply,
             INITIAL_VIRTUAL_NUSD_RESERVE,
             GRADUATION_MARKET_CAP_TARGET_NUSD
         );
+        if (launchWindow != 0) {
+            deployment.pump.setLaunchProtection(launchWindow, launchMaxBuyNusd);
+        }
         deployment.router.bindPump(address(deployment.pump));
         deployment.locker.bindRouter(address(deployment.router));
 
@@ -116,13 +127,18 @@ contract DeployTestnet {
                 || deployment.pump.graduationThresholdNusd() != GRADUATION_MARKET_CAP_TARGET_NUSD
                 || deployment.pump.graduationReserveThresholdNusd() != GRADUATION_RESERVE_THRESHOLD_NUSD
                 || deployment.pump.createFee() != CREATE_FEE_NUSD || deployment.pump.tradeFeeBps() != TRADE_FEE_BPS
-                || deployment.pump.paused()
+                || deployment.pump.paused() || deployment.pump.readyExitDelay() != 1 days
+                || deployment.pump.permissionlessGraduationDelay() != 1 hours
+                || deployment.pump.launchProtectionWindow() != launchWindow
+                || deployment.pump.launchMaxBuyNusd() != (launchWindow == 0 ? 0 : launchMaxBuyNusd)
+                || deployment.pump.graduationAdapter() != address(0)
         ) revert UnexpectedPumpConfiguration();
         if (deployment.router.enabled() || deployment.router.enableAt() != 0) {
             revert UnsafeInitialGraduationState();
         }
 
         if (protocolAdmin != deployer) {
+            deployment.pump.transferAdmin(protocolAdmin);
             deployment.router.transferAdmin(protocolAdmin);
             deployment.diaOracleAdapter.transferAdmin(protocolAdmin);
         }
@@ -162,6 +178,8 @@ contract DeployTestnet {
         vm.serializeUint(objectKey, "permissionlessGraduationDelay", deployment.pump.permissionlessGraduationDelay());
         vm.serializeUint(objectKey, "readyExitDelay", deployment.pump.readyExitDelay());
         vm.serializeUint(objectKey, "launchProtectionWindow", deployment.pump.launchProtectionWindow());
+        vm.serializeUint(objectKey, "launchMaxBuyNusd", deployment.pump.launchMaxBuyNusd());
+        vm.serializeAddress(objectKey, "graduationAdapter", deployment.pump.graduationAdapter());
         vm.serializeBool(objectKey, "graduationRouterEnabled", deployment.router.enabled());
         vm.serializeUint(objectKey, "graduationRouterEnableAt", deployment.router.enableAt());
         string memory json = vm.serializeAddress(objectKey, "pump", address(deployment.pump));
@@ -177,5 +195,23 @@ contract DeployTestnet {
             protocolAdmin,
             deployment.oracleNusd.supplyCeilingNusd()
         );
+    }
+
+    function validateOracleParameters(
+        uint256 maxPriceAge,
+        uint256 minPriceWad,
+        uint256 maxPriceWad,
+        uint256 maxDeviationBps
+    ) public pure {
+        if (
+            maxPriceAge < 5 minutes || maxPriceAge > 2 hours || minPriceWad < 0.01 ether
+                || maxPriceWad > 1_000_000 ether || minPriceWad >= maxPriceWad || maxDeviationBps > 10_000
+        ) revert InvalidOracleParameters();
+    }
+
+    function validateLaunchProtection(uint256 window, uint256 maxBuyNusd) public pure {
+        if (window > 1 hours || (window != 0 && maxBuyNusd == 0)) {
+            revert InvalidLaunchProtection();
+        }
     }
 }

@@ -85,9 +85,7 @@ contract DIAOracleAdapterFuzzTest is TestBase {
         }
     }
 
-    function testFuzzDeviationAcceptsExactlyTheAllowance(uint256 rawBps, uint256 rawPrice, uint256 rawElapsed)
-        public
-    {
+    function testFuzzDeviationAcceptsExactlyTheAllowance(uint256 rawBps, uint256 rawPrice, uint256 rawElapsed) public {
         uint256 deviationBps = bound(rawBps, 1, 10_000);
         uint256 newPrice = bound(rawPrice, 1e8, 1_000e8);
         uint256 elapsed = bound(rawElapsed, 0, 2 hours);
@@ -101,7 +99,9 @@ contract DIAOracleAdapterFuzzTest is TestBase {
         feed.setRound(2, int256(newPrice), NOW + elapsed, 2);
         uint256 anchor = 100 ether;
         uint256 priceWad = newPrice * 1e10;
-        uint256 allowed = anchor * deviationBps * (elapsed / 1 hours + 1) / 10_000;
+        uint256 intervals = elapsed / 1 hours + 1;
+        if (intervals > 3) intervals = 3;
+        uint256 allowed = anchor * deviationBps * intervals / 10_000;
         uint256 difference = priceWad > anchor ? priceWad - anchor : anchor - priceWad;
 
         if (difference > allowed) {

@@ -38,6 +38,8 @@ contract DeployMainnet {
     error UnexpectedOracleNusdConfiguration();
     error UnexpectedPumpConfiguration();
     error UnsafeInitialGraduationState();
+    error InvalidOracleParameters();
+    error InvalidLaunchProtection();
 
     VmDeploy private constant vm = VmDeploy(address(uint160(uint256(keccak256("hevm cheat code")))));
 
@@ -83,14 +85,20 @@ contract DeployMainnet {
         uint256 maxDeviationBps = vm.envUint("DIA_MAX_DEVIATION_BPS");
         uint256 routerDelay = vm.envOr("GRADUATION_TIMELOCK", uint256(7 days));
         uint256 totalSupply = vm.envOr("PUMP_TOKEN_TOTAL_SUPPLY", uint256(1_000_000_000 ether));
+        uint256 launchWindow = vm.envOr("LAUNCH_PROTECTION_WINDOW", uint256(15 minutes));
+        uint256 launchMaxBuyNusd = vm.envOr("LAUNCH_MAX_BUY_NUSD", uint256(50 ether));
+
+        validateOracleParameters(maxPriceAge, minPriceWad, maxPriceWad, maxDeviationBps);
+        validateLaunchProtection(launchWindow, launchMaxBuyNusd);
 
         vm.startBroadcast(privateKey);
 
         deployment.oracle =
             new DIAOracleAdapter(diaFeed, maxPriceAge, deployer, minPriceWad, maxPriceWad, maxDeviationBps);
         // Do not call syncPrice() here: paris-EVM simulation cannot execute shanghai DIA
-        // bytecode (PUSH0 / NotActivated) and would block `--broadcast`. Arm the breaker
-        // after deploy with `cast send <adapter> "syncPrice()"`.
+        // bytecode (PUSH0 / NotActivated) and would block `--broadcast`. After an
+        // approved broadcast, `syncPrice()` MUST be called on-chain with
+        // `cast send <adapter> "syncPrice()"`.
         deployment.oracleNusd = new OracleNUSD(deployment.oracle, protocolAdmin, NUSD_SUPPLY_CEILING);
 
         deployment.locker = new PermanentLiquidityLocker(deployer);
@@ -99,11 +107,14 @@ contract DeployMainnet {
             address(deployment.oracleNusd),
             address(deployment.oracleNusd),
             address(deployment.router),
-            protocolAdmin,
+            deployer,
             totalSupply,
             PUMP_INITIAL_MARKET_CAP_NUSD,
             PUMP_GRADUATION_MARKET_CAP_NUSD
         );
+        if (launchWindow != 0) {
+            deployment.pump.setLaunchProtection(launchWindow, launchMaxBuyNusd);
+        }
         if (deployment.pump.graduationReserveThresholdNusd() != PUMP_GRADUATION_RESERVE_NUSD) {
             revert MainnetReleaseNotApproved();
         }
@@ -121,13 +132,18 @@ contract DeployMainnet {
                 || deployment.pump.graduationThresholdNusd() != PUMP_GRADUATION_MARKET_CAP_NUSD
                 || deployment.pump.graduationReserveThresholdNusd() != PUMP_GRADUATION_RESERVE_NUSD
                 || deployment.pump.createFee() != 1 ether || deployment.pump.tradeFeeBps() != 10
-                || deployment.pump.paused()
+                || deployment.pump.paused() || deployment.pump.readyExitDelay() != 1 days
+                || deployment.pump.permissionlessGraduationDelay() != 1 hours
+                || deployment.pump.launchProtectionWindow() != launchWindow
+                || deployment.pump.launchMaxBuyNusd() != (launchWindow == 0 ? 0 : launchMaxBuyNusd)
+                || deployment.pump.graduationAdapter() != address(0)
         ) revert UnexpectedPumpConfiguration();
         if (deployment.router.enabled() || deployment.router.enableAt() != 0) {
             revert UnsafeInitialGraduationState();
         }
 
         if (protocolAdmin != deployer) {
+            deployment.pump.transferAdmin(protocolAdmin);
             deployment.router.transferAdmin(protocolAdmin);
             deployment.oracle.transferAdmin(protocolAdmin);
         }
@@ -158,6 +174,14 @@ contract DeployMainnet {
         vm.serializeUint(objectKey, "graduationMarketCapNusd", PUMP_GRADUATION_MARKET_CAP_NUSD);
         vm.serializeUint(objectKey, "graduationReserveNusd", PUMP_GRADUATION_RESERVE_NUSD);
         vm.serializeBool(objectKey, "graduationEnabled", false);
+        vm.serializeUint(objectKey, "readyExitDelay", deployment.pump.readyExitDelay());
+        vm.serializeUint(objectKey, "launchProtectionWindow", deployment.pump.launchProtectionWindow());
+        vm.serializeUint(objectKey, "launchMaxBuyNusd", deployment.pump.launchMaxBuyNusd());
+        vm.serializeAddress(objectKey, "graduationAdapter", deployment.pump.graduationAdapter());
+        vm.serializeUint(objectKey, "maxPriceAge", deployment.oracle.maxPriceAge());
+        vm.serializeUint(objectKey, "minPriceWad", deployment.oracle.minPriceWad());
+        vm.serializeUint(objectKey, "maxPriceWad", deployment.oracle.maxPriceWad());
+        vm.serializeUint(objectKey, "maxDeviationBps", deployment.oracle.maxDeviationBps());
         string memory json = vm.serializeAddress(objectKey, "pump", address(deployment.pump));
         vm.writeJson(json, "./deployments/latest.json");
 
@@ -171,5 +195,23 @@ contract DeployMainnet {
             protocolAdmin,
             deployment.oracleNusd.supplyCeilingNusd()
         );
+    }
+
+    function validateOracleParameters(
+        uint256 maxPriceAge,
+        uint256 minPriceWad,
+        uint256 maxPriceWad,
+        uint256 maxDeviationBps
+    ) public pure {
+        if (
+            maxPriceAge < 5 minutes || maxPriceAge > 2 hours || minPriceWad < 0.01 ether
+                || maxPriceWad > 1_000_000 ether || minPriceWad >= maxPriceWad || maxDeviationBps > 10_000
+        ) revert InvalidOracleParameters();
+    }
+
+    function validateLaunchProtection(uint256 window, uint256 maxBuyNusd) public pure {
+        if (window > 1 hours || (window != 0 && maxBuyNusd == 0)) {
+            revert InvalidLaunchProtection();
+        }
     }
 }

@@ -553,7 +553,7 @@ export default function DocsPage() {
               </div>
               <div className="ox-docs-note">
                 <strong>Lifecycle safety</strong>
-                <span>READY freezes the curve so the pinned 0xFi controller (and its keeper) can graduate the market. Anyone may call graduateReady; a holder can sell to reopen the curve only after the ready-exit delay if graduation never happens.</span>
+                <span>READY freezes buys so the pinned 0xFi controller (and its keeper) can graduate the market. Anyone may call graduateReady. Sells freeze only while that path is live; if it is not, holders can sell immediately. When the freeze applies, a holder can sell to reopen the curve after the ready-exit delay.</span>
               </div>
               <div className="ox-docs-method-list">
                 <div><code>reserveMarket(contentHash)</code><span>Pay the nonrefundable creation reservation.</span></div>

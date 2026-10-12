@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {TestBase} from "../TestBase.sol";
+import {MathX} from "../../src/common/MathX.sol";
 import {SafeTransferLib} from "../../src/common/SafeTransferLib.sol";
 import {TwoStepAdmin} from "../../src/common/TwoStepAdmin.sol";
 import {GraduationRouter} from "../../src/graduation/GraduationRouter.sol";
@@ -196,8 +197,9 @@ contract GraduationRouterTest is TestBase {
             address(adapter), address(token), address(nusd), 400 ether, 100 ether, 1, ENABLED_AT
         );
 
-        assertEq(result.lpAmount, 100 ether, "lp amount");
-        assertEq(adapter.lpToken().balanceOf(address(locker)), 100 ether, "locker custody");
+        uint256 expectedLp = MathX.sqrt(400 ether * 100 ether) - 1_000;
+        assertEq(result.lpAmount, expectedLp, "lp amount");
+        assertEq(adapter.lpToken().balanceOf(address(locker)), expectedLp, "locker custody");
         assertEq(adapter.lpToken().balanceOf(address(router)), 0, "router holds no LP");
         assertEq(token.balanceOf(address(router)), 0, "router holds no token");
         assertEq(nusd.balanceOf(address(router)), 0, "router holds no NUSD");
@@ -205,7 +207,7 @@ contract GraduationRouterTest is TestBase {
         assertEq(nusd.allowance(address(router), address(adapter)), 0, "NUSD approval cleared");
         (address lockedLp, uint256 lockedAmount,,,) = locker.locks(address(token));
         assertEq(lockedLp, address(adapter.lpToken()), "lock token");
-        assertEq(lockedAmount, 100 ether, "lock amount");
+        assertEq(lockedAmount, expectedLp, "lock amount");
 
         vm.expectRevert(PermanentLiquidityLocker.InvalidLock.selector);
         router.executeGraduation(address(adapter), address(token), address(nusd), 1 ether, 1 ether, 1, ENABLED_AT);

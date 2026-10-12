@@ -147,7 +147,7 @@ function descendants(value: unknown): ElementNode[] {
   return [element, ...descendants(element.props.children)];
 }
 
-function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect", mode = "buy", replacement?: "cancelled" | "replaced" | "repriced", options: { quoteSettling?: boolean; simulationError?: boolean; simulationChange?: boolean; market?: Record<string, unknown>; paused?: boolean; readyAt?: bigint; readyExitDelay?: bigint } = {}) {
+function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect", mode = "buy", replacement?: "cancelled" | "replaced" | "repriced", options: { quoteSettling?: boolean; simulationError?: boolean; simulationChange?: boolean; market?: Record<string, unknown>; paused?: boolean; readyAt?: bigint; readyExitDelay?: bigint; graduationPossible?: boolean } = {}) {
   const account = { address: ACCOUNT as string, isConnected: true, chainId: 4441, connector: { uid: "wallet-a" } };
   const writes: Array<{ functionName: string; account?: string; chainId?: number }> = [];
   const errors: Error[] = [];
@@ -199,7 +199,8 @@ function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect",
               : read.functionName === "balanceOf" ? 100n * 10n ** 18n
                 : read.functionName === "paused" ? Boolean(options.paused)
                   : read.functionName === "readyAt" ? (options.readyAt ?? 0n)
-                    : read.functionName === "readyExitDelay" ? (options.readyExitDelay ?? 604_800n)
+                    : read.functionName === "readyExitDelay" ? (options.readyExitDelay ?? 86_400n)
+                      : read.functionName === "graduationPossible" ? (options.graduationPossible ?? true)
                       : 0n;
           return { data, refetch: async () => ({}), isLoading: false };
         },
@@ -304,11 +305,24 @@ test("Pump freezes READY buys and sells until the exit delay", () => {
   const harness = tradeHarness(undefined, "sell", undefined, {
     market: { status: "READY" },
     readyAt: now,
-    readyExitDelay: 7n * 24n * 3600n,
+    readyExitDelay: 24n * 3600n,
+    graduationPossible: true,
   });
   const primary = descendants(harness.render()).find((node) => node.type === "button" && String(node.props.className).includes("pump-button-large"));
   assert.equal(primary?.props.disabled, true);
   assert.equal(primary?.props.children, "Awaiting graduation");
+});
+
+test("Pump lets a READY sell through when graduation is impossible", async () => {
+  const harness = tradeHarness(undefined, "sell", undefined, {
+    market: { status: "READY" },
+    readyAt: BigInt(Math.floor(Date.now() / 1000)),
+    readyExitDelay: 24n * 3600n,
+    graduationPossible: false,
+  });
+  await harness.run();
+  assert.deepEqual(harness.writes.map(({ functionName }) => functionName), ["approve", "sell"]);
+  assert.equal(harness.errors.length, 0);
 });
 
 test("Pump lets a READY sell reopen the curve after the exit delay", async () => {

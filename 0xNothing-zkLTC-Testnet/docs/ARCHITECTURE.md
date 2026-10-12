@@ -61,8 +61,8 @@ pinned adapter, the router's admin is the controller, `graduationsPaused` is
 false, `enabled` is true, and `isAdapterAllowed` is true.
 On the deployed Pump, holders retain an exit regardless: the first successful
 sell from `READY` atomically returns the market to `TRADING` and emits
-`TokenCurveReopened`. The current source freezes `READY` instead and only accepts
-that reopening sell after `readyExitDelay`.
+`TokenCurveReopened`. The current source freezes READY sells only while
+graduation is possible, and then only until `readyExitDelay` (default 24 hours).
 
 With that path live, anyone may ask the controller to graduate a READY
 market. It derives the exact terminal token/NUSD amounts, atomically prepares an

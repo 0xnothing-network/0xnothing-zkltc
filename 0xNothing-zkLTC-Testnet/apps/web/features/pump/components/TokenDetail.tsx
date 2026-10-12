@@ -296,7 +296,7 @@ export function TokenDetail({ token }: { token: Address }) {
       <section className="pump-graduation-line">
         <div><span>$6,000 READY target</span><strong>{market.status === "TRADING" ? `${(market.progressBps / 100).toFixed(1)}% funded` : market.status === "READY" ? "Market-cap target reached" : "Liquidity migrated"}</strong></div>
         <div className="pump-progress" role="progressbar" aria-label="Progress to READY" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, market.progressBps / 100)}><span style={{ width: `${Math.min(100, market.progressBps / 100)}%` }} /></div>
-        {market.status === "READY" ? <p className="pump-form-hint">Curve trading is frozen. Graduate through the pinned 0xFi controller — the same <code>graduateReady</code> call the keeper uses. Sells reopen only after the exit delay if graduation never happens.</p> : null}
+        {market.status === "READY" ? <p className="pump-form-hint">Buys are frozen at the $6,000 target. Graduate through the pinned 0xFi controller — the same <code>graduateReady</code> call the keeper uses. Sells freeze only while that path is live, and reopen after the exit delay if graduation never happens.</p> : null}
         <GraduationAction market={market} onComplete={() => void query.refetch()} />
       </section>
 

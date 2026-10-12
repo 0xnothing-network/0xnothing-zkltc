@@ -48,6 +48,16 @@ function readyExitIsOpen(readyAt: bigint | undefined, delay: bigint | undefined,
   return BigInt(nowSec) >= readyAt + delay;
 }
 
+function readySellsAreOpen(
+  graduationPossible: boolean | undefined,
+  readyAt: bigint | undefined,
+  delay: bigint | undefined,
+  nowSec = Math.floor(Date.now() / 1000),
+): boolean {
+  if (graduationPossible === false) return true;
+  return readyExitIsOpen(readyAt, delay, nowSec);
+}
+
 function formatRemaining(opensAt: bigint, nowSec = Math.floor(Date.now() / 1000)): string {
   const seconds = Number(opensAt) - nowSec;
   if (!Number.isFinite(seconds) || seconds <= 0) return "now";
@@ -97,10 +107,18 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
     functionName: "readyExitDelay",
     query: { enabled: configured && market.status === "READY" },
   });
-  const exitOpensAt = market.status === "READY" && readyAt.data !== undefined && readyExitDelay.data !== undefined
+  const graduationPossible = useReadContract({
+    chainId: PUMP_CHAIN_ID,
+    address: PUMP_FACTORY_ADDRESS,
+    abi: zeroXPumpAbi,
+    functionName: "graduationPossible",
+    query: { enabled: configured && market.status === "READY" },
+  });
+  const exitOpensAt = market.status === "READY" && graduationPossible.data !== false
+    && readyAt.data !== undefined && readyExitDelay.data !== undefined
     ? readyAt.data + readyExitDelay.data
     : undefined;
-  const exitOpen = market.status === "READY" && readyExitIsOpen(readyAt.data, readyExitDelay.data);
+  const exitOpen = market.status === "READY" && readySellsAreOpen(graduationPossible.data, readyAt.data, readyExitDelay.data);
   const buyAllowed = market.status === "TRADING" && pumpPaused.data !== true;
   const sellAllowed = market.status === "TRADING" || exitOpen;
   const buyQuote = useReadContract({
@@ -109,6 +127,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
     abi: zeroXPumpAbi,
     functionName: "quoteBuy",
     args: [market.tokenAddress, amountWei],
+    account: address,
     query: { enabled: configured && mode === "buy" && amountWei > 0n && buyAllowed },
   });
   const sellQuote = useReadContract({
@@ -206,7 +225,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
         market.status === "GRADUATED"
           ? "Trading on this bonding curve has ended."
           : market.status === "READY" && !exitOpen
-            ? "Trading is frozen so this market can graduate. Sells reopen only after the exit delay if graduation never happens."
+            ? "Trading is frozen so this market can graduate. Sells reopen after the exit delay if graduation never happens."
             : "The launchpad is paused. Selling remains available.",
       );
       return;
@@ -301,7 +320,8 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
       {quoteError ? <p className="pump-inline-error">Quote unavailable. <button type="button" onClick={() => void activeQuote.refetch()}>Retry</button></p> : null}
 
       {market.status === "READY" && !exitOpen ? <p className="pump-form-hint">Trading is frozen at the $6,000 target so this market can graduate. Sells reopen after the exit delay{exitOpensAt !== undefined ? ` (${formatRemaining(exitOpensAt)})` : ""} if graduation never happens.</p> : null}
-      {market.status === "READY" && exitOpen ? <p className="pump-form-hint">Graduation did not happen in time. Selling reopens the bonding curve.</p> : null}
+      {market.status === "READY" && exitOpen && graduationPossible.data !== false ? <p className="pump-form-hint">Graduation did not happen in time. Selling reopens the bonding curve.</p> : null}
+      {market.status === "READY" && exitOpen && graduationPossible.data === false ? <p className="pump-form-hint">Graduation is not available yet, so selling remains open and reopens the bonding curve.</p> : null}
       {market.status === "TRADING" && pumpPaused.data === true ? <p className="pump-form-hint">The launchpad is paused. Buys and new tokens are blocked; selling remains available.</p> : null}
       <button type="button" className="pump-button pump-button-primary pump-button-large pump-button-full" disabled={pending || !configured || quotePending || Boolean(quoteError) || !tradeAllowed} onClick={() => void submit()}>{buttonLabel}</button>
       {!configured ? <p className="pump-form-hint">Trading activates after deployment addresses are configured.</p> : null}

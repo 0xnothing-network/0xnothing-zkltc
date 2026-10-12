@@ -8,6 +8,7 @@ import {ZeroXPump} from "../../src/pump/ZeroXPump.sol";
 import {PumpToken} from "../../src/pump/PumpToken.sol";
 import {GraduationRouter} from "../../src/graduation/GraduationRouter.sol";
 import {PermanentLiquidityLocker} from "../../src/graduation/PermanentLiquidityLocker.sol";
+import {IGraduationAdapter} from "../../src/graduation/interfaces/IGraduationAdapter.sol";
 import {MockGraduationAdapter, MockLPToken} from "../mocks/MockGraduationAdapter.sol";
 
 contract ZeroXPumpTest is TestBase {
@@ -173,11 +174,33 @@ contract ZeroXPumpTest is TestBase {
         assertEq(pump.status(token), uint8(ZeroXPump.Lifecycle.READY), "failure keeps READY");
     }
 
-    function testDustSellCannotReopenReadyMarket() public {
+    function testDustSellReopensReadyMarketWhenGraduationIsImpossible() public {
         address token = _createMarket();
         vm.prank(TRADER);
         (uint256 bought,) = pump.buy(token, 50_000 ether, 0, block.timestamp + 1);
         assertEq(pump.readyAt(token), block.timestamp, "ready timestamp");
+        assertFalse(pump.graduationPossible(), "no live adapter");
+        vm.prank(TRADER);
+        PumpToken(token).approve(address(pump), bought);
+
+        vm.expectRevert(ZeroXPump.MarketNotTrading.selector);
+        vm.prank(TRADER);
+        pump.buy(token, 1 ether, 0, block.timestamp + 1);
+
+        uint256 sellAmount = bought / 10;
+        vm.prank(TRADER);
+        pump.sell(token, sellAmount, 0, block.timestamp + 1);
+        assertEq(pump.status(token), uint8(ZeroXPump.Lifecycle.TRADING), "reopened without freeze");
+        assertEq(pump.readyAt(token), 0, "ready timestamp cleared");
+    }
+
+    function testDustSellCannotReopenReadyMarketWhileGraduationIsPossible() public {
+        _enableAdapter();
+        address token = _createMarket();
+        vm.prank(TRADER);
+        (uint256 bought,) = pump.buy(token, 50_000 ether, 0, block.timestamp + 1);
+        assertEq(pump.readyAt(token), block.timestamp, "ready timestamp");
+        assertTrue(pump.graduationPossible(), "live adapter");
         vm.prank(TRADER);
         PumpToken(token).approve(address(pump), bought);
 
@@ -200,7 +223,27 @@ contract ZeroXPumpTest is TestBase {
         assertEq(pump.status(token), uint8(ZeroXPump.Lifecycle.READY), "still ready");
     }
 
+    function testReadySellsUnfreezeWhenAdapterIsCleared() public {
+        _enableAdapter();
+        address token = _createMarket();
+        vm.prank(TRADER);
+        (uint256 bought,) = pump.buy(token, 50_000 ether, 0, block.timestamp + 1);
+        vm.prank(TRADER);
+        PumpToken(token).approve(address(pump), bought);
+        vm.expectRevert(ZeroXPump.MarketNotTrading.selector);
+        vm.prank(TRADER);
+        pump.sell(token, 1, 0, block.timestamp + 1);
+
+        pump.setGraduationAdapter(address(0));
+        assertFalse(pump.graduationPossible(), "unset adapter");
+        uint256 sellAmount = bought / 10;
+        vm.prank(TRADER);
+        pump.sell(token, sellAmount, 0, block.timestamp + 1);
+        assertEq(pump.status(token), uint8(ZeroXPump.Lifecycle.TRADING), "unfrozen after unset");
+    }
+
     function testReadyExitDelaySellReopensCurveAndCanReachReadyAgain() public {
+        _enableAdapter();
         address token = _createMarket();
         vm.prank(TRADER);
         (uint256 bought,) = pump.buy(token, 50_000 ether, 0, block.timestamp + 1);
@@ -233,7 +276,7 @@ contract ZeroXPumpTest is TestBase {
         assertEq(pump.readyAt(token), exitOpen, "ready clock restarted");
     }
 
-    function testOnlyAdminCanGraduateWhileTradingIsPaused() public {
+    function testPauseBlocksAdminAndPublicGraduation() public {
         address token = _createMarket();
         vm.prank(TRADER);
         pump.buy(token, 50_000 ether, 0, block.timestamp + 1);
@@ -245,9 +288,12 @@ contract ZeroXPumpTest is TestBase {
         vm.prank(TRADER);
         vm.expectRevert(ZeroXPump.ContractPaused.selector);
         pump.graduate(token, address(adapter), 1, graduationDeadline);
+        vm.expectRevert(ZeroXPump.ContractPaused.selector);
+        pump.graduate(token, address(adapter), type(uint256).max, graduationDeadline);
 
-        pump.graduate(token, address(adapter), 1, graduationDeadline);
-        assertEq(pump.status(token), uint8(ZeroXPump.Lifecycle.GRADUATED), "graduated");
+        pump.setPaused(false);
+        pump.graduate(token, address(0), 0, graduationDeadline);
+        assertEq(pump.status(token), uint8(ZeroXPump.Lifecycle.GRADUATED), "graduated after unpause");
     }
 
     function testAnyoneCanGraduateAfterPermissionlessDelay() public {
@@ -275,7 +321,7 @@ contract ZeroXPumpTest is TestBase {
         pump.graduate(token, address(adapter), 1, graduationDeadline);
     }
 
-    function testAdminCanGraduateImmediatelyAndPublicCannotUseUnlistedAdapter() public {
+    function testGraduateIgnoresCallerAdapterAndMinimumLp() public {
         _enableAdapter();
         address token = _createMarket();
         vm.prank(TRADER);
@@ -285,14 +331,39 @@ contract ZeroXPumpTest is TestBase {
         vm.warp(publicOpen);
         MockGraduationAdapter rogue = new MockGraduationAdapter();
         vm.prank(TRADER);
-        vm.expectRevert(GraduationRouter.AdapterNotAllowed.selector);
-        pump.graduate(token, address(rogue), 1, publicOpen + 1);
+        IGraduationAdapter.GraduationResult memory result =
+            pump.graduate(token, address(rogue), type(uint256).max, publicOpen + 1);
+        assertEq(pump.status(token), uint8(ZeroXPump.Lifecycle.GRADUATED), "caller args ignored");
+        assertEq(result.dex, address(adapter), "configured adapter used");
+        assertGt(result.lpAmount, 0, "lp minted");
+    }
 
-        address second = _createMarket();
+    function testGraduateRequiresConfiguredAdapter() public {
+        address token = _createMarket();
         vm.prank(TRADER);
-        pump.buy(second, 50_000 ether, 0, publicOpen + 1);
-        pump.graduate(second, address(adapter), 1, publicOpen + 1);
-        assertEq(pump.status(second), uint8(ZeroXPump.Lifecycle.GRADUATED), "admin graduates without delay");
+        pump.buy(token, 50_000 ether, 0, block.timestamp + 1);
+        router.scheduleAdapter(address(adapter));
+        router.scheduleEnable();
+        vm.warp(block.timestamp + DELAY);
+        router.activateAdapter(address(adapter));
+        router.enableRouter();
+
+        vm.expectRevert(ZeroXPump.InvalidAmount.selector);
+        pump.graduate(token, address(adapter), 1, type(uint256).max);
+
+        pump.setGraduationAdapter(address(adapter));
+        pump.graduate(token, address(0), 0, type(uint256).max);
+        assertEq(pump.status(token), uint8(ZeroXPump.Lifecycle.GRADUATED), "configured adapter");
+    }
+
+    function testAdminCanGraduateImmediately() public {
+        _enableAdapter();
+        address token = _createMarket();
+        vm.prank(TRADER);
+        pump.buy(token, 50_000 ether, 0, block.timestamp + 1);
+        assertTrue(block.timestamp < pump.readyAt(token) + pump.permissionlessGraduationDelay(), "delay still closed");
+        pump.graduate(token, address(0), 0, block.timestamp + 1);
+        assertEq(pump.status(token), uint8(ZeroXPump.Lifecycle.GRADUATED), "admin graduates without delay");
     }
 
     function testGraduationDelayConfiguration() public {
@@ -301,12 +372,15 @@ contract ZeroXPumpTest is TestBase {
         pump.setGraduationDelays(0, 1 days);
 
         vm.expectRevert(ZeroXPump.InvalidConfiguration.selector);
-        pump.setGraduationDelays(1 days + 1, 7 days);
+        pump.setGraduationDelays(1 days + 1, 1 days);
         vm.expectRevert(ZeroXPump.InvalidConfiguration.selector);
         pump.setGraduationDelays(0, 1 days - 1);
         vm.expectRevert(ZeroXPump.InvalidConfiguration.selector);
-        pump.setGraduationDelays(0, 30 days + 1);
+        pump.setGraduationDelays(0, 3 days + 1);
 
+        assertEq(pump.readyExitDelay(), 1 days, "default exit delay");
+        pump.setGraduationDelays(0, 3 days);
+        assertEq(pump.readyExitDelay(), 3 days, "max exit delay");
         pump.setGraduationDelays(0, 1 days);
         assertEq(pump.permissionlessGraduationDelay(), 0, "public graduation immediate");
         assertEq(pump.readyExitDelay(), 1 days, "exit delay");
@@ -358,6 +432,7 @@ contract ZeroXPumpTest is TestBase {
         pump.setLaunchProtection(60, 10 ether);
         address token = _createMarket();
 
+        vm.prank(TRADER);
         (uint256 quotedOut,, uint256 quotedUser,,) = pump.quoteBuy(token, 1_000 ether);
         assertEq(quotedUser, 10 ether, "quote capped");
         uint256 balanceBefore = nusd.balanceOf(TRADER);
@@ -366,15 +441,48 @@ contract ZeroXPumpTest is TestBase {
         assertEq(spent, 10 ether, "spend capped");
         assertEq(tokenOut, quotedOut, "quote matches capped execution");
         assertEq(balanceBefore - nusd.balanceOf(TRADER), 10 ether, "only cap pulled");
+        assertEq(pump.launchBuySpentNusd(token, TRADER), 10 ether, "spent recorded");
 
         (,,,,,, uint64 createdAt,,,,) = pump.markets(token);
         vm.warp(uint256(createdAt) + 59);
+        vm.prank(TRADER);
         (,, quotedUser,,) = pump.quoteBuy(token, 1_000 ether);
-        assertEq(quotedUser, 10 ether, "still capped at last protected second");
+        assertEq(quotedUser, 0, "cumulative remaining is zero");
 
         vm.warp(uint256(createdAt) + 60);
+        vm.prank(TRADER);
         (,, quotedUser,,) = pump.quoteBuy(token, 1_000 ether);
         assertEq(quotedUser, 1_000 ether, "cap expired");
+    }
+
+    function testLaunchProtectionIsCumulativePerBuyer() public {
+        pump.setLaunchProtection(60, 10 ether);
+        address token = _createMarket();
+
+        vm.prank(TRADER);
+        (, uint256 spent) = pump.buy(token, 6 ether, 0, block.timestamp + 1);
+        assertEq(spent, 6 ether, "first fill");
+        assertEq(pump.launchBuySpentNusd(token, TRADER), 6 ether, "spent");
+
+        vm.prank(TRADER);
+        (uint256 quotedOut,, uint256 quotedUser,,) = pump.quoteBuy(token, 1_000 ether);
+        assertEq(quotedUser, 4 ether, "remaining cap");
+        vm.prank(TRADER);
+        (, spent) = pump.buy(token, 1_000 ether, quotedOut, block.timestamp + 1);
+        assertEq(spent, 4 ether, "second fill uses remainder");
+
+        vm.prank(TRADER);
+        vm.expectRevert(ZeroXPump.InvalidAmount.selector);
+        pump.buy(token, 1 ether, 0, block.timestamp + 1);
+
+        address other = address(0xB0B);
+        nusd.mint(other, 100 ether);
+        vm.prank(other);
+        nusd.approve(address(pump), type(uint256).max);
+        vm.prank(other);
+        (, spent) = pump.buy(token, 10 ether, 0, block.timestamp + 1);
+        assertEq(spent, 10 ether, "other buyer has a full cap");
+        assertEq(pump.launchBuySpentNusd(token, other), 10 ether, "other spent isolated");
     }
 
     function testLaunchProtectionConfiguration() public {
@@ -414,7 +522,8 @@ contract ZeroXPumpTest is TestBase {
         assertEq(created.topics[1], bytes32(uint256(uint160(token))), "created token topic");
         assertEq(created.topics[2], bytes32(uint256(uint160(CREATOR))), "creator topic");
         assertEq(created.topics[3], commitment, "content hash topic");
-        ZeroXPump.CreationLog memory creation = abi.decode(bytes.concat(bytes32(uint256(32)), created.data), (ZeroXPump.CreationLog));
+        ZeroXPump.CreationLog memory creation =
+            abi.decode(bytes.concat(bytes32(uint256(32)), created.data), (ZeroXPump.CreationLog));
         assertEq(keccak256(bytes(creation.name)), keccak256("Nothing Meme"), "name");
         assertEq(keccak256(bytes(creation.imageURI)), keccak256("ipfs://img"), "image");
         assertEq(creation.totalSupply, SUPPLY, "supply");
@@ -497,10 +606,47 @@ contract ZeroXPumpTest is TestBase {
         vm.prank(TRADER);
         pump.buy(token, 50_000 ether, 0, block.timestamp);
         vm.expectRevert(ZeroXPump.InvalidAmount.selector);
-        pump.graduate(token, address(0), 1, block.timestamp);
-        vm.expectRevert(ZeroXPump.InvalidAmount.selector);
-        pump.graduate(token, address(adapter), 0, block.timestamp);
+        pump.graduate(token, address(adapter), 1, block.timestamp);
         assertEq(pump.curveProgressBps(token), 10_000, "full progress");
+    }
+
+    function testGraduationMinimumLpAppliesFixedSlippage() public {
+        uint256 tokenLiquidity = 250_000_000 ether;
+        uint256 nusdLiquidity = 1_500 ether;
+        uint256 expected = _sqrt(tokenLiquidity * nusdLiquidity) - 1_000;
+        assertEq(
+            pump.graduationMinimumLp(tokenLiquidity, nusdLiquidity), (expected * 9_900) / 10_000, "100 bps slippage"
+        );
+        vm.expectRevert(ZeroXPump.InvalidAmount.selector);
+        pump.graduationMinimumLp(1, 1);
+    }
+
+    function testReadySellsUnfreezeWhenRouterDisabled() public {
+        _enableAdapter();
+        address token = _createMarket();
+        vm.prank(TRADER);
+        (uint256 bought,) = pump.buy(token, 50_000 ether, 0, block.timestamp + 1);
+        vm.prank(TRADER);
+        PumpToken(token).approve(address(pump), bought);
+        assertTrue(pump.graduationPossible(), "live");
+        router.disableRouter();
+        assertFalse(pump.graduationPossible(), "router off");
+        uint256 sellAmount = bought / 10;
+        vm.prank(TRADER);
+        pump.sell(token, sellAmount, 0, block.timestamp + 1);
+        assertEq(pump.status(token), uint8(ZeroXPump.Lifecycle.TRADING), "unfrozen");
+    }
+
+    function testSetGraduationAdapterGuards() public {
+        vm.prank(TRADER);
+        vm.expectRevert(TwoStepAdmin.Unauthorized.selector);
+        pump.setGraduationAdapter(address(adapter));
+        vm.expectRevert(ZeroXPump.InvalidConfiguration.selector);
+        pump.setGraduationAdapter(TRADER);
+        pump.setGraduationAdapter(address(adapter));
+        assertEq(pump.graduationAdapter(), address(adapter), "set");
+        pump.setGraduationAdapter(address(0));
+        assertEq(pump.graduationAdapter(), address(0), "unset");
     }
 
     function testGraduatedMarketReportsFullProgressAndRejectsTrades() public {
@@ -604,6 +750,7 @@ contract ZeroXPumpTest is TestBase {
 
         uint256 nusdLiquidity = RESERVE_THRESHOLD;
         uint256 tokenLiquidity = PumpToken(token).balanceOf(address(adapter));
+        assertGe(lpAmount, pump.graduationMinimumLp(tokenLiquidity, nusdLiquidity), "on-chain minLP");
         uint256 dexPrice = (nusdLiquidity * 1e18) / tokenLiquidity;
         uint256 difference = dexPrice > terminalPrice ? dexPrice - terminalPrice : terminalPrice - dexPrice;
         assertLe(difference, 1, "graduation price continuity");
@@ -674,11 +821,22 @@ contract ZeroXPumpTest is TestBase {
         vm.stopPrank();
     }
 
+    function _sqrt(uint256 value) private pure returns (uint256 result) {
+        if (value == 0) return 0;
+        result = value;
+        uint256 candidate = (value / 2) + (value % 2);
+        while (candidate < result) {
+            result = candidate;
+            candidate = ((value / candidate) + candidate) / 2;
+        }
+    }
+
     function _enableAdapter() internal {
         router.scheduleAdapter(address(adapter));
         router.scheduleEnable();
         vm.warp(block.timestamp + DELAY);
         router.activateAdapter(address(adapter));
         router.enableRouter();
+        pump.setGraduationAdapter(address(adapter));
     }
 }

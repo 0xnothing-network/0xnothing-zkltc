@@ -22,6 +22,8 @@ export const zeroXPumpAbi = parseAbi([
   "function paused() view returns (bool)",
   "function readyAt(address token) view returns (uint256)",
   "function readyExitDelay() view returns (uint256)",
+  "function graduationPossible() view returns (bool)",
+  "function graduationAdapter() view returns (address)",
   "function permissionlessGraduationDelay() view returns (uint256)",
   "function admin() view returns (address)",
   "function graduationRouter() view returns (address)",

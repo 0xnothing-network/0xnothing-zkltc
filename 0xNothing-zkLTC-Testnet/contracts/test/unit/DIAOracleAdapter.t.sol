@@ -181,6 +181,19 @@ contract DIAOracleAdapterTest is TestBase {
         assertEq(price, BASE_PRICE * 75 / 100, "recovered without keeper or admin");
     }
 
+    function testDeviationAllowanceStopsGrowingAfterMaxIntervals() public {
+        int256 crashed = BASE_ANSWER * 65 / 100;
+        uint256 anchorTime = adapter.anchorUpdatedAt();
+        vm.warp(anchorTime + 30 days);
+        _setRound(crashed, block.timestamp);
+        vm.expectPartialRevert(DIAOracleAdapter.PriceDeviationExceeded.selector);
+        adapter.readPriceWad();
+
+        _setRound(BASE_ANSWER * 70 / 100, block.timestamp);
+        (uint256 price,,) = adapter.readPriceWad();
+        assertEq(price, BASE_PRICE * 70 / 100, "capped at three intervals");
+    }
+
     function testSameRoundAsAnchorSkipsDeviation() public {
         adapter.setMaxDeviationBps(1);
         (uint256 price,,) = adapter.readPriceWad();

@@ -50,8 +50,9 @@ Optional settings, with defaults, are `PROTOCOL_ADMIN` (deployer),
 `DIA_MAX_PRICE_AGE` (`3600` seconds, on-chain cap 5 minutes–2 hours),
 `DIA_MIN_PRICE_WAD` (`1e18`), `DIA_MAX_PRICE_WAD` (`10_000e18`),
 `DIA_MAX_DEVIATION_BPS` (`2000`), `GRADUATION_TIMELOCK` (`2 days`),
-`PUMP_TOKEN_TOTAL_SUPPLY` (`1_000_000_000e18`), and `NUSD_DEBT_CEILING`
-(`1_000_000e18`). The release curve fixes the initial virtual market cap at
+`PUMP_TOKEN_TOTAL_SUPPLY` (`1_000_000_000e18`), `NUSD_DEBT_CEILING`
+(`1_000_000e18`), `LAUNCH_PROTECTION_WINDOW` (`15 minutes`), and
+`LAUNCH_MAX_BUY_NUSD` (`50e18`). The release curve fixes the initial virtual market cap at
 `1,500 NUSD` and the READY market-cap target at `6,000 NUSD`; they are not
 deployment-time environment overrides. `NUSD_DEBT_CEILING` is retained as the
 deployment environment name for compatibility, but its value is passed to
@@ -65,12 +66,13 @@ disabled with no adapter. The script deploys DIAOracleAdapter first and then
 OracleNUSD; it does not deploy NativeCollateralVault. OracleNUSD is passed to
 ZeroXPump as both its NUSD and vault address. When
 `PROTOCOL_ADMIN` differs from the deployer, the admin must call `acceptAdmin()`
-on the router and on DIAOracleAdapter before scheduling any future DEX adapter.
+on Pump, the router, and DIAOracleAdapter before scheduling any future DEX adapter.
 Do not call `syncPrice()` through this paris-EVM script: the live DIA aggregator
 uses PUSH0 and reverts with `NotActivated` in local simulation, which would also
 block `--broadcast`. Run `scripts/preflight-testnet-oracle.sh` first, then after
-an approved broadcast `cast send <adapter> "syncPrice()"`. Do not use
-`--broadcast` until the deployment phase has been explicitly approved.
+an approved broadcast `syncPrice()` **must** be sent with
+`cast send <adapter> "syncPrice()"`. Do not use `--broadcast` until the
+deployment phase has been explicitly approved.
 
 The initial deployment deliberately leaves liquidity migration unavailable. On
 the live testnet the router has since completed its delayed enable and its 0xFi
@@ -79,11 +81,13 @@ administration, so the controller path is active. The authoritative state is
 `pump.graduation` in `deployments/liteforge-testnet/deployments.json`: treat the
 path as live only while `enabled`, `adapterAllowed`, `controllerOwnsPumpAdmin`,
 `controllerOwnsRouterAdmin`, and `operational` are all true.
-Reaching a `6,000 NUSD` market cap moves a market to READY. In the current
-source READY freezes buys and sells until graduation; sells reopen the curve only
-after `readyExitDelay`, and anyone may graduate after
-`permissionlessGraduationDelay`. The deployed testnet Pump predates this and
-still lets a READY sell reopen the curve.
+Reaching a `6,000 NUSD` market cap moves a market to READY. Buys stop. Sells
+freeze only while a configured adapter is live on an enabled router; otherwise
+holders can sell immediately. When the freeze applies, sells reopen the curve
+after `readyExitDelay` (default 24 hours, max 3 days). Anyone may graduate after
+`permissionlessGraduationDelay` using the configured adapter and on-chain minLP.
+The deployed testnet Pump predates this and still lets a READY sell reopen the
+curve.
 
 After an approved broadcast, preview authoritative receipt data with:
 

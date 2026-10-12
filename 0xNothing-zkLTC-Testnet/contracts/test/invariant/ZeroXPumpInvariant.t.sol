@@ -131,6 +131,7 @@ contract ZeroXPumpInvariantTest is InvariantBase {
         vm.warp(1_000_000 + 1 hours);
         router.activateAdapter(address(adapter));
         router.enableRouter();
+        pump.setGraduationAdapter(address(adapter));
         pump.setGraduationDelays(1 hours, 1 days);
 
         nusd.mint(address(this), MARKETS * 1 ether);

@@ -121,7 +121,18 @@ contract ZeroXPumpFuzzTest is TestBase {
         vm.prank(TRADER);
         (, uint256 spent) = pump.buy(token, maxNusdIn, 0, type(uint256).max);
         if (elapsed < window) {
-            assertEq(spent, maxNusdIn < cap ? maxNusdIn : cap, "capped inside window");
+            uint256 first = maxNusdIn < cap ? maxNusdIn : cap;
+            assertEq(spent, first, "capped inside window");
+            uint256 remaining = cap - first;
+            if (remaining == 0) {
+                vm.prank(TRADER);
+                vm.expectRevert(ZeroXPump.InvalidAmount.selector);
+                pump.buy(token, maxNusdIn, 0, type(uint256).max);
+            } else {
+                vm.prank(TRADER);
+                (, uint256 second) = pump.buy(token, maxNusdIn, 0, type(uint256).max);
+                assertEq(second, maxNusdIn < remaining ? maxNusdIn : remaining, "cumulative remainder");
+            }
         } else {
             assertEq(spent, maxNusdIn, "uncapped after window");
         }

@@ -68,7 +68,9 @@ that bound, plus the final stablecoin/route identity checks, only after the
 official interfaces are known. No placeholder or guessed address may satisfy a
 release gate.
 
-Graduation is submitted by the protocol Safe after the adapter is active. The Safe can pause curve trading before migration, while the router and adapter disable controls independently stop graduation. Any account may also graduate once `permissionlessGraduationDelay` has elapsed. A failed attempt leaves the market in `READY`, where buys and sells are frozen; only after `readyExitDelay` can a holder sell reopen the curve to `TRADING` instead of trapping reserves.
+Graduation is submitted by the protocol Safe after the adapter is active. Pause blocks every `graduate` call, including the Safe. The router and adapter disable controls independently stop graduation. Any account may also graduate once `permissionlessGraduationDelay` has elapsed, using the configured adapter and on-chain minLP. A failed attempt leaves the market in `READY`, where buys are frozen. Sells freeze only while graduation is possible; otherwise holders can exit immediately. When the freeze applies, only after `readyExitDelay` (default 24 hours, max 3 days) can a holder sell reopen the curve to `TRADING`.
+
+OracleNUSD keeps the owner-chosen zero-fee mint/redeem model and a 3600s `maxPriceAge`. Residual risk: a stale or manipulated DIA print can mint NUSD against native collateral at an off-market rate, and there is no protocol spread. `syncPrice()` is not part of the deploy script and must be sent after broadcast.
 
 ## Phase 3: indexing and web release
 

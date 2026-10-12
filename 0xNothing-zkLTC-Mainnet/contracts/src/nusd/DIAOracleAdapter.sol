@@ -10,7 +10,8 @@ import {IDIAAggregatorV3} from "./interfaces/IDIAAggregatorV3.sol";
 /// @dev The admin can only tighten or relax the acceptance rules; it can never supply a price. Deviation is
 ///      measured against the last synced anchor because the DIA feed does not implement `getRoundData`. The
 ///      allowed deviation grows by `maxDeviationBps` for every `maxPriceAge` elapsed since the anchor was
-///      published, so a genuine large move self-heals without a keeper or admin action.
+///      published, capped at `MAX_DEVIATION_INTERVALS`, so a genuine large move self-heals without unbounded
+///      allowance growth.
 contract DIAOracleAdapter is TwoStepAdmin {
     error InvalidFeed();
     error InvalidMaxPriceAge();
@@ -28,6 +29,7 @@ contract DIAOracleAdapter is TwoStepAdmin {
     uint256 public constant BPS_DENOMINATOR = 10_000;
     uint256 public constant MIN_PRICE_AGE = 5 minutes;
     uint256 public constant MAX_PRICE_AGE_CAP = 2 hours;
+    uint256 public constant MAX_DEVIATION_INTERVALS = 3;
 
     IDIAAggregatorV3 public immutable feed;
     uint8 public immutable feedDecimals;
@@ -152,6 +154,7 @@ contract DIAOracleAdapter is TwoStepAdmin {
 
         uint256 elapsed = block.timestamp > anchorUpdatedAt ? block.timestamp - anchorUpdatedAt : 0;
         uint256 intervals = elapsed / maxPriceAge + 1;
+        if (intervals > MAX_DEVIATION_INTERVALS) intervals = MAX_DEVIATION_INTERVALS;
         uint256 allowed = MathX.mulDiv(anchor, deviationBps * intervals, BPS_DENOMINATOR);
         uint256 difference = priceWad > anchor ? priceWad - anchor : anchor - priceWad;
         if (difference > allowed) revert PriceDeviationExceeded(anchor, priceWad, allowed);

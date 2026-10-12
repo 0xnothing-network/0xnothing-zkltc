@@ -73,6 +73,7 @@ export const zeroXPumpAbi = parseAbi([
   "function status(address token) view returns (uint8)",
   "function readyAt(address token) view returns (uint256)",
   "function readyExitDelay() view returns (uint256)",
+  "function graduationPossible() view returns (bool)",
   "function spotPriceNusdWad(address token) view returns (uint256)",
   "function getAllTokens() view returns (address[] tokens)",
   "function paused() view returns (bool)",
