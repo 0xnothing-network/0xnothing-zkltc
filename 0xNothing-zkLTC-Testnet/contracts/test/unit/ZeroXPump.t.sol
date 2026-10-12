@@ -423,10 +423,12 @@ contract ZeroXPumpTest is TestBase {
 
     function testEmergencySellPauseMax24hAutoExpiresAndEmits() public {
         address token = _createMarket();
+        uint256 deadline = type(uint256).max;
         vm.prank(TRADER);
-        (uint256 bought,) = pump.buy(token, 10 ether, 0, block.timestamp + 1);
+        (uint256 bought,) = pump.buy(token, 10 ether, 0, deadline);
         vm.prank(TRADER);
         PumpToken(token).approve(address(pump), bought);
+        uint256 slice = bought / 10;
 
         vm.prank(TRADER);
         vm.expectRevert(TwoStepAdmin.Unauthorized.selector);
@@ -446,20 +448,20 @@ contract ZeroXPumpTest is TestBase {
 
         vm.prank(TRADER);
         vm.expectRevert(ZeroXPump.SellsPaused.selector);
-        pump.sell(token, bought / 10, 0, block.timestamp + 1);
+        pump.sell(token, slice, 0, deadline);
         vm.expectRevert(ZeroXPump.SellsPaused.selector);
-        pump.quoteSell(token, bought / 10);
+        pump.quoteSell(token, slice);
 
         pump.setPaused(true);
         vm.prank(TRADER);
         vm.expectRevert(ZeroXPump.SellsPaused.selector);
-        pump.sell(token, bought / 10, 0, block.timestamp + 1);
+        pump.sell(token, slice, 0, deadline);
 
         vm.warp(until);
         assertFalse(pump.sellsPaused(), "auto-expired");
         pump.setPaused(false);
         vm.prank(TRADER);
-        uint256 received = pump.sell(token, bought / 10, 0, block.timestamp + 1);
+        uint256 received = pump.sell(token, slice, 0, deadline);
         assertGt(received, 0, "sell after expiry");
 
         pump.setSellPause(1 hours);
@@ -468,7 +470,7 @@ contract ZeroXPumpTest is TestBase {
         assertFalse(pump.sellsPaused(), "cleared");
         assertEq(pump.sellPausedUntil(), 0, "until cleared");
         vm.prank(TRADER);
-        pump.sell(token, bought / 10, 0, block.timestamp + 1);
+        pump.sell(token, slice, 0, deadline);
     }
 
     function testLaunchProtectionIsOffByDefault() public {
