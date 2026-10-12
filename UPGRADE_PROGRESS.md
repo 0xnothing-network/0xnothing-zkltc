@@ -81,9 +81,9 @@
 | Web production build | Build cuối sau sửa Explorer đạt **34/34** trang, lint/TypeScript trong build đạt |
 | Wallet tests / typecheck / build | **151/151 đạt**, TypeScript/build đạt |
 | Root tooling | **11/11 đạt** |
-| Testnet contracts | **96/96 đạt** (Foundry, bao gồm fuzz/invariants) |
-| Mainnet contracts | **72/72 đạt** (Foundry local) |
-| 0xFi contracts | **160/160 đạt**, size check đạt; warning timestamp hiện có không phải lỗi build |
+| Testnet contracts | **92/92 đạt** (Foundry, bao gồm fuzz/invariants) |
+| Mainnet contracts | **68/68 đạt** (Foundry local) |
+| 0xFi contracts | **151/151 đạt**, size check đạt; warning timestamp hiện có không phải lỗi build |
 | 0xFi scripts | Syntax **33** scripts đạt; **28/28** tests đạt |
 | Pixel subgraph | **8/8** tests và codegen/build đạt |
 | 0xFi subgraph | **22/22** tests và codegen/build đạt |
@@ -97,6 +97,10 @@ Các thành phần của verification gate được chạy riêng để thu kế
 không chạy lại lệnh tổng `npm run verify` sau khi từng check đã đạt. Foundry được
 gọi từ `C:/Users/tdat/.foundry/bin/forge.exe` vì executable chưa có trên PATH.
 Fork tests có điều kiện môi trường không đồng nghĩa đã chạy giao dịch thật trên mạng.
+
+Số test Foundry ở trên theo `forge test` của forge 1.8.5: mỗi invariant suite
+được báo là 1 test dù chứa nhiều hàm `invariant*`. `forge test --list` vẫn liệt kê
+từng hàm nên cho **96/72/160**; không có test nào bị bỏ, mọi invariant vẫn chạy.
 
 ### Bundle và giới hạn xác minh
 

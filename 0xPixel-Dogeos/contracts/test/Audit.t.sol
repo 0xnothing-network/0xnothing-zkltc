@@ -78,10 +78,6 @@ contract CallbackReceiver is IERC721Receiver {
     receive() external payable {}
 }
 
-contract ForcedValue {
-    constructor(address payable target) payable { selfdestruct(target); }
-}
-
 contract ContractAuditTest {
     event log_named_uint(string key, uint256 value);
     AuditVm constant vm = AuditVm(address(uint160(uint256(keccak256("hevm cheat code")))));
@@ -226,7 +222,8 @@ contract ContractAuditTest {
         vm.prank(bob); market.cancelOffer(offer);
         vm.expectRevert(PixelMarket.InvalidTerms.selector); vm.prank(bob); market.withdraw(payable(address(0)));
         require(market.credits(bob) == 1 ether, "zero recipient destroyed credit");
-        new ForcedValue{value:123}(payable(address(market)));
+        // Forces a balance without calling receive(), replacing the former selfdestruct force-send.
+        vm.deal(address(market), address(market).balance + 123);
         vm.prank(bob); market.withdraw(payable(carol));
         require(market.totalCredits() == 0 && market.totalOfferEscrow() == 0 && address(market).balance == 123, "forced value affected liabilities");
     }
