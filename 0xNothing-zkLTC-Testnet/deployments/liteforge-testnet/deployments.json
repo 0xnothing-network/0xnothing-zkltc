@@ -36,10 +36,10 @@
     "graduation": {
       "enabled": true,
       "enableAt": "0",
-      "adapter": "0x2da1c50DAa37Ecc56dEF8B92366Ad28Eb95a184D",
+      "adapter": "0x8c10229478cB5F912E506E1C79547B0344d191CA",
       "adapterAllowed": true,
       "adapterActivationTime": "0",
-      "controller": "0x8a8f0532cc59a3c6404090ebFd8de90ecE514728",
+      "controller": "0xEe7C17f0BFeD4E3Bb4134A9C09c49170FC6E22DC",
       "controllerOwnsPumpAdmin": true,
       "controllerOwnsRouterAdmin": true,
       "operational": true,

@@ -37,8 +37,8 @@
     "creationFeeNusd": "1",
     "tradeFeeBps": 10,
     "graduationMigrationEnabled": true,
-    "graduationAdapter": "0x2da1c50DAa37Ecc56dEF8B92366Ad28Eb95a184D",
-    "graduationController": "0x8a8f0532cc59a3c6404090ebFd8de90ecE514728"
+    "graduationAdapter": "0x8c10229478cB5F912E506E1C79547B0344d191CA",
+    "graduationController": "0xEe7C17f0BFeD4E3Bb4134A9C09c49170FC6E22DC"
   },
   "goldskyNetwork": "liteforge"
 }

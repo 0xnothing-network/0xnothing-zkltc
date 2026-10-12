@@ -11,15 +11,15 @@ import type { Address } from "viem";
 export const CONTRACTS = {
   /** NUSD is the ERC-20 *and* the oracle mint/redeem module. */
   nusd: "0x677D63c78E77E0b1971530e1494Caee4Bd7d631e",
-  wzkltc: "0xE93d4373CE1eDA3df6c3Ab7ed3ab07A07aA5939F",
-  nbtc: "0x0CBc1e968db77885DCa648D7bD0e80fCc94cB9Cf",
-  neth: "0xD504bB9430d94ccFF87e12e94fd6C0074D0E8aCb",
-  dexFactory: "0xd7426d800707786adb71eFd40431ddAacec8EcE7",
-  dexRouter: "0xb49A0d60c20Fab6AdfC0B9a77C10cb1cAFBaf811",
+  wzkltc: "0x3d09BcE3C571679125C1Ecad0cfB227ac9Ea4e69",
+  nbtc: "0x18A8877a2937eacAB552B5E370F635a62F81B1d7",
+  neth: "0x6Df5aEC35747102422d68945E4ee20f18cc88372",
+  dexFactory: "0xc3B99e993eBAF776BFF01fa8a019Fe6d4334de52",
+  dexRouter: "0x1A5a1901C193175aA7D25502f4736D550D969458",
   /** 0xFi lending remains separate from fixed-duration NUSD points staking. */
-  lendingPool: "0x7CB638F8e10f1bd200A3c5C3fD014C3FD97BA914",
+  lendingPool: "0x34ACc957ef5BACEE97b9056BE2C5A910eE7022b8",
   /** Locks NUSD for fixed terms and accounts xPoints on-chain. */
-  nusdPointsStaking: "0xDf009d9c2Bc0C2f8ee55A047074edB166C1D3282",
+  nusdPointsStaking: "0xA5B2f5c3c67198Bf1B99aA6837CdFe33dA85f480",
   /**
    * The DIA LTC/USD adapter NUSD itself is bound to — every mint and redeem is
    * priced through this contract, so it is also what the wallet shows. Used as
