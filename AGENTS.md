@@ -39,3 +39,13 @@ re-read whole files.
 After big code changes, refresh the graph with `graft build` (deterministic,
 no API key, $0).
 <!-- graft:end -->
+
+## Cloud Agent
+
+- Next.js workspace: `npm run dev` at http://127.0.0.1:3300. `GET /api/health` returns `{"status":"ok"}`.
+- DOGEOSxPIXEL: `PORT=3301 HOST=127.0.0.1 npm --prefix 0xPixel-Dogeos run dev`. The workspace proxies http://127.0.0.1:3300/DOGEOSxPIXEL to that process.
+- Use Node.js 22.23. DogeOS tests import a TypeScript helper, which Node 22.14 rejects (`ERR_UNKNOWN_FILE_EXTENSION`).
+- Contract tests need Foundry 1.8.5 (`forge`, `cast`, `anvil`). Testnet and DogeOS compile with Solidity 0.8.34; 0xFi uses 0.8.24.
+- Full local verification is `npm run verify` (see TESTING.md).
+- Public chain configuration is committed. Server-only values in `0xNothing-zkLTC-Testnet/apps/web/.env.example` are for uploads, points vouchers, and deploys.
+- These subgraph lockfiles fail `npm ci` on npm 10.9 because locked `@types/node@12` does not satisfy a `>=18` peer: `0xNothing-zkLTC-Testnet/subgraphs/0xpump`, `0xNothing-zkLTC-Testnet/subgraphs/0xpixel-marketplace`, and `0xNothing-zkLTC-Mainnet/subgraphs/0xpump`. Install them with `npm install --include=dev --no-audit --no-fund --package-lock=false` so the committed lockfile stays unchanged.
