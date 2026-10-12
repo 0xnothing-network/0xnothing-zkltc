@@ -106,6 +106,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   const [currentUnixTime, setCurrentUnixTime] = useState(() => Math.floor(Date.now() / 1_000));
 
   const validation = useReadContract({
+    chainId: deployment.chain.id,
     address: deployment.contracts.dexFactory,
     abi: dexFactoryAbi,
     functionName: "isPair",
@@ -114,8 +115,8 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   });
   const pairMetadata = useReadContracts({
     contracts: [
-      { address: pool, abi: dexPoolAbi, functionName: "token0" },
-      { address: pool, abi: dexPoolAbi, functionName: "token1" },
+      { chainId: deployment.chain.id, address: pool, abi: dexPoolAbi, functionName: "token0" },
+      { chainId: deployment.chain.id, address: pool, abi: dexPoolAbi, functionName: "token1" },
     ] as const,
     query: { enabled: validation.data === true, staleTime: 5 * 60_000 },
   });
@@ -123,8 +124,8 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   const poolToken1 = pairMetadata.data?.[1]?.result as Address | undefined;
   const pairData = useReadContracts({
     contracts: [
-      { address: pool, abi: dexPoolAbi, functionName: "getReserves" },
-      { address: pool, abi: dexPoolAbi, functionName: "totalSupply" },
+      { chainId: deployment.chain.id, address: pool, abi: dexPoolAbi, functionName: "getReserves" },
+      { chainId: deployment.chain.id, address: pool, abi: dexPoolAbi, functionName: "totalSupply" },
     ] as const,
     query: { enabled: validation.data === true },
   });
@@ -141,12 +142,12 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   const rawReserveB = token1IsNusd ? rawReserves?.[0] : rawReserves?.[1];
   const tokenMetadata = useReadContracts({
     contracts: tokenA && tokenB ? [
-      { address: tokenA, abi: erc20Abi, functionName: "symbol" },
-      { address: tokenB, abi: erc20Abi, functionName: "symbol" },
-      { address: tokenA, abi: erc20Abi, functionName: "decimals" },
-      { address: tokenB, abi: erc20Abi, functionName: "decimals" },
-      { address: tokenA, abi: tokenImageAbi, functionName: "imageURI" },
-      { address: tokenB, abi: tokenImageAbi, functionName: "imageURI" },
+      { chainId: deployment.chain.id, address: tokenA, abi: erc20Abi, functionName: "symbol" },
+      { chainId: deployment.chain.id, address: tokenB, abi: erc20Abi, functionName: "symbol" },
+      { chainId: deployment.chain.id, address: tokenA, abi: erc20Abi, functionName: "decimals" },
+      { chainId: deployment.chain.id, address: tokenB, abi: erc20Abi, functionName: "decimals" },
+      { chainId: deployment.chain.id, address: tokenA, abi: tokenImageAbi, functionName: "imageURI" },
+      { chainId: deployment.chain.id, address: tokenB, abi: tokenImageAbi, functionName: "imageURI" },
     ] as const : [],
     query: { enabled: Boolean(tokenA && tokenB), staleTime: 5 * 60_000 },
   });
@@ -162,9 +163,9 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   const tokenReadFailed = tokenMetadata.data?.slice(0, 4).some((result) => result.status === "failure") ?? false;
   const walletBalances = useReadContracts({
     contracts: address && tokenA && tokenB ? [
-      { address: pool, abi: dexPoolAbi, functionName: "balanceOf", args: [address] },
-      { address: tokenA, abi: erc20Abi, functionName: "balanceOf", args: [address] },
-      { address: tokenB, abi: erc20Abi, functionName: "balanceOf", args: [address] },
+      { chainId: deployment.chain.id, address: pool, abi: dexPoolAbi, functionName: "balanceOf", args: [address] },
+      { chainId: deployment.chain.id, address: tokenA, abi: erc20Abi, functionName: "balanceOf", args: [address] },
+      { chainId: deployment.chain.id, address: tokenB, abi: erc20Abi, functionName: "balanceOf", args: [address] },
     ] as const : [],
     query: { enabled: Boolean(address && tokenA && tokenB) },
   });
@@ -172,6 +173,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   const balanceA = walletBalances.data?.[1]?.result as bigint | undefined;
   const balanceB = walletBalances.data?.[2]?.result as bigint | undefined;
   const lockedLpRead = useReadContract({
+    chainId: deployment.chain.id,
     address: deployment.contracts.lpLocker,
     abi: communityLiquidityLockerAbi,
     functionName: "activeLockedByToken",
@@ -180,6 +182,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   });
   const lockedLp = lockedLpRead.data as bigint | undefined;
   const burnedLpRead = useReadContract({
+    chainId: deployment.chain.id,
     address: pool,
     abi: erc20Abi,
     functionName: "balanceOf",
@@ -188,6 +191,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   });
   const burnedLp = burnedLpRead.data as bigint | undefined;
   const ownerLockIdsRead = useReadContract({
+    chainId: deployment.chain.id,
     address: deployment.contracts.lpLocker,
     abi: communityLiquidityLockerAbi,
     functionName: "ownerLockIds",
@@ -201,6 +205,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   const locksRead = useReadContracts({
     contracts: deployment.contracts.lpLocker
       ? lockIds.map((id) => ({
+          chainId: deployment.chain.id,
           address: deployment.contracts.lpLocker!,
           abi: communityLiquidityLockerAbi,
           functionName: "getLock",
@@ -274,6 +279,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   const swapImageOut = swapInputIndex === 0 ? imageB : imageA;
   const swapAmountIn = parseAmount(swapAmountText, swapDecimalsIn);
   const reserveRead = useReadContract({
+    chainId: deployment.chain.id,
     address: dexRouter,
     abi: dexRouterAbi,
     functionName: "getReserves",
@@ -297,12 +303,14 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
     : undefined;
   const canonicalMarket = canonicalOracleMarketForIdentifier(pool);
   const oraclePriceRead = useReadContract({
+    chainId: deployment.chain.id,
     address: canonicalMarket?.oracle,
     abi: diaOracleAdapterAbi,
     functionName: "readPriceWad",
     query: { enabled: Boolean(canonicalMarket?.oracle) },
   });
   const oracleFreshRead = useReadContract({
+    chainId: deployment.chain.id,
     address: canonicalMarket?.oracle,
     abi: diaOracleAdapterAbi,
     functionName: "isFresh",
@@ -314,6 +322,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   const marketPriceNusd = canonicalMarket ? oraclePriceNusd : spotPriceNusd;
   const tvlNusd = nusdReserve !== undefined ? Number(formatUnits(nusdReserve, nusdDecimals)) * 2 : undefined;
   const swapQuote = useReadContract({
+    chainId: deployment.chain.id,
     address: dexRouter,
     abi: dexRouterAbi,
     functionName: "getAmountsOut",
@@ -325,6 +334,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
     },
   });
   const swapsPaused = useReadContract({
+    chainId: deployment.chain.id,
     address: deployment.contracts.dexFactory,
     abi: dexFactoryAbi,
     functionName: "swapsPaused",

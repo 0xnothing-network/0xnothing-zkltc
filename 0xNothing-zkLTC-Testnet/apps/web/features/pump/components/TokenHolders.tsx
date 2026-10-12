@@ -5,6 +5,7 @@ import { getAddressExplorerUrl } from "@/lib/explorer";
 import { formatSupplyPercentage, formatTokenAmount, shortAddress } from "@/features/pump/format";
 import { usePumpHolders } from "@/features/pump/hooks/usePumpData";
 import { PumpErrorState, PumpInlineLoading } from "@/features/pump/components/PumpStates";
+import { ExternalLink } from "@/components/ExternalLink";
 
 const HOLDER_LIMIT = 10;
 
@@ -66,9 +67,9 @@ export function TokenHolders({ token, symbol }: { token: Address; symbol: string
               <div className="pump-holder-row" role="row" key={holder.account}>
                 <span className="pump-holder-rank" role="cell">{hasKnownRank ? index + 1 : "--"}</span>
                 <span className="pump-holder-identity" role="cell">
-                  <a href={getAddressExplorerUrl(holder.account)} target="_blank" rel="noopener noreferrer" title={holder.account}>
+                  <ExternalLink href={getAddressExplorerUrl(holder.account)} title={holder.account}>
                     {shortAddress(holder.account, 7, 6)}
-                  </a>
+                  </ExternalLink>
                   {holder.isCreator || !isActive || (isActive && !hasKnownRank) ? (
                     <small>
                       {holder.isCreator ? <em className="pump-holder-badge">Creator</em> : null}

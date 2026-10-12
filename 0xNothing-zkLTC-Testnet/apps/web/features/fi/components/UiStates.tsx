@@ -7,6 +7,7 @@ import {
 import type { Hash } from "viem";
 import { explorerTransactionUrl } from "@fi/config/deployment";
 import { fiPath } from "@fi/config/paths";
+import { ExternalLink } from "@/components/ExternalLink";
 
 export function PageHeading({
   title,
@@ -150,9 +151,9 @@ export function TransactionStatus({
     >
       <span>{message}</span>
       {hash ? (
-        <a href={explorerTransactionUrl(hash)} target="_blank" rel="noopener noreferrer">
+        <ExternalLink href={explorerTransactionUrl(hash)}>
           View transaction <ArrowSquareOut size={13} aria-hidden="true" />
-        </a>
+        </ExternalLink>
       ) : null}
     </div>
   );

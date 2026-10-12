@@ -39,6 +39,7 @@ function FarmRow({
   const amount = parseAmount(amountText);
   const tx = useProtocolTransaction();
   const poolRead = useReadContract({
+    chainId: deployment.chain.id,
     address: deployment.contracts.dexFactory,
     abi: dexFactoryAbi,
     functionName: "getPair",
@@ -59,6 +60,7 @@ function FarmRow({
       ? deployment.contracts.nethNusdGauge
       : undefined;
   const gaugeRead = useReadContract({
+    chainId: deployment.chain.id,
     address: deployment.contracts.farmFactory,
     abi: farmFactoryAbi,
     functionName: "gaugeForPair",
@@ -69,20 +71,20 @@ function FarmRow({
     || (gaugeRead.data && gaugeRead.data !== zeroAddress ? gaugeRead.data : undefined);
   const stats = useReadContracts({
     contracts: gauge && pool ? [
-      { address: gauge, abi: farmGaugeAbi, functionName: "rewardRate" },
-      { address: gauge, abi: farmGaugeAbi, functionName: "periodFinish" },
-      { address: gauge, abi: farmGaugeAbi, functionName: "totalSupply" },
-      { address: gauge, abi: farmGaugeAbi, functionName: "depositsPaused" },
-      { address: gauge, abi: farmGaugeAbi, functionName: "totalFunded" },
-      { address: gauge, abi: farmGaugeAbi, functionName: "pausedRewardDuration" },
+      { chainId: deployment.chain.id, address: gauge, abi: farmGaugeAbi, functionName: "rewardRate" },
+      { chainId: deployment.chain.id, address: gauge, abi: farmGaugeAbi, functionName: "periodFinish" },
+      { chainId: deployment.chain.id, address: gauge, abi: farmGaugeAbi, functionName: "totalSupply" },
+      { chainId: deployment.chain.id, address: gauge, abi: farmGaugeAbi, functionName: "depositsPaused" },
+      { chainId: deployment.chain.id, address: gauge, abi: farmGaugeAbi, functionName: "totalFunded" },
+      { chainId: deployment.chain.id, address: gauge, abi: farmGaugeAbi, functionName: "pausedRewardDuration" },
     ] as const : [],
     query: { enabled: Boolean(gauge && pool) },
   });
   const walletStats = useReadContracts({
     contracts: address && gauge && pool ? [
-      { address: gauge, abi: farmGaugeAbi, functionName: "balanceOf", args: [address] },
-      { address: gauge, abi: farmGaugeAbi, functionName: "earned", args: [address] },
-      { address: pool, abi: dexPoolAbi, functionName: "balanceOf", args: [address] },
+      { chainId: deployment.chain.id, address: gauge, abi: farmGaugeAbi, functionName: "balanceOf", args: [address] },
+      { chainId: deployment.chain.id, address: gauge, abi: farmGaugeAbi, functionName: "earned", args: [address] },
+      { chainId: deployment.chain.id, address: pool, abi: dexPoolAbi, functionName: "balanceOf", args: [address] },
     ] as const : [],
     query: { enabled: Boolean(address && gauge && pool) },
   });

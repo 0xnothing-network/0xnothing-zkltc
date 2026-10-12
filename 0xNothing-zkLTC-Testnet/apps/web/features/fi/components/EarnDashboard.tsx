@@ -73,24 +73,24 @@ export function EarnDashboard() {
 
   const protocol = useReadContracts({
     contracts: stakingAddress ? [
-      { address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "totalLocked" },
-      { address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "stakingPaused" },
-      { address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "redemptionEnabled" },
-      { address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "redemptionsPaused" },
-      { address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "nusdPerXPointWad" },
-      { address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "redemptionReserve" },
-      { address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "isSolvent" },
+      { chainId: deployment.chain.id, address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "totalLocked" },
+      { chainId: deployment.chain.id, address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "stakingPaused" },
+      { chainId: deployment.chain.id, address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "redemptionEnabled" },
+      { chainId: deployment.chain.id, address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "redemptionsPaused" },
+      { chainId: deployment.chain.id, address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "nusdPerXPointWad" },
+      { chainId: deployment.chain.id, address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "redemptionReserve" },
+      { chainId: deployment.chain.id, address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "isSolvent" },
     ] as const : [],
     query: { enabled: Boolean(stakingAddress), refetchInterval: EARN_POLL_MS, refetchIntervalInBackground: false },
   });
   const wallet = useReadContracts({
     contracts: address && stakingAddress && nusd ? [
-      { address: nusd, abi: erc20Abi, functionName: "balanceOf", args: [address] },
-      { address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "totalLockedByUser", args: [address] },
-      { address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "earnedPointCredits", args: [address] },
-      { address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "spentPointCredits", args: [address] },
-      { address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "availablePointCredits", args: [address] },
-      { address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "userPositionCount", args: [address] },
+      { chainId: deployment.chain.id, address: nusd, abi: erc20Abi, functionName: "balanceOf", args: [address] },
+      { chainId: deployment.chain.id, address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "totalLockedByUser", args: [address] },
+      { chainId: deployment.chain.id, address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "earnedPointCredits", args: [address] },
+      { chainId: deployment.chain.id, address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "spentPointCredits", args: [address] },
+      { chainId: deployment.chain.id, address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "availablePointCredits", args: [address] },
+      { chainId: deployment.chain.id, address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "userPositionCount", args: [address] },
     ] as const : [],
     query: { enabled: Boolean(address && stakingAddress && nusd), refetchInterval: EARN_POLL_MS, refetchIntervalInBackground: false },
   });
@@ -124,6 +124,7 @@ export function EarnDashboard() {
     : undefined;
 
   const positionIdsRead = useReadContract({
+    chainId: deployment.chain.id,
     address: stakingAddress,
     abi: nusdPointsStakingAbi,
     functionName: "userPositionIds",
@@ -137,6 +138,7 @@ export function EarnDashboard() {
   const positionIds = positionIdsRead.data as readonly bigint[] | undefined;
   const positionReads = useReadContracts({
     contracts: (positionIds ?? []).map((positionId) => ({
+      chainId: deployment.chain.id,
       address: stakingAddress!,
       abi: nusdPointsStakingAbi,
       functionName: "getPosition" as const,

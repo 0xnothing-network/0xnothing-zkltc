@@ -4,9 +4,7 @@ import { useState, useEffect, useCallback, useDeferredValue, useRef } from "reac
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Toolbar } from "@/features/pixel/components/Toolbar";
-import { AIPromptGenerator } from "@/features/pixel/components/AIPromptGenerator";
 import { PixelLoadingIndicator } from "@/components/PageLoader";
-import { ImageImporter } from "@/features/pixel/components/ImageImporter";
 
 import { pixelHistoryLimit } from "@/lib/pixelV2";
 const DEFAULT_GRID_SIZE = 16;
@@ -24,6 +22,14 @@ const Canvas = dynamic(
 const MintPanel = dynamic(
   () => import("@/features/pixel/components/MintPanel").then((m) => m.MintPanel),
   { ssr: false, loading: () => <PanelSkeleton label="Mint" /> }
+);
+const AIPromptGenerator = dynamic(
+  () => import("@/features/pixel/components/AIPromptGenerator").then((m) => m.AIPromptGenerator),
+  { ssr: false, loading: () => <PanelSkeleton label="Prompt" /> }
+);
+const ImageImporter = dynamic(
+  () => import("@/features/pixel/components/ImageImporter").then((m) => m.ImageImporter),
+  { ssr: false },
 );
 function PanelSkeleton({ label }: { label: string }) {
   return (

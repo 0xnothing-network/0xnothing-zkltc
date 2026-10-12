@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
-import { PixelMist } from "@/components/PixelMist";
+import dynamic from "next/dynamic";
 import { Providers } from "@/app/providers";
 import { FiHeader } from "@fi/components/FiHeader";
 import { ToastProvider } from "@fi/components/Toast";
 import "./globals.css";
+
+const PixelMist = dynamic(
+  () => import("@/components/PixelMist").then((module) => module.PixelMist),
+  { ssr: false },
+);
 
 export const metadata: Metadata = {
   title: { default: "0xFi | LitVM DeFi", template: "%s | 0xFi" },

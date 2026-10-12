@@ -41,6 +41,7 @@ import { STEADY_LIVE_MS } from "@/lib/liveData";
 import { jitteredPollInterval } from "@/lib/pollJitter";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { ConnectWalletButton } from "@fi/components/ConnectWalletButton";
+import { ExternalLink } from "@/components/ExternalLink";
 import { RwaDashboard } from "@fi/components/RwaDashboard";
 import { parseAmount } from "@fi/lib/format";
 import { PointsAdminPanel } from "./PointsAdminPanel";
@@ -402,7 +403,7 @@ export default function DevPage() {
 
         {actionError ? <div className={`${styles.banner} ${styles.bannerError}`} role="alert"><XCircle size={17} weight="bold" /><span>{actionError}</span></div> : null}
         {actionSuccess ? <div className={styles.banner} role="status" aria-live="polite"><CheckCircle size={17} weight="bold" /><span>{actionSuccess}</span></div> : null}
-        {txHash ? <div className={styles.banner} role="status" aria-live="polite"><CircleNotch size={17} weight="bold" className="animate-spin" /><span>Transaction pending. <a className={styles.monoLink} href={`${deployment.chain.explorerUrl}/tx/${txHash}`} target="_blank" rel="noreferrer">View on explorer <ArrowSquareOut size={12} /></a></span></div> : null}
+        {txHash ? <div className={styles.banner} role="status" aria-live="polite"><CircleNotch size={17} weight="bold" className="animate-spin" /><span>Transaction pending. <ExternalLink className={styles.monoLink} href={`${deployment.chain.explorerUrl}/tx/${txHash}`}>View on explorer <ArrowSquareOut size={12} /></ExternalLink></span></div> : null}
 
         <PointsAdminPanel />
 
@@ -447,7 +448,7 @@ export default function DevPage() {
               <strong className={styles.value}>Direct settlement</strong>
               <span className={styles.subvalue}>No admin withdrawal action is exposed here.</span>
               <span className={styles.address}>Marketplace: {shortAddress(PIXEL_MARKETPLACE_ADDRESS)}<br />Fees are forwarded directly to the immutable dev wallet at settlement time.<br />There is no pooled fee balance for this console to claim.</span>
-              <a className={styles.monoLink} href={explorerAddressUrl(PIXEL_MARKETPLACE_ADDRESS)} target="_blank" rel="noreferrer">Open marketplace <ArrowSquareOut size={12} /></a>
+              <ExternalLink className={styles.monoLink} href={explorerAddressUrl(PIXEL_MARKETPLACE_ADDRESS)}>Open marketplace <ArrowSquareOut size={12} /></ExternalLink>
             </div>
             <div className={styles.card + " " + styles.formCard}>
               <div className={styles.cardTop}><span>Authority model</span><LockKey size={16} /></div>

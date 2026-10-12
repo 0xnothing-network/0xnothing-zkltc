@@ -474,6 +474,7 @@ function componentHarness(name: PumpComponent, changeAt?: "simulation" | "upload
       "@/features/pump/components/LazyPumpChart": {}, "@/features/pump/components/PumpTokenLogo": {},
       "@/features/pump/components/TradePanel": {}, "@/features/pump/components/TradeHistory": {}, "@/features/pump/components/TokenHolders": {},
       "@/lib/explorer": { getAddressExplorerUrl: String },
+      "@/components/ExternalLink": { ExternalLink: (props: { href: string; children: unknown }) => ({ type: "a", props }) },
       "@/lib/contract": { publicClient, getTransactionExplorerUrl: String },
       "@/components/Toast": { useToast: () => toast },
       "@/lib/actionLock": { tryAcquireAction: (ref: { current: boolean }) => ref.current ? false : (ref.current = true), releaseAction: (ref: { current: boolean }) => { ref.current = false; } },

@@ -54,11 +54,11 @@ export function Providers({
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 5 * 1000,
+            staleTime: BLOCK_SYNC_MS,
             gcTime: 10 * 60 * 1000,
             retry: 1,
             retryDelay: (attemptIndex) => Math.min(500 * 2 ** attemptIndex, 3000),
-            refetchOnWindowFocus: true,
+            refetchOnWindowFocus: false,
             refetchOnReconnect: true,
           },
           mutations: {

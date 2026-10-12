@@ -63,12 +63,14 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
   const vaultStatus = useSynthVaultStatus(vault);
 
   const oracleState = useReadContract({
+    chainId: deployment.chain.id,
     address: oracle,
     abi: diaOracleAdapterAbi,
     functionName: "isFresh",
     query: { enabled: Boolean(oracle) },
   });
   const safetyReserveState = useReadContract({
+    chainId: deployment.chain.id,
     address: vault,
     abi: synthVaultAbi,
     functionName: "safetyReserve",
@@ -80,26 +82,26 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
 
   const reads = useReadContracts({
     contracts: vault ? [
-      { address: vault, abi: synthVaultAbi, functionName: "mintPaused" },
-      { address: vault, abi: synthVaultAbi, functionName: "withdrawPaused" },
+      { chainId: deployment.chain.id, address: vault, abi: synthVaultAbi, functionName: "mintPaused" },
+      { chainId: deployment.chain.id, address: vault, abi: synthVaultAbi, functionName: "withdrawPaused" },
     ] as const : [],
     query: { enabled: Boolean(vault) },
   });
   const walletReads = useReadContracts({
     contracts: vault && address ? [
-      { address: vault, abi: synthVaultAbi, functionName: "position", args: [address] },
-      { address: vault, abi: synthVaultAbi, functionName: "maxMintableSynthetic", args: [address] },
-      { address: vault, abi: synthVaultAbi, functionName: "maxUserCollateralWithdrawable", args: [address] },
+      { chainId: deployment.chain.id, address: vault, abi: synthVaultAbi, functionName: "position", args: [address] },
+      { chainId: deployment.chain.id, address: vault, abi: synthVaultAbi, functionName: "maxMintableSynthetic", args: [address] },
+      { chainId: deployment.chain.id, address: vault, abi: synthVaultAbi, functionName: "maxUserCollateralWithdrawable", args: [address] },
     ] as const : [],
     query: { enabled: Boolean(vault && address) },
   });
   const reserveReads = useReadContracts({
     contracts: safetyReserve ? [
-      { address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "totalReserveNusd" },
-      { address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "freeReserveNusd" },
-      { address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "ENTRY_TVL_NUSD" },
-      { address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "sponsorshipActive" },
-      { address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "allocationsPaused" },
+      { chainId: deployment.chain.id, address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "totalReserveNusd" },
+      { chainId: deployment.chain.id, address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "freeReserveNusd" },
+      { chainId: deployment.chain.id, address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "ENTRY_TVL_NUSD" },
+      { chainId: deployment.chain.id, address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "sponsorshipActive" },
+      { chainId: deployment.chain.id, address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "allocationsPaused" },
     ] as const : [],
     query: { enabled: Boolean(safetyReserve) },
   });
@@ -117,6 +119,7 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
   const allocationsPaused = reserveReads.data?.[4]?.result as boolean | undefined;
 
   const mintQuoteState = useReadContract({
+    chainId: deployment.chain.id,
     address: vault,
     abi: synthVaultAbi,
     functionName: "quoteDepositAndMint",
@@ -131,6 +134,7 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
   const reserveRequired = mintQuote?.[1];
   const quoteUsesSponsorship = mintQuote?.[2] === true;
   const mintFeeState = useReadContract({
+    chainId: deployment.chain.id,
     address: vault,
     abi: synthVaultAbi,
     functionName: "quoteMintFee",

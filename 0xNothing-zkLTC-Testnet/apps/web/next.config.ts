@@ -1,6 +1,27 @@
 import type { NextConfig } from "next";
+import { LITVM_RPC_URL } from "./lib/publicConfig";
 
 const isDevelopment = process.env.NODE_ENV === "development";
+
+for (const [name, value] of Object.entries(process.env)) {
+  if (!name.startsWith("NEXT_PUBLIC_") || !value?.trim()) continue;
+  if (/PINATA|JWT|SECRET|PRIVATE_KEY|SIGNER/i.test(name)) {
+    throw new Error(`${name} must stay server-only. Do not expose secrets as NEXT_PUBLIC_ variables.`);
+  }
+}
+
+const configuredRpcUrl = process.env.NEXT_PUBLIC_LITVM_RPC_URL?.trim() || LITVM_RPC_URL;
+const rpcOrigin = new URL(configuredRpcUrl).origin;
+const rpcWebsocketOrigin = rpcOrigin.replace(/^http/u, "ws");
+
+const connectSrc = [
+  "'self'",
+  rpcOrigin,
+  rpcWebsocketOrigin,
+  "https://va.vercel-scripts.com",
+  "https://vitals.vercel-insights.com",
+  ...(isDevelopment ? ["http:", "ws:", "http://localhost:*", "ws://localhost:*"] : []),
+].join(" ");
 
 const contentSecurityPolicy = [
   "default-src 'self'",
@@ -8,15 +29,15 @@ const contentSecurityPolicy = [
   "form-action 'self'",
   "frame-ancestors 'none'",
   "object-src 'none'",
-  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com${isDevelopment ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
-  "img-src 'self' data: blob: https:",
-  `connect-src 'self' https: wss:${isDevelopment ? " http: ws:" : ""}`,
+  "img-src 'self' data: blob: https://dweb.link https://*.ipfs.dweb.link https://ipfs.io https://*.ipfs.io https://gateway.pinata.cloud https://*.mypinata.cloud",
+  `connect-src ${connectSrc}`,
   "worker-src 'self' blob:",
   "manifest-src 'self'",
-  ...(isDevelopment ? [] : ["upgrade-insecure-requests"]),
-].join("; ");
+  "upgrade-insecure-requests",
+].filter((directive) => isDevelopment ? directive !== "upgrade-insecure-requests" : true).join("; ");
 
 const securityHeaders = [
   { key: "Content-Security-Policy", value: contentSecurityPolicy },
@@ -31,9 +52,12 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+  { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+  { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
+  { key: "X-DNS-Prefetch-Control", value: "on" },
   {
     key: "Permissions-Policy",
-    value: "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
+    value: "camera=(), geolocation=(), microphone=(), payment=(), usb=(), interest-cohort=()",
   },
 ];
 
@@ -60,13 +84,45 @@ const nextConfig: NextConfig = {
       "@tanstack/react-query",
     ],
   },
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
     config.resolve = config.resolve || {};
     config.resolve.fallback = {
       ...(config.resolve.fallback || {}),
       "@react-native-async-storage/async-storage": false,
       "pino-pretty": false,
     };
+    if (!isServer) {
+      const split = config.optimization?.splitChunks;
+      const splitConfig = typeof split === "object" && split ? split : {};
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          ...splitConfig,
+          cacheGroups: {
+            ...(splitConfig.cacheGroups ?? {}),
+            charts: {
+              test: /[\\/]node_modules[\\/]lightweight-charts[\\/]/,
+              name: "charts",
+              chunks: "async",
+              priority: 30,
+            },
+          },
+        },
+      };
+    }
+    if (process.env.ANALYZE === "1" && !isServer) {
+      try {
+        const { BundleAnalyzerPlugin } = require("webpack-bundle-analyzer") as typeof import("webpack-bundle-analyzer");
+        config.plugins = config.plugins ?? [];
+        config.plugins.push(new BundleAnalyzerPlugin({
+          analyzerMode: "static",
+          reportFilename: "bundle-report.html",
+          openAnalyzer: false,
+        }));
+      } catch {
+        // Optional: `ANALYZE=1` is useful when webpack-bundle-analyzer is installed.
+      }
+    }
     return config;
   },
   images: {
