@@ -17,6 +17,7 @@ import { readableError } from "@fi/lib/errors";
 import { isBlockSyncedQueryKey } from "@/lib/liveData";
 import { ReceiptConfirmationError, waitForProtocolReceipt } from "@/lib/transactionReceipt";
 import { deliveredTokenAmount } from "../../../../../../shared/transactions/tokenDelivery";
+import { LITVM_ADD_CHAIN_PARAMETER } from "@/config/network";
 
 export type TransactionPhase =
   | "idle"
@@ -122,7 +123,7 @@ export function useProtocolTransaction() {
         let wallet = walletClient;
         if (chainId !== deployment.chain.id) {
           setState({ phase: "switching", message: "Switching to LitVM LiteForge" });
-          await switchChainAsync({ chainId: deployment.chain.id });
+          await switchChainAsync({ chainId: deployment.chain.id, addEthereumChainParameter: LITVM_ADD_CHAIN_PARAMETER });
           wallet = (await refetchWalletClient()).data;
         } else if (!wallet) {
           wallet = (await refetchWalletClient()).data;

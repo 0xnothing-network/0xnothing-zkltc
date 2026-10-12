@@ -67,7 +67,7 @@ export function Modal({ open, onClose, title, description, children, variant = "
   if (!open) return null;
   const sheet = variant === "sheet";
   return (
-    <div className={cx("fixed inset-0 z-[90] flex justify-center bg-overlay", sheet ? "items-end sm:items-center" : "items-center p-4")}
+    <div className={cx("ui fixed inset-0 z-[90] flex justify-center bg-overlay", sheet ? "items-end sm:items-center" : "items-center p-4")}
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
     >
       <div

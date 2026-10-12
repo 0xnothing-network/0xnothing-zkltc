@@ -7,6 +7,10 @@
  *
  * Radii are namespaced (`rounded-ui-lg`) instead of overriding Tailwind's
  * default `rounded-lg` scale, which existing 0xPixel markup still relies on.
+ * New-system subtrees carry the `ui` class; legacy product CSS excludes
+ * `.ui` / `.ui *` from its element-level rules (fonts, link colour, focus),
+ * so layered Tailwind utilities are not overridden by unlayered legacy CSS.
+ *
  * Font stacks are literal (not var(--font-ui)) so the theme variable can never
  * resolve to itself; they mirror tokens.css.
  */

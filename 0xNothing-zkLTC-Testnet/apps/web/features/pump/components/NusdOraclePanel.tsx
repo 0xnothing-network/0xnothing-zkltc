@@ -26,6 +26,7 @@ import {
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { createPumpWalletGuard } from "@/features/pump/walletSession";
 import { waitForProtocolReceipt } from "@/lib/transactionReceipt";
+import { LITVM_ADD_CHAIN_PARAMETER } from "@/config/network";
 
 type OracleMode = "mint" | "redeem";
 
@@ -257,7 +258,7 @@ export function NusdOraclePanel() {
       return false;
     }
     if (chainId !== PUMP_CHAIN_ID) {
-      switchChain({ chainId: PUMP_CHAIN_ID });
+      switchChain({ chainId: PUMP_CHAIN_ID, addEthereumChainParameter: LITVM_ADD_CHAIN_PARAMETER });
       return false;
     }
     if (!publicClient) {

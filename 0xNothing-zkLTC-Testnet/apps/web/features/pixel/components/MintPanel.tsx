@@ -21,6 +21,7 @@ import { pixelDataToPNG } from "@/lib/gridParser";
 import { useToast } from "@/components/Toast";
 import { normalizeError } from "@/lib/errors";
 import { LITVM_CHAIN_ID } from "@/lib/chainSwitch";
+import { LITVM_ADD_CHAIN_PARAMETER } from "@/config/network";
 import { PixelLoadingIndicator } from "@/components/PageLoader";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { createWalletSessionGuard } from "@/lib/walletSession";
@@ -49,10 +50,10 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
   const { sendTransactionAsync } = useSendTransaction();
   const toast = useToast();
 
-  // The wrong-network prompt lives in PixelHeader, which the /0xpixel layout
-  // mounts on every page of the section. Repeating the effect here fired two
-  // toasts and two switchChain() calls — so two wallet prompts — for one wrong
-  // network. The manual guard inside handleMint below still covers the case
+  // The wrong-network prompt lives in the shared AppShell (NetworkPill and
+  // WrongNetworkBanner), which the /0xpixel layout mounts on every page of the
+  // section. Repeating a switch effect here would fire a second wallet prompt
+  // for one wrong network. The manual guard inside handleMint below still covers the case
   // where the chain changes between mount and submit.
 
   const { data: mintReceipt, error: mintReceiptError, isLoading: isConfirming } =
@@ -203,7 +204,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
         kind: "info",
         duration: 3000,
       });
-      switchChain?.({ chainId: LITVM_CHAIN_ID });
+      switchChain?.({ chainId: LITVM_CHAIN_ID, addEthereumChainParameter: LITVM_ADD_CHAIN_PARAMETER });
       return;
     }
     if (!PIXEL_V2_ENABLED) {

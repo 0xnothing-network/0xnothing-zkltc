@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PixelMist } from "@/components/PixelMist";
 import { Providers } from "@/app/providers";
-import { FiHeader } from "@fi/components/FiHeader";
+import { AppShell } from "@/components/shell/AppShell";
 import { ToastProvider } from "@fi/components/Toast";
 import "./globals.css";
 
@@ -17,8 +17,9 @@ export default function FiLayout({ children }: Readonly<{ children: React.ReactN
         <PixelMist product="fi" />
         <ToastProvider>
           <div className="fi-shell">
-            <FiHeader />
-            <main id="fi-main" tabIndex={-1}>{children}</main>
+            <AppShell product="fi">
+              <main id="fi-main" tabIndex={-1}>{children}</main>
+            </AppShell>
           </div>
         </ToastProvider>
       </div>

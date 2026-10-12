@@ -14,7 +14,7 @@
   --fi-yellow: #d8c98d;
   --fi-blue: #c6ccd5;
   --fi-content: 1320px;
-  --fi-header-height: 76px;
+  --fi-header-height: 64px; /* AppShell header height */
   --fi-control-height: 44px;
   --fi-text-label: 11px;
   --fi-text-body: 13px;
@@ -45,10 +45,10 @@
   box-sizing: border-box;
 }
 
-.fi-root button,
-.fi-root input,
-.fi-root select,
-.fi-root textarea {
+.fi-root button:not(:where(.ui, .ui *)),
+.fi-root input:not(:where(.ui, .ui *)),
+.fi-root select:not(:where(.ui, .ui *)),
+.fi-root textarea:not(:where(.ui, .ui *)) {
   font: inherit;
 }
 
@@ -66,17 +66,12 @@
   cursor: not-allowed;
 }
 
-.fi-root a {
+.fi-root a:not(:where(.ui, .ui *)) {
   color: inherit;
   text-decoration: none;
 }
 
-.fi-root h1,
-.fi-root h2,
-.fi-root h3,
-.fi-root p,
-.fi-root dl,
-.fi-root dd {
+.fi-root :is(h1, h2, h3, p, dl, dd):not(:where(.ui, .ui *)) {
   margin: 0;
 }
 
@@ -85,7 +80,7 @@
   color: #051009;
 }
 
-.fi-root :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+.fi-root :where(a, button, input, select, textarea, summary, [tabindex]):not(:where(.ui, .ui *)):focus-visible {
   outline: 2px solid var(--fi-green);
   outline-offset: 2px;
 }

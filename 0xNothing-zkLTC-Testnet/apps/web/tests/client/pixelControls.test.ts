@@ -47,7 +47,7 @@ test("originality is only advertised after a successful check and failures offer
       "@/lib/pixelCollections": { PIXEL_V2_ENABLED: true, pixelUtf8Bytes: (value: string) => new TextEncoder().encode(value).length },
       "@/features/pixel/components/PixelButton": { PixelButton: "pixel-button" },
       "@/lib/gridParser": {}, "@/components/Toast": { useToast: () => ({}) },
-      "@/lib/errors": {}, "@/lib/chainSwitch": { LITVM_CHAIN_ID: 4441 },
+      "@/lib/errors": {}, "@/lib/chainSwitch": { LITVM_CHAIN_ID: 4441 }, "@/config/network": { LITVM_ADD_CHAIN_PARAMETER: {} },
       "@/components/PageLoader": {}, "@/lib/actionLock": {}, "@/lib/walletSession": {},
     },
   );
@@ -100,7 +100,7 @@ test("rejecting a listing after approval never opens another wallet request auto
       "@/lib/contract": { getTokenExplorerUrl: () => "", getMarketplaceTxUrl: () => "" },
       "@/lib/abi": {},
       "@/lib/marketplaceAbi": {},
-      "@/lib/chainSwitch": { LITVM_CHAIN_ID: 4441 },
+      "@/lib/chainSwitch": { LITVM_CHAIN_ID: 4441 }, "@/config/network": { LITVM_ADD_CHAIN_PARAMETER: {} },
       "@/lib/walletSession": { createWalletSessionGuard: () => () => {} },
       "@/lib/actionLock": { releaseAction: (ref: { current: boolean }) => { ref.current = false; }, tryAcquireAction: () => true },
     },

@@ -28,6 +28,7 @@ import { useToast } from "@/components/Toast";
 import { invalidateAfterPumpTrade } from "@/lib/liveData";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { LITVM_ADD_CHAIN_PARAMETER } from "@/config/network";
 
 type TradeMode = "buy" | "sell";
 
@@ -152,7 +153,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
       return;
     }
     if (chainId !== PUMP_CHAIN_ID) {
-      switchChain({ chainId: PUMP_CHAIN_ID });
+      switchChain({ chainId: PUMP_CHAIN_ID, addEthereumChainParameter: LITVM_ADD_CHAIN_PARAMETER });
       return;
     }
     if (!publicClient) {

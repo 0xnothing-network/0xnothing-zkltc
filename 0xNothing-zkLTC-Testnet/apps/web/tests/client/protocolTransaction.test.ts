@@ -59,6 +59,7 @@ function harness(options: { changeAt?: "simulation" | "receipt"; chainId?: numbe
       "wagmi/actions": { getAccount: () => account },
       "@fi/lib/abis/erc20": { erc20Abi: [] },
       "@fi/config/deployment": { deployment: { chain: { id: 4441 } } },
+      "@/config/network": { LITVM_ADD_CHAIN_PARAMETER: {} },
       "@fi/lib/errors": { readableError: (error: Error) => error.message },
       "@/lib/liveData": { isBlockSyncedQueryKey },
       "@/lib/transactionReceipt": { ReceiptConfirmationError, waitForProtocolReceipt },

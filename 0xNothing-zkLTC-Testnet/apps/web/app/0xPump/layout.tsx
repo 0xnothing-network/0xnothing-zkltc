@@ -1,6 +1,6 @@
 import { PixelMist } from "@/components/PixelMist";
 import { Providers } from "@/app/providers";
-import { PumpHeader } from "@/features/pump/components/PumpHeader";
+import { AppShell } from "@/components/shell/AppShell";
 import "./globals.css";
 
 export default function PumpLayout({ children }: { children: React.ReactNode }) {
@@ -9,8 +9,7 @@ export default function PumpLayout({ children }: { children: React.ReactNode }) 
       <div className="pump-shell" data-product="pump">
         <PixelMist product="pump" />
         <div className="pump-surface">
-          <PumpHeader />
-          {children}
+          <AppShell product="pump">{children}</AppShell>
         </div>
       </div>
     </Providers>
