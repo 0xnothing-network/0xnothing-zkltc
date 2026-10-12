@@ -15,6 +15,9 @@ via_ir = true
 skip = ["src/0xpixel/reference/*"]
 fs_permissions = [{ access = "read-write", path = "./deployments" }]
 
+[rpc_endpoints]
+liteforge = "${LITVM_RPC_URL}"
+
 [fuzz]
 runs = 512
 

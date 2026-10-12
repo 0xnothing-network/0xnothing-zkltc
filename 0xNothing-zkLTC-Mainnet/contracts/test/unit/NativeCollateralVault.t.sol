@@ -22,7 +22,7 @@ contract NativeCollateralVaultTest is TestBase {
         vm.warp(1_000_000);
         feed = new MockDIAFeed(18);
         feed.setRound(1, 50 ether, block.timestamp, 1);
-        oracle = new DIAOracleAdapter(address(feed), 90 minutes);
+        oracle = new DIAOracleAdapter(address(feed), 90 minutes, address(this), 1, type(uint256).max, 0);
         nusd = new NUSD(address(this));
         vault = new NativeCollateralVault(
             address(nusd), address(oracle), address(this), 17_500, 15_000, 800, 5_000, 300 ether

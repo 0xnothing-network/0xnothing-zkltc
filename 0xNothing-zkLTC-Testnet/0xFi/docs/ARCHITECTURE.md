@@ -112,6 +112,11 @@ The controller prepares the protected pair and graduates it atomically, with
 minimum LP fixed to the exact output implied by the live Pump reserves. A
 failed check reverts pool creation and all transfers together.
 
+`graduateReady` calls `pump.graduate` as the controller. While the controller is
+Pump admin it bypasses `permissionlessGraduationDelay`, so the keeper still
+graduates a READY market as soon as it appears. Direct `pump.graduate` callers
+who are not admin wait for that delay and cannot run while Pump is paused.
+
 The keeper only discovers READY markets and pays gas. It has no protocol role,
 so downtime delays execution without blocking another caller, and a compromised
 keeper key cannot alter configuration. Goldsky accelerates pool discovery and

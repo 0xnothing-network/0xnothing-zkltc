@@ -65,3 +65,66 @@ test("all-paused routes remain fail-closed and retain a quote for the pause warn
   assert.equal(quote.paused, true);
   assert.equal(quote.amountOut, 2_000n);
 });
+
+const nusd = { id: "nusd", address: addresses.nusd, decimals: 18, symbol: "NUSD" };
+
+function pumpFixture(params: { status: number; paused?: boolean; sellsPaused?: boolean; readyAt?: bigint; delay?: bigint; graduationPossible?: boolean }) {
+  const now = BigInt(Math.floor(Date.now() / 1000));
+  const readContract = async ({ functionName }: { functionName: string }) => {
+    if (functionName === "status") return BigInt(params.status);
+    if (functionName === "paused") return params.paused ?? false;
+    if (functionName === "sellsPaused") return params.sellsPaused ?? false;
+    if (functionName === "graduationPossible") return params.graduationPossible ?? true;
+    if (functionName === "readyAt") return params.readyAt ?? now;
+    if (functionName === "readyExitDelay") return params.delay ?? 86_400n;
+    if (functionName === "quoteBuy") return [2_000n, 1_000n, 1_000n, 10n, false];
+    if (functionName === "quoteSell") return [1_000n, 990n, 10n];
+    if (functionName === "getPair") return zeroAddress;
+    if (functionName === "swapsPaused") return false;
+    throw new Error(`Unexpected read: ${functionName}`);
+  };
+  return evaluateModule<{
+    quoteSwap(params: unknown): Promise<{ kind: string; amountOut: bigint; paused: boolean }>;
+  }>(new URL("../../src/core/services/swap.ts", import.meta.url), {
+    viem: { zeroAddress }, "../../abis": {}, "../../config/contracts": { CONTRACTS: addresses },
+    "../../../../../shared/transactions/tokenDelivery": { deliveredTokenAmount },
+    "../i18n": {}, "../lib/format": {}, "../lib/swapMath": {}, "./tx": {},
+    "../rpc/client": { activeNetwork: { id: "litvm", rpcUrl: "https://rpc.example" }, publicClient: { readContract, multicall: async () => [50n, 10n, 10n] } },
+  });
+}
+
+test("Pump quotes a TRADING buy and still quotes a sell while the launchpad is paused", async () => {
+  const buy = await pumpFixture({ status: 1, paused: true }).quoteSwap({ tokenIn: nusd, tokenOut: token, amountIn: 100n });
+  assert.equal(buy.kind, "pump-buy");
+  assert.equal(buy.paused, true);
+  const sell = await pumpFixture({ status: 1, paused: true }).quoteSwap({ tokenIn: token, tokenOut: nusd, amountIn: 100n });
+  assert.equal(sell.kind, "pump-sell");
+  assert.equal(sell.paused, false);
+  assert.equal(sell.amountOut, 990n);
+});
+
+test("Pump freezes READY sells until the exit delay, then quotes a reopen sell", async () => {
+  const frozen = await pumpFixture({ status: 2 }).quoteSwap({ tokenIn: token, tokenOut: nusd, amountIn: 100n });
+  assert.equal(frozen.kind, "none");
+  const open = await pumpFixture({ status: 2, readyAt: 1n, delay: 1n }).quoteSwap({ tokenIn: token, tokenOut: nusd, amountIn: 100n });
+  assert.equal(open.kind, "pump-sell");
+  assert.equal(open.paused, false);
+  const readyBuy = await pumpFixture({ status: 2 }).quoteSwap({ tokenIn: nusd, tokenOut: token, amountIn: 100n });
+  assert.equal(readyBuy.kind, "none");
+});
+
+test("Pump quotes a READY sell immediately when graduation is impossible", async () => {
+  const quote = await pumpFixture({ status: 2, graduationPossible: false }).quoteSwap({
+    tokenIn: token, tokenOut: nusd, amountIn: 100n,
+  });
+  assert.equal(quote.kind, "pump-sell");
+  assert.equal(quote.paused, false);
+});
+
+test("Pump blocks sells during an emergency sell pause", async () => {
+  const quote = await pumpFixture({ status: 1, sellsPaused: true }).quoteSwap({
+    tokenIn: token, tokenOut: nusd, amountIn: 100n,
+  });
+  assert.equal(quote.kind, "none");
+  assert.equal(quote.paused, true);
+});

@@ -542,7 +542,7 @@ export default function DocsPage() {
               <div className="ox-docs-lifecycle" aria-label="0xPump market lifecycle">
                 <div><strong>Trading</strong><span>Users buy and sell against virtual reserves.</span></div>
                 <ArrowRight size={18} aria-hidden="true" />
-                <div><strong>Ready</strong><span>Buys stop at the 6,000 NUSD market-cap target.</span></div>
+                <div><strong>Ready</strong><span>Buys and sells freeze at the 6,000 NUSD market-cap target until graduation.</span></div>
                 <ArrowRight size={18} aria-hidden="true" />
                 <div><strong>Graduated</strong><span>Terminal liquidity moves into a protected 0xFi pool.</span></div>
               </div>
@@ -553,7 +553,7 @@ export default function DocsPage() {
               </div>
               <div className="ox-docs-note">
                 <strong>Lifecycle safety</strong>
-                <span>A holder can sell from READY and reopen the curve. Graduation is available only when the pinned controller, adapter, router, and admin handovers all pass live checks.</span>
+                <span>READY freezes buys so the pinned 0xFi controller (and its keeper) can graduate the market. Anyone may call graduateReady. Sells freeze only while that path is live; if it is not, holders can sell immediately. When the freeze applies, a holder can sell to reopen the curve after the ready-exit delay.</span>
               </div>
               <div className="ox-docs-method-list">
                 <div><code>reserveMarket(contentHash)</code><span>Pay the nonrefundable creation reservation.</span></div>

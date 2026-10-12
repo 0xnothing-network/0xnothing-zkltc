@@ -20,7 +20,7 @@ contract ConstructorValidationTest is TestBase {
         MockDIAFeed feed = new MockDIAFeed(18);
         feed.setRound(1, 100 ether, block.timestamp, 1);
         nusd = new NUSD(address(this));
-        oracle = new DIAOracleAdapter(address(feed), 2 hours);
+        oracle = new DIAOracleAdapter(address(feed), 2 hours, address(this), 1, type(uint256).max, 0);
         locker = new PermanentLiquidityLocker(address(this));
         router = new GraduationRouter(address(this), 1 hours, address(locker));
     }
@@ -32,7 +32,32 @@ contract ConstructorValidationTest is TestBase {
 
     function testOracleRejectsEoaFeed() public {
         vm.expectRevert();
-        new DIAOracleAdapter(address(0xD1A), 2 hours);
+        new DIAOracleAdapter(address(0xD1A), 2 hours, address(this), 1, type(uint256).max, 0);
+    }
+
+    function testOracleRejectsUnsafeConfiguration() public {
+        MockDIAFeed feed = new MockDIAFeed(8);
+        vm.expectRevert(DIAOracleAdapter.InvalidMaxPriceAge.selector);
+        new DIAOracleAdapter(address(feed), 2 hours + 1, address(this), 1, type(uint256).max, 0);
+
+        vm.expectRevert(DIAOracleAdapter.InvalidMaxPriceAge.selector);
+        new DIAOracleAdapter(address(feed), 5 minutes - 1, address(this), 1, type(uint256).max, 0);
+
+        vm.expectRevert(DIAOracleAdapter.InvalidPriceBounds.selector);
+        new DIAOracleAdapter(address(feed), 30 minutes, address(this), 0, 1 ether, 0);
+
+        vm.expectRevert(DIAOracleAdapter.InvalidPriceBounds.selector);
+        new DIAOracleAdapter(address(feed), 30 minutes, address(this), 1 ether, 1 ether, 0);
+
+        vm.expectRevert(DIAOracleAdapter.InvalidDeviation.selector);
+        new DIAOracleAdapter(address(feed), 30 minutes, address(this), 1, 1 ether, 10_001);
+
+        vm.expectRevert();
+        new DIAOracleAdapter(address(feed), 30 minutes, address(0), 1, 1 ether, 0);
+
+        MockDIAFeed wideFeed = new MockDIAFeed(37);
+        vm.expectRevert(DIAOracleAdapter.InvalidFeedDecimals.selector);
+        new DIAOracleAdapter(address(wideFeed), 30 minutes, address(this), 1, 1 ether, 0);
     }
 
     function testVaultRejectsNonContractDependencies() public {
