@@ -211,6 +211,7 @@ describe("0xPump mappings", () => {
 
     assert.entityCount("CurveReopening", 1);
     assert.fieldEquals("Market", TOKEN.toHexString(), "status", "CURVE");
+    assert.fieldEquals("Market", TOKEN.toHexString(), "readyAt", "0");
     assert.fieldEquals("Market", TOKEN.toHexString(), "reserveNusd", "900");
     assert.fieldEquals("Market", TOKEN.toHexString(), "reserveToken", "600");
     assert.fieldEquals("Market", TOKEN.toHexString(), "progressBps", "9000");
