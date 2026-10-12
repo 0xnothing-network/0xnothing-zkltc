@@ -34,6 +34,10 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
     uint256 public constant MAX_NAME_LENGTH = 64;
     uint256 public constant MAX_SYMBOL_LENGTH = 16;
     uint256 public constant MAX_URI_LENGTH = 200;
+    uint256 public constant MAX_PERMISSIONLESS_GRADUATION_DELAY = 1 days;
+    uint256 public constant MIN_READY_EXIT_DELAY = 1 days;
+    uint256 public constant MAX_READY_EXIT_DELAY = 30 days;
+    uint256 public constant MAX_LAUNCH_PROTECTION_WINDOW = 1 hours;
 
     enum Lifecycle {
         NONE,
@@ -54,6 +58,36 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
         address dex;
         bytes32 dexPairId;
         address pool;
+    }
+
+    /// @dev Field order and types mirror the non-indexed parameters of `TokenTraded`.
+    struct TradeLog {
+        uint256 tokenAmount;
+        uint256 curveNusdAmount;
+        uint256 userNusdAmount;
+        uint256 feeNusd;
+        uint256 realNusdReserveAfter;
+        uint256 tokenReserveAfter;
+        uint256 virtualNusdReserveAfter;
+        uint256 virtualTokenReserveAfter;
+        uint256 circulatingSupplyAfter;
+        uint256 spotPriceNusdWad;
+        uint256 curveProgressBps;
+    }
+
+    /// @dev Field order and types mirror the non-indexed parameters of `TokenCreated`.
+    struct CreationLog {
+        string name;
+        string symbol;
+        string metadataURI;
+        string imageURI;
+        uint256 totalSupply;
+        uint256 curveTokenSupply;
+        uint256 virtualNusdReserve;
+        uint256 virtualTokenReserve;
+        uint256 graduationThresholdNusd;
+        uint256 graduationReserveThresholdNusd;
+        uint256 creationFeeNusd;
     }
 
     address public immutable NUSD;
@@ -77,6 +111,17 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
     uint256 public accruedProtocolFeesNusd;
     uint256 public totalRealNusdReserves;
     bool public paused;
+
+    /// @notice Timestamp at which each market last entered READY.
+    mapping(address => uint256) public readyAt;
+    /// @notice Delay after READY before any account, not only the admin, may graduate the market.
+    uint256 public permissionlessGraduationDelay = 1 hours;
+    /// @notice Delay after READY before holders may sell again and reopen an ungraduated curve.
+    uint256 public readyExitDelay = 7 days;
+    /// @notice Seconds after creation during which each buy is capped at `launchMaxBuyNusd`; zero disables.
+    uint256 public launchProtectionWindow;
+    /// @notice Maximum gross NUSD per buy while launch protection is active.
+    uint256 public launchMaxBuyNusd;
 
     event TokenCreated(
         address indexed token,
@@ -127,6 +172,8 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
     );
     event ProtocolFeesWithdrawn(address indexed recipient, uint256 amountNusd);
     event PauseUpdated(bool paused);
+    event GraduationDelaysUpdated(uint256 permissionlessGraduationDelay, uint256 readyExitDelay);
+    event LaunchProtectionUpdated(uint256 window, uint256 maxBuyNusd);
 
     constructor(
         address nusdAddress,
@@ -225,22 +272,7 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
         _tokensByCreator[msg.sender].push(token);
         createdTokenByContentHash[msg.sender][contentHash] = token;
 
-        emit TokenCreated(
-            token,
-            msg.sender,
-            contentHash,
-            name,
-            symbol,
-            metadataURI,
-            imageURI,
-            tokenTotalSupply,
-            tokenTotalSupply,
-            initialVirtualNusdReserve,
-            initialVirtualTokenReserve,
-            graduationThresholdNusd,
-            graduationReserveThresholdNusd,
-            CREATE_FEE_NUSD
-        );
+        _emitCreated(token, contentHash, name, symbol, metadataURI, imageURI);
     }
 
     function buy(address token, uint256 maxNusdIn, uint256 minTokenOut, uint256 deadline)
@@ -273,16 +305,18 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
 
         if (readyAfter) {
             market.lifecycle = Lifecycle.READY;
+            readyAt[token] = block.timestamp;
             emit TokenReadyForGraduation(token, market.realNusdReserve, market.tokenReserve, graduationThresholdNusd);
         }
     }
 
+    /// @notice Sells stay available while paused so holders can always exit a TRADING curve. A READY market
+    ///         is frozen for graduation and only accepts sells again after `readyExitDelay`.
     function sell(address token, uint256 tokenIn, uint256 minNusdOut, uint256 deadline)
         external
         nonReentrant
         returns (uint256 userNusdAmount)
     {
-        if (paused) revert ContractPaused();
         if (block.timestamp > deadline) revert DeadlineExpired();
         Market storage market = _sellableMarket(token);
         bool reopenCurve = market.lifecycle == Lifecycle.READY;
@@ -306,7 +340,10 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
         market.totalNusdVolume += curveNusdAmount;
         totalRealNusdReserves -= curveNusdAmount;
         accruedProtocolFeesNusd += feeNusd;
-        if (reopenCurve) market.lifecycle = Lifecycle.TRADING;
+        if (reopenCurve) {
+            market.lifecycle = Lifecycle.TRADING;
+            delete readyAt[token];
+        }
 
         SafeTransferLib.safeTransfer(NUSD, msg.sender, userNusdAmount);
         _emitTrade(token, msg.sender, false, tokenIn, curveNusdAmount, userNusdAmount, feeNusd, market);
@@ -315,15 +352,21 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
         }
     }
 
+    /// @notice The admin may graduate a READY market at any time. Any other account may graduate it once
+    ///         `permissionlessGraduationDelay` has elapsed and the Pump is not paused. The router only accepts
+    ///         timelocked, allowlisted adapters, so callers cannot choose an arbitrary destination.
     function graduate(address token, address adapter, uint256 minimumLp, uint256 deadline)
         external
-        onlyAdmin
         nonReentrant
         returns (IGraduationAdapter.GraduationResult memory result)
     {
         if (block.timestamp > deadline) revert DeadlineExpired();
         Market storage market = _market(token);
         if (market.lifecycle != Lifecycle.READY) revert MarketNotReady();
+        if (msg.sender != admin) {
+            if (paused) revert ContractPaused();
+            if (block.timestamp < readyAt[token] + permissionlessGraduationDelay) revert Unauthorized();
+        }
         if (adapter == address(0) || minimumLp == 0) revert InvalidAmount();
 
         uint256 nusdLiquidity = market.realNusdReserve;
@@ -373,9 +416,33 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
         emit ProtocolFeesWithdrawn(recipient, amountNusd);
     }
 
+    /// @notice Pausing blocks reservations, creation, buys, and permissionless graduation. Sells stay open.
     function setPaused(bool newPaused) external onlyAdmin {
         paused = newPaused;
         emit PauseUpdated(newPaused);
+    }
+
+    function setGraduationDelays(uint256 newPermissionlessGraduationDelay, uint256 newReadyExitDelay)
+        external
+        onlyAdmin
+    {
+        if (
+            newPermissionlessGraduationDelay > MAX_PERMISSIONLESS_GRADUATION_DELAY
+                || newReadyExitDelay < MIN_READY_EXIT_DELAY || newReadyExitDelay > MAX_READY_EXIT_DELAY
+        ) revert InvalidConfiguration();
+        permissionlessGraduationDelay = newPermissionlessGraduationDelay;
+        readyExitDelay = newReadyExitDelay;
+        emit GraduationDelaysUpdated(newPermissionlessGraduationDelay, newReadyExitDelay);
+    }
+
+    /// @notice Caps each buy during the first `window` seconds of every market; `window == 0` disables.
+    function setLaunchProtection(uint256 window, uint256 maxBuyNusd) external onlyAdmin {
+        if (window > MAX_LAUNCH_PROTECTION_WINDOW || (window != 0 && maxBuyNusd == 0)) {
+            revert InvalidConfiguration();
+        }
+        launchProtectionWindow = window;
+        launchMaxBuyNusd = window == 0 ? 0 : maxBuyNusd;
+        emit LaunchProtectionUpdated(window, launchMaxBuyNusd);
     }
 
     function quoteBuy(address token, uint256 maxNusdIn)
@@ -446,7 +513,7 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
         if (maxNusdIn == 0) return (0, 0, 0, 0, false);
         uint256 remainingNusd = graduationReserveThresholdNusd - market.realNusdReserve;
         uint256 maximumGross = ((remainingNusd * BPS_DENOMINATOR) - 1) / (BPS_DENOMINATOR - TRADE_FEE_BPS);
-        userNusdAmount = MathX.min(maxNusdIn, maximumGross);
+        userNusdAmount = MathX.min(MathX.min(maxNusdIn, maximumGross), _launchBuyCap(market));
         feeNusd = MathX.mulDiv(userNusdAmount, TRADE_FEE_BPS, BPS_DENOMINATOR);
         curveNusdAmount = userNusdAmount - feeNusd;
         if (curveNusdAmount == 0) return (0, 0, 0, 0, false);
@@ -479,24 +546,74 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
         uint256 feeNusd,
         Market storage market
     ) internal {
-        emit TokenTraded(
-            token,
-            trader,
-            isBuy,
-            tokenAmount,
-            curveNusdAmount,
-            userNusdAmount,
-            feeNusd,
-            market.realNusdReserve,
-            market.tokenReserve,
-            market.virtualNusdReserve,
-            market.virtualTokenReserve,
-            tokenTotalSupply - market.tokenReserve,
-            _spotPrice(market),
-            MathX.min(
-                BPS_DENOMINATOR, MathX.mulDiv(market.realNusdReserve, BPS_DENOMINATOR, graduationReserveThresholdNusd)
-            )
+        TradeLog memory entry;
+        entry.tokenAmount = tokenAmount;
+        entry.curveNusdAmount = curveNusdAmount;
+        entry.userNusdAmount = userNusdAmount;
+        entry.feeNusd = feeNusd;
+        entry.realNusdReserveAfter = market.realNusdReserve;
+        entry.tokenReserveAfter = market.tokenReserve;
+        entry.virtualNusdReserveAfter = market.virtualNusdReserve;
+        entry.virtualTokenReserveAfter = market.virtualTokenReserve;
+        entry.circulatingSupplyAfter = tokenTotalSupply - market.tokenReserve;
+        entry.spotPriceNusdWad = _spotPrice(market);
+        entry.curveProgressBps = MathX.min(
+            BPS_DENOMINATOR, MathX.mulDiv(market.realNusdReserve, BPS_DENOMINATOR, graduationReserveThresholdNusd)
         );
+        // A static struct ABI-encodes exactly like its fields listed as separate event arguments.
+        _log4(
+            TokenTraded.selector,
+            bytes32(uint256(uint160(token))),
+            bytes32(uint256(uint160(trader))),
+            bytes32(uint256(isBuy ? 1 : 0)),
+            abi.encode(entry),
+            0
+        );
+    }
+
+    function _emitCreated(
+        address token,
+        bytes32 contentHash,
+        string calldata name,
+        string calldata symbol,
+        string calldata metadataURI,
+        string calldata imageURI
+    ) internal {
+        CreationLog memory entry;
+        entry.name = name;
+        entry.symbol = symbol;
+        entry.metadataURI = metadataURI;
+        entry.imageURI = imageURI;
+        entry.totalSupply = tokenTotalSupply;
+        entry.curveTokenSupply = tokenTotalSupply;
+        entry.virtualNusdReserve = initialVirtualNusdReserve;
+        entry.virtualTokenReserve = initialVirtualTokenReserve;
+        entry.graduationThresholdNusd = graduationThresholdNusd;
+        entry.graduationReserveThresholdNusd = graduationReserveThresholdNusd;
+        entry.creationFeeNusd = CREATE_FEE_NUSD;
+        // A dynamic struct encodes as a 32-byte head offset followed by the event's argument tuple.
+        _log4(
+            TokenCreated.selector,
+            bytes32(uint256(uint160(token))),
+            bytes32(uint256(uint160(msg.sender))),
+            contentHash,
+            abi.encode(entry),
+            32
+        );
+    }
+
+    function _log4(bytes32 topic0, bytes32 topic1, bytes32 topic2, bytes32 topic3, bytes memory data, uint256 skip)
+        private
+    {
+        assembly ("memory-safe") {
+            log4(add(add(data, 0x20), skip), sub(mload(data), skip), topic0, topic1, topic2, topic3)
+        }
+    }
+
+    function _launchBuyCap(Market storage market) internal view returns (uint256) {
+        uint256 window = launchProtectionWindow;
+        if (window == 0 || block.timestamp >= uint256(market.createdAt) + window) return type(uint256).max;
+        return launchMaxBuyNusd;
     }
 
     function _spotPrice(Market storage market) internal view returns (uint256) {
@@ -552,7 +669,8 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
 
     function _sellableMarket(address token) internal view returns (Market storage market) {
         market = _market(token);
-        if (market.lifecycle != Lifecycle.TRADING && market.lifecycle != Lifecycle.READY) {
+        if (market.lifecycle == Lifecycle.TRADING) return market;
+        if (market.lifecycle != Lifecycle.READY || block.timestamp < readyAt[token] + readyExitDelay) {
             revert MarketNotTrading();
         }
     }

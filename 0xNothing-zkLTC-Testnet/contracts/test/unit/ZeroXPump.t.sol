@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {TestBase} from "../TestBase.sol";
+import {TestBase, Vm} from "../TestBase.sol";
+import {TwoStepAdmin} from "../../src/common/TwoStepAdmin.sol";
 import {NUSD} from "../../src/nusd/NUSD.sol";
 import {ZeroXPump} from "../../src/pump/ZeroXPump.sol";
 import {PumpToken} from "../../src/pump/PumpToken.sol";
@@ -172,17 +173,47 @@ contract ZeroXPumpTest is TestBase {
         assertEq(pump.status(token), uint8(ZeroXPump.Lifecycle.READY), "failure keeps READY");
     }
 
-    function testReadySellReopensCurveAndCanReachReadyAgain() public {
+    function testDustSellCannotReopenReadyMarket() public {
+        address token = _createMarket();
+        vm.prank(TRADER);
+        (uint256 bought,) = pump.buy(token, 50_000 ether, 0, block.timestamp + 1);
+        assertEq(pump.readyAt(token), block.timestamp, "ready timestamp");
+        vm.prank(TRADER);
+        PumpToken(token).approve(address(pump), bought);
+
+        vm.expectRevert(ZeroXPump.MarketNotTrading.selector);
+        vm.prank(TRADER);
+        pump.sell(token, 1, 0, block.timestamp + 1);
+
+        vm.expectRevert(ZeroXPump.MarketNotTrading.selector);
+        pump.quoteSell(token, 1);
+
+        vm.expectRevert(ZeroXPump.MarketNotTrading.selector);
+        vm.prank(TRADER);
+        pump.buy(token, 1 ether, 0, block.timestamp + 1);
+
+        uint256 almostOpen = pump.readyAt(token) + pump.readyExitDelay() - 1;
+        vm.warp(almostOpen);
+        vm.expectRevert(ZeroXPump.MarketNotTrading.selector);
+        vm.prank(TRADER);
+        pump.sell(token, 1, 0, almostOpen + 1);
+        assertEq(pump.status(token), uint8(ZeroXPump.Lifecycle.READY), "still ready");
+    }
+
+    function testReadyExitDelaySellReopensCurveAndCanReachReadyAgain() public {
         address token = _createMarket();
         vm.prank(TRADER);
         (uint256 bought,) = pump.buy(token, 50_000 ether, 0, block.timestamp + 1);
         assertEq(pump.status(token), uint8(ZeroXPump.Lifecycle.READY), "ready status");
+        uint256 exitOpen = pump.readyAt(token) + pump.readyExitDelay();
+        vm.warp(exitOpen);
 
         uint256 sellAmount = bought / 10;
         vm.prank(TRADER);
         PumpToken(token).approve(address(pump), sellAmount);
         vm.prank(TRADER);
-        pump.sell(token, sellAmount, 0, block.timestamp + 1);
+        pump.sell(token, sellAmount, 0, exitOpen + 1);
+        assertEq(pump.readyAt(token), 0, "ready timestamp cleared");
 
         assertEq(pump.status(token), uint8(ZeroXPump.Lifecycle.TRADING), "curve reopened");
         (,, uint256 reserveAfterSell,,,,,,,,) = pump.markets(token);
@@ -193,12 +224,13 @@ contract ZeroXPumpTest is TestBase {
             "accounting after reopen"
         );
 
-        vm.expectRevert();
-        pump.graduate(token, address(adapter), 1, block.timestamp + 1);
+        vm.expectRevert(ZeroXPump.MarketNotReady.selector);
+        pump.graduate(token, address(adapter), 1, exitOpen + 1);
 
         vm.prank(TRADER);
-        pump.buy(token, 50_000 ether, 0, block.timestamp + 1);
+        pump.buy(token, 50_000 ether, 0, exitOpen + 1);
         assertEq(pump.status(token), uint8(ZeroXPump.Lifecycle.READY), "ready again");
+        assertEq(pump.readyAt(token), exitOpen, "ready clock restarted");
     }
 
     function testOnlyAdminCanGraduateWhileTradingIsPaused() public {
@@ -207,17 +239,80 @@ contract ZeroXPumpTest is TestBase {
         pump.buy(token, 50_000 ether, 0, block.timestamp + 1);
         uint256 graduationDeadline = block.timestamp + DELAY + 1 days;
         _enableAdapter();
-
-        vm.prank(TRADER);
-        vm.expectRevert();
-        pump.graduate(token, address(adapter), 1, graduationDeadline);
+        assertGe(block.timestamp, pump.readyAt(token) + pump.permissionlessGraduationDelay(), "public window open");
 
         pump.setPaused(true);
+        vm.prank(TRADER);
+        vm.expectRevert(ZeroXPump.ContractPaused.selector);
+        pump.graduate(token, address(adapter), 1, graduationDeadline);
+
         pump.graduate(token, address(adapter), 1, graduationDeadline);
         assertEq(pump.status(token), uint8(ZeroXPump.Lifecycle.GRADUATED), "graduated");
     }
 
-    function testPauseBlocksCreateBuyAndSell() public {
+    function testAnyoneCanGraduateAfterPermissionlessDelay() public {
+        _enableAdapter();
+        address token = _createMarket();
+        vm.prank(TRADER);
+        pump.buy(token, 50_000 ether, 0, block.timestamp + 1);
+        uint256 readyTime = pump.readyAt(token);
+        uint256 graduationDeadline = block.timestamp + 1 days;
+
+        vm.warp(readyTime + pump.permissionlessGraduationDelay() - 1);
+        vm.prank(TRADER);
+        vm.expectRevert(TwoStepAdmin.Unauthorized.selector);
+        pump.graduate(token, address(adapter), 1, graduationDeadline);
+
+        vm.warp(readyTime + pump.permissionlessGraduationDelay());
+        vm.prank(TRADER);
+        pump.graduate(token, address(adapter), 1, graduationDeadline);
+        assertEq(pump.status(token), uint8(ZeroXPump.Lifecycle.GRADUATED), "graduated by anyone");
+
+        vm.prank(TRADER);
+        vm.expectRevert(ZeroXPump.MarketNotReady.selector);
+        pump.graduate(token, address(adapter), 1, graduationDeadline);
+        vm.expectRevert(ZeroXPump.MarketNotReady.selector);
+        pump.graduate(token, address(adapter), 1, graduationDeadline);
+    }
+
+    function testAdminCanGraduateImmediatelyAndPublicCannotUseUnlistedAdapter() public {
+        _enableAdapter();
+        address token = _createMarket();
+        vm.prank(TRADER);
+        pump.buy(token, 50_000 ether, 0, block.timestamp + 1);
+
+        uint256 publicOpen = pump.readyAt(token) + pump.permissionlessGraduationDelay();
+        vm.warp(publicOpen);
+        MockGraduationAdapter rogue = new MockGraduationAdapter();
+        vm.prank(TRADER);
+        vm.expectRevert(GraduationRouter.AdapterNotAllowed.selector);
+        pump.graduate(token, address(rogue), 1, publicOpen + 1);
+
+        address second = _createMarket();
+        vm.prank(TRADER);
+        pump.buy(second, 50_000 ether, 0, publicOpen + 1);
+        pump.graduate(second, address(adapter), 1, publicOpen + 1);
+        assertEq(pump.status(second), uint8(ZeroXPump.Lifecycle.GRADUATED), "admin graduates without delay");
+    }
+
+    function testGraduationDelayConfiguration() public {
+        vm.prank(TRADER);
+        vm.expectRevert(TwoStepAdmin.Unauthorized.selector);
+        pump.setGraduationDelays(0, 1 days);
+
+        vm.expectRevert(ZeroXPump.InvalidConfiguration.selector);
+        pump.setGraduationDelays(1 days + 1, 7 days);
+        vm.expectRevert(ZeroXPump.InvalidConfiguration.selector);
+        pump.setGraduationDelays(0, 1 days - 1);
+        vm.expectRevert(ZeroXPump.InvalidConfiguration.selector);
+        pump.setGraduationDelays(0, 30 days + 1);
+
+        pump.setGraduationDelays(0, 1 days);
+        assertEq(pump.permissionlessGraduationDelay(), 0, "public graduation immediate");
+        assertEq(pump.readyExitDelay(), 1 days, "exit delay");
+    }
+
+    function testPauseAllowsSellsButBlocksReserveCreateAndBuy() public {
         address token = _createMarket();
         vm.prank(TRADER);
         (uint256 bought,) = pump.buy(token, 10 ether, 0, block.timestamp + 1);
@@ -232,13 +327,143 @@ contract ZeroXPumpTest is TestBase {
         vm.prank(CREATOR);
         pump.createMarket("Paused", "PAUSE", "ipfs://metadata", "ipfs://image", pausedCommitment);
 
-        vm.expectRevert();
+        vm.expectRevert(ZeroXPump.ContractPaused.selector);
         vm.prank(TRADER);
         pump.buy(token, 1 ether, 0, block.timestamp + 1);
 
-        vm.expectRevert();
+        vm.expectRevert(ZeroXPump.ContractPaused.selector);
+        vm.prank(CREATOR);
+        pump.reserveMarket(keccak256("paused-reserve"));
+
+        uint256 nusdBefore = nusd.balanceOf(TRADER);
         vm.prank(TRADER);
-        pump.sell(token, bought, 0, block.timestamp + 1);
+        uint256 received = pump.sell(token, bought, 0, block.timestamp + 1);
+        assertGt(received, 0, "paused exit");
+        assertEq(nusd.balanceOf(TRADER), nusdBefore + received, "exit paid");
+        assertEq(
+            nusd.balanceOf(address(pump)),
+            pump.totalRealNusdReserves() + pump.accruedProtocolFeesNusd(),
+            "accounting after paused exit"
+        );
+    }
+
+    function testLaunchProtectionIsOffByDefault() public {
+        assertEq(pump.launchProtectionWindow(), 0, "window off");
+        address token = _createMarket();
+        (,, uint256 userAmount,,) = pump.quoteBuy(token, 1_000 ether);
+        assertEq(userAmount, 1_000 ether, "uncapped at launch");
+    }
+
+    function testLaunchProtectionCapsEarlyBuysThenExpires() public {
+        pump.setLaunchProtection(60, 10 ether);
+        address token = _createMarket();
+
+        (uint256 quotedOut,, uint256 quotedUser,,) = pump.quoteBuy(token, 1_000 ether);
+        assertEq(quotedUser, 10 ether, "quote capped");
+        uint256 balanceBefore = nusd.balanceOf(TRADER);
+        vm.prank(TRADER);
+        (uint256 tokenOut, uint256 spent) = pump.buy(token, 1_000 ether, quotedOut, block.timestamp + 1);
+        assertEq(spent, 10 ether, "spend capped");
+        assertEq(tokenOut, quotedOut, "quote matches capped execution");
+        assertEq(balanceBefore - nusd.balanceOf(TRADER), 10 ether, "only cap pulled");
+
+        (,,,,,, uint64 createdAt,,,,) = pump.markets(token);
+        vm.warp(uint256(createdAt) + 59);
+        (,, quotedUser,,) = pump.quoteBuy(token, 1_000 ether);
+        assertEq(quotedUser, 10 ether, "still capped at last protected second");
+
+        vm.warp(uint256(createdAt) + 60);
+        (,, quotedUser,,) = pump.quoteBuy(token, 1_000 ether);
+        assertEq(quotedUser, 1_000 ether, "cap expired");
+    }
+
+    function testLaunchProtectionConfiguration() public {
+        vm.prank(TRADER);
+        vm.expectRevert(TwoStepAdmin.Unauthorized.selector);
+        pump.setLaunchProtection(60, 1 ether);
+
+        vm.expectRevert(ZeroXPump.InvalidConfiguration.selector);
+        pump.setLaunchProtection(1 hours + 1, 1 ether);
+        vm.expectRevert(ZeroXPump.InvalidConfiguration.selector);
+        pump.setLaunchProtection(60, 0);
+
+        pump.setLaunchProtection(1 hours, 5 ether);
+        assertEq(pump.launchMaxBuyNusd(), 5 ether, "cap set");
+        pump.setLaunchProtection(0, 5 ether);
+        assertEq(pump.launchProtectionWindow(), 0, "window disabled");
+        assertEq(pump.launchMaxBuyNusd(), 0, "cap cleared");
+    }
+
+    function testTradeAndCreateEventsKeepTheirAbiEncoding() public {
+        vm.recordLogs();
+        bytes32 commitment = keccak256("event-encoding");
+        vm.startPrank(CREATOR);
+        pump.reserveMarket(commitment);
+        address token = pump.createMarket("Nothing Meme", "MEME", "ipfs://meta", "ipfs://img", commitment);
+        vm.stopPrank();
+        vm.prank(TRADER);
+        (uint256 tokenOut,) = pump.buy(token, 10 ether, 0, block.timestamp + 1);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        Vm.Log memory created = _findLog(
+            logs,
+            keccak256(
+                "TokenCreated(address,address,bytes32,string,string,string,string,uint256,uint256,uint256,uint256,uint256,uint256,uint256)"
+            )
+        );
+        assertEq(created.topics[1], bytes32(uint256(uint160(token))), "created token topic");
+        assertEq(created.topics[2], bytes32(uint256(uint160(CREATOR))), "creator topic");
+        assertEq(created.topics[3], commitment, "content hash topic");
+        ZeroXPump.CreationLog memory creation = abi.decode(bytes.concat(bytes32(uint256(32)), created.data), (ZeroXPump.CreationLog));
+        assertEq(keccak256(bytes(creation.name)), keccak256("Nothing Meme"), "name");
+        assertEq(keccak256(bytes(creation.imageURI)), keccak256("ipfs://img"), "image");
+        assertEq(creation.totalSupply, SUPPLY, "supply");
+        assertEq(creation.graduationReserveThresholdNusd, RESERVE_THRESHOLD, "reserve threshold");
+        assertEq(creation.creationFeeNusd, 1 ether, "creation fee");
+        assertEq(keccak256(created.data), keccak256(_expectedCreationData()), "creation data");
+
+        Vm.Log memory traded = _findLog(
+            logs,
+            keccak256(
+                "TokenTraded(address,address,bool,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)"
+            )
+        );
+        assertEq(traded.topics[1], bytes32(uint256(uint160(token))), "traded token topic");
+        assertEq(traded.topics[2], bytes32(uint256(uint160(TRADER))), "trader topic");
+        assertEq(traded.topics[3], bytes32(uint256(1)), "isBuy topic");
+        assertEq(traded.data.length, 11 * 32, "static trade data");
+        ZeroXPump.TradeLog memory trade = abi.decode(traded.data, (ZeroXPump.TradeLog));
+        assertEq(trade.tokenAmount, tokenOut, "trade amount");
+        assertEq(trade.userNusdAmount, 10 ether, "user amount");
+        assertEq(trade.feeNusd, 0.01 ether, "fee");
+        assertEq(trade.circulatingSupplyAfter, tokenOut, "circulating");
+        assertEq(trade.spotPriceNusdWad, pump.spotPriceNusdWad(token), "spot");
+        assertEq(trade.curveProgressBps, pump.curveProgressBps(token), "progress");
+    }
+
+    function _expectedCreationData() internal pure returns (bytes memory) {
+        return abi.encode(
+            "Nothing Meme",
+            "MEME",
+            "ipfs://meta",
+            "ipfs://img",
+            SUPPLY,
+            SUPPLY,
+            VIRTUAL_NUSD,
+            SUPPLY,
+            MARKET_CAP_TARGET,
+            RESERVE_THRESHOLD,
+            1 ether
+        );
+    }
+
+    function _findLog(Vm.Log[] memory logs, bytes32 topic0) internal view returns (Vm.Log memory) {
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].topics.length > 0 && logs[i].topics[0] == topic0 && logs[i].emitter == address(pump)) {
+                return logs[i];
+            }
+        }
+        revert("log not found");
     }
 
     function testTimelockedGraduationLocksLpAndPreservesTerminalPrice() public {
