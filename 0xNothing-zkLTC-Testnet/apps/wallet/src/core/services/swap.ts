@@ -146,6 +146,28 @@ async function pumpPaused(client: SwapClient): Promise<boolean> {
     .catch(() => true);
 }
 
+/** READY sells stay frozen until `readyExitDelay`. Unreadable clocks fail closed. */
+async function pumpReadyExitOpen(client: SwapClient, token: Address): Promise<boolean> {
+  try {
+    const [readyAt, delay] = await Promise.all([
+      client.readContract({
+        address: CONTRACTS.pumpFactory,
+        abi: zeroXPumpAbi,
+        functionName: "readyAt",
+        args: [token],
+      }),
+      client.readContract({
+        address: CONTRACTS.pumpFactory,
+        abi: zeroXPumpAbi,
+        functionName: "readyExitDelay",
+      }),
+    ]);
+    return BigInt(Math.floor(Date.now() / 1000)) >= (readyAt as bigint) + (delay as bigint);
+  } catch {
+    return false;
+  }
+}
+
 async function pumpBuyQuote(
   client: SwapClient,
   token: Address,
@@ -368,14 +390,9 @@ export async function quoteSwap(params: {
       pumpStatus(client, pumpToken),
       pumpPaused(client),
     ]);
-    if (status === PUMP_READY && buying) {
-      // READY means the curve has closed. The AMM becomes the source of truth
-      // only after graduation, so never show a misleading buy quote here.
-      return noRoute(identity, paused);
-    }
-    const pumpActive = status === PUMP_TRADING || (status === PUMP_READY && !buying);
-    if (pumpActive) {
-      if (buying) {
+    if (buying) {
+      if (status === PUMP_READY) return noRoute(identity, paused);
+      if (status === PUMP_TRADING) {
         const quote = await pumpBuyQuote(client, pumpToken, amountIn);
         return {
           ...identity,
@@ -387,6 +404,9 @@ export async function quoteSwap(params: {
           paused,
         };
       }
+    } else if (status === PUMP_READY && !(await pumpReadyExitOpen(client, pumpToken))) {
+      return noRoute(identity, false);
+    } else if (status === PUMP_TRADING || status === PUMP_READY) {
       const quote = await pumpSellQuote(client, pumpToken, amountIn);
       return {
         ...identity,
@@ -395,7 +415,7 @@ export async function quoteSwap(params: {
         path: [input, output],
         feeBps: PUMP_TRADE_FEE_BPS,
         stages: 1,
-        paused,
+        paused: false,
       };
     }
   }
@@ -571,7 +591,7 @@ export async function executeSwap(params: {
     throw new Error(t("err.quoteStale"));
   }
   if (route.kind === "none" || route.amountOut <= 0n) throw new Error(t("err.noLiquidity"));
-  if (route.paused) throw new Error(t("err.swapPaused"));
+  if (route.paused && route.kind !== "pump-sell") throw new Error(t("err.swapPaused"));
 
   const paid = `${formatAmount(amountIn, tokenIn.decimals, 4)} ${tokenIn.symbol}`;
   const received = `${formatAmount(route.amountOut, tokenOut.decimals, 4)} ${tokenOut.symbol}`;

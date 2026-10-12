@@ -43,6 +43,19 @@ function displayAmount(value: bigint): string {
   return formatCompactNumber(Number(formatUnits(value, 18)), 6);
 }
 
+function readyExitIsOpen(readyAt: bigint | undefined, delay: bigint | undefined, nowSec = Math.floor(Date.now() / 1000)): boolean {
+  if (readyAt === undefined || delay === undefined) return false;
+  return BigInt(nowSec) >= readyAt + delay;
+}
+
+function formatRemaining(opensAt: bigint, nowSec = Math.floor(Date.now() / 1000)): string {
+  const seconds = Number(opensAt) - nowSec;
+  if (!Number.isFinite(seconds) || seconds <= 0) return "now";
+  if (seconds < 3600) return `${Math.max(1, Math.ceil(seconds / 60))}m`;
+  if (seconds < 86_400) return `${Math.max(1, Math.ceil(seconds / 3600))}h`;
+  return `${Math.max(1, Math.ceil(seconds / 86_400))}d`;
+}
+
 export function TradePanel({ market, onComplete }: { market: PumpMarket; onComplete?: () => void }) {
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -62,13 +75,41 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
   const { value: amountWei, pending: amountSettling } = useDebouncedValue(typedAmountWei);
   const configured = PUMP_CONFIGURED && NUSD_CONFIGURED;
 
+  const pumpPaused = useReadContract({
+    chainId: PUMP_CHAIN_ID,
+    address: PUMP_FACTORY_ADDRESS,
+    abi: zeroXPumpAbi,
+    functionName: "paused",
+    query: { enabled: configured },
+  });
+  const readyAt = useReadContract({
+    chainId: PUMP_CHAIN_ID,
+    address: PUMP_FACTORY_ADDRESS,
+    abi: zeroXPumpAbi,
+    functionName: "readyAt",
+    args: [market.tokenAddress],
+    query: { enabled: configured && market.status === "READY" },
+  });
+  const readyExitDelay = useReadContract({
+    chainId: PUMP_CHAIN_ID,
+    address: PUMP_FACTORY_ADDRESS,
+    abi: zeroXPumpAbi,
+    functionName: "readyExitDelay",
+    query: { enabled: configured && market.status === "READY" },
+  });
+  const exitOpensAt = market.status === "READY" && readyAt.data !== undefined && readyExitDelay.data !== undefined
+    ? readyAt.data + readyExitDelay.data
+    : undefined;
+  const exitOpen = market.status === "READY" && readyExitIsOpen(readyAt.data, readyExitDelay.data);
+  const buyAllowed = market.status === "TRADING" && pumpPaused.data !== true;
+  const sellAllowed = market.status === "TRADING" || exitOpen;
   const buyQuote = useReadContract({
     chainId: PUMP_CHAIN_ID,
     address: PUMP_FACTORY_ADDRESS,
     abi: zeroXPumpAbi,
     functionName: "quoteBuy",
     args: [market.tokenAddress, amountWei],
-    query: { enabled: configured && mode === "buy" && amountWei > 0n && market.status === "TRADING" },
+    query: { enabled: configured && mode === "buy" && amountWei > 0n && buyAllowed },
   });
   const sellQuote = useReadContract({
     chainId: PUMP_CHAIN_ID,
@@ -76,7 +117,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
     abi: zeroXPumpAbi,
     functionName: "quoteSell",
     args: [market.tokenAddress, amountWei],
-    query: { enabled: configured && mode === "sell" && amountWei > 0n && market.status !== "GRADUATED" },
+    query: { enabled: configured && mode === "sell" && amountWei > 0n && sellAllowed },
   });
   const nusdBalance = useReadContract({
     chainId: PUMP_CHAIN_ID,
@@ -128,7 +169,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
   // screen belongs to the previous amount, not the one now in the field.
   const quotePending = amountSettling || activeQuote.isLoading;
   const quoteError = activeQuote.error;
-  const tradeAllowed = market.status === "TRADING" || (market.status === "READY" && mode === "sell");
+  const tradeAllowed = mode === "buy" ? buyAllowed : sellAllowed;
 
   const refresh = async () => {
     await Promise.all([
@@ -161,10 +202,12 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
     }
     if (!tradeAllowed) {
       toast.info(
-        market.status === "GRADUATED" ? "Curve closed" : "$6,000 market cap reached",
+        market.status === "GRADUATED" ? "Curve closed" : market.status === "READY" ? "$6,000 market cap reached" : "Buys paused",
         market.status === "GRADUATED"
           ? "Trading on this bonding curve has ended."
-          : "Buys pause at READY. A sell can reopen the bonding curve.",
+          : market.status === "READY" && !exitOpen
+            ? "Trading is frozen so this market can graduate. Sells reopen only after the exit delay if graduation never happens."
+            : "The launchpad is paused. Selling remains available.",
       );
       return;
     }
@@ -222,7 +265,9 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
 
   const buttonLabel = market.status === "GRADUATED"
     ? "Graduated to DEX"
+    : market.status === "READY" && !exitOpen ? "Awaiting graduation"
     : market.status === "READY" && mode === "buy" ? "Buy paused at READY"
+    : pumpPaused.data === true && mode === "buy" ? "Buys paused"
     : pending ? "Confirming transaction"
     : needsApproval ? `Approve once and ${mode === "buy" ? "buy" : "sell"}`
     : mode === "buy" ? `Buy ${market.symbol}` : `Sell ${market.symbol}`;
@@ -230,8 +275,8 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
   return (
     <aside className="pump-panel pump-trade-panel">
       <div className="pump-segmented pump-trade-tabs" role="group" aria-label="Trade side">
-        <button type="button" disabled={pending || market.status !== "TRADING"} className={mode === "buy" ? "active buy" : ""} aria-pressed={mode === "buy"} onClick={() => { setMode("buy"); setAmount(""); }}>Buy</button>
-        <button type="button" disabled={pending || market.status === "GRADUATED"} className={mode === "sell" ? "active sell" : ""} aria-pressed={mode === "sell"} onClick={() => { setMode("sell"); setAmount(""); }}>Sell</button>
+        <button type="button" disabled={pending || !buyAllowed} className={mode === "buy" ? "active buy" : ""} aria-pressed={mode === "buy"} onClick={() => { setMode("buy"); setAmount(""); }}>Buy</button>
+        <button type="button" disabled={pending || !sellAllowed} className={mode === "sell" ? "active sell" : ""} aria-pressed={mode === "sell"} onClick={() => { setMode("sell"); setAmount(""); }}>Sell</button>
       </div>
 
       <label className="pump-amount-field">
@@ -255,7 +300,9 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
 
       {quoteError ? <p className="pump-inline-error">Quote unavailable. <button type="button" onClick={() => void activeQuote.refetch()}>Retry</button></p> : null}
 
-      {market.status === "READY" ? <p className="pump-form-hint">Buys are paused at the $6,000 market-cap target. Selling remains available and reopens the curve.</p> : null}
+      {market.status === "READY" && !exitOpen ? <p className="pump-form-hint">Trading is frozen at the $6,000 target so this market can graduate. Sells reopen after the exit delay{exitOpensAt !== undefined ? ` (${formatRemaining(exitOpensAt)})` : ""} if graduation never happens.</p> : null}
+      {market.status === "READY" && exitOpen ? <p className="pump-form-hint">Graduation did not happen in time. Selling reopens the bonding curve.</p> : null}
+      {market.status === "TRADING" && pumpPaused.data === true ? <p className="pump-form-hint">The launchpad is paused. Buys and new tokens are blocked; selling remains available.</p> : null}
       <button type="button" className="pump-button pump-button-primary pump-button-large pump-button-full" disabled={pending || !configured || quotePending || Boolean(quoteError) || !tradeAllowed} onClick={() => void submit()}>{buttonLabel}</button>
       {!configured ? <p className="pump-form-hint">Trading activates after deployment addresses are configured.</p> : null}
     </aside>

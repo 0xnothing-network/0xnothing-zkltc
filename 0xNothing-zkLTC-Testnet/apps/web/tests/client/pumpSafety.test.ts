@@ -147,7 +147,7 @@ function descendants(value: unknown): ElementNode[] {
   return [element, ...descendants(element.props.children)];
 }
 
-function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect", mode = "buy", replacement?: "cancelled" | "replaced" | "repriced", options: { quoteSettling?: boolean; simulationError?: boolean; simulationChange?: boolean } = {}) {
+function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect", mode = "buy", replacement?: "cancelled" | "replaced" | "repriced", options: { quoteSettling?: boolean; simulationError?: boolean; simulationChange?: boolean; market?: Record<string, unknown>; paused?: boolean; readyAt?: bigint; readyExitDelay?: bigint } = {}) {
   const account = { address: ACCOUNT as string, isConnected: true, chainId: 4441, connector: { uid: "wallet-a" } };
   const writes: Array<{ functionName: string; account?: string; chainId?: number }> = [];
   const errors: Error[] = [];
@@ -192,11 +192,15 @@ function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect",
             return receipt;
           } };
         },
-        useReadContract: (options: { functionName: string; chainId?: number }) => {
-          readOptions.push(options);
-          const data = options.functionName === "quoteBuy" ? [2n, 1n, 1n, 0n, false]
-            : options.functionName === "quoteSell" ? [1n, 1n, 0n]
-              : options.functionName === "balanceOf" ? 100n * 10n ** 18n : 0n;
+        useReadContract: (read: { functionName: string; chainId?: number }) => {
+          readOptions.push(read);
+          const data = read.functionName === "quoteBuy" ? [2n, 1n, 1n, 0n, false]
+            : read.functionName === "quoteSell" ? [1n, 1n, 0n]
+              : read.functionName === "balanceOf" ? 100n * 10n ** 18n
+                : read.functionName === "paused" ? Boolean(options.paused)
+                  : read.functionName === "readyAt" ? (options.readyAt ?? 0n)
+                    : read.functionName === "readyExitDelay" ? (options.readyExitDelay ?? 604_800n)
+                      : 0n;
           return { data, refetch: async () => ({}), isLoading: false };
         },
         useSwitchChain: () => ({}),
@@ -221,11 +225,12 @@ function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect",
   );
   return {
     run: async () => {
-      const tree = component.TradePanel({ market });
+      const tree = component.TradePanel({ market: { ...market, ...options.market } });
       descendants(tree).find((node) => node.type === "button" && String(node.props.className).includes("pump-button-large"))?.props.onClick?.();
       for (let index = 0; index < 30 && !done; index += 1) await setImmediate();
       assert.equal(done, true, "trade handler completed");
     },
+    render: () => component.TradePanel({ market: { ...market, ...options.market } }),
     writes, errors, readOptions, publicClientOptions, simulations, successes: () => successes,
   };
 }
@@ -292,6 +297,41 @@ test("Pump keeps the sell approval and trade bound to the original wallet", asyn
   assert.deepEqual(harness.writes.map(({ functionName }) => functionName), ["approve", "sell"]);
   assert.equal(harness.errors.length, 0);
   assert.ok(harness.writes.every(({ account, chainId }) => account === ACCOUNT && chainId === 4441));
+});
+
+test("Pump freezes READY buys and sells until the exit delay", () => {
+  const now = BigInt(Math.floor(Date.now() / 1000));
+  const harness = tradeHarness(undefined, "sell", undefined, {
+    market: { status: "READY" },
+    readyAt: now,
+    readyExitDelay: 7n * 24n * 3600n,
+  });
+  const primary = descendants(harness.render()).find((node) => node.type === "button" && String(node.props.className).includes("pump-button-large"));
+  assert.equal(primary?.props.disabled, true);
+  assert.equal(primary?.props.children, "Awaiting graduation");
+});
+
+test("Pump lets a READY sell reopen the curve after the exit delay", async () => {
+  const harness = tradeHarness(undefined, "sell", undefined, {
+    market: { status: "READY" },
+    readyAt: 1n,
+    readyExitDelay: 1n,
+  });
+  await harness.run();
+  assert.deepEqual(harness.writes.map(({ functionName }) => functionName), ["approve", "sell"]);
+  assert.equal(harness.errors.length, 0);
+});
+
+test("Pump blocks buys while paused and still lets holders sell", async () => {
+  const pausedBuy = tradeHarness(undefined, "buy", undefined, { paused: true });
+  const buyButton = descendants(pausedBuy.render()).find((node) => node.type === "button" && String(node.props.className).includes("pump-button-large"));
+  assert.equal(buyButton?.props.disabled, true);
+  assert.equal(buyButton?.props.children, "Buys paused");
+
+  const pausedSell = tradeHarness(undefined, "sell", undefined, { paused: true });
+  await pausedSell.run();
+  assert.deepEqual(pausedSell.writes.map(({ functionName }) => functionName), ["approve", "sell"]);
+  assert.equal(pausedSell.errors.length, 0);
 });
 
 type PumpComponent = "CreateTokenForm" | "NusdOraclePanel" | "TokenDetail" | "PumpStatsDashboard";
