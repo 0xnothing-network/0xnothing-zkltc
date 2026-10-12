@@ -11,7 +11,8 @@ import {IDIAAggregatorV3} from "./interfaces/IDIAAggregatorV3.sol";
 ///      measured against the last synced anchor because the DIA feed does not implement `getRoundData`. The
 ///      allowed deviation grows by `maxDeviationBps` for every `maxPriceAge` elapsed since the anchor was
 ///      published, capped at `MAX_DEVIATION_INTERVALS`, so a genuine large move self-heals without unbounded
-///      allowance growth.
+///      allowance growth. The constructor try-arms the anchor when the feed is readable; mint/redeem then
+///      call `ensureAnchor()` so the breaker is live from the first consume. `syncPrice()` is a fallback.
 contract DIAOracleAdapter is TwoStepAdmin {
     error InvalidFeed();
     error InvalidMaxPriceAge();
@@ -72,11 +73,24 @@ contract DIAOracleAdapter is TwoStepAdmin {
         _setMaxPriceAge(maximumPriceAge);
         _setPriceBounds(minimumPriceWad, maximumPriceWad);
         _setMaxDeviationBps(maximumDeviationBps);
+        _tryInitializeAnchor();
     }
 
     function readPriceWad() public view returns (uint256 priceWad, uint256 updatedAt, uint80 roundId) {
         (priceWad, updatedAt, roundId) = _readBoundedPrice();
         _checkDeviation(priceWad, roundId);
+    }
+
+    /// @notice Returns the current bounded price and arms the deviation anchor on the first successful consume.
+    /// @dev View `readPriceWad` cannot write. Mint and redeem call this so the breaker is live from the first
+    ///      trade even when the constructor could not read a shanghai PUSH0 feed under paris Foundry.
+    function ensureAnchor() external returns (uint256 priceWad, uint256 updatedAt, uint80 roundId) {
+        (priceWad, updatedAt, roundId) = _readBoundedPrice();
+        if (anchorPriceWad == 0) {
+            _setAnchor(priceWad, updatedAt, roundId, false);
+        } else {
+            _checkDeviation(priceWad, roundId);
+        }
     }
 
     function isFresh() external view returns (bool fresh) {
@@ -88,6 +102,8 @@ contract DIAOracleAdapter is TwoStepAdmin {
     }
 
     /// @notice Moves the deviation anchor to the current feed price when it passes every check.
+    /// @dev Fallback if the constructor and the first mint/redeem could not arm the breaker (paris-EVM
+    ///      simulation of a shanghai PUSH0 aggregator). Prefer constructor arming and `ensureAnchor()`.
     function syncPrice() external returns (uint256 priceWad) {
         uint256 updatedAt;
         uint80 roundId;
@@ -133,17 +149,38 @@ contract DIAOracleAdapter is TwoStepAdmin {
         }
 
         // forge-lint: disable-next-line(unsafe-typecast)
-        uint256 unsignedAnswer = uint256(answer);
+        priceWad = _scaleToWad(uint256(answer));
+        if (priceWad == 0) revert InvalidOracleAnswer();
+        if (priceWad < minPriceWad || priceWad > maxPriceWad) {
+            revert PriceOutOfBounds(priceWad, minPriceWad, maxPriceWad);
+        }
+    }
+
+    /// @dev Best-effort constructor arm. Live shanghai DIA feeds succeed here; paris Foundry simulation
+    ///      of PUSH0 aggregators reverts and is swallowed so deploy scripts keep working. Mint/redeem
+    ///      then arm via `ensureAnchor()`. Invalid or stale constructor reads are skipped, not fatal.
+    function _tryInitializeAnchor() internal {
+        try feed.latestRoundData() returns (
+            uint80 roundId, int256 answer, uint256, uint256 updatedAt, uint80 answeredInRound
+        ) {
+            if (roundId == 0 || answer <= 0 || updatedAt == 0) return;
+            if (enforceAnsweredInRound && answeredInRound < roundId) return;
+            if (updatedAt > block.timestamp) return;
+            if (block.timestamp - updatedAt > maxPriceAge) return;
+            // forge-lint: disable-next-line(unsafe-typecast)
+            uint256 priceWad = _scaleToWad(uint256(answer));
+            if (priceWad == 0 || priceWad < minPriceWad || priceWad > maxPriceWad) return;
+            _setAnchor(priceWad, updatedAt, roundId, false);
+        } catch {}
+    }
+
+    function _scaleToWad(uint256 unsignedAnswer) internal view returns (uint256 priceWad) {
         if (feedDecimals == 18) {
             priceWad = unsignedAnswer;
         } else if (feedDecimals < 18) {
             priceWad = unsignedAnswer * (10 ** (18 - feedDecimals));
         } else {
             priceWad = unsignedAnswer / (10 ** (feedDecimals - 18));
-        }
-        if (priceWad == 0) revert InvalidOracleAnswer();
-        if (priceWad < minPriceWad || priceWad > maxPriceWad) {
-            revert PriceOutOfBounds(priceWad, minPriceWad, maxPriceWad);
         }
     }
 

@@ -103,7 +103,8 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
         if (msg.value == 0) revert InvalidAmount();
         if (recipient == address(0)) revert InvalidRecipient();
 
-        amountNusd = quoteMint(msg.value);
+        (uint256 priceWad,,) = oracle.ensureAnchor();
+        amountNusd = MathX.mulDiv(msg.value, priceWad, WAD);
         if (amountNusd == 0) revert InvalidAmount();
         if (amountNusd < minNusdOut) revert SlippageExceeded(minNusdOut, amountNusd);
 
@@ -132,7 +133,8 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
         if (amountNusd == 0) revert InvalidAmount();
         if (recipient == address(0)) revert InvalidRecipient();
 
-        collateralOutWei = quoteRedeem(amountNusd);
+        (uint256 priceWad,,) = oracle.ensureAnchor();
+        collateralOutWei = MathX.mulDiv(amountNusd, WAD, priceWad);
         if (collateralOutWei == 0) revert InvalidAmount();
         if (collateralOutWei < minCollateralOutWei) {
             revert SlippageExceeded(minCollateralOutWei, collateralOutWei);

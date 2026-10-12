@@ -18,7 +18,7 @@ These are release blockers, not values to guess around.
 - Audit the Pump curve, reserve accounting, rounding, fee isolation, and the exact transition from a `1,500 NUSD` initial virtual market cap to the fixed `6,000 NUSD` READY market-cap target.
 - Audit the paid content-reservation flow end to end so one `1 NUSD` reservation authorizes only its owner and exact canonical metadata/logo hash.
 - Review and parameterize the DIAOracleAdapter price bounds and deviation breaker (implemented, admin-tunable) in addition to the independent mint and redeem pause domains.
-- Move ownership, pause, fee-recipient, and adapter-governance roles to a Safe multisig with a documented delay.
+- Move ownership, pause, fee-recipient, adapter-governance, and DIAOracleAdapter admin (`setPriceBounds`, `setMaxDeviationBps`, `setMaxPriceAge`, `setEnforceAnsweredInRound`, `resetPriceAnchor`) to a Safe multisig behind a timelock. A hot EOA must not hold these keys.
 - Add redundant RPC, paid IPFS pinning, durable upload rate limits, monitoring, and incident procedures.
 
 The mainnet candidate is an oracle-priced native reserve, not an
@@ -70,7 +70,7 @@ release gate.
 
 Graduation is submitted by the protocol Safe after the adapter is active. Pause blocks every `graduate` call, including the Safe. The router and adapter disable controls independently stop graduation. Any account may also graduate once `permissionlessGraduationDelay` has elapsed, using the configured adapter and on-chain minLP. A failed attempt leaves the market in `READY`, where buys are frozen. Sells freeze only while graduation is possible; otherwise holders can exit immediately. When the freeze applies, only after `readyExitDelay` (default 24 hours, max 3 days) can a holder sell reopen the curve to `TRADING`.
 
-OracleNUSD keeps the owner-chosen zero-fee mint/redeem model and a 3600s `maxPriceAge`. Residual risk: a stale or manipulated DIA print can mint NUSD against native collateral at an off-market rate, and there is no protocol spread. `syncPrice()` is not part of the deploy script and must be sent after broadcast.
+OracleNUSD keeps the owner-chosen zero-fee mint/redeem model and a 3600s `maxPriceAge`. Residual risk: a stale or manipulated DIA print can mint NUSD against native collateral at an off-market rate, and there is no protocol spread. The constructor try-arms the DIA deviation breaker when the feed is readable; mint/redeem call `ensureAnchor()` on the first consume. `syncPrice()` is not part of the deploy script and remains a fallback. Mainnet admin of DIA bounds, breaker, `maxPriceAge`, `setEnforceAnsweredInRound`, Pump pause / emergency `sellPause`, and graduation controls must be a Safe multisig behind a timelock.
 
 ## Phase 3: indexing and web release
 

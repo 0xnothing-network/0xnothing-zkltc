@@ -20,6 +20,8 @@ export const zeroXPumpAbi = parseAbi([
   "function nusd() view returns (address)",
   "function vault() view returns (address)",
   "function paused() view returns (bool)",
+  "function sellsPaused() view returns (bool)",
+  "function sellPausedUntil() view returns (uint256)",
   "function readyAt(address token) view returns (uint256)",
   "function readyExitDelay() view returns (uint256)",
   "function graduationPossible() view returns (bool)",

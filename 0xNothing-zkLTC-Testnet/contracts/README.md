@@ -69,10 +69,12 @@ ZeroXPump as both its NUSD and vault address. When
 on Pump, the router, and DIAOracleAdapter before scheduling any future DEX adapter.
 Do not call `syncPrice()` through this paris-EVM script: the live DIA aggregator
 uses PUSH0 and reverts with `NotActivated` in local simulation, which would also
-block `--broadcast`. Run `scripts/preflight-testnet-oracle.sh` first, then after
-an approved broadcast `syncPrice()` **must** be sent with
-`cast send <adapter> "syncPrice()"`. Do not use `--broadcast` until the
-deployment phase has been explicitly approved.
+block `--broadcast`. The constructor try-arms the deviation breaker when the feed
+is readable; mint/redeem call `ensureAnchor()` on the first consume. Run
+`scripts/preflight-testnet-oracle.sh` first. After an approved broadcast,
+`cast send <adapter> "syncPrice()"` remains a fallback if the constructor could
+not read the feed. Do not use `--broadcast` until the deployment phase has been
+explicitly approved.
 
 The initial deployment deliberately leaves liquidity migration unavailable. On
 the live testnet the router has since completed its delayed enable and its 0xFi

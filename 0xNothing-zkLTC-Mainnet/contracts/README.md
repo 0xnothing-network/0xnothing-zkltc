@@ -37,6 +37,11 @@ as reference code and are not instantiated by `DeployMainnet.s.sol`.
 forge script script/DeployMainnet.s.sol:DeployMainnet --rpc-url $env:MAINNET_RPC_URL
 ```
 
+Copy `contracts/.env.example` to `contracts/.env` for local values. Foundry loads
+`.env` automatically; `.env` is gitignored. After `MAINNET_RPC_URL` is set, the
+alias `forge script ... --rpc-url mainnet` uses `[rpc_endpoints]` in
+`foundry.toml`.
+
 Required: `PRIVATE_KEY`, `DIA_LTC_USD_FEED`, `EXPECTED_MAINNET_CHAIN_ID`,
 the oracle policy `DIA_MAX_PRICE_AGE` (5 minutes to 2 hours),
 `DIA_MIN_PRICE_WAD`, `DIA_MAX_PRICE_WAD`, and `DIA_MAX_DEVIATION_BPS`, and the
@@ -63,9 +68,16 @@ token/stablecoin pool on a major DEX. It must be implemented, audited,
 timelock-scheduled, and activated only after the official stablecoin, settlement
 route, DEX interface, and pool semantics are final. When `PROTOCOL_ADMIN` differs
 from the deployer, the admin must call `acceptAdmin()` on Pump, the router, and
-DIAOracleAdapter. After an approved broadcast, `syncPrice()` must be sent on the
-DIA adapter. Do not use `--broadcast` until the deployment phase has been
-explicitly approved.
+DIAOracleAdapter. The constructor try-arms the deviation breaker when the feed
+is readable; mint/redeem call `ensureAnchor()` on the first consume. After an
+approved broadcast, `cast send <adapter> "syncPrice()"` remains a fallback if
+the constructor could not read the feed. Do not use `--broadcast` until the
+deployment phase has been explicitly approved.
+
+Mainnet admin keys (Pump, DIAOracleAdapter, OracleNUSD pauser, router) must be a
+Safe multisig behind a timelock. That includes oracle `setPriceBounds`,
+`setMaxDeviationBps`, `setMaxPriceAge`, `setEnforceAnsweredInRound`,
+`resetPriceAnchor`, Pump `setPaused` / `setSellPause`, and adapter allowlisting.
 
 Mainnet oracle release blocker: validate the final DIA feed, the maximum supply
 ceiling decision, price monitoring, and the adapter's bound/deviation values
@@ -91,10 +103,10 @@ The router enable/adapter controls are the separate graduation emergency domain.
 an on-chain UniV2 minLP. A READY market rejects buys. Sells freeze only while
 graduation is possible (adapter set, router enabled, adapter allowlisted); when
 that freeze applies, they reopen the curve only after `readyExitDelay` (default
-24 hours, max 3 days). After broadcast, `syncPrice()` must be called on the DIA
-adapter. OracleNUSD remains a zero-fee, 3600s-maxAge mint/redeem model: a stale
-or manipulated feed can mint at an off-market rate, with no spread to absorb
-oracle error.
+24 hours, max 3 days). A separate admin `setSellPause` can halt sells for at
+most 24 hours and auto-expires. OracleNUSD remains a zero-fee, 3600s-maxAge
+mint/redeem model: a stale or manipulated feed can mint at an off-market rate,
+with no spread to absorb oracle error.
 
 The current router requires synchronous same-transaction settlement and checks
 an ERC-20 LP-token balance before transferring it to the permanent locker. An

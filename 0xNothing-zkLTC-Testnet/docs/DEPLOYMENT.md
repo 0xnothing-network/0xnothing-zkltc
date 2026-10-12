@@ -55,14 +55,14 @@ admin-set `graduationAdapter` (unset at deploy) and an on-chain UniV2 minLP; the
 caller's adapter/minimumLp arguments are ignored. After the 0xFi adapter is
 activated, the Pump admin must call `setGraduationAdapter`.
 
-The script does **not** call `syncPrice()`. The live DIA aggregator uses shanghai
-PUSH0, which reverts with `NotActivated` inside this project's paris Foundry EVM
-and would block both simulation and `--broadcast`. Preflight the live feed with
+The script does **not** call `syncPrice()`. The constructor try-arms the
+deviation anchor when the feed is readable. Live shanghai DIA succeeds on-chain;
+paris Foundry simulation of PUSH0 aggregators is swallowed so this script can
+still run. Mint and redeem then call `ensureAnchor()` on the first consume, so
+the breaker is active without a keeper. Preflight the live feed with
 `scripts/preflight-testnet-oracle.sh` (or the `cast call latestRoundData` above).
-After an approved broadcast, `syncPrice()` **must** be called on-chain to arm the
-deviation breaker. Until then, deviation is skipped while the anchor is zero;
-min/max bounds still apply, so mint/redeem are not unpriced. Anyone may call
-`syncPrice()`:
+Permissionless `syncPrice()` is a fallback if the constructor could not read the
+feed and no mint/redeem has run yet:
 
 ```bash
 cast send "$DIA_ORACLE_ADAPTER" "syncPrice()" --rpc-url "$LITVM_RPC_URL" --private-key "$PRIVATE_KEY"

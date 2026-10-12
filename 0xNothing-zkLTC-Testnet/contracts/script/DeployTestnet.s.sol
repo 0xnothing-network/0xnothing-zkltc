@@ -90,13 +90,11 @@ contract DeployTestnet {
 
         deployment.diaOracleAdapter =
             new DIAOracleAdapter(diaFeed, maxPriceAge, deployer, minPriceWad, maxPriceWad, maxDeviationBps);
-        // Do not call syncPrice() here. The live LiteForge DIA aggregator uses shanghai
-        // PUSH0, which reverts with NotActivated in this project's paris EVM and would
-        // block both `forge script` simulation and `--broadcast`. After an approved
-        // broadcast, `syncPrice()` MUST be called on-chain (`cast send <adapter>
-        // "syncPrice()"`). Deviation is skipped while the anchor is zero; bounds still
-        // apply. Preflight the live feed with `scripts/preflight-testnet-oracle.sh`
-        // (or the cast calls in docs/DEPLOYMENT.md).
+        // Do not call syncPrice() here. The constructor try-arms the deviation
+        // breaker when the feed is readable; paris Foundry simulation of shanghai
+        // PUSH0 aggregators is swallowed so this script can still run. Mint/redeem
+        // call ensureAnchor() on the first consume. `cast send <adapter> "syncPrice()"`
+        // remains a fallback. Preflight with `scripts/preflight-testnet-oracle.sh`.
         deployment.oracleNusd = new OracleNUSD(deployment.diaOracleAdapter, protocolAdmin, supplyCeilingNusd);
 
         deployment.locker = new PermanentLiquidityLocker(deployer);

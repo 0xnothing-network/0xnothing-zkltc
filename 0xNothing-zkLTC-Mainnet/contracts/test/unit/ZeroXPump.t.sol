@@ -421,6 +421,56 @@ contract ZeroXPumpTest is TestBase {
         );
     }
 
+    function testEmergencySellPauseMax24hAutoExpiresAndEmits() public {
+        address token = _createMarket();
+        vm.prank(TRADER);
+        (uint256 bought,) = pump.buy(token, 10 ether, 0, block.timestamp + 1);
+        vm.prank(TRADER);
+        PumpToken(token).approve(address(pump), bought);
+
+        vm.prank(TRADER);
+        vm.expectRevert(TwoStepAdmin.Unauthorized.selector);
+        pump.setSellPause(1 hours);
+
+        vm.expectRevert(ZeroXPump.InvalidConfiguration.selector);
+        pump.setSellPause(1 days + 1);
+
+        vm.recordLogs();
+        pump.setSellPause(1 hours);
+        Vm.Log memory updated = _findLog(vm.getRecordedLogs(), keccak256("SellPauseUpdated(uint256,uint256)"));
+        (uint256 until, uint256 duration) = abi.decode(updated.data, (uint256, uint256));
+        assertEq(until, block.timestamp + 1 hours, "until");
+        assertEq(duration, 1 hours, "duration");
+        assertTrue(pump.sellsPaused(), "halted");
+        assertEq(pump.sellPausedUntil(), until, "stored until");
+
+        vm.prank(TRADER);
+        vm.expectRevert(ZeroXPump.SellsPaused.selector);
+        pump.sell(token, bought / 10, 0, block.timestamp + 1);
+        vm.expectRevert(ZeroXPump.SellsPaused.selector);
+        pump.quoteSell(token, bought / 10);
+
+        pump.setPaused(true);
+        vm.prank(TRADER);
+        vm.expectRevert(ZeroXPump.SellsPaused.selector);
+        pump.sell(token, bought / 10, 0, block.timestamp + 1);
+
+        vm.warp(until);
+        assertFalse(pump.sellsPaused(), "auto-expired");
+        pump.setPaused(false);
+        vm.prank(TRADER);
+        uint256 received = pump.sell(token, bought / 10, 0, block.timestamp + 1);
+        assertGt(received, 0, "sell after expiry");
+
+        pump.setSellPause(1 hours);
+        assertTrue(pump.sellsPaused(), "halted again");
+        pump.setSellPause(0);
+        assertFalse(pump.sellsPaused(), "cleared");
+        assertEq(pump.sellPausedUntil(), 0, "until cleared");
+        vm.prank(TRADER);
+        pump.sell(token, bought / 10, 0, block.timestamp + 1);
+    }
+
     function testLaunchProtectionIsOffByDefault() public {
         assertEq(pump.launchProtectionWindow(), 0, "window off");
         address token = _createMarket();

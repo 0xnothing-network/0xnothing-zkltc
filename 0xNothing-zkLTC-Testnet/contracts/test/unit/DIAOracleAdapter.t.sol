@@ -200,16 +200,55 @@ contract DIAOracleAdapterTest is TestBase {
         assertEq(price, BASE_PRICE, "anchored round");
     }
 
-    function testUnanchoredOrDisabledDeviationIsNotEnforced() public {
+    function testConstructorArmsDeviationBreakerFromAReadableFeed() public {
         DIAOracleAdapter fresh =
             new DIAOracleAdapter(address(feed), MAX_AGE, address(this), MIN_PRICE, MAX_PRICE, DEVIATION_BPS);
+        assertEq(fresh.anchorPriceWad(), BASE_PRICE, "constructor armed");
         _setRound(BASE_ANSWER * 3, block.timestamp);
+        vm.expectPartialRevert(DIAOracleAdapter.PriceDeviationExceeded.selector);
         fresh.readPriceWad();
 
-        vm.expectPartialRevert(DIAOracleAdapter.PriceDeviationExceeded.selector);
-        adapter.readPriceWad();
         adapter.setMaxDeviationBps(0);
         adapter.readPriceWad();
+    }
+
+    function testEnsureAnchorArmsWhenConstructorCouldNotReadTheFeed() public {
+        MockDIAFeed silent = new MockDIAFeed(8);
+        silent.setRevertLatest(true);
+        DIAOracleAdapter fresh =
+            new DIAOracleAdapter(address(silent), MAX_AGE, address(this), MIN_PRICE, MAX_PRICE, DEVIATION_BPS);
+        assertEq(fresh.anchorPriceWad(), 0, "unarmed");
+
+        silent.setRevertLatest(false);
+        silent.setRound(1, BASE_ANSWER, block.timestamp, 1);
+        (uint256 price,,) = fresh.ensureAnchor();
+        assertEq(price, BASE_PRICE, "first consume price");
+        assertEq(fresh.anchorPriceWad(), BASE_PRICE, "armed on first consume");
+
+        silent.setRound(2, BASE_ANSWER * 3, block.timestamp, 2);
+        vm.expectPartialRevert(DIAOracleAdapter.PriceDeviationExceeded.selector);
+        fresh.ensureAnchor();
+        vm.expectPartialRevert(DIAOracleAdapter.PriceDeviationExceeded.selector);
+        fresh.readPriceWad();
+    }
+
+    function testMintArmsSilentFeedThenEnforcesDeviation() public {
+        MockDIAFeed silent = new MockDIAFeed(8);
+        silent.setRevertLatest(true);
+        DIAOracleAdapter fresh =
+            new DIAOracleAdapter(address(silent), MAX_AGE, address(this), MIN_PRICE, MAX_PRICE, DEVIATION_BPS);
+        OracleNUSD nusd = new OracleNUSD(fresh, address(this), type(uint256).max);
+        vm.deal(address(this), 10 ether);
+
+        silent.setRevertLatest(false);
+        silent.setRound(1, BASE_ANSWER, block.timestamp, 1);
+        uint256 minted = nusd.mintAtOracle{value: 1 ether}(0, address(this));
+        assertGt(minted, 0, "mint armed breaker");
+        assertEq(fresh.anchorPriceWad(), BASE_PRICE, "anchor from mint");
+
+        silent.setRound(2, BASE_ANSWER * 3, block.timestamp, 2);
+        vm.expectPartialRevert(DIAOracleAdapter.PriceDeviationExceeded.selector);
+        nusd.mintAtOracle{value: 1 ether}(0, address(this));
     }
 
     function testAdminResetAnchorRecoversImmediatelyButKeepsOtherChecks() public {

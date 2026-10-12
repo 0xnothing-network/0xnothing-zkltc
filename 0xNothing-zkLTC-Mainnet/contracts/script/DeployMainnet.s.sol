@@ -95,10 +95,10 @@ contract DeployMainnet {
 
         deployment.oracle =
             new DIAOracleAdapter(diaFeed, maxPriceAge, deployer, minPriceWad, maxPriceWad, maxDeviationBps);
-        // Do not call syncPrice() here: paris-EVM simulation cannot execute shanghai DIA
-        // bytecode (PUSH0 / NotActivated) and would block `--broadcast`. After an
-        // approved broadcast, `syncPrice()` MUST be called on-chain with
-        // `cast send <adapter> "syncPrice()"`.
+        // Do not call syncPrice() here: paris-EVM simulation of shanghai PUSH0 DIA
+        // bytecode is swallowed by the constructor try-arm so `--broadcast` is not
+        // blocked. Mint/redeem call ensureAnchor() on the first consume.
+        // `cast send <adapter> "syncPrice()"` remains a fallback.
         deployment.oracleNusd = new OracleNUSD(deployment.oracle, protocolAdmin, NUSD_SUPPLY_CEILING);
 
         deployment.locker = new PermanentLiquidityLocker(deployer);

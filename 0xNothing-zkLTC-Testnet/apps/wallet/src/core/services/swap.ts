@@ -146,6 +146,17 @@ async function pumpPaused(client: SwapClient): Promise<boolean> {
     .catch(() => true);
 }
 
+/** Emergency sell halt. Unreadable state fails closed so a wallet cannot sell through a live pause. */
+async function pumpSellsPaused(client: SwapClient): Promise<boolean> {
+  return client
+    .readContract({
+      address: CONTRACTS.pumpFactory,
+      abi: zeroXPumpAbi,
+      functionName: "sellsPaused",
+    })
+    .catch(() => true);
+}
+
 /** READY sells stay frozen until `readyExitDelay` only while graduation is possible. Unreadable state fails closed. */
 async function pumpReadyExitOpen(client: SwapClient, token: Address): Promise<boolean> {
   try {
@@ -392,9 +403,10 @@ export async function quoteSwap(params: {
   const pumpToken = buyingPumpToken || sellingPumpToken;
   if (pumpToken) {
     const buying = Boolean(buyingPumpToken);
-    const [status, paused] = await Promise.all([
+    const [status, paused, sellsHalted] = await Promise.all([
       pumpStatus(client, pumpToken),
       pumpPaused(client),
+      pumpSellsPaused(client),
     ]);
     if (buying) {
       if (status === PUMP_READY) return noRoute(identity, paused);
@@ -410,6 +422,8 @@ export async function quoteSwap(params: {
           paused,
         };
       }
+    } else if (sellsHalted) {
+      return noRoute(identity, true);
     } else if (status === PUMP_READY && !(await pumpReadyExitOpen(client, pumpToken))) {
       return noRoute(identity, false);
     } else if (status === PUMP_TRADING || status === PUMP_READY) {

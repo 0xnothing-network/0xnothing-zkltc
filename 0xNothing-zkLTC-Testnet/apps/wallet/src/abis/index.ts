@@ -77,6 +77,7 @@ export const zeroXPumpAbi = parseAbi([
   "function spotPriceNusdWad(address token) view returns (uint256)",
   "function getAllTokens() view returns (address[] tokens)",
   "function paused() view returns (bool)",
+  "function sellsPaused() view returns (bool)",
 ]);
 
 /** 0xFi lending pool; distinct from fixed-duration points staking. */

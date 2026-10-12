@@ -68,11 +68,12 @@ test("all-paused routes remain fail-closed and retain a quote for the pause warn
 
 const nusd = { id: "nusd", address: addresses.nusd, decimals: 18, symbol: "NUSD" };
 
-function pumpFixture(params: { status: number; paused?: boolean; readyAt?: bigint; delay?: bigint; graduationPossible?: boolean }) {
+function pumpFixture(params: { status: number; paused?: boolean; sellsPaused?: boolean; readyAt?: bigint; delay?: bigint; graduationPossible?: boolean }) {
   const now = BigInt(Math.floor(Date.now() / 1000));
   const readContract = async ({ functionName }: { functionName: string }) => {
     if (functionName === "status") return BigInt(params.status);
     if (functionName === "paused") return params.paused ?? false;
+    if (functionName === "sellsPaused") return params.sellsPaused ?? false;
     if (functionName === "graduationPossible") return params.graduationPossible ?? true;
     if (functionName === "readyAt") return params.readyAt ?? now;
     if (functionName === "readyExitDelay") return params.delay ?? 86_400n;
@@ -118,4 +119,12 @@ test("Pump quotes a READY sell immediately when graduation is impossible", async
   });
   assert.equal(quote.kind, "pump-sell");
   assert.equal(quote.paused, false);
+});
+
+test("Pump blocks sells during an emergency sell pause", async () => {
+  const quote = await pumpFixture({ status: 1, sellsPaused: true }).quoteSwap({
+    tokenIn: token, tokenOut: nusd, amountIn: 100n,
+  });
+  assert.equal(quote.kind, "none");
+  assert.equal(quote.paused, true);
 });

@@ -22,6 +22,7 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
     error InvalidAmount();
     error SlippageExceeded();
     error ContractPaused();
+    error SellsPaused();
     error AssetTransferMismatch();
     error InsufficientProtocolFees();
     error InvalidCommitment();
@@ -38,6 +39,7 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
     uint256 public constant MIN_READY_EXIT_DELAY = 1 days;
     uint256 public constant MAX_READY_EXIT_DELAY = 3 days;
     uint256 public constant MAX_LAUNCH_PROTECTION_WINDOW = 1 hours;
+    uint256 public constant MAX_SELL_PAUSE = 24 hours;
     uint256 public constant MINIMUM_LIQUIDITY = 1_000;
     uint256 public constant GRADUATION_SLIPPAGE_BPS = 100;
 
@@ -113,6 +115,8 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
     uint256 public accruedProtocolFeesNusd;
     uint256 public totalRealNusdReserves;
     bool public paused;
+    /// @notice Exclusive timestamp until which sells are halted. Zero means sells are open. Auto-expires.
+    uint256 public sellPausedUntil;
 
     /// @notice Timestamp at which each market last entered READY.
     mapping(address => uint256) public readyAt;
@@ -178,6 +182,7 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
     );
     event ProtocolFeesWithdrawn(address indexed recipient, uint256 amountNusd);
     event PauseUpdated(bool paused);
+    event SellPauseUpdated(uint256 sellPausedUntil, uint256 durationSeconds);
     event GraduationDelaysUpdated(uint256 permissionlessGraduationDelay, uint256 readyExitDelay);
     event GraduationAdapterUpdated(address indexed previousAdapter, address indexed adapter);
     event LaunchProtectionUpdated(uint256 window, uint256 maxBuyNusd);
@@ -318,8 +323,9 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
         }
     }
 
-    /// @notice Sells stay available while paused so holders can always exit a TRADING curve. A READY market
+    /// @notice Sells stay available while `paused` so holders can always exit a TRADING curve. A READY market
     ///         is frozen for graduation only while graduation is possible, and then only until `readyExitDelay`.
+    ///         The separate emergency `sellPause` can halt sells for at most `MAX_SELL_PAUSE` and auto-expires.
     function sell(address token, uint256 tokenIn, uint256 minNusdOut, uint256 deadline)
         external
         nonReentrant
@@ -428,10 +434,24 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
         emit ProtocolFeesWithdrawn(recipient, amountNusd);
     }
 
-    /// @notice Pausing blocks reservations, creation, buys, and every graduation. Sells stay open.
+    /// @notice Pausing blocks reservations, creation, buys, and every graduation. Sells stay open unless
+    ///         a separate emergency `sellPause` is active.
     function setPaused(bool newPaused) external onlyAdmin {
         paused = newPaused;
         emit PauseUpdated(newPaused);
+    }
+
+    /// @notice Emergency sell halt. `durationSeconds == 0` clears it; otherwise sells are blocked until
+    ///         `block.timestamp + durationSeconds`, at most `MAX_SELL_PAUSE` (24 hours). The halt expires
+    ///         automatically with no keeper.
+    function setSellPause(uint256 durationSeconds) external onlyAdmin {
+        if (durationSeconds > MAX_SELL_PAUSE) revert InvalidConfiguration();
+        sellPausedUntil = durationSeconds == 0 ? 0 : block.timestamp + durationSeconds;
+        emit SellPauseUpdated(sellPausedUntil, durationSeconds);
+    }
+
+    function sellsPaused() public view returns (bool) {
+        return block.timestamp < sellPausedUntil;
     }
 
     function setGraduationDelays(uint256 newPermissionlessGraduationDelay, uint256 newReadyExitDelay)
@@ -720,6 +740,7 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
     }
 
     function _sellableMarket(address token) internal view returns (Market storage market) {
+        if (sellsPaused()) revert SellsPaused();
         market = _market(token);
         if (market.lifecycle == Lifecycle.TRADING) return market;
         if (market.lifecycle != Lifecycle.READY) revert MarketNotTrading();
