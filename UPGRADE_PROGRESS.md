@@ -98,6 +98,10 @@ không chạy lại lệnh tổng `npm run verify` sau khi từng check đã đ�
 gọi từ `C:/Users/tdat/.foundry/bin/forge.exe` vì executable chưa có trên PATH.
 Fork tests có điều kiện môi trường không đồng nghĩa đã chạy giao dịch thật trên mạng.
 
+Số test Foundry ở trên theo `forge test` của forge 1.8.5: mỗi invariant suite
+được báo là 1 test dù chứa nhiều hàm `invariant*`. `forge test --list` vẫn liệt kê
+từng hàm nên cho **96/72/160**; không có test nào bị bỏ, mọi invariant vẫn chạy.
+
 ### Bundle và giới hạn xác minh
 
 - Build: shared First Load JS **103 kB**, middleware **34,3 kB**, home **112 kB**, Fi swap **251 kB**, Fi pool detail **254 kB**, Pump home **216 kB**. Không tuyên bố bundle nhỏ hơn: so với mốc lịch sử tháng 8, shared chunk giữ nguyên, các route Fi tăng khoảng 2 kB với kiểm tra receipt mới.
