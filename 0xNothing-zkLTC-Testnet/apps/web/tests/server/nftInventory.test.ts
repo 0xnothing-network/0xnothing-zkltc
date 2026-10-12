@@ -102,7 +102,6 @@ test("large V2 wallet reads packed art in bounded ordered batches and forwards f
       "next/server": { NextResponse: Response },
       "@/lib/contract": {
         PIXEL_NFT_CONTRACT_ADDRESS: legacy,
-        PIXEL_MARKETPLACE_ADDRESS: marketplace,
         getUserTokenIds: async (_owner: string, collection: string, force: boolean) => {
           assert.equal(collection, v2);
           freshness.push(force);
@@ -116,7 +115,6 @@ test("large V2 wallet reads packed art in bounded ordered batches and forwards f
             await Promise.resolve();
             active--;
             return contracts.map(({ functionName, args }) => {
-              if (functionName === "getListingByToken") return { status: "success", result: [args[1], { active: true, price: args[1] * 10n }] };
               assert.equal(functionName, "tokenPackedData", "V2 never runs legacy hex conversion");
               return { status: "success", result: [`Art ${args[0]}`, "Description", 256n, "0xaabbcc", owner, 2n, "hash"] };
             });
@@ -124,7 +122,11 @@ test("large V2 wallet reads packed art in bounded ordered batches and forwards f
         },
       },
       "@/lib/pixelImage": { getPixelImageUrl },
-      "@/lib/marketplaceAbi": { MarketplaceAbi: [] },
+      "@/lib/nusdMarketplaceConfig": { NUSD_MARKETPLACE_ADDRESS: marketplace, NFT_NUSD_ADDRESS: legacy },
+      "@/lib/nusdMarketplaceInventory": { readNusdWalletListings: async (_client: unknown, _market: string, _nusd: string, tokens: { collection: string; tokenId: string; listing: unknown }[]) => {
+        assert.ok(tokens.every((token) => token.collection === v2 && token.listing === null));
+        return Object.fromEntries(tokens.map((token) => [`${token.collection}:${token.tokenId}`, { listingId: token.tokenId, price: (BigInt(token.tokenId) * 10n).toString() }]));
+      } },
       "@/lib/abi": { PixelNFTABI: [] },
       "@/lib/pixelV2Abi": { PixelV2ABI: [] },
       "@/lib/marketplaceSubgraph": { hasMarketplaceSubgraph: () => false },
@@ -142,8 +144,8 @@ test("large V2 wallet reads packed art in bounded ordered batches and forwards f
   assert.equal(body.tokens[44].name, "Art 45");
   assert.equal(body.tokens[44].imageUrl, getPixelImageUrl(45, v2));
   assert.deepEqual(body.tokens[44].listing, { listingId: "45", price: "450" });
-  assert.deepEqual(widths, [20, 20, 20, 20, 5, 5]);
-  assert.equal(peak, 2, "batch progression waits for both data and listing reads");
+  assert.deepEqual(widths, [20, 20, 5]);
+  assert.equal(peak, 1, "packed metadata progresses in bounded batches before NUSD mapping");
   assert.deepEqual(freshness, [true]);
   assert.match(response.headers.get("cache-control") ?? "", /no-store/);
 });

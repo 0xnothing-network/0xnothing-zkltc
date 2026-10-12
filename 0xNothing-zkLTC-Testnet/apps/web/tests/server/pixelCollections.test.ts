@@ -45,28 +45,34 @@ test("immutable pixel-image reads and cache arguments distinguish collection plu
   assert.equal((await route.GET(new Request(`https://app.test/api/pixel-image?tokenId=1&collection=${owner}`))).status, 400);
 });
 
-test("fresh legacy inventory still merges V2 RPC inventory with matching collection listing calls", async () => {
+test("V1 and V2 inventory merge only validated NUSD listings, discarding native index prices", async () => {
   const enumerated: string[] = [];
   const listed: string[] = [];
   const route = evaluateModule<{ GET: (request: Request) => Promise<Response> }>(new URL("../../app/api/user-nfts/route.ts", import.meta.url), {
     "next/server": { NextResponse: Response },
     "@/lib/contract": {
-      PIXEL_NFT_CONTRACT_ADDRESS: legacy, PIXEL_MARKETPLACE_ADDRESS: marketplace,
+      PIXEL_NFT_CONTRACT_ADDRESS: legacy,
       getUserTokenIds: async (_owner: string, collection: string) => { enumerated.push(collection); return [1n]; },
       publicClient: {
         getBlockNumber: async () => 100n,
         multicall: async ({ contracts }: { contracts: Array<{ functionName: string; args: unknown[] }> }) => contracts.map((contract) => {
           if (contract.functionName === "tokenPackedData") return { status: "success", result: ["V2 Art", "Description", 256n, "pixels", owner, 2n, ""] };
-          listed.push(String(contract.args[0]));
-          return { status: "success", result: [0n, { active: false }] };
+          throw new Error("Unexpected metadata read");
         }),
       },
     },
-    "@/lib/pixelImage": { getPixelImageUrl }, "@/lib/marketplaceAbi": { MarketplaceAbi: [] }, "@/lib/abi": { PixelNFTABI: [] },
+    "@/lib/pixelImage": { getPixelImageUrl }, "@/lib/abi": { PixelNFTABI: [] },
+    "@/lib/nusdMarketplaceConfig": { NUSD_MARKETPLACE_ADDRESS: marketplace, NFT_NUSD_ADDRESS: owner },
+    "@/lib/nusdMarketplaceInventory": { readNusdWalletListings: async (_client: unknown, market: string, _nusd: string, tokens: { collection: string; listing: unknown }[]) => {
+      assert.equal(market, marketplace);
+      assert.ok(tokens.every((token) => token.listing === null));
+      listed.push(...tokens.map((token) => token.collection));
+      return { [`${v2}:1`]: { listingId: "2", price: "1000000000000000000" } };
+    } },
     "@/lib/pixelV2Abi": { PixelV2ABI: [] },
     "@/lib/marketplaceSubgraph": {
       hasMarketplaceSubgraph: () => true,
-      fetchUserNftsFromSubgraph: async () => ({ tokens: [{ tokenId: "1", name: "Legacy Art", imageUrl: "old.svg", listing: null }], indexedBlock: 100, hasIndexingErrors: false }),
+      fetchUserNftsFromSubgraph: async () => ({ tokens: [{ tokenId: "1", name: "Legacy Art", imageUrl: "old.svg", listing: { listingId: "9", price: "900" } }], indexedBlock: 100, hasIndexingErrors: false }),
     },
     "@/lib/boundedCache": { createBoundedCache }, "@/lib/server/publicError": { publicErrorMessage: () => "unavailable" }, "@/lib/pixelCollections": collections,
   }, { URL, setTimeout, clearTimeout, console: quiet });
@@ -77,7 +83,9 @@ test("fresh legacy inventory still merges V2 RPC inventory with matching collect
   assert.deepEqual(body.tokens.map((nft: { collection: string }) => nft.collection), [legacy, v2]);
   assert.equal(body.tokens[1].imageUrl, getPixelImageUrl(1, v2));
   assert.deepEqual(enumerated, [v2]);
-  assert.deepEqual(listed, [v2]);
+  assert.deepEqual(listed, [legacy, v2]);
+  assert.equal(body.tokens[0].listing, null);
+  assert.deepEqual(body.tokens[1].listing, { listingId: "2", price: "1000000000000000000" });
 });
 
 test("metadata cache and RPC fallback isolate equal token IDs in legacy and V2", async () => {
@@ -106,10 +114,9 @@ test("metadata cache and RPC fallback isolate equal token IDs in legacy and V2",
   assert.equal(indexed, 1, "V2 never accepts the legacy-only index as its inventory");
 });
 
-test("marketplace RPC inventory and Pixel hydration keep both generations with equal token IDs", async () => {
+test("NUSD marketplace hydration keeps both NFT generations without native listings", async () => {
   let indexedListings = 0;
   const nftReads: string[] = [];
-  const listing = (id: bigint) => [id === 1n ? legacy : v2, 1n, 5n, owner, true];
   const route = evaluateModule<{ GET: (request: Request) => Promise<Response> }>(new URL("../../app/api/marketplace/listings/route.ts", import.meta.url), {
     "next/server": { NextResponse: Response },
     "@/lib/pixelCollections": collections,
@@ -118,16 +125,16 @@ test("marketplace RPC inventory and Pixel hydration keep both generations with e
       publicClient: {
         readContract: async () => [1n, 2n],
         multicall: async ({ contracts }: { contracts: Array<{ address: string; functionName: string; args: unknown[] }> }) => contracts.map((call) => {
-          const result = call.functionName === "listings" ? listing(call.args[0] as bigint)
-            : call.functionName === "ownerOf" ? owner
-              : call.functionName === "getApproved" ? marketplace
-                : call.functionName === "isApprovedForAll" ? false
-                  : (() => { nftReads.push(call.address); return [call.address === v2 ? "New Art" : "Legacy Art", 256n, "pixels", owner, 1n, ""]; })();
+          nftReads.push(call.address);
+          assert.equal(call.functionName, call.address === v2 ? "tokenPackedData" : "tokenData");
+          const result = call.address === v2 ? ["New Art", "", 256n, "pixels", owner, 1n, ""] : ["Legacy Art", 256n, "pixels", owner, 1n, ""];
           return { status: "success", result };
         }),
       },
     },
-    "@/lib/marketplaceAbi": { MarketplaceAbi: [], marketplaceNftKey: collections.pixelTokenKey }, "@/lib/abi": { PixelNFTABI: [] },
+    "@/lib/nusdMarketplaceConfig": { NUSD_MARKETPLACE_ADDRESS: marketplace, NFT_NUSD_ADDRESS: owner },
+    "@/lib/nusdMarketplace": { readNusdMarket: async () => ({ blockNumber: 100n, listingCount: 2n, listings: [legacy, v2].map((collection, index) => ({ id: BigInt(index + 1), collection, tokenId: 1n, price: 5n, seller: owner, active: true })) }) },
+    "@/lib/pixelV2Abi": { PixelV2ABI: [] }, "@/lib/abi": { PixelNFTABI: [] },
     "@/lib/pixelImage": { getPixelImageUrl },
     "@/lib/marketplaceSubgraph": {
       hasMarketplaceSubgraph: () => true,
@@ -141,6 +148,8 @@ test("marketplace RPC inventory and Pixel hydration keep both generations with e
   assert.equal(response.status, 200);
   const body = await response.json();
   assert.equal(body.listings.length, 2);
+  assert.equal(body.currency, "NUSD");
+  assert.equal(body.marketplace, marketplace);
   assert.equal(body.tokens[`${legacy}:1`].name, "Legacy Art");
   assert.equal(body.tokens[`${v2}:1`].name, "New Art");
   assert.notEqual(body.tokens[`${legacy}:1`].imageUrl, body.tokens[`${v2}:1`].imageUrl);
