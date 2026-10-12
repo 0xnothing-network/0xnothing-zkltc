@@ -81,9 +81,9 @@
 | Web production build | Build cuối sau sửa Explorer đạt **34/34** trang, lint/TypeScript trong build đạt |
 | Wallet tests / typecheck / build | **151/151 đạt**, TypeScript/build đạt |
 | Root tooling | **11/11 đạt** |
-| Testnet contracts | **96/96 đạt** (Foundry, bao gồm fuzz/invariants) |
-| Mainnet contracts | **72/72 đạt** (Foundry local) |
-| 0xFi contracts | **160/160 đạt**, size check đạt; warning timestamp hiện có không phải lỗi build |
+| Testnet contracts | **92/92 đạt** (Foundry, bao gồm fuzz/invariants) |
+| Mainnet contracts | **68/68 đạt** (Foundry local) |
+| 0xFi contracts | **151/151 đạt**, size check đạt; warning timestamp hiện có không phải lỗi build |
 | 0xFi scripts | Syntax **33** scripts đạt; **28/28** tests đạt |
 | Pixel subgraph | **8/8** tests và codegen/build đạt |
 | 0xFi subgraph | **22/22** tests và codegen/build đạt |
