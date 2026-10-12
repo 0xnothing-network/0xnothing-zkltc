@@ -1,14 +1,9 @@
 import type { Metadata } from "next";
-import dynamic from "next/dynamic";
 import { Providers } from "@/app/providers";
+import { LazyPixelMist } from "@/components/LazyPixelMist";
 import { FiHeader } from "@fi/components/FiHeader";
 import { ToastProvider } from "@fi/components/Toast";
 import "./globals.css";
-
-const PixelMist = dynamic(
-  () => import("@/components/PixelMist").then((module) => module.PixelMist),
-  { ssr: false },
-);
 
 export const metadata: Metadata = {
   title: { default: "0xFi | LitVM DeFi", template: "%s | 0xFi" },
@@ -19,7 +14,7 @@ export default function FiLayout({ children }: Readonly<{ children: React.ReactN
   return (
     <Providers withToast={false}>
       <div className="fi-root">
-        <PixelMist product="fi" />
+        <LazyPixelMist product="fi" />
         <ToastProvider>
           <div className="fi-shell">
             <FiHeader />
