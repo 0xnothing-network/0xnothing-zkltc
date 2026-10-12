@@ -17,7 +17,7 @@ These are release blockers, not values to guess around.
 - Review the deliberate `type(uint256).max` supply ceiling. There is no practical protocol-wide cap, but every mint requires a native zkLTC deposit whose current oracle value equals the NUSD issued.
 - Audit the Pump curve, reserve accounting, rounding, fee isolation, and the exact transition from a `1,500 NUSD` initial virtual market cap to the fixed `6,000 NUSD` READY market-cap target.
 - Audit the paid content-reservation flow end to end so one `1 NUSD` reservation authorizes only its owner and exact canonical metadata/logo hash.
-- Add reviewed oracle-deviation and value circuit breakers in addition to the independent mint and redeem pause domains.
+- Review and parameterize the DIAOracleAdapter price bounds and deviation breaker (implemented, admin-tunable) in addition to the independent mint and redeem pause domains.
 - Move ownership, pause, fee-recipient, and adapter-governance roles to a Safe multisig with a documented delay.
 - Add redundant RPC, paid IPFS pinning, durable upload rate limits, monitoring, and incident procedures.
 
@@ -68,7 +68,7 @@ that bound, plus the final stablecoin/route identity checks, only after the
 official interfaces are known. No placeholder or guessed address may satisfy a
 release gate.
 
-Graduation is submitted by the protocol Safe after the adapter is active. The Safe can pause curve trading before migration, while the router and adapter disable controls independently stop graduation. A failed attempt leaves the market in `READY`; until a graduation succeeds, a holder sell reopens the curve to `TRADING` instead of trapping reserves.
+Graduation is submitted by the protocol Safe after the adapter is active. The Safe can pause curve trading before migration, while the router and adapter disable controls independently stop graduation. Any account may also graduate once `permissionlessGraduationDelay` has elapsed. A failed attempt leaves the market in `READY`, where buys and sells are frozen; only after `readyExitDelay` can a holder sell reopen the curve to `TRADING` instead of trapping reserves.
 
 ## Phase 3: indexing and web release
 

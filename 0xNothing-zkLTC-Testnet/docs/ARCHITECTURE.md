@@ -59,9 +59,10 @@ manifest field gates the UI: for a `READY` market the client recomputes
 admin, Pump points at the pinned router, controller and router agree on the
 pinned adapter, the router's admin is the controller, `graduationsPaused` is
 false, `enabled` is true, and `isAdapterAllowed` is true.
-Holders retain an exit regardless: the first successful sell
-from `READY` atomically returns the market to `TRADING` and emits
-`TokenCurveReopened`.
+On the deployed Pump, holders retain an exit regardless: the first successful
+sell from `READY` atomically returns the market to `TRADING` and emits
+`TokenCurveReopened`. The current source freezes `READY` instead and only accepts
+that reopening sell after `readyExitDelay`.
 
 With that path live, anyone may ask the controller to graduate a READY
 market. It derives the exact terminal token/NUSD amounts, atomically prepares an

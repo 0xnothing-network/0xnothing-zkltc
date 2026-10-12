@@ -38,7 +38,9 @@ forge script script/DeployTestnet.s.sol:DeployTestnet --rpc-url $env:LITVM_RPC_U
 ```
 
 Required: `PRIVATE_KEY`. Optional settings are `PROTOCOL_ADMIN`,
-`DIA_LTC_USD_FEED`, `DIA_MAX_PRICE_AGE`, `GRADUATION_TIMELOCK`,
+`DIA_LTC_USD_FEED`, `DIA_MAX_PRICE_AGE` (default 60 minutes, at most 2 hours),
+`DIA_MIN_PRICE_WAD` (default `1e18`), `DIA_MAX_PRICE_WAD` (default `10_000e18`),
+`DIA_MAX_DEVIATION_BPS` (default `2000`), `GRADUATION_TIMELOCK`,
 `PUMP_TOKEN_TOTAL_SUPPLY`, and `NUSD_DEBT_CEILING`. The release curve fixes the
 initial virtual market cap at `1,500 NUSD` and the READY market-cap target at
 `6,000 NUSD`; they are not deployment-time environment overrides.
@@ -53,7 +55,9 @@ disabled with no adapter. The script deploys DIAOracleAdapter first and then
 OracleNUSD; it does not deploy NativeCollateralVault. OracleNUSD is passed to
 ZeroXPump as both its NUSD and vault address. When
 `PROTOCOL_ADMIN` differs from the deployer, the admin must call `acceptAdmin()`
-on the router before scheduling any future DEX adapter. Do not use `--broadcast`
+on the router and on DIAOracleAdapter before scheduling any future DEX adapter.
+The script calls `syncPrice()` once, so it fails fast if the feed is stale or out
+of bounds. Do not use `--broadcast`
 until the deployment phase has been explicitly approved.
 
 The initial deployment deliberately leaves liquidity migration unavailable. On
@@ -63,9 +67,11 @@ administration, so the controller path is active. The authoritative state is
 `pump.graduation` in `deployments/liteforge-testnet/deployments.json`: treat the
 path as live only while `enabled`, `adapterAllowed`, `controllerOwnsPumpAdmin`,
 `controllerOwnsRouterAdmin`, and `operational` are all true.
-Reaching a `6,000 NUSD` market cap moves a market to READY and pauses
-buys; while a market remains READY, holders may sell, atomically reopening the
-curve to TRADING.
+Reaching a `6,000 NUSD` market cap moves a market to READY. In the current
+source READY freezes buys and sells until graduation; sells reopen the curve only
+after `readyExitDelay`, and anyone may graduate after
+`permissionlessGraduationDelay`. The deployed testnet Pump predates this and
+still lets a READY sell reopen the curve.
 
 After an approved broadcast, preview authoritative receipt data with:
 

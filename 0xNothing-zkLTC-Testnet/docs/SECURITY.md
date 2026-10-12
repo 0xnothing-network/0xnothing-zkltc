@@ -12,6 +12,8 @@ This code is a testnet implementation, not an audit report.
 ## Oracle and stablecoin controls
 
 - Reject non-positive, incomplete, future-dated, and stale DIA rounds.
+- `DIAOracleAdapter` also rejects prices outside admin-set `minPriceWad`/`maxPriceWad` bounds and prices that move more than `maxDeviationBps` from the last synced anchor per `maxPriceAge` interval. The allowance grows with elapsed time, so a genuine large move self-heals without a keeper; anyone may call `syncPrice()` to advance the anchor and the admin may call `resetPriceAnchor()` to re-anchor immediately. The admin can only accept or reject feed prices, never supply one.
+- `maxPriceAge` is settable between 5 minutes and 2 hours. The LiteForge DIA feed publishes roughly every 50 minutes, so a value below about 60 minutes halts mint and redeem between updates. `answeredInRound` enforcement can be disabled by the admin if a feed stops populating it, so that field alone cannot permanently brick OracleNUSD.
 - Mint and redeem use the current DIA price with integer rounding and no protocol fee. Invalid oracle data stops both operations.
 - `mintPaused` and `redeemPaused` are independent incident controls. `coverReserve` and quote views remain available while paused.
 - The supply ceiling limits NUSD issuance, but it does not guarantee solvency. A zkLTC/USD price decline can make the native reserve worth less than outstanding NUSD, and redemptions can then exhaust the reserve.
@@ -28,8 +30,11 @@ This code is a testnet implementation, not an audit report.
   visible onchain.
 - Adding an adapter is delayed and visible onchain.
 - Only allowlisted adapter code may receive reserves.
-- A holder can sell from `READY`; that sell reopens the curve as `TRADING` so reserves are not indefinitely trapped while graduation is unavailable.
-- `graduateReady` is permissionless and cannot choose the adapter, pool, recipient, price, or liquidity amount. It reverts unless `graduationsPaused` is false, the router is enabled, and the pinned adapter is allowed. Only `governance` may unpause; the guardian and `governance` may call `emergencyPause`, which pauses graduations, pauses Pump, and disables the router in one call and cannot itself unpause. The Pump trade pause blocks create, buy, and sell, and the router and adapter disable controls independently stop graduation.
+- The LiteForge contracts deployed today predate the hardening below; their behavior changes only after an approved redeployment.
+- A `READY` market is frozen: buys and sells revert, so a dust sell can no longer push a ready market back to `TRADING`. Sells reopen the curve only after `readyExitDelay` (default 7 days, admin-settable between 1 and 30 days) so reserves are not trapped indefinitely if graduation never becomes available.
+- `ZeroXPump.graduate` is callable by the admin at any time and by any account once `permissionlessGraduationDelay` (default 1 hour, at most 1 day) has elapsed since `READY` while Pump is unpaused. The router still accepts only timelocked, allowlisted adapters, and the 0xFi adapter requires an empty pair and exact seeded reserves.
+- An optional launch cap limits each buy to `launchMaxBuyNusd` during the first `launchProtectionWindow` seconds (at most 1 hour) after creation. It is off by default and is a per-transaction cap only; it does not stop a sniper splitting buys across transactions or accounts.
+- `graduateReady` is permissionless and cannot choose the adapter, pool, recipient, price, or liquidity amount. It reverts unless `graduationsPaused` is false, the router is enabled, and the pinned adapter is allowed. Only `governance` may unpause; the guardian and `governance` may call `emergencyPause`, which pauses graduations, pauses Pump, and disables the router in one call and cannot itself unpause. The Pump pause blocks reservation, create, buy, and permissionless graduation but leaves sells open so holders can exit, and the router and adapter disable controls independently stop graduation.
 - Adapter failures revert graduation and leave the market in `READY` with its reserves intact.
 - Mainnet graduation additionally requires an audited NUSD-to-official-zkLTC-
   stablecoin conversion or bridge, a real major-DEX fork test, terminal-price

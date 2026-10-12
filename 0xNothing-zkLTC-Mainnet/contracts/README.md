@@ -38,9 +38,11 @@ forge script script/DeployMainnet.s.sol:DeployMainnet --rpc-url $env:MAINNET_RPC
 ```
 
 Required: `PRIVATE_KEY`, `DIA_LTC_USD_FEED`, `EXPECTED_MAINNET_CHAIN_ID`,
-and the explicit release gate
-`MAINNET_RELEASE_APPROVED=true`. Optional settings are
-`PROTOCOL_ADMIN`, `DIA_MAX_PRICE_AGE`, `GRADUATION_TIMELOCK`,
+the oracle policy `DIA_MAX_PRICE_AGE` (5 minutes to 2 hours),
+`DIA_MIN_PRICE_WAD`, `DIA_MAX_PRICE_WAD`, and `DIA_MAX_DEVIATION_BPS`, and the
+explicit release gate `MAINNET_RELEASE_APPROVED=true`. The oracle values have no
+defaults because they depend on the final feed's heartbeat. Optional settings are
+`PROTOCOL_ADMIN`, `GRADUATION_TIMELOCK`,
 and `PUMP_TOKEN_TOTAL_SUPPLY`. The release curve fixes the initial virtual
 market cap at `1,500 NUSD` and READY at a literal `6,000 NUSD` market cap.
 The deployment fixes `supplyCeilingNusd` to `type(uint256).max`, so there is no
@@ -57,12 +59,17 @@ bridge NUSD into the official zkLTC stablecoin before seeding the approved
 token/stablecoin pool on a major DEX. It must be implemented, audited,
 timelock-scheduled, and activated only after the official stablecoin, settlement
 route, DEX interface, and pool semantics are final. When `PROTOCOL_ADMIN` differs
-from the deployer, the admin must call `acceptAdmin()` on the router. Do not use
+from the deployer, the admin must call `acceptAdmin()` on the router and on
+DIAOracleAdapter. Do not use
 `--broadcast` until the deployment phase has been explicitly approved.
 
 Mainnet oracle release blocker: validate the final DIA feed, the maximum supply
-ceiling decision, price monitoring, and a deviation/value-bound policy before
-setting `MAINNET_RELEASE_APPROVED=true`. OracleNUSD has independent mint and
+ceiling decision, price monitoring, and the adapter's bound/deviation values
+before setting `MAINNET_RELEASE_APPROVED=true`. DIAOracleAdapter rejects prices
+outside `[minPriceWad, maxPriceWad]` and moves larger than `maxDeviationBps` per
+`maxPriceAge` interval from the last synced anchor; the allowance grows with
+elapsed time so a real move self-heals, and the admin can re-anchor with
+`resetPriceAnchor()` but can never supply a price. OracleNUSD has independent mint and
 redeem pause controls, and anyone can add native backing through `coverReserve`.
 This model is not overcollateralized: if zkLTC falls after NUSD is minted, the
 reserve's current USD value can fall below the NUSD supply and full redemption
@@ -71,12 +78,13 @@ affected redemption until backing is added; it is not automatically socialized
 or liquidated. This behavior and the single-feed policy require an explicit
 production decision and audit.
 
-Graduation is admin/multisig-triggered, not permissionless. The Pump pause stops
-market creation and curve trades; the router enable/adapter controls are the
-separate graduation emergency domain. An admin can pause trading and then
-graduate a READY market. While a market remains READY, holders may sell; that
-atomically reopens the curve to TRADING and prevents funds being locked while no
-DEX path is available.
+The admin may graduate a READY market at any time; any account may graduate it
+once `permissionlessGraduationDelay` has elapsed while Pump is unpaused. The
+Pump pause stops reservation, creation, buys, and permissionless graduation but
+not sells; the router enable/adapter controls are the separate graduation
+emergency domain. A READY market rejects buys and sells, so a dust sell cannot
+reopen it; sells reopen the curve only after `readyExitDelay` so funds are not
+locked indefinitely while no DEX path is available.
 
 The current router requires synchronous same-transaction settlement and checks
 an ERC-20 LP-token balance before transferring it to the permanent locker. An
