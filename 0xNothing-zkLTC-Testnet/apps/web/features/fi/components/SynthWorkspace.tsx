@@ -274,7 +274,14 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
         address: vault,
         abi: synthVaultAbi,
         functionName: "repayAndWithdraw",
-        args: [maxUint256, maxUint256, address] as const,
+        // Live vaults reject a max-uint withdraw as InvalidAmount. Repay max
+        // (or 0 when already debt-free) then the exact stored user NUSD. The
+        // upgraded vault also accepts max-uint collateral as "all safe after repay".
+        args: [
+          synthDebt && synthDebt > 0n ? maxUint256 : 0n,
+          userCollateral ?? 0n,
+          address,
+        ] as const,
       },
     });
     if (hash) {
