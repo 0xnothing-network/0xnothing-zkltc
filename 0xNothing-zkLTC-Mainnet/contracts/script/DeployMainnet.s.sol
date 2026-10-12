@@ -204,8 +204,9 @@ contract DeployMainnet {
         uint256 maxDeviationBps
     ) public pure {
         if (
-            maxPriceAge < 5 minutes || maxPriceAge > 2 hours || minPriceWad < 0.01 ether
-                || maxPriceWad > 1_000_000 ether || minPriceWad >= maxPriceWad || maxDeviationBps > 10_000
+            maxPriceAge < 5 minutes || maxPriceAge > 2 hours || minPriceWad < 0.01 ether || minPriceWad > 1_000 ether
+                || maxPriceWad < 1 ether || maxPriceWad > 1_000_000 ether || minPriceWad >= maxPriceWad
+                || maxDeviationBps == 0 || maxDeviationBps > 10_000
         ) revert InvalidOracleParameters();
     }
 

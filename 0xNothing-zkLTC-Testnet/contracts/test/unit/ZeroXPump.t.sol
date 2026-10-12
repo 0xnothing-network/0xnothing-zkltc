@@ -348,7 +348,7 @@ contract ZeroXPumpTest is TestBase {
         router.activateAdapter(address(adapter));
         router.enableRouter();
 
-        vm.expectRevert(ZeroXPump.InvalidAmount.selector);
+        vm.expectRevert(ZeroXPump.GraduationDisabled.selector);
         pump.graduate(token, address(adapter), 1, type(uint256).max);
 
         pump.setGraduationAdapter(address(adapter));
@@ -464,13 +464,45 @@ contract ZeroXPumpTest is TestBase {
         uint256 received = pump.sell(token, slice, 0, deadline);
         assertGt(received, 0, "sell after expiry");
 
+        vm.expectRevert(ZeroXPump.SellPauseCooldown.selector);
         pump.setSellPause(1 hours);
-        assertTrue(pump.sellsPaused(), "halted again");
+        vm.warp(until + 72 hours);
+        pump.setSellPause(1 hours);
+        assertTrue(pump.sellsPaused(), "halted after cooldown");
         pump.setSellPause(0);
         assertFalse(pump.sellsPaused(), "cleared");
         assertEq(pump.sellPausedUntil(), 0, "until cleared");
         vm.prank(TRADER);
         pump.sell(token, slice, 0, deadline);
+    }
+
+    function testSellPauseCannotBeRenewedUntilCooldown() public {
+        address token = _createMarket();
+        uint256 deadline = type(uint256).max;
+        vm.prank(TRADER);
+        (uint256 bought,) = pump.buy(token, 10 ether, 0, deadline);
+        vm.prank(TRADER);
+        PumpToken(token).approve(address(pump), bought);
+
+        pump.setSellPause(1 hours);
+        uint256 until = pump.sellPausedUntil();
+        uint256 readyAt = pump.sellPauseReadyAt();
+        assertEq(readyAt, until + 72 hours, "cooldown from expiry");
+
+        vm.expectRevert(ZeroXPump.SellPauseCooldown.selector);
+        pump.setSellPause(1 hours);
+        pump.setSellPause(0);
+        assertFalse(pump.sellsPaused(), "early lift");
+        assertEq(pump.sellPauseReadyAt(), readyAt, "early lift keeps cooldown");
+        vm.expectRevert(ZeroXPump.SellPauseCooldown.selector);
+        pump.setSellPause(1 hours);
+
+        vm.prank(TRADER);
+        pump.sell(token, bought / 10, 0, deadline);
+
+        vm.warp(readyAt);
+        pump.setSellPause(1 hours);
+        assertTrue(pump.sellsPaused(), "armed after cooldown");
     }
 
     function testLaunchProtectionIsOffByDefault() public {
@@ -657,7 +689,7 @@ contract ZeroXPumpTest is TestBase {
 
         vm.prank(TRADER);
         pump.buy(token, 50_000 ether, 0, block.timestamp);
-        vm.expectRevert(ZeroXPump.InvalidAmount.selector);
+        vm.expectRevert(ZeroXPump.GraduationDisabled.selector);
         pump.graduate(token, address(adapter), 1, block.timestamp);
         assertEq(pump.curveProgressBps(token), 10_000, "full progress");
     }

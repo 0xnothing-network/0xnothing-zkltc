@@ -23,6 +23,8 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
     error SlippageExceeded();
     error ContractPaused();
     error SellsPaused();
+    error SellPauseCooldown();
+    error GraduationDisabled();
     error AssetTransferMismatch();
     error InsufficientProtocolFees();
     error InvalidCommitment();
@@ -40,6 +42,7 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
     uint256 public constant MAX_READY_EXIT_DELAY = 3 days;
     uint256 public constant MAX_LAUNCH_PROTECTION_WINDOW = 1 hours;
     uint256 public constant MAX_SELL_PAUSE = 24 hours;
+    uint256 public constant SELL_PAUSE_COOLDOWN = 72 hours;
     uint256 public constant MINIMUM_LIQUIDITY = 1_000;
     uint256 public constant GRADUATION_SLIPPAGE_BPS = 100;
 
@@ -117,6 +120,8 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
     bool public paused;
     /// @notice Exclusive timestamp until which sells are halted. Zero means sells are open. Auto-expires.
     uint256 public sellPausedUntil;
+    /// @notice Earliest time a new sell pause may be armed. Prevents rolling 24h pauses into a perpetual lock.
+    uint256 public sellPauseReadyAt;
 
     /// @notice Timestamp at which each market last entered READY.
     mapping(address => uint256) public readyAt;
@@ -325,7 +330,8 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
 
     /// @notice Sells stay available while `paused` so holders can always exit a TRADING curve. A READY market
     ///         is frozen for graduation only while graduation is possible, and then only until `readyExitDelay`.
-    ///         The separate emergency `sellPause` can halt sells for at most `MAX_SELL_PAUSE` and auto-expires.
+    ///         The separate emergency `sellPause` can halt sells for at most `MAX_SELL_PAUSE` and auto-expires;
+    ///         a new halt cannot start until `SELL_PAUSE_COOLDOWN` after that expiry.
     function sell(address token, uint256 tokenIn, uint256 minNusdOut, uint256 deadline)
         external
         nonReentrant
@@ -366,10 +372,12 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
         }
     }
 
-    /// @notice Graduates a READY market through the configured adapter. Caller `adapter` and `minimumLp` are
-    ///         ignored: the Pump uses `graduationAdapter` and an on-chain UniV2 minLP with `GRADUATION_SLIPPAGE_BPS`.
-    ///         Pause blocks every caller, including the admin. Non-admin callers still wait for
-    ///         `permissionlessGraduationDelay`.
+    /// @notice Graduates a READY market through the configured adapter. Reverts `GraduationDisabled` until the
+    ///         admin sets `graduationAdapter`. Caller `adapter` and `minimumLp` are ignored. Pause blocks every
+    ///         caller, including the admin. Non-admin callers still wait for `permissionlessGraduationDelay`.
+    /// @dev The on-chain UniV2 minLP (`sqrt(token*nusd) - MINIMUM_LIQUIDITY` with `GRADUATION_SLIPPAGE_BPS` slack)
+    ///      assumes a fresh empty pair. A pre-created or skewed pool can DoS graduation or allow ~1% extraction
+    ///      (known issue R-1). Leave `graduationAdapter` unset until a reserve-aware adapter is reviewed.
     function graduate(address token, address adapter, uint256 minimumLp, uint256 deadline)
         external
         nonReentrant
@@ -384,7 +392,7 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
         }
 
         adapter = graduationAdapter;
-        if (adapter == address(0)) revert InvalidAmount();
+        if (adapter == address(0)) revert GraduationDisabled();
 
         uint256 nusdLiquidity = market.realNusdReserve;
         uint256 priceWad = _spotPrice(market);
@@ -441,12 +449,20 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
         emit PauseUpdated(newPaused);
     }
 
-    /// @notice Emergency sell halt. `durationSeconds == 0` clears it; otherwise sells are blocked until
-    ///         `block.timestamp + durationSeconds`, at most `MAX_SELL_PAUSE` (24 hours). The halt expires
-    ///         automatically with no keeper.
+    /// @notice Emergency sell halt. `durationSeconds == 0` clears an active halt. Otherwise sells are blocked
+    ///         until `block.timestamp + durationSeconds`, at most `MAX_SELL_PAUSE` (24 hours). After a halt is
+    ///         armed, a new one cannot start until `SELL_PAUSE_COOLDOWN` (72 hours) after that halt's expiry.
+    ///         Early lift does not shorten the cooldown. The halt expires automatically with no keeper.
     function setSellPause(uint256 durationSeconds) external onlyAdmin {
         if (durationSeconds > MAX_SELL_PAUSE) revert InvalidConfiguration();
-        sellPausedUntil = durationSeconds == 0 ? 0 : block.timestamp + durationSeconds;
+        if (durationSeconds == 0) {
+            sellPausedUntil = 0;
+            emit SellPauseUpdated(0, 0);
+            return;
+        }
+        if (block.timestamp < sellPauseReadyAt) revert SellPauseCooldown();
+        sellPausedUntil = block.timestamp + durationSeconds;
+        sellPauseReadyAt = sellPausedUntil + SELL_PAUSE_COOLDOWN;
         emit SellPauseUpdated(sellPausedUntil, durationSeconds);
     }
 
@@ -551,6 +567,7 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
     }
 
     /// @notice UniV2-style LP the Pump will require, after `GRADUATION_SLIPPAGE_BPS`.
+    /// @dev Assumes a fresh pair (R-1). Do not treat this as safe against a pre-existing or skewed pool.
     function graduationMinimumLp(uint256 tokenLiquidity, uint256 nusdLiquidity)
         public
         pure

@@ -40,7 +40,7 @@ prediction-only and must not be used as a subgraph start block. Copy
 | `DIA_MAX_PRICE_AGE` | no | `3600` (60 min) | Oracle staleness window in seconds. On-chain cap is 300–7200. The live feed publishes about every 50 minutes; values below 3600 halt mint/redeem between updates. |
 | `DIA_MIN_PRICE_WAD` | no | `1e18` (1 USD) | Inclusive minimum accepted LTC/USD. |
 | `DIA_MAX_PRICE_WAD` | no | `10000e18` | Inclusive maximum accepted LTC/USD. |
-| `DIA_MAX_DEVIATION_BPS` | no | `2000` | Max move per `maxPriceAge` vs the last synced anchor, capped at three intervals. `0` disables. The script rejects ages outside 300–7200s, min below `0.01e18`, max above `1_000_000e18`, inverted bounds, and deviation above 10_000 bps. |
+| `DIA_MAX_DEVIATION_BPS` | no | `2000` | Max move per `maxPriceAge` vs the last synced anchor, capped at three intervals. The script requires deviation in 1–10_000 bps (zero would disable the breaker), `minPriceWad` in `0.01e18`–`1000e18`, `maxPriceWad` in `1e18`–`1_000_000e18`, min `<` max, and ages 300–7200s. |
 | `GRADUATION_TIMELOCK` | no | `172800` (2 days) | `GraduationRouter.minimumDelay`. |
 | `PUMP_TOKEN_TOTAL_SUPPLY` | no | `1_000_000_000e18` | Fixed supply of every Pump token. |
 | `NUSD_DEBT_CEILING` | no | `1_000_000e18` | Passed to `OracleNUSD.supplyCeilingNusd`. |

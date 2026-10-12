@@ -47,8 +47,9 @@ the oracle policy `DIA_MAX_PRICE_AGE` (5 minutes to 2 hours),
 `DIA_MIN_PRICE_WAD`, `DIA_MAX_PRICE_WAD`, and `DIA_MAX_DEVIATION_BPS`, and the
 explicit release gate `MAINNET_RELEASE_APPROVED=true`. The oracle values have no
 defaults because they depend on the final feed's heartbeat. The script rejects
-ages outside 300–7200s, min below `0.01e18`, max above `1_000_000e18`, inverted
-bounds, and deviation above 10_000 bps. Optional settings are `PROTOCOL_ADMIN`,
+ages outside 300–7200s, `minPriceWad` outside `0.01e18`–`1000e18`, `maxPriceWad`
+outside `1e18`–`1_000_000e18`, inverted bounds, or deviation `0` / above 10_000 bps.
+Optional settings are `PROTOCOL_ADMIN`,
 `GRADUATION_TIMELOCK`, `PUMP_TOKEN_TOTAL_SUPPLY`, `LAUNCH_PROTECTION_WINDOW`
 (default 15 minutes), and `LAUNCH_MAX_BUY_NUSD` (default 50 NUSD, cumulative per
 buyer). The release curve fixes the initial virtual

@@ -28,6 +28,12 @@ contract DeployParametersTest is TestBase {
         script.validateOracleParameters(3600, 10_000 ether, 10_000 ether, 2_000);
         vm.expectRevert(DeployTestnet.InvalidOracleParameters.selector);
         script.validateOracleParameters(3600, 1 ether, 10_000 ether, 10_001);
+        vm.expectRevert(DeployTestnet.InvalidOracleParameters.selector);
+        script.validateOracleParameters(3600, 1 ether, 10_000 ether, 0);
+        vm.expectRevert(DeployTestnet.InvalidOracleParameters.selector);
+        script.validateOracleParameters(3600, 1_000 ether + 1, 10_000 ether, 2_000);
+        vm.expectRevert(DeployTestnet.InvalidOracleParameters.selector);
+        script.validateOracleParameters(3600, 0.01 ether, 1 ether - 1, 2_000);
     }
 
     function testLaunchProtectionDefaultIsAccepted() public view {
