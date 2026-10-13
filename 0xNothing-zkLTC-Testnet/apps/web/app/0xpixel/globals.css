@@ -5,8 +5,7 @@
  */
 
 /* Buttons */
-:where(.pixel-product) .pixel-btn,
-:where(.pixel-product) .pixel-btn-soft {
+:where(.pixel-product) .pixel-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -23,22 +22,22 @@
   user-select: none;
   transition: background-color 160ms var(--ease), border-color 160ms var(--ease), filter 160ms var(--ease), transform 120ms var(--ease);
 }
-:where(.pixel-product) :is(.pixel-btn, .pixel-btn-soft):hover:not(:disabled) { border-color: var(--text-3); }
-:where(.pixel-product) :is(.pixel-btn, .pixel-btn-soft):active:not(:disabled) { transform: scale(.98); }
-:where(.pixel-product) :is(.pixel-btn, .pixel-btn-soft):disabled {
+:where(.pixel-product) :is(.pixel-btn):hover:not(:disabled) { border-color: var(--text-3); }
+:where(.pixel-product) :is(.pixel-btn):active:not(:disabled) { transform: scale(.98); }
+:where(.pixel-product) :is(.pixel-btn):disabled {
   border-color: var(--line);
   background: var(--surface-2);
   color: var(--text-3);
   box-shadow: none;
   cursor: not-allowed;
 }
-:where(.pixel-product) :is(.pixel-btn-indigo, .pixel-btn-emerald, .pixel-btn-soft-indigo):not(:disabled) {
+:where(.pixel-product) :is(.pixel-btn-indigo, .pixel-btn-emerald):not(:disabled) {
   border-color: transparent;
   background: var(--accent);
   color: var(--accent-ink);
 }
-:where(.pixel-product) :is(.pixel-btn-indigo, .pixel-btn-emerald, .pixel-btn-soft-indigo):hover:not(:disabled) { filter: brightness(1.06); }
-:where(.pixel-product) :is(.pixel-btn-amber, .pixel-btn-soft-amber):not(:disabled) {
+:where(.pixel-product) :is(.pixel-btn-indigo, .pixel-btn-emerald):hover:not(:disabled) { filter: brightness(1.06); }
+:where(.pixel-product) :is(.pixel-btn-amber):not(:disabled) {
   border-color: transparent;
   background: var(--warning);
   color: #1a1204;
@@ -49,15 +48,15 @@
   color: var(--negative);
 }
 :where(.pixel-product) .pixel-btn-secondary { background: transparent; }
-:where(.pixel-product) :is(.pixel-btn-sm, .pixel-btn-soft-sm) { min-height: 34px; padding: 0 12px; font-size: 13px; border-radius: var(--r-sm); }
+:where(.pixel-product) :is(.pixel-btn-sm) { min-height: 34px; padding: 0 12px; font-size: 13px; border-radius: var(--r-sm); }
 :where(.pixel-product) .pixel-btn-icon { width: 40px; padding: 0; }
-:where(.pixel-product) a:is(.pixel-btn, .pixel-btn-soft) { text-decoration: none; }
+:where(.pixel-product) a:is(.pixel-btn) { text-decoration: none; }
 
 /* Surfaces (the shared skin adds border, radius and elevation). */
 :where(.pixel-product) .pixel-panel { background: var(--surface-1); color: var(--text-1); }
 :where(.pixel-product) .pixel-panel :is(h2, h3) { color: var(--text-1); }
 :where(.pixel-product) .nft-card { background: var(--surface-1); color: var(--text-1); content-visibility: auto; }
-:where(.pixel-product) .marketplace-activity-row { content-visibility: auto; contain-intrinsic-size: 80px; }
+
 :where(.pixel-product) .pixel-art { image-rendering: pixelated; }
 
 /* Loading states */
@@ -71,7 +70,7 @@
   border-radius: var(--r-md);
   background: var(--surface-2);
 }
-:where(.pixel-product) .pixel-spin { animation: pixel-spin .6s linear infinite; }
+
 @keyframes pixel-spin { to { transform: rotate(360deg); } }
 
 /* Drawing canvas: a quiet grid on the inset surface. */

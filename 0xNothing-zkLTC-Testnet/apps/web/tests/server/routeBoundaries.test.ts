@@ -93,7 +93,6 @@ test("marketplace uses verified RPC metadata when indexed metadata has no image"
       "@/lib/pixelImage": { getPixelImageUrl: (tokenId: string) => `/api/pixel-image?tokenId=${tokenId}` },
       "@/lib/marketplaceSubgraph": {
         hasMarketplaceSubgraph: () => true,
-        fetchAllMarketplaceListingsFromSubgraph: async () => [{ listingId: "1", collection, tokenId: "1", price: "5", seller, active: true }],
         fetchTokenMetadataFromSubgraph: async () => ({ "1": { tokenId: "1", name: "Incomplete index", imageUrl: "", creator: seller, mintedAt: 0 } }),
       },
       "@/lib/erc721Metadata.server": { fetchValidatedErc721Metadata: async () => ({}) },

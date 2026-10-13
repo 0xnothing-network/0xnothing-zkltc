@@ -110,15 +110,6 @@ export const MarketplaceAbi = [
   },
 ] as const;
 
-export interface RawListing {
-  listingId: bigint;
-  collection: `0x${string}`;
-  tokenId: bigint;
-  price: bigint;
-  seller: `0x${string}`;
-  active: boolean;
-}
-
 export function marketplaceNftKey(
   collection: string,
   tokenId: string | bigint,

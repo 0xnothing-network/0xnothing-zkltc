@@ -31,9 +31,9 @@
 .pixel-product .pixel-generator-panel textarea { min-height: 100px; padding: 12px; font-size: 13px; line-height: 1.6; }
 
 /* Collection and market pages */
-.pixel-product :is(.pixel-collection-page, .pixel-market-page) { max-width: 1440px; padding-top: 40px; padding-bottom: 64px; }
+.pixel-product :is(.pixel-collection-page) { max-width: 1440px; padding-top: 40px; padding-bottom: 64px; }
 .pixel-product .pixel-collection-heading { padding-bottom: 24px; margin-bottom: 24px; }
-.pixel-product :is(.pixel-collection-empty, .pixel-market-page .text-center.py-20) {
+.pixel-product :is(.pixel-collection-empty) {
   min-height: 320px;
   display: flex;
   flex-direction: column;
@@ -42,12 +42,12 @@
   padding: 48px 24px;
   border-style: dashed !important;
 }
-.pixel-product :is(.nft-grid, .pixel-market-grid) { gap: 20px; }
+.pixel-product :is(.nft-grid) { gap: 20px; }
 .pixel-product .nft-card { overflow: hidden; }
 .pixel-product .nft-card > a:first-child { padding: 12px; background: var(--surface-2); }
 .pixel-product .nft-card > div:last-child { padding: 18px; border-top: 1px solid var(--line); }
 .pixel-product .nft-card img { border-radius: var(--r-sm); }
-.pixel-product .marketplace-activity-row { padding-block: 16px; border-color: var(--line); background: var(--surface-1); border-radius: var(--r-md); }
+
 .pixel-product footer { margin-top: 0; padding-block: 24px; border-top: 1px solid var(--line); background: var(--bg); }
 
 @media (min-width: 768px) and (max-width: 1199px) {
@@ -67,8 +67,8 @@
   .pixel-product .pixel-studio-intro-inner { padding-block: 22px; }
   .pixel-product .pixel-workspace-grid { gap: 14px; }
   .pixel-product .pixel-drawing-column { padding: 10px; }
-  .pixel-product :is(.pixel-collection-page, .pixel-market-page) { padding-top: 28px; }
-  .pixel-product :is(.nft-grid, .pixel-market-grid) { gap: 10px; }
+  .pixel-product :is(.pixel-collection-page) { padding-top: 28px; }
+  .pixel-product :is(.nft-grid) { gap: 10px; }
   .pixel-product .nft-card > a:first-child { padding: 6px; }
   .pixel-product .nft-card > div:last-child { padding: 12px; }
   .pixel-product .pixel-collection-heading { padding-bottom: 20px; margin-bottom: 20px; }

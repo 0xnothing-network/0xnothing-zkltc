@@ -1,16 +1,5 @@
 /* Signature components (components/Signature.tsx). */
 
-/* Pixel progress: square cells, filled cells use the product accent. */
-.ox-pixel-progress {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  gap: 2px;
-  height: 10px;
-}
-.ox-pixel-progress i { border-radius: 1px; background: var(--surface-3); }
-.ox-pixel-progress i[data-on] { background: var(--accent); }
-
 /* Health gauge */
 .ox-health-gauge { display: grid; justify-items: center; gap: 2px; margin: 4px 0 0; }
 .ox-health-gauge svg { width: min(100%, 200px); overflow: visible; }

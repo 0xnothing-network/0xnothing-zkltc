@@ -79,7 +79,6 @@
 }
 
 .headerActions,
-.inlineActions,
 .stackActions {
   display: flex;
   align-items: center;
@@ -300,14 +299,6 @@
   box-shadow: 0 0 0 3px rgba(211, 220, 231, 0.11);
 }
 
-.statusBad .statusDot {
-  background: var(--text-2);
-}
-
-.statusWarn .statusDot {
-  background: var(--text-1);
-}
-
 .formCard {
   display: grid;
   gap: 17px;
@@ -412,22 +403,10 @@
   opacity: 0.5;
 }
 
-.buttonSecondary {
-  border-color: rgba(215, 224, 235, 0.15);
-  background: transparent;
-  color: rgba(215, 224, 235, 0.72);
-}
-
 .buttonDanger {
   border-color: rgba(255, 178, 157, 0.35);
   background: rgba(255, 106, 82, 0.08);
   color: var(--text-2);
-}
-
-.buttonRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .empty {
@@ -577,7 +556,7 @@
 .field input, .field select { min-height: 46px; transition: border-color 120ms steps(2, end), box-shadow 120ms steps(2, end); }
 .field select { appearance: auto; }
 .button { font-size: 12px; min-height: 44px; font-weight: 600; }
-.buttonSecondary { background: var(--surface-2); }
+
 .buttonDanger:hover:not(:disabled) { background: rgba(255, 106, 82, .15); border-color: var(--text-2); }
 .empty { border-radius: var(--r-md); background: var(--surface-2); padding: 26px; }
 .empty p, .checkbox { font-size: 13px; }
@@ -597,7 +576,7 @@
 .button { border-color: var(--line-strong); background: var(--surface-2); box-shadow: var(--e-2); font-size: 12px; }
 .button:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: var(--e-2); }
 .button:disabled { box-shadow: none; }
-.buttonSecondary { background: var(--surface-2); }
+
 .buttonDanger { border-color: var(--line-strong); background: var(--surface-2); color: var(--text-2); }
 .field label, .eyebrow, .meta, .cardTop { font-size: 12px; }
 .field input, .field select { min-height: 44px; font-size: 14px; }

@@ -38,7 +38,6 @@ test("server-side upstream JSON consumers retain explicit byte limits", () => {
     "../../features/fi/lib/server/goldsky.ts",
     "../../features/pump/server/graph.ts",
     "../../lib/marketplaceSubgraph.ts",
-    "../../lib/onchainMarketplace.ts",
   ]) {
     const source = readFileSync(new URL(path, import.meta.url), "utf8");
     assert.match(source, /readLimitedJson/u, path);

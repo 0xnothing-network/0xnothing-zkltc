@@ -3,18 +3,6 @@
  * They read the product accent and shared status colours from tokens.css.
  */
 
-/** Pixel-cell progress bar. `value` is clamped to 0–1; cells fill left to right. */
-export function PixelProgress({ value, cells = 32, label, className = "" }: { value: number; cells?: number; label: string; className?: string }) {
-  const clamped = Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
-  const filled = Math.round(clamped * cells);
-  return (
-    <div className={`ox-pixel-progress ${className}`.trim()} role="progressbar" aria-label={label}
-      aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(clamped * 100)}>
-      {Array.from({ length: cells }, (_, index) => <i key={index} data-on={index < filled ? "" : undefined} />)}
-    </div>
-  );
-}
-
 /**
  * Semicircular health gauge. `risk` is the position's distance to liquidation
  * on a 0–1 scale (0 = no debt, 1 = liquidation threshold reached); zones switch

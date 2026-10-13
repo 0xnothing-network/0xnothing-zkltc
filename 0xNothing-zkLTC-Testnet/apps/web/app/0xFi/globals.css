@@ -91,7 +91,7 @@
 }
 
 /* Inset rings stay visible inside the terminal's clipped control groups. */
-.fi-root :is(.fi-wallet-menu, .fi-segmented, .fi-mobile-dock) :is(a, button):focus-visible,
+.fi-root :is( .fi-segmented, .fi-mobile-dock) :is(a, button):focus-visible,
 .fi-root :is(.fi-settings-details, .fi-pool-details, .fi-points-program-details, .fi-chart-a11y) > summary:focus-visible,
 .fi-root .fi-swap-asset-trigger:focus-visible {
   outline-offset: -3px;
@@ -111,230 +111,6 @@
 
 #fi-main:focus {
   outline: none;
-}
-
-.fi-header {
-  position: sticky;
-  z-index: var(--fi-layer-header);
-  top: 0;
-  border-bottom: 1px solid var(--fi-line-strong);
-  background: var(--fi-bg);
-  box-shadow: 0 2px 0 var(--bg);
-  backdrop-filter: none;
-}
-
-.fi-header-inner {
-  display: grid;
-  grid-template-columns: auto minmax(380px, 1fr) auto auto;
-  align-items: center;
-  gap: 18px;
-  width: calc(100% - 48px);
-  max-width: var(--fi-content);
-  min-height: var(--fi-header-height);
-  margin: 0 auto;
-}
-
-.fi-wordmark {
-  display: inline-flex;
-  min-height: var(--fi-control-height);
-  align-items: center;
-  margin-left: -4px;
-  padding: 0 4px;
-  color: var(--fi-text);
-  font-size: 24px;
-  font-weight: 400;
-  letter-spacing: -0.05em;
-}
-
-.fi-wordmark span {
-  color: var(--accent-text);
-}
-
-.fi-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-
-.fi-nav a,
-.fi-nav-mobile a {
-  position: relative;
-  display: inline-flex;
-  min-height: 40px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px solid transparent;
-  padding: 0 12px;
-  color: var(--fi-muted);
-  font-size: var(--fi-text-label);
-  font-weight: 400;
-  letter-spacing: 0;
-  transition: border-color 100ms steps(2, end), background-color 100ms steps(2, end), color 100ms steps(2, end);
-  border-radius: var(--r-md);
-}
-
-.fi-nav a:hover,
-.fi-nav-mobile a:hover {
-  border-color: var(--fi-line);
-  background: var(--fi-panel);
-  color: var(--fi-text);
-}
-
-.fi-nav a.active,
-.fi-nav-mobile a.active {
-  border-color: var(--fi-line-strong);
-  background: var(--fi-panel);
-  color: var(--accent-text);
-}
-
-.fi-nav a.active::after,
-.fi-nav-mobile a.active::after {
-  content: "";
-  position: absolute;
-  right: 12px;
-  bottom: 4px;
-  left: 12px;
-  height: 2px;
-  background: var(--accent);
-  border-radius: var(--r-md);
-}
-
-.fi-header-balances {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(92px, 1fr));
-  min-height: 40px;
-  overflow: hidden;
-  border: 1px solid var(--fi-line-strong);
-  background: var(--fi-input);
-  border-radius: var(--r-md);
-}
-
-.fi-header-balances > div {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 10px;
-}
-
-.fi-header-balances > div + div {
-  border-left: 1px solid var(--fi-line);
-}
-
-.fi-header-balances span {
-  color: var(--fi-muted);
-  font-size: var(--fi-text-label);
-  letter-spacing: 0;
-}
-
-.fi-header-balances strong {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--accent-text);
-  font-size: var(--fi-text-body);
-  font-weight: 400;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-@media (min-width: 1181px) {
-  .fi-wordmark { grid-column: 1; }
-  .fi-nav-desktop { grid-column: 2; }
-  .fi-header-balances { grid-column: 3; }
-  .fi-wallet-actions { grid-column: 4; }
-}
-
-.fi-wallet-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.fi-wallet-menu-wrap {
-  position: relative;
-}
-
-.fi-wallet-menu {
-  position: absolute;
-  z-index: var(--fi-layer-menu);
-  top: calc(100% + 9px);
-  right: 0;
-  display: grid;
-  width: 224px;
-  max-width: calc(100vw - 24px);
-  max-height: calc(100dvh - 160px - env(safe-area-inset-bottom));
-  border: 1px solid var(--fi-line-strong);
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-  background: var(--fi-panel);
-  box-shadow: var(--e-2);
-  border-radius: var(--r-md);
-  padding: 4px;
-}
-
-.fi-wallet-menu-summary {
-  display: grid;
-  gap: 5px;
-  border-bottom: 1px solid var(--fi-line);
-  padding: 13px;
-}
-
-.fi-wallet-menu-summary span {
-  color: var(--fi-muted);
-  font-size: var(--fi-text-label);
-  letter-spacing: 0;
-}
-
-.fi-wallet-menu-summary strong {
-  font-size: var(--fi-text-body);
-  font-weight: 400;
-}
-
-.fi-wallet-menu button,
-.fi-wallet-menu a {
-  display: flex;
-  min-height: var(--fi-control-height);
-  align-items: center;
-  gap: 9px;
-  border: 0;
-  border-bottom: 1px solid var(--fi-line);
-  padding: 0 13px;
-  background: transparent;
-  color: var(--fi-text);
-  font-size: var(--fi-text-label);
-  letter-spacing: 0;
-  text-align: left;
-}
-
-.fi-wallet-menu button:hover,
-.fi-wallet-menu a:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.fi-wallet-menu .danger {
-  border-bottom: 0;
-  color: var(--negative);
-}
-
-.fi-wallet-button > span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.fi-wallet-button > svg {
-  flex: none;
-}
-
-.fi-icon-button.fi-mobile-menu-button,
-.fi-nav-mobile {
-  display: none;
 }
 
 .fi-network-guard {
@@ -468,11 +244,6 @@
   background: var(--fi-green-hover);
 }
 
-.fi-button-warning {
-  border-color: var(--warning);
-  color: var(--warning);
-}
-
 .fi-button-muted {
   border-color: var(--fi-line-strong);
   background: var(--fi-panel-2);
@@ -483,13 +254,6 @@
   width: 100%;
   min-height: 48px;
   font-size: var(--fi-text-label);
-}
-
-.fi-wallet-placeholder {
-  width: 108px;
-  height: var(--fi-control-height);
-  border: 1px solid var(--fi-line);
-  background: var(--fi-panel);
 }
 
 .fi-panel {
@@ -522,7 +286,7 @@
   padding-bottom: 0;
 }
 
-.fi-panel > :is(.fi-inline-state, .fi-segmented, .fi-select-field, .fi-settings-details, .fi-token-address-import) {
+.fi-panel > :is(.fi-inline-state, .fi-segmented, .fi-select-field, .fi-settings-details) {
   margin-top: 12px;
 }
 
@@ -1148,26 +912,6 @@
   transform: rotate(180deg);
 }
 
-.fi-swap-asset-listbox {
-  position: absolute;
-  z-index: var(--fi-layer-menu);
-  top: calc(100% + 6px);
-  right: 0;
-  width: min(350px, calc(100vw - 32px));
-  max-height: min(360px, 52dvh);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  border: 1px solid var(--fi-line-strong);
-  border-top: 1px solid var(--line-strong);
-  outline: 0;
-  background: var(--fi-panel);
-  box-shadow: var(--e-2);
-  scrollbar-color: var(--fi-line-strong) var(--fi-input);
-  scrollbar-width: thin;
-  border-radius: var(--r-md);
-  padding: 4px;
-}
-
 .fi-swap-asset-option {
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr) auto 14px;
@@ -1743,33 +1487,6 @@
   width: min(640px, calc(100% - 24px));
 }
 
-@media (max-width: 1180px) {
-  .fi-header-inner {
-    grid-template-columns: auto minmax(190px, 1fr) auto;
-  }
-
-  .fi-wordmark { grid-column: 1; }
-  .fi-header-balances { grid-column: 2; }
-  .fi-wallet-actions { grid-column: 3; }
-
-  .fi-nav-desktop {
-    display: none;
-  }
-
-  .fi-icon-button.fi-mobile-menu-button {
-    display: inline-grid;
-  }
-
-  .fi-nav-mobile {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(0, 1fr);
-    border-top: 1px solid var(--fi-line);
-    padding: 5px 12px;
-    background: var(--fi-bg);
-  }
-}
-
 @media (max-width: 1024px) {
   .fi-workspace-grid {
     grid-template-columns: 1fr;
@@ -1789,35 +1506,6 @@
 }
 
 @media (max-width: 760px) {
-  .fi-header-inner {
-    grid-template-columns: 1fr auto;
-    grid-template-areas:
-      "brand wallet"
-      "balances balances";
-    width: calc(100% - 24px);
-    min-height: var(--fi-header-height);
-    gap: 0 8px;
-    padding: 8px 0;
-  }
-
-  .fi-wordmark { grid-area: brand; }
-  .fi-wallet-actions { grid-area: wallet; }
-  .fi-header-balances { grid-area: balances; margin-top: 6px; }
-
-  .fi-wallet-button {
-    max-width: 142px;
-    overflow: hidden;
-  }
-
-  .fi-nav-mobile {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .fi-nav-mobile a {
-    min-height: 44px;
-    padding: 0 4px;
-    font-size: 12px;
-  }
 
   .fi-page {
     width: calc(100% - 24px);
@@ -1894,8 +1582,7 @@
 }
 
 @media (max-width: 480px) {
-  .fi-wordmark { font-size: 16px; }
-  .fi-wallet-actions .fi-button { max-width: 124px; padding-inline: 8px; }
+
   .fi-panel { padding: 15px; }
   .fi-panel-flush,
   .fi-chart-panel { padding: 0; }
@@ -1914,7 +1601,7 @@
     --fi-control-height: 44px;
   }
 
-  .fi-root :is(.fi-nav a, .fi-nav-mobile a, .fi-slippage-options button, .fi-inline-retry, .fi-toast button) {
+  .fi-root :is( .fi-slippage-options button, .fi-inline-retry, .fi-toast button) {
     min-height: 44px;
   }
 
@@ -2799,95 +2486,6 @@
 
 /* Transaction disclosure and contract import */
 
-.fi-token-address-import {
-  display: grid;
-  gap: 10px;
-  border-top: 1px solid var(--fi-line);
-  padding-top: 12px;
-}
-
-.fi-token-address-import .fi-field-label-row {
-  min-height: 18px;
-}
-
-.fi-token-address-import .fi-field-label-row a {
-  color: var(--accent-text);
-  font-size: var(--fi-text-label);
-  letter-spacing: 0;
-}
-
-.fi-contract-input {
-  display: flex;
-  width: 100%;
-  min-width: 0;
-  min-height: var(--fi-control-height);
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--fi-line-strong);
-  padding: 0 10px;
-  background: var(--fi-input);
-  color: var(--fi-dim);
-  transition: border-color 100ms steps(2, end), box-shadow 100ms steps(2, end);
-  border-radius: var(--r-md);
-}
-
-.fi-contract-input:hover {
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.fi-contract-input:focus-within {
-  border-color: var(--accent);
-  box-shadow: inset 2px 0 0 var(--accent);
-  color: var(--accent-text);
-}
-
-.fi-contract-input > svg {
-  flex: none;
-}
-
-.fi-contract-input > input {
-  min-width: 0;
-  min-height: 42px;
-  flex: 1;
-  border: 0;
-  outline: 0;
-  padding: 0;
-  background: transparent;
-  color: var(--fi-text);
-  font: inherit;
-  font-size: var(--fi-text-body);
-}
-
-.fi-contract-input > input::placeholder {
-  color: var(--fi-dim);
-}
-
-.fi-contract-input > span {
-  flex: none;
-  border-left: 1px solid var(--fi-line);
-  padding-left: 8px;
-  color: var(--fi-muted);
-  font-size: var(--fi-text-label);
-}
-
-.fi-contract-status {
-  display: flex;
-  min-height: 36px;
-  align-items: center;
-  gap: 8px;
-  border-left: 2px solid var(--fi-muted);
-  padding: 9px 10px;
-  background: var(--fi-input);
-  color: var(--fi-muted);
-  font-size: var(--fi-text-body);
-  overflow-wrap: anywhere;
-}
-
-.fi-token-address-import[data-state="positive"] .fi-contract-status { border-left-color: var(--positive); color: var(--positive); }
-.fi-token-address-import[data-state="danger"] .fi-contract-status { border-left-color: var(--negative); color: var(--negative); }
-.fi-token-import-details .fi-token-address-import { margin: 0; border-top: 0; padding: 12px; }
-.fi-import-side-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
 .fi-settings-details {
   overflow: hidden;
   border: 1px solid var(--fi-line);
@@ -2938,8 +2536,7 @@
 
 @media (max-width: 760px) {
   .fi-shell { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
-  .fi-icon-button.fi-mobile-menu-button,
-  .fi-nav-mobile { display: none; }
+
   .fi-mobile-dock {
     position: fixed;
     z-index: calc(var(--fi-layer-header) + 2);
@@ -2986,8 +2583,7 @@
 }
 
 @media (max-width: 480px) {
-  .fi-header-inner,
-  .fi-page { width: calc(100% - 16px); }
+    .fi-page { width: calc(100% - 16px); }
   .fi-amount-input { min-height: 68px; }
   .fi-amount-input input { padding-inline: 12px; font-size: 23px; }
   .fi-amount-controls { min-height: 66px; }
@@ -3006,13 +2602,13 @@
   .fi-trade-identity .fi-token-logo[data-size="lg"] { width: 36px; height: 36px; }
   .fi-trade-identity { gap: 8px; }
   .fi-trade-identity h1 { font-size: 18px; }
-  .fi-swap-asset-listbox { position: fixed; top: auto; right: 8px; bottom: calc(68px + env(safe-area-inset-bottom)); left: 8px; width: auto; max-height: min(430px, 58dvh); }
+
 }
 
 @media (max-width: 350px) {
   .fi-panel-heading { grid-template-columns: 1fr; }
   .fi-panel-heading > :last-child:not(:first-child) { justify-self: start; }
-  .fi-wallet-actions .fi-button { max-width: 108px; }
+
   .fi-farm-row > .fi-trade-quote { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .fi-farm-row > .fi-trade-quote > div:last-child { grid-column: 1 / -1; }
 }
@@ -3684,10 +3280,6 @@
 }
 
 /* Hide the header balance strip throughout 0xFi. */
-.fi-root .fi-header-balances { display: none; }
-@media (max-width: 760px) {
-  .fi-root .fi-header-inner { grid-template-areas: "brand wallet"; }
-}
 
 /* Consistent workspace hierarchy across pools, earn, lend, borrow and synth. */
 .fi-root .fi-page-heading { padding-bottom: 24px; }

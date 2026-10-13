@@ -107,87 +107,6 @@
   min-height: 100dvh;
 }
 
-.pump-header {
-  position: sticky;
-  z-index: 40;
-  top: 0;
-  border-bottom: 1px solid var(--pump-line);
-  background: rgba(5, 8, 6, 0.98);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-.pump-header-inner {
-  display: grid;
-  grid-template-areas: "wordmark nav balances wallet";
-  grid-template-columns: auto minmax(220px, 1fr) auto auto;
-  width: calc(100% - 40px);
-  max-width: var(--pump-content);
-  min-height: 64px;
-  margin: 0 auto;
-  align-items: center;
-  gap: 18px;
-}
-
-.pump-wordmark {
-  grid-area: wordmark;
-  display: inline-flex;
-  width: fit-content;
-  min-height: 44px;
-  align-items: center;
-  gap: 2px;
-  color: var(--pump-text);
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.pump-wordmark-zero { color: var(--accent-text); }
-
-.pump-nav { display: flex; align-items: center; gap: 4px; }
-.pump-nav-desktop { grid-area: nav; justify-self: center; }
-.pump-nav-link {
-  display: inline-flex;
-  min-height: 40px;
-  align-items: center;
-  padding: 0 14px;
-  color: var(--pump-muted);
-  font-size: 12px;
-  transition: color 150ms ease, background 150ms ease;
-}
-.pump-nav-link:hover,
-.pump-nav-link.active { background: rgba(255,255,255,0.06); color: var(--pump-text); }
-.pump-header-balances {
-  grid-area: balances;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(92px, 1fr));
-  min-height: 38px;
-  border: 1px solid var(--pump-line);
-}
-.pump-header-balance {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 0 11px;
-}
-.pump-header-balance + .pump-header-balance { border-left: 1px solid var(--pump-line); }
-.pump-header-balance span { color: var(--pump-muted); font-size: 12px; }
-.pump-header-balance strong {
-  overflow: hidden;
-  color: var(--accent-text);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.pump-wallet-actions { grid-area: wallet; display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
-.pump-menu-button { display: none; width: 44px; height: 44px; flex: none; place-items: center; border: 1px solid var(--pump-line); color: var(--pump-text); }
-.pump-menu-button[aria-expanded="true"] { border-color: var(--accent); background: var(--pump-panel-2); color: var(--accent-text); }
-.pump-menu-button svg { width: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; }
-.pump-nav-mobile { display: none; }
-
 .pump-page {
   width: calc(100% - 40px);
   max-width: var(--pump-content);
@@ -215,7 +134,7 @@
 .pump-button-primary { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
 .pump-button-primary:hover:not(:disabled) { border-color: var(--accent); background: var(--accent); }
 .pump-button-muted { background: rgba(255,255,255,0.04); }
-.pump-button-warning { border-color: var(--warning); color: var(--warning); }
+
 .pump-button-large { min-height: 48px; padding-inline: 22px; }
 .pump-button-full { width: 100%; }
 
@@ -804,24 +723,13 @@
 }
 
 @media (max-width: 1180px) {
-  .pump-header-inner {
-    grid-template-areas: "wordmark balances wallet";
-    grid-template-columns: auto minmax(190px, 1fr) auto;
-  }
-  .pump-nav-desktop { display: none; }
-  .pump-header-balances { justify-self: end; }
-  .pump-menu-button { display: grid; }
-  .pump-nav-mobile { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 1px solid var(--pump-line); padding: 5px 12px; }
-  .pump-nav-mobile .pump-nav-link { justify-content: center; }
+
   .pump-market-toolbar { align-items: stretch; flex-direction: column; }
   .pump-market-controls { width: 100%; grid-template-columns: auto 132px minmax(0, 1fr); justify-content: stretch; }
 }
 
 @media (max-width: 1040px) {
-  .pump-header-inner { gap: 12px; }
-  .pump-nav-link { padding-inline: 9px; font-size: 12px; }
-  .pump-header-balances { grid-template-columns: repeat(2, minmax(76px, 1fr)); }
-  .pump-header-balance { gap: 6px; padding-inline: 8px; }
+
   .pump-token-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pump-token-grid.pump-trending-grid {
     grid-template-columns: none;
@@ -847,25 +755,7 @@
 }
 
 @media (max-width: 760px) {
-  .pump-header-inner {
-    grid-template-areas:
-      "wordmark wallet"
-      "balances balances";
-    grid-template-columns: 1fr auto;
-    width: calc(100% - 24px);
-    min-height: 64px;
-    gap: 0 8px;
-    padding: 8px 0;
-  }
-  .pump-nav-desktop { display: none; }
-  .pump-header-balances { width: 100%; min-height: 30px; margin-top: 6px; }
-  .pump-header-balance { justify-content: center; gap: 8px; }
-  .pump-menu-button { display: grid; }
-  .pump-nav-mobile { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-top: 1px solid var(--pump-line); padding: 5px 12px; }
-  .pump-nav-mobile .pump-nav-link { justify-content: center; }
-  .pump-nav-mobile .pump-nav-link { grid-column: span 2; }
-  .pump-nav-mobile .pump-nav-link:nth-child(4) { grid-column: 2 / span 2; }
-  .pump-nav-mobile .pump-nav-link:nth-child(5) { grid-column: 4 / span 2; }
+
   .pump-page { width: calc(100% - 24px); padding: 18px 0 40px; }
   .pump-page-heading { min-height: auto; align-items: flex-start; flex-direction: column; gap: 26px; padding: 28px 0; }
   .pump-page-heading h1 { font-size: 30px; }
@@ -973,9 +863,7 @@
 }
 
 @media (max-width: 480px) {
-  .pump-wordmark { font-size: 15px; }
-  .pump-wallet-actions .pump-button { max-width: 128px; overflow: hidden; padding-inline: 10px; text-overflow: ellipsis; white-space: nowrap; }
-  .pump-nav-mobile .pump-nav-link { min-height: 44px; padding-inline: 4px; font-size: 12px; }
+
   .pump-create-form,
 .pump-vault,
 .pump-trade-panel { padding: 16px; }
@@ -1037,7 +925,7 @@
 }
 
 @media (pointer: coarse) {
-  .pump-shell :where(.pump-button, .pump-nav-link, .pump-menu-button, .pump-segmented button) { min-height: 44px; }
+  .pump-shell :where(.pump-button, .pump-segmented button) { min-height: 44px; }
   .pump-token-links :where(a, button),
 .pump-amount-field button,
 .pump-vault-field-head button,
@@ -1091,26 +979,6 @@
   background: color-mix(in srgb, var(--accent) 2.5%, transparent) !important;
 }
 
-.pump-shell .pump-nav-desktop {
-  background: transparent !important;
-  border-color: transparent !important;
-}
-
-.pump-shell .pump-nav-mobile {
-  background: rgba(7, 8, 9, 0.98) !important;
-  border-color: var(--pump-line) !important;
-}
-
-.pump-shell .pump-nav-link {
-  color: var(--pump-muted) !important;
-}
-
-.pump-shell .pump-nav-link:hover,
-.pump-shell .pump-nav-link.active {
-  background: rgba(255, 255, 255, 0.06) !important;
-  color: var(--pump-text) !important;
-}
-
 .pump-shell input,
 .pump-shell select,
 .pump-shell textarea {
@@ -1154,11 +1022,6 @@
   border-color: var(--accent) !important;
   background: var(--accent) !important;
   color: var(--accent-ink) !important;
-}
-
-.pump-shell .pump-button-warning:disabled {
-  border-color: var(--warning) !important;
-  color: var(--warning) !important;
 }
 
 .pump-shell .pump-button-muted:disabled {
@@ -1378,15 +1241,6 @@
   }
 }
 @media (max-width: 640px) {
-  .pump-wordmark {
-    min-height: 44px;
-    align-items: center;
-  }
-
-  .pump-menu-button {
-    width: 44px;
-    height: 44px;
-  }
 
   .pump-page {
     padding-bottom: calc(32px + env(safe-area-inset-bottom));
@@ -1404,7 +1258,6 @@
   }
 
   .pump-button,
-.pump-nav-mobile .pump-nav-link,
 .pump-market-controls .pump-segmented button,
 .pump-vault-tabs button,
 .pump-trade-tabs button,
@@ -1423,8 +1276,7 @@
     font-size: 16px !important;
   }
 
-  .pump-menu-button,
-.pump-amount-field button,
+  .pump-amount-field button,
 .pump-inline-options button {
     min-width: 44px;
   }
@@ -1782,14 +1634,8 @@
   }
 }
 @media (max-width: 640px) {
-  .pump-header-inner {
-    grid-template-areas: "wordmark wallet";
-    grid-template-columns: minmax(0, 1fr) auto;
-    min-height: 64px;
-  }
 
-  .pump-header-balances,
-.pump-stat-strip {
+  .pump-stat-strip {
     display: none;
   }
 
@@ -1973,13 +1819,12 @@
   }
 }
 /* Pixel workspace: readable market data, square frames and stepped feedback. */
-.pump-shell :is(.pump-button,.pump-menu-button,.pump-panel,.pump-token-card,.pump-stats-section,.pump-portfolio-list) {
+.pump-shell :is(.pump-button,.pump-panel,.pump-token-card,.pump-stats-section,.pump-portfolio-list) {
   box-shadow: var(--e-2);
 }
 .pump-shell :is(button,a,input,select,textarea) { transition-timing-function: steps(2, end); }
-.pump-shell .pump-button:active:not(:disabled),
-.pump-shell .pump-menu-button:active { transform: translate(2px,2px); box-shadow: var(--e-2); }
-.pump-shell :is(.pump-button,.pump-menu-button,.pump-nav-link,.pump-segmented button,.pump-inline-options button):focus-visible {
+.pump-shell .pump-button:active:not(:disabled) { transform: translate(2px,2px); box-shadow: var(--e-2); }
+.pump-shell :is(.pump-button,.pump-segmented button,.pump-inline-options button):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
@@ -2009,20 +1854,10 @@
   -webkit-font-smoothing: auto;
 }
 .pump-shell :is(h1,h2,h3) { letter-spacing: 0; text-wrap: balance; }
-.pump-shell :is(.pump-eyebrow,.pump-status,.pump-token-metrics,.pump-detail-stats,.pump-stat-strip,.pump-stats-primary,.pump-table,.pump-header-balances,.pump-portfolio-value,.pump-token-price) { font-family: var(--font-ui), monospace; font-variant-numeric: tabular-nums; }
-.pump-shell .pump-header { background: var(--pump-bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
-.pump-header-inner { min-height: 76px; gap: 24px; }
-.pump-wordmark { font-size: 20px; letter-spacing: 0; }
-.pump-shell .pump-nav-desktop { padding: 4px; border: 1px solid var(--pump-line) !important; border-radius: var(--r-md); background: var(--pump-panel) !important; }
-.pump-shell .pump-nav-link { border-radius: var(--r-md); font-size: 12px; text-transform: none; font-weight: 600; }
-.pump-shell .pump-nav-link.active { background: var(--pump-panel-2) !important; color: var(--accent-text) !important; }
-.pump-shell .pump-nav-mobile { background: var(--pump-bg) !important; padding-block: 10px; gap: 5px; }
-.pump-header-balances { border: 0; gap: 12px; }
-.pump-header-balance { display: grid; gap: 5px; padding-inline: 8px; }
-.pump-header-balance span { font-size: 12px; }
-.pump-header-balance strong { font-size: 12px; }
+.pump-shell :is(.pump-eyebrow,.pump-status,.pump-token-metrics,.pump-detail-stats,.pump-stat-strip,.pump-stats-primary,.pump-table,.pump-portfolio-value,.pump-token-price) { font-family: var(--font-ui), monospace; font-variant-numeric: tabular-nums; }
+
 .pump-page { padding-block: 36px 72px; }
-.pump-shell :is(.pump-button,.pump-menu-button,.pump-search,.pump-sort-select select,.pump-field input,.pump-field textarea,.pump-inline-options button) { border-radius: var(--r-md); }
+.pump-shell :is(.pump-button,.pump-search,.pump-sort-select select,.pump-field input,.pump-field textarea,.pump-inline-options button) { border-radius: var(--r-md); }
 .pump-button { font-size: 12px; text-transform: none; min-height: 44px; }
 .pump-shell :is(.pump-panel,.pump-token-card,.pump-stats-section,.pump-dev-fees,.pump-notice,.pump-empty-state,.pump-graduation-line) { border-radius: var(--r-md); }
 .pump-page-heading { padding-block: 12px 30px; gap: 28px; }
@@ -2109,8 +1944,7 @@
 }
 @media (max-width: 640px) {
   .pump-page { width: calc(100% - 32px); padding-top: 24px; }
-  .pump-header-inner { width: calc(100% - 32px); min-height: 70px; }
-  .pump-nav-mobile { grid-template-columns: repeat(6,minmax(0,1fr)); }
+
   .pump-page-heading { align-items: flex-start; gap: 18px; }
   .pump-panel { padding: 20px; }
   .pump-chart-panel,.pump-history,.pump-holders { padding: 0; }

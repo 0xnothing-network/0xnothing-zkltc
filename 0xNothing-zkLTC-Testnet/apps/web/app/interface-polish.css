@@ -9,11 +9,9 @@
   -webkit-tap-highlight-color: transparent;
 }
 :is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product)
-  :is(.fi-button, .fi-nav a, .fi-nav-mobile a, .fi-segmented button,
-  .fi-token-select-trigger, .fi-token-select-option, .fi-market-row,
-  .pump-button, .pump-nav-link, .pump-segmented button, .pump-token-card,
-  .pump-inline-options button, .pixel-btn, .pixel-btn-soft, .pixel-nav,
-  .pixel-nav-mobile, .nft-card, .marketplace-activity-row) {
+  :is(.fi-button, .fi-segmented button, .fi-market-row,
+  .pump-button, .pump-segmented button, .pump-token-card,
+  .pump-inline-options button, .pixel-btn, .nft-card) {
   transition-property: color, background-color, border-color, box-shadow, transform !important;
   transition-duration: var(--ui-fast) !important;
   transition-timing-function: var(--ui-ease) !important;
@@ -29,7 +27,7 @@
   box-shadow: 0 0 0 1px var(--pixel-ui-action);
 }
 :is(.fi-root, .pump-shell, .pixel-product) :is(.fi-table-wrap, .pump-table-wrap,
-  .fi-swap-asset-results, .fi-token-select-menu) {
+  .fi-swap-asset-results) {
   scrollbar-width: thin;
   scrollbar-color: var(--pixel-ui-border-strong) var(--pixel-ui-bg);
   overscroll-behavior: contain;
@@ -37,7 +35,7 @@
 :is(.fi-root, .pump-shell, .pixel-product) :is(h1, h2, h3) { text-wrap: balance; }
 .fi-root.fi-root .fi-swap-asset-picker { box-shadow: 6px 6px 0 var(--bg); }
 .fi-root.fi-root .fi-swap-asset-picker-heading { padding-bottom: 8px; border-bottom: 1px solid var(--fi-line); }
-.fi-root.fi-root .fi-token-select-option { min-height: 52px; }
+
 .fi-root.fi-root .fi-table th, .pump-shell.pump-shell .pump-table th {
   background: var(--pixel-ui-raised);
   color: var(--pixel-ui-muted);
@@ -54,16 +52,13 @@
 }
 
 /* Keyboard focus stays inside scrollable navigation; filled actions use an outer ring. */
-:is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product)
-  :is(.fi-nav a, .fi-nav-mobile a, .pump-nav-link, .pixel-nav, .pixel-nav-mobile):focus-visible {
-  outline-offset: -4px;
-}
+
 :is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product)
   :is(a, button, input, select, textarea, summary) {
   scroll-margin-block: 120px 40px;
 }
 :is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product)
-  :is(.fi-button, .pump-button, .pixel-btn, .pixel-btn-soft):disabled {
+  :is(.fi-button, .pump-button, .pixel-btn):disabled {
   transform: none !important;
   filter: none !important;
 }
@@ -97,7 +92,7 @@
 @media (pointer: coarse) {
   :is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product)
     :is(.fi-segmented button, .fi-inline-retry, .fi-slippage-options button,
-    .pump-segmented button, .pump-inline-options button, .pixel-nav-icon, .pixel-menu-toggle) {
+    .pump-segmented button, .pump-inline-options button) {
     min-height: 44px;
     min-width: 44px;
   }

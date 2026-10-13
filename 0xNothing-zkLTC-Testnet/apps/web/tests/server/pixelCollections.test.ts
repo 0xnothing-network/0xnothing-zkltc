@@ -115,7 +115,6 @@ test("metadata cache and RPC fallback isolate equal token IDs in legacy and V2",
 });
 
 test("NUSD marketplace hydration keeps both NFT generations without native listings", async () => {
-  let indexedListings = 0;
   const nftReads: string[] = [];
   const route = evaluateModule<{ GET: (request: Request) => Promise<Response> }>(new URL("../../app/api/marketplace/listings/route.ts", import.meta.url), {
     "next/server": { NextResponse: Response },
@@ -138,7 +137,6 @@ test("NUSD marketplace hydration keeps both NFT generations without native listi
     "@/lib/pixelImage": { getPixelImageUrl },
     "@/lib/marketplaceSubgraph": {
       hasMarketplaceSubgraph: () => true,
-      fetchAllMarketplaceListingsFromSubgraph: async () => { indexedListings++; return []; },
       fetchTokenMetadataFromSubgraph: async () => ({}),
     },
     "@/lib/erc721Metadata.server": { fetchValidatedErc721Metadata: async () => ({}) }, "@/lib/boundedCache": { createBoundedCache },
@@ -154,5 +152,4 @@ test("NUSD marketplace hydration keeps both NFT generations without native listi
   assert.equal(body.tokens[`${v2}:1`].name, "New Art");
   assert.notEqual(body.tokens[`${legacy}:1`].imageUrl, body.tokens[`${v2}:1`].imageUrl);
   assert.deepEqual(nftReads, [legacy, v2]);
-  assert.equal(indexedListings, 0, "the old index cannot hide a new collection's listing");
 });
