@@ -126,6 +126,12 @@ contract DeployMainnet {
                 || deployment.oracleNusd.vault() != address(deployment.oracleNusd)
                 || deployment.oracleNusd.supplyCeilingNusd() != NUSD_SUPPLY_CEILING
                 || deployment.oracleNusd.mintPaused() || deployment.oracleNusd.redeemPaused()
+                || deployment.oracleNusd.mintFeeBps() != 0 || deployment.oracleNusd.redeemFeeBps() != 0
+                || deployment.oracleNusd.treasury() != address(0) || deployment.oracleNusd.issuanceCeilingNusd() != 0
+                || deployment.oracleNusd.dailyMintCapNusd() != 0 || deployment.oracleNusd.dailyRedeemCapNusd() != 0
+                || deployment.oracleNusd.perWalletDailyMintCapNusd() != 0
+                || deployment.oracleNusd.perWalletDailyRedeemCapNusd() != 0
+                || deployment.oracleNusd.sameBlockMintRedeemBlocked()
         ) revert UnexpectedOracleNusdConfiguration();
         if (
             deployment.pump.initialVirtualNusdReserve() != PUMP_INITIAL_MARKET_CAP_NUSD

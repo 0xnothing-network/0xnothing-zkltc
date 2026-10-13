@@ -72,6 +72,30 @@ contract ZeroXFiGraduationAdapter is IGraduationAdapter, ReentrancyGuard {
         if (lpToken == address(0) || !factory.isPair(lpToken)) return address(0);
     }
 
+    /// @notice Fresh empty-pair floor. The 0xFi pair must still be empty at `graduate`.
+    function quoteMinimumLp(address token, address nusd_, uint256 tokenAmount, uint256 nusdAmount)
+        external
+        view
+        returns (uint256 minimumLp)
+    {
+        if (nusd_ != nusd || token == address(0) || tokenAmount == 0 || nusdAmount == 0) {
+            revert InvalidConfiguration();
+        }
+        uint256 rootK = _sqrt(tokenAmount * nusdAmount);
+        if (rootK <= 1000) revert InvalidPoolState();
+        minimumLp = rootK - 1000;
+    }
+
+    function _sqrt(uint256 value) private pure returns (uint256 result) {
+        if (value == 0) return 0;
+        result = value;
+        uint256 candidate = (value / 2) + (value % 2);
+        while (candidate < result) {
+            result = candidate;
+            candidate = ((value / candidate) + candidate) / 2;
+        }
+    }
+
     function graduate(GraduationParams calldata params) external nonReentrant returns (GraduationResult memory result) {
         if (msg.sender != pumpRouter) revert InvalidGraduationCaller();
         // The deadline limits execution lifetime; reserve and exact-transfer checks remain authoritative.

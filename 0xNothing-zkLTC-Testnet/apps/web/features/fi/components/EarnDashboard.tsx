@@ -30,6 +30,8 @@ type PointsPosition = {
   unlockTime: bigint;
   lockDuration: number;
   withdrawn: boolean;
+  startTime: bigint;
+  forfeited: boolean;
 };
 
 function formatUnlock(unlockTime: bigint): string {
@@ -80,6 +82,7 @@ export function EarnDashboard() {
       { address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "nusdPerXPointWad" },
       { address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "redemptionReserve" },
       { address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "isSolvent" },
+      { address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "minStakeNusd" },
     ] as const : [],
     query: { enabled: Boolean(stakingAddress), refetchInterval: EARN_POLL_MS, refetchIntervalInBackground: false },
   });
@@ -102,6 +105,7 @@ export function EarnDashboard() {
   const nusdPerXPointWad = protocol.data?.[4]?.result as bigint | undefined;
   const redemptionReserve = protocol.data?.[5]?.result as bigint | undefined;
   const solvent = protocol.data?.[6]?.result as boolean | undefined;
+  const minStakeNusd = protocol.data?.[7]?.result as bigint | undefined;
   const walletNusd = wallet.data?.[0]?.result as bigint | undefined;
   const userLocked = wallet.data?.[1]?.result as bigint | undefined;
   const earnedCredits = wallet.data?.[2]?.result as bigint | undefined;
@@ -170,9 +174,12 @@ export function EarnDashboard() {
     if (!amountText) return undefined;
     if (!amount) return "Enter a valid NUSD amount.";
     if (walletNusd !== undefined && amount > walletNusd) return "Amount exceeds your NUSD balance.";
+    if (minStakeNusd !== undefined && amount < minStakeNusd) {
+      return `Minimum stake is ${formatAmount(minStakeNusd)} NUSD.`;
+    }
     if (stakingPaused) return "New stakes are paused.";
     return undefined;
-  }, [amount, amountText, stakingPaused, walletNusd]);
+  }, [amount, amountText, minStakeNusd, stakingPaused, walletNusd]);
   const redeemInvalid = useMemo(() => {
     if (!redeemXPointsText) return undefined;
     if (!redeemXPoints || !redeemPointCredits) return "Enter a valid xPoints amount.";
@@ -226,6 +233,17 @@ export function EarnDashboard() {
     }
   }
 
+  async function exitEarly(positionId: bigint) {
+    if (!stakingAddress) return;
+    const hash = await tx.execute({
+      call: { address: stakingAddress, abi: nusdPointsStakingAbi, functionName: "exitEarly", args: [positionId] },
+    });
+    if (hash) {
+      toast.show("Early exit", "Principal returned. This position's xPoints were forfeited.", "success");
+      refresh();
+    }
+  }
+
   async function redeemPoints() {
     if (
       !stakingAddress
@@ -260,7 +278,7 @@ export function EarnDashboard() {
             <span className="fi-status" data-state={stakingPaused ? "warning" : "live"}>{stakingPaused ? "Paused" : "Active"}</span>
           </div>
           <h2 id="points-overview-title">Earn xPoints</h2>
-          <p>1 NUSD earns 0.01xPoints at x1. Lock for 30 to 365 days to earn up to x3.</p>
+          <p>1 NUSD earns 0.01xPoints at x1 if held to maturity. Credits accrue per second. Early exit forfeits that lock&apos;s xPoints. Redemption of xPoints for NUSD stays disabled until an admin enables it.</p>
         </header>
         <dl className="fi-points-metrics" aria-label="Your NUSD staking overview">
           <div><dt>Your locked NUSD</dt><dd>{formatAmount(userLocked)} <small>NUSD</small></dd></div>
@@ -294,9 +312,9 @@ export function EarnDashboard() {
                 ))}
               </div>
             </div>
-            <AmountField id="points-stake-nusd" label="Amount" asset="NUSD" value={amountText} balance={formatAmount(walletNusd)} helper="Your NUSD principal unlocks only at maturity." error={invalid} onChange={setAmountText} onMax={walletNusd && walletNusd > 0n ? () => setAmountText(formatUnits(walletNusd, 18)) : undefined} />
+            <AmountField id="points-stake-nusd" label="Amount" asset="NUSD" value={amountText} balance={formatAmount(walletNusd)} helper={`Minimum ${formatAmount(minStakeNusd)} NUSD. Credits accrue per second; early exit forfeits this position.`} error={invalid} onChange={setAmountText} onMax={walletNusd && walletNusd > 0n ? () => setAmountText(formatUnits(walletNusd, 18)) : undefined} />
             <dl className="fi-points-estimate" aria-label="NUSD stake estimate">
-              <div><dt>Estimated xPoints</dt><dd data-tone="positive">{formatXPoints(previewXPoints)}</dd></div>
+              <div><dt>xPoints at maturity</dt><dd data-tone="positive">{formatXPoints(previewXPoints)}</dd></div>
               <div><dt>Unlock date</dt><dd>{amount && nowSeconds ? formatUnlock(BigInt(nowSeconds + duration)) : "--"}</dd></div>
             </dl>
             {!isConnected ? <ConnectWalletButton /> : (
@@ -322,15 +340,22 @@ export function EarnDashboard() {
                 {positions.map(({ id, position }) => {
                   const matured = nowSeconds !== undefined && BigInt(nowSeconds) >= position.unlockTime;
                   const option = pointsLockOptions.find((item) => item.duration === position.lockDuration);
+                  const statusLabel = position.forfeited ? "Forfeited" : position.withdrawn ? "Withdrawn" : matured ? "Matured" : "Locked";
                   return (
                     <div className="fi-points-position" key={id.toString()}>
                       <div className="fi-points-position-copy">
                         <span className="fi-label">Position #{id.toString()}</span>
                         <strong>{formatAmount(position.amount)} NUSD</strong>
-                        <small>{option?.label ?? `${Math.round(position.lockDuration / 86_400)} days`} · {formatPointCredits(position.pointCredits)} · unlock {formatUnlock(position.unlockTime)}</small>
+                        <small>{option?.label ?? `${Math.round(position.lockDuration / 86_400)} days`} · {formatPointCredits(position.pointCredits)} accrued · unlock {formatUnlock(position.unlockTime)}</small>
                       </div>
-                      <span className="fi-status" data-state={position.withdrawn ? "offline" : matured ? "live" : "warning"}>{position.withdrawn ? "Withdrawn" : matured ? "Matured" : "Locked"}</span>
-                      <button type="button" className="fi-button fi-button-muted" disabled={position.withdrawn || !matured || tx.pending || redemptionTx.pending} onClick={() => void withdraw(id)}>{position.withdrawn ? "Withdrawn" : matured ? "Withdraw NUSD" : "Still locked"}</button>
+                      <span className="fi-status" data-state={position.forfeited || position.withdrawn ? "offline" : matured ? "live" : "warning"}>{statusLabel}</span>
+                      {position.forfeited || position.withdrawn ? (
+                        <button type="button" className="fi-button fi-button-muted" disabled>{statusLabel}</button>
+                      ) : matured ? (
+                        <button type="button" className="fi-button fi-button-muted" disabled={tx.pending || redemptionTx.pending} onClick={() => void withdraw(id)}>Withdraw NUSD</button>
+                      ) : (
+                        <button type="button" className="fi-button fi-button-muted" disabled={tx.pending || redemptionTx.pending} onClick={() => void exitEarly(id)}>Exit early (forfeit xPoints)</button>
+                      )}
                     </div>
                   );
                 })}

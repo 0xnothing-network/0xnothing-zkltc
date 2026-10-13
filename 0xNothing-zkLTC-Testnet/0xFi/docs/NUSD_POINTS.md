@@ -21,9 +21,13 @@ to the nearest `0.01xPoints`. At the base multiplier:
 | 180 days | x1.5 | 1.50 |
 | 365 days | x3 | 3.00 |
 
-xPoints are fixed when `stake` confirms. Principal cannot be withdrawn before
-the selected timestamp, and a matured position remains withdrawable even if new
-stakes or redemptions are paused.
+xPoints accrue per second while the position stays open and reach the table
+total only at maturity. Repeating short locks no longer pays the full multiplier
+up front. The minimum stake is `50 NUSD` unless the owner lowers it. Principal
+can exit early; that call forfeits the position's accrued and remaining xPoints.
+A matured position remains withdrawable even if new stakes or redemptions are
+paused. Direct NUSD redemption stays disabled until an owner sets
+`redemptionEnabled`.
 
 Direct NUSD escrow reduces circulating NUSD but does not by itself create AMM
 liquidity: an actual LP strategy also needs a counter-asset and introduces
