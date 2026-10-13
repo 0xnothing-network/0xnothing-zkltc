@@ -76,12 +76,17 @@ host and verify `/api/health` returns `200` with `Cache-Control: no-store`.
 ## Scaling boundary
 
 The current in-process upload replay locks and API rate limiters are local to a
-Worker isolate. Cloudflare still provides edge distribution, but those maps are
-not globally authoritative. Before relying on them as cross-region security
-controls, move replay/idempotency state to a Durable Object or D1 and enforce
-abuse limits with Cloudflare Rate Limiting. Persistent OpenNext ISR/data cache
-through R2 plus a Durable Object is an optional later optimization; it is not
-required for the first deploy.
+Worker isolate. Middleware public-API quotas key on `CF-Connecting-IP` when
+`CLOUDFLARE_WORKERS === "true"` (the same trust rule as Node upload/voucher
+routes). Spoofable forwarding headers stay ignored unless
+`TRUSTED_PROXY_SHARED_SECRET` authenticates the Cloudflare-to-Railway hop.
+Unidentified clients are not collapsed into one bucket. Cloudflare still
+provides edge distribution, but those maps are not globally authoritative.
+Before relying on them as cross-region security controls, move
+replay/idempotency state to a Durable Object or D1 and enforce abuse limits
+with Cloudflare Rate Limiting. Persistent OpenNext ISR/data cache through R2
+plus a Durable Object is an optional later optimization; it is not required
+for the first deploy.
 
 ## Production smoke test
 

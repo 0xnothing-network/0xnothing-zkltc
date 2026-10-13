@@ -1,15 +1,7 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { LITVM_RPC_URL, PUBLIC_APP_URL } from "@/lib/publicConfig";
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-  display: "swap",
-  preload: false,
-});
 
 // Every contract read leaves the browser for this origin, and the first one only
 // starts after hydration. Opening the socket while the document parses removes a
@@ -52,7 +44,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
       </head>
-      <body className={`${jetbrainsMono.variable} font-sans antialiased`}>
+      <body className="font-sans antialiased">
         <a href="#main-content" className="skip-link">Skip to content</a>
         <div id="main-content" tabIndex={-1}>{children}</div>
         {vercelAnalyticsEnabled ? <Analytics /> : null}

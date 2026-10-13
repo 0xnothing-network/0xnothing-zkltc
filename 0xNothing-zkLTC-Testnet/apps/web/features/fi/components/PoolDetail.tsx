@@ -68,6 +68,7 @@ export function PoolDetail({
     : balanceB.data;
   const tx = useProtocolTransaction();
   const poolRead = useReadContract({
+    chainId: deployment.chain.id,
     address: deployment.contracts.dexFactory,
     abi: dexFactoryAbi,
     functionName: "getPair",
@@ -80,12 +81,13 @@ export function PoolDetail({
   const pool = poolRead.data && poolRead.data !== zeroAddress ? poolRead.data : undefined;
   const poolStats = useReadContracts({
     contracts: pool ? [
-      { address: pool, abi: dexPoolAbi, functionName: "totalSupply" },
+      { chainId: deployment.chain.id, address: pool, abi: dexPoolAbi, functionName: "totalSupply" },
     ] as const : [],
     query: { enabled: Boolean(pool) },
   });
   const totalSupply = poolStats.data?.[0]?.result as bigint | undefined;
   const lpBalanceRead = useReadContract({
+    chainId: deployment.chain.id,
     address: pool,
     abi: dexPoolAbi,
     functionName: "balanceOf",
@@ -99,6 +101,7 @@ export function PoolDetail({
       ? deployment.contracts.nethNusdGauge
       : undefined;
   const stakedLpRead = useReadContract({
+    chainId: deployment.chain.id,
     address: gauge,
     abi: farmGaugeAbi,
     functionName: "balanceOf",
@@ -110,6 +113,7 @@ export function PoolDetail({
     ? (lpBalance ?? 0n) + (stakedLp ?? 0n)
     : undefined;
   const reserveRead = useReadContract({
+    chainId: deployment.chain.id,
     address: dexRouter,
     abi: dexRouterAbi,
     functionName: "getReserves",

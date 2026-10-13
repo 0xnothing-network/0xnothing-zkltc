@@ -2,6 +2,9 @@
   "name": "0xnothing-zkltc",
   "version": "2.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "description": "0xPixel, 0xPump, and 0xFi workspace for LitVM testnet and future zkLTC mainnet",
   "scripts": {
     "clean:generated": "node scripts/clean-generated.mjs",
