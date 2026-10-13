@@ -7,6 +7,7 @@ import { deployment, explorerAddressUrl } from "@fi/config/deployment";
 import { useProtocolTransaction } from "@fi/lib/hooks/useProtocolTransaction";
 import { useRwaMarket } from "@fi/lib/hooks/useRwaMarket";
 import { ConnectWalletButton } from "./ConnectWalletButton";
+import { ExternalLink } from "@/components/ExternalLink";
 import { rwaMarkets } from "../../../../../shared/rwa/markets";
 import { rwaMarketAbi } from "../../../../../shared/rwa/abi";
 import { parseRwaAmount, tradeLimit, type RwaMarketConfig } from "../../../../../shared/rwa/core";
@@ -65,7 +66,7 @@ function RwaMarketPanel({ config, admin }: { config: RwaMarketConfig; admin: boo
   return <section className="rwa-market" aria-label={config.name}>
     <header className="rwa-heading"><div><span className="rwa-eyebrow">{config.assetSymbol} / {config.settlementSymbol}</span><h2>{config.name}</h2></div>
       <span className="rwa-status">{state.isError ? "Read unavailable" : !data ? "Loading…" : data.paused ? "Paused" : !data.price ? "Price unavailable" : "Open"}</span></header>
-    <p>Issuer: {config.issuer}. <a href={config.documentationUrl} target="_blank" rel="noreferrer">Asset documentation ↗</a></p>
+    <p>Issuer: {config.issuer}. <ExternalLink href={config.documentationUrl}>Asset documentation ↗</ExternalLink></p>
     {state.isError ? <p role="alert">Market data unavailable. Trading is disabled. <button type="button" onClick={() => void state.refetch()}>Retry</button></p> : null}
     {data ? <>
       <dl className="rwa-metrics">
@@ -81,7 +82,7 @@ function RwaMarketPanel({ config, admin }: { config: RwaMarketConfig; admin: boo
     </> : null}
     {admin ? <div className="rwa-form">
       <p>Only the onchain owner can operate this reserve. Withdrawals go to the connected owner. Funding and reinvestment permanently commit funds to market liquidity.</p>
-      <p>Withdrawable fees: {data ? cash(data.withdrawable) : "—"}. <a href={data ? explorerAddressUrl(data.owner) : explorerAddressUrl(config.market)} target="_blank" rel="noreferrer">View authority ↗</a></p>
+      <p>Withdrawable fees: {data ? cash(data.withdrawable) : "—"}. <ExternalLink href={data ? explorerAddressUrl(data.owner) : explorerAddressUrl(config.market)}>View authority ↗</ExternalLink></p>
       <label>Reserve amount ({config.settlementSymbol})<input inputMode="decimal" value={reserveText} disabled={busy} onChange={(e) => setReserveText(e.target.value)} placeholder="0.00" /></label>
       <div className="rwa-actions">
         <button disabled={!isOwner || !correctChain || state.isError || busy || !reserveAmount || !data || reserveAmount > data.withdrawable} onClick={() => void manage("withdrawFees")}>Withdraw fees</button>
@@ -108,9 +109,9 @@ function RwaMarketPanel({ config, admin }: { config: RwaMarketConfig; admin: boo
     </form>}
     {address && !correctChain ? <p role="alert">Switch your wallet to LitVM LiteForge (chain {config.chainId}).</p> : null}
     <p role="status">{notice || tx.message}</p>
-    {tx.hash ? <a href={`${deployment.chain.explorerUrl}/tx/${tx.hash}`} target="_blank" rel="noreferrer">View transaction ↗</a> : null}
-    <details><summary>Contracts and price sources</summary><a href={explorerAddressUrl(config.market)} target="_blank" rel="noreferrer">Market: {config.market}</a>
-      <ol>{config.sourceUrls.map((url, i) => <li key={`${i}:${url}`}><a href={url} target="_blank" rel="noreferrer">{i < 2 ? "Asset / USD" : "Settlement / USD"} source {i % 2 + 1} ↗</a></li>)}</ol>
+    {tx.hash ? <ExternalLink href={`${deployment.chain.explorerUrl}/tx/${tx.hash}`}>View transaction ↗</ExternalLink> : null}
+    <details><summary>Contracts and price sources</summary><ExternalLink href={explorerAddressUrl(config.market)}>Market: {config.market}</ExternalLink>
+      <ol>{config.sourceUrls.map((url, i) => <li key={`${i}:${url}`}><ExternalLink href={url}>{i < 2 ? "Asset / USD" : "Settlement / USD"} source {i % 2 + 1} ↗</ExternalLink></li>)}</ol>
     </details>
   </section>;
 }

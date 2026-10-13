@@ -21,6 +21,7 @@ export function useSynthVaultStatus(vault: Address | undefined) {
     && deployment.contracts.synthFeeGaugeFactory,
   );
   const activation = useReadContract({
+    chainId: deployment.chain.id,
     address: vault,
     abi: synthVaultAbi,
     functionName: "activated",

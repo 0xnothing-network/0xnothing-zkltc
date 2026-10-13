@@ -13,7 +13,14 @@ npm run verify
 - `0xFi/contracts/test/` separates `unit`, `integration`, `risk`, `invariant`, `fork`, shared `helpers`, and reusable `mocks`.
 - Testnet and mainnet Pump contracts keep matching `unit`, `fuzz`, `invariant`, `fork`, and `mocks` directories. Their common base contracts intentionally remain at the test root.
 - Pump subgraph tests remain flat because `mapping.test.ts` is the explicit AssemblyScript compile target and `event-builders.ts` is its local support module.
-- Root tooling tests cover cleanup boundaries, manifest rendering, bounded HTTP JSON parsing, and testnet/mainnet Pump subgraph parity.
+- Root tooling tests cover cleanup boundaries, manifest rendering, bounded HTTP JSON parsing, testnet/mainnet Pump subgraph parity, and CI install walk order.
+- 0xFi script tests also cover LiteForge liquidity-seed planning and the DIA `syncPrice` keeper policy.
+- Web tests cover the faucet claim-state helper under `apps/web/tests/data/`.
+
+Pull requests run the same `npm run verify` command in GitHub Actions. See
+`0xNothing-zkLTC-Testnet/docs/operations/ci.md`. Testnet faucet, liquidity
+seeding, and the `syncPrice` keeper runbooks live under
+`0xNothing-zkLTC-Testnet/docs/operations/`.
 Keep a fixture or helper beside the domain that owns it. Move it to a shared
 `helpers` or `mocks` directory only after multiple test files consume it. Test
 doubles must never be imported by production source or deployment scripts.

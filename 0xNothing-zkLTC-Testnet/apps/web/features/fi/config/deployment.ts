@@ -1,7 +1,8 @@
 import { getAddress, isAddress, zeroAddress, type Address } from "viem";
+import { LITVM_CHAIN_ID } from "@/lib/chainSwitch";
 import testnet from "@fi/config/testnet.generated.json";
 
-export const LITVM_CHAIN_ID = 4441 as const;
+export { LITVM_CHAIN_ID };
 
 const TESTNET = testnet;
 

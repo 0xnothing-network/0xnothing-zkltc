@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { ExternalLink } from "@/components/ExternalLink";
 import {
   ArrowRight,
   ArrowSquareOut,
@@ -353,9 +354,9 @@ export async function queryIndexer<T>(endpoint: string, query: string, variables
 
 function ContractLink({ address }: { address: string }) {
   return (
-    <a href={`${deployment.chain.explorerUrl}/address/${address}`} target="_blank" rel="noopener noreferrer">
+    <ExternalLink href={`${deployment.chain.explorerUrl}/address/${address}`}>
       <code>{address}</code><ArrowSquareOut size={12} aria-hidden="true" />
-    </a>
+    </ExternalLink>
   );
 }
 
@@ -688,9 +689,9 @@ export default function DocsPage() {
               </div>
               <div className="ox-docs-footer-actions">
                 <Link href="/0xFi">Test the swap UI <ArrowRight size={14} aria-hidden="true" /></Link>
-                <a href={`${deployment.chain.explorerUrl}/address/${testnet.dexRouter}`} target="_blank" rel="noopener noreferrer" className="secondary">
+                <ExternalLink href={`${deployment.chain.explorerUrl}/address/${testnet.dexRouter}`} className="secondary">
                   Inspect router <ArrowSquareOut size={14} aria-hidden="true" />
-                </a>
+                </ExternalLink>
               </div>
             </section>
           </article>

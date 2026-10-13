@@ -2,13 +2,19 @@
 
 import { useAccount, useBalance, useReadContract } from "wagmi";
 import { assets, type AssetSymbol } from "@fi/config/assets";
+import { deployment } from "@fi/config/deployment";
 import { erc20Abi } from "@fi/lib/abis/erc20";
 
 export function useAssetBalance(symbol: AssetSymbol) {
   const { address } = useAccount();
   const asset = assets[symbol];
-  const native = useBalance({ address, query: { enabled: Boolean(address && asset.native) } });
+  const native = useBalance({
+    address,
+    chainId: deployment.chain.id,
+    query: { enabled: Boolean(address && asset.native) },
+  });
   const token = useReadContract({
+    chainId: deployment.chain.id,
     address: asset.address,
     abi: erc20Abi,
     functionName: "balanceOf",

@@ -37,6 +37,7 @@ import { FI_BASE_PATH, fiPath } from "@fi/config/paths";
 import { formatAmount, shortAddress } from "@fi/lib/format";
 import { useToast } from "@fi/components/Toast";
 import { friendlyWalletError, hasInjectedWallet } from "@fi/components/ConnectWalletButton";
+import { ExternalLink } from "@/components/ExternalLink";
 
 const NAV_ITEMS = [
   { href: "/", label: "Swap", icon: ArrowsLeftRight },
@@ -222,9 +223,9 @@ export function FiHeader() {
                     <button type="button" onClick={() => void copyAddress()}>
                       <Copy size={15} aria-hidden="true" /> Copy address
                     </button>
-                    <a href={explorerAddressUrl(address)} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink href={explorerAddressUrl(address)}>
                       <ArrowSquareOut size={15} aria-hidden="true" /> View on explorer
-                    </a>
+                    </ExternalLink>
                     <button type="button" className="danger" onClick={() => disconnect()}>
                       <SignOut size={15} aria-hidden="true" /> Disconnect
                     </button>

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { publicApiRateLimitedResponse } from "@/lib/server/edgePublicRateLimit";
 import { trustedProxyRequest } from "@/lib/server/proxyAuth";
 
 const LEGACY_PUMP_PATH = "/0xpump";
@@ -21,6 +22,9 @@ export function middleware(request: NextRequest) {
       { status: 403, headers: { "Cache-Control": "no-store" } },
     );
   }
+
+  const rateLimited = publicApiRateLimitedResponse(request, pathname);
+  if (rateLimited) return rateLimited;
 
   if (pathname !== LEGACY_PUMP_PATH && !pathname.startsWith(`${LEGACY_PUMP_PATH}/`)) {
     return NextResponse.next();

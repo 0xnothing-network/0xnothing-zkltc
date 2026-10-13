@@ -27,36 +27,42 @@ export function useSwapRouteGuards({
   needsRedeem: boolean;
 }) {
   const dexPauseState = useReadContract({
+    chainId: deployment.chain.id,
     address: deployment.contracts.dexFactory,
     abi: dexFactoryAbi,
     functionName: "swapsPaused",
     query: { enabled: Boolean(needsDex && deployment.contracts.dexFactory) },
   });
   const mintPauseState = useReadContract({
+    chainId: deployment.chain.id,
     address: deployment.contracts.nusd,
     abi: nusdOracleAbi,
     functionName: "mintPaused",
     query: { enabled: Boolean(needsMint && deployment.contracts.nusd) },
   });
   const redeemPauseState = useReadContract({
+    chainId: deployment.chain.id,
     address: deployment.contracts.nusd,
     abi: nusdOracleAbi,
     functionName: "redeemPaused",
     query: { enabled: Boolean(needsRedeem && deployment.contracts.nusd) },
   });
   const supplyCeilingState = useReadContract({
+    chainId: deployment.chain.id,
     address: deployment.contracts.nusd,
     abi: nusdOracleAbi,
     functionName: "supplyCeilingNusd",
     query: { enabled: Boolean(needsMint && deployment.contracts.nusd) },
   });
   const totalSupplyState = useReadContract({
+    chainId: deployment.chain.id,
     address: deployment.contracts.nusd,
     abi: nusdOracleAbi,
     functionName: "totalSupply",
     query: { enabled: Boolean(needsMint && deployment.contracts.nusd) },
   });
   const collateralReserveState = useReadContract({
+    chainId: deployment.chain.id,
     address: deployment.contracts.nusd,
     abi: nusdOracleAbi,
     functionName: "totalCollateralWei",

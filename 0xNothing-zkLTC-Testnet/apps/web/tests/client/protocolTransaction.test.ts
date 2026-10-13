@@ -61,6 +61,11 @@ function harness(options: { changeAt?: "simulation" | "receipt"; chainId?: numbe
       "@fi/config/deployment": { deployment: { chain: { id: 4441 } } },
       "@fi/lib/errors": { readableError: (error: Error) => error.message },
       "@/lib/liveData": { isBlockSyncedQueryKey },
+      "@/lib/chainSwitch": {
+        requireLitvmChainId: (id: number | undefined | null) => {
+          if (id !== 4441) throw new Error("Wrong network. Switch to LitVM LiteForge and try again.");
+        },
+      },
       "@/lib/transactionReceipt": { ReceiptConfirmationError, waitForProtocolReceipt },
       "../../../../../../shared/transactions/tokenDelivery": { deliveredTokenAmount },
     },

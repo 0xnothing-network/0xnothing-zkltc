@@ -95,7 +95,7 @@ test("Gallery has only NUSD selling and management, without native signer contro
 });
 
 test("old marketplace bookmarks redirect to the only NUSD marketplace", async () => {
-  const { default: config } = evaluateModule<{ default: { redirects: () => Promise<{ source: string; destination: string }[]> } }>(new URL("../../next.config.ts", import.meta.url), {}, { process: { env: {} }, __dirname: "." });
+  const { default: config } = evaluateModule<{ default: { redirects: () => Promise<{ source: string; destination: string }[]> } }>(new URL("../../next.config.ts", import.meta.url), { "./lib/publicConfig": { LITVM_RPC_URL: "https://rpc.example" } }, { process: { env: {} }, __dirname: ".", URL });
   const redirect = (await config.redirects()).find((item) => item.source === "/0xpixel/marketplace/legacy");
   assert.equal(redirect?.destination, "/0xpixel/marketplace");
 });
