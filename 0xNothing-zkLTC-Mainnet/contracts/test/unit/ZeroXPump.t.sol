@@ -217,7 +217,7 @@ contract ZeroXPumpTest is TestBase {
         assertEq(pump.status(token), uint8(ZeroXPump.Lifecycle.GRADUATED), "graduated");
     }
 
-    function testPauseBlocksCreateBuyAndSell() public {
+    function testPauseBlocksCreateAndBuyButKeepsSellOpen() public {
         address token = _createMarket();
         vm.prank(TRADER);
         (uint256 bought,) = pump.buy(token, 10 ether, 0, block.timestamp + 1);
@@ -236,9 +236,9 @@ contract ZeroXPumpTest is TestBase {
         vm.prank(TRADER);
         pump.buy(token, 1 ether, 0, block.timestamp + 1);
 
-        vm.expectRevert();
         vm.prank(TRADER);
-        pump.sell(token, bought, 0, block.timestamp + 1);
+        uint256 nusdOut = pump.sell(token, bought, 0, block.timestamp + 1);
+        assertGt(nusdOut, 0, "holders can always exit to NUSD");
     }
 
     function testTimelockedGraduationLocksLpAndPreservesTerminalPrice() public {

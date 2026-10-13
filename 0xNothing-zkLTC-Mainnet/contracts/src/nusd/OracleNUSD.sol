@@ -17,6 +17,10 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
     error SlippageExceeded(uint256 minimumAmount, uint256 actualAmount);
     error SupplyCeilingExceeded(uint256 requestedAmountNusd, uint256 availableAmountNusd);
     error InsufficientReserve(uint256 requiredCollateralWei, uint256 availableCollateralWei);
+    error OracleHealthy();
+    error OracleFailureNotReported();
+    error OracleUnavailable();
+    error OracleFailureGracePending(uint256 availableAt);
     error ERC20InvalidAddress();
     error ERC20InsufficientBalance(address account, uint256 balance, uint256 requiredAmount);
     error ERC20InsufficientAllowance(address owner, address spender, uint256 allowance, uint256 requiredAmount);
@@ -25,6 +29,8 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
     string public constant symbol = "NUSD";
     uint8 public constant decimals = 18;
     uint256 public constant WAD = 1e18;
+    /// @notice How long the oracle must stay unusable before the price-free exit opens.
+    uint256 public constant ORACLE_FAILURE_GRACE = 7 days;
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     DIAOracleAdapter public immutable oracle;
@@ -34,6 +40,8 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
     uint256 public totalCollateralWei;
     bool public mintPaused;
     bool public redeemPaused;
+    /// @notice First time anyone observed the oracle failing; zero while it is healthy.
+    uint256 public oracleFailureReportedAt;
 
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
@@ -45,6 +53,11 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
         address indexed account, address indexed recipient, uint256 amountNusd, uint256 collateralOutWei
     );
     event ReserveCovered(address indexed payer, uint256 amountWei, uint256 totalCollateralWei);
+    event OracleFailureReported(address indexed reporter, uint256 reportedAt);
+    event OracleFailureCleared(address indexed caller);
+    event EmergencyRedeemed(
+        address indexed account, address indexed recipient, uint256 amountNusd, uint256 collateralOutWei
+    );
     event MintPauseUpdated(bool paused);
     event RedeemPauseUpdated(bool paused);
 
@@ -146,6 +159,62 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
         SafeTransferLib.safeTransferNative(recipient, collateralOutWei);
 
         emit RedeemedAtOracle(msg.sender, recipient, amountNusd, collateralOutWei);
+    }
+
+    /// @notice Starts the failure clock. Permissionless; only succeeds while the oracle cannot price.
+    function reportOracleFailure() external {
+        if (_oracleUsable()) revert OracleHealthy();
+        if (oracleFailureReportedAt != 0) return;
+        // The grace period is measured in wall-clock time by design.
+        // forge-lint: disable-next-line(block-timestamp)
+        oracleFailureReportedAt = block.timestamp;
+        emit OracleFailureReported(msg.sender, block.timestamp);
+    }
+
+    /// @notice Stops the failure clock once the oracle prices again. Permissionless.
+    function clearOracleFailure() external {
+        if (!_oracleUsable()) revert OracleUnavailable();
+        if (oracleFailureReportedAt == 0) return;
+        oracleFailureReportedAt = 0;
+        emit OracleFailureCleared(msg.sender);
+    }
+
+    /// @notice Price-free exit for when the oracle has been unusable for ORACLE_FAILURE_GRACE.
+    /// @dev Pays each holder their proportional share of the reserve, so the order of
+    ///      exits does not matter and no stale price is ever used. It deliberately ignores
+    ///      `redeemPaused`: an absent or compromised pauser must not be able to lock holders
+    ///      out of collateral once the normal oracle path is gone.
+    function emergencyRedeem(uint256 amountNusd, uint256 minCollateralOutWei, address recipient)
+        external
+        nonReentrant
+        returns (uint256 collateralOutWei)
+    {
+        uint256 reportedAt = oracleFailureReportedAt;
+        if (reportedAt == 0) revert OracleFailureNotReported();
+        // forge-lint: disable-next-line(block-timestamp)
+        if (block.timestamp < reportedAt + ORACLE_FAILURE_GRACE) {
+            revert OracleFailureGracePending(reportedAt + ORACLE_FAILURE_GRACE);
+        }
+        if (_oracleUsable()) revert OracleHealthy();
+        if (amountNusd == 0) revert InvalidAmount();
+        if (recipient == address(0)) revert InvalidRecipient();
+        collateralOutWei = MathX.mulDiv(amountNusd, totalCollateralWei, totalSupply);
+        if (collateralOutWei == 0) revert InvalidAmount();
+        if (collateralOutWei < minCollateralOutWei) {
+            revert SlippageExceeded(minCollateralOutWei, collateralOutWei);
+        }
+        _burn(msg.sender, amountNusd);
+        totalCollateralWei -= collateralOutWei;
+        SafeTransferLib.safeTransferNative(recipient, collateralOutWei);
+        emit EmergencyRedeemed(msg.sender, recipient, amountNusd, collateralOutWei);
+    }
+
+    function _oracleUsable() private view returns (bool) {
+        try oracle.readPriceWad() returns (uint256 priceWad, uint256, uint80) {
+            return priceWad != 0;
+        } catch {
+            return false;
+        }
     }
 
     function reserveValueNusd() external view returns (uint256 valueNusd) {

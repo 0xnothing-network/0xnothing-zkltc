@@ -282,7 +282,8 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
         nonReentrant
         returns (uint256 userNusdAmount)
     {
-        if (paused) revert ContractPaused();
+        // Selling back into the curve stays open while paused: a pause stops new
+        // exposure (create/buy) but must never trap holders if the admin is absent.
         if (block.timestamp > deadline) revert DeadlineExpired();
         Market storage market = _sellableMarket(token);
         bool reopenCurve = market.lifecycle == Lifecycle.READY;
