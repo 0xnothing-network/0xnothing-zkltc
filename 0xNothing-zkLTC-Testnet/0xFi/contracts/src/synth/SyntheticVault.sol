@@ -172,15 +172,32 @@ contract SyntheticVault is EmergencyGuardian, ReentrancyGuard {
         amountRepaidSynthetic = _repay(msg.sender, onBehalfOf, maximumAmountSynthetic);
     }
 
+    /// @notice Repays first, then withdraws. Collateral ratio is evaluated only
+    /// after debt reduction so a full close can be atomic.
+    /// @dev A zero-debt account skips repay, including when `maximumRepaySynthetic`
+    /// is `type(uint256).max`. `type(uint256).max` collateral means all remaining
+    /// safe user NUSD after that repay (the full user balance when debt reaches
+    /// zero). If debt remains and nothing is withdrawable, a max-uint withdraw
+    /// reverts `InsufficientCollateral` instead of succeeding as a no-op.
     function repayAndWithdraw(uint256 maximumRepaySynthetic, uint256 collateralAmountNusd, address recipient)
         external
         nonReentrant
         returns (uint256 amountRepaidSynthetic)
     {
-        if (maximumRepaySynthetic != 0) {
+        Position storage accountPosition = positions[msg.sender];
+        if (maximumRepaySynthetic != 0 && accountPosition.debtSynthetic != 0) {
             amountRepaidSynthetic = _repay(msg.sender, msg.sender, maximumRepaySynthetic);
         }
-        if (collateralAmountNusd != 0) _withdrawCollateral(msg.sender, collateralAmountNusd, recipient);
+        uint256 withdrawAmount = collateralAmountNusd;
+        if (withdrawAmount == type(uint256).max) {
+            if (accountPosition.debtSynthetic == 0) {
+                withdrawAmount = accountPosition.userCollateralNusd;
+            } else {
+                withdrawAmount = maxUserCollateralWithdrawable(msg.sender);
+                if (withdrawAmount == 0) revert InsufficientCollateral();
+            }
+        }
+        if (withdrawAmount != 0) _withdrawCollateral(msg.sender, withdrawAmount, recipient);
     }
 
     function withdrawCollateral(uint256 amountNusd, address recipient) external nonReentrant {
@@ -572,7 +589,7 @@ contract SyntheticVault is EmergencyGuardian, ReentrancyGuard {
 
         if (!_positionCollateralValid(accountPosition, debtAfter, priceWad)) revert InsufficientCollateral();
 
-        _collectMintFee(account, amountSynthetic, feeNusd);
+        if (feeNusd != 0) _collectMintFee(account, amountSynthetic, feeNusd);
         accountPosition.debtSynthetic = debtAfter;
         totalDebtSynthetic += amountSynthetic;
         syntheticAsset.mint(recipient, amountSynthetic);
@@ -580,6 +597,7 @@ contract SyntheticVault is EmergencyGuardian, ReentrancyGuard {
     }
 
     function _collectMintFee(address payer, uint256 amountSynthetic, uint256 feeNusd) internal {
+        if (feeNusd == 0) return;
         uint256 collateralBalanceBefore = nusd.balanceOf(address(this));
         _pullExact(nusd, payer, feeNusd);
         nusd.forceApprove(address(mintFeeDistributor), feeNusd);
@@ -816,9 +834,12 @@ contract SyntheticVault is EmergencyGuardian, ReentrancyGuard {
         return _mulDivUp(debtSynthetic, priceWad, WAD);
     }
 
-    function _mintFeeNusd(uint256 amountSynthetic, uint256 priceWad) internal pure returns (uint256) {
-        uint256 notionalNusd = _mulDivUp(amountSynthetic, priceWad, WAD);
-        return _mulDivUp(notionalNusd, MINT_FEE_BPS, BPS_DENOMINATOR);
+    /// @dev 0.1% of this mint's oracle NUSD notional. The single-ceil form
+    /// `ceil(amount * price / 1e21)` equals the stacked
+    /// `ceil(ceil(amount * price / 1e18) / 1000)` for every input.
+    function _mintFeeNusd(uint256 amountSynthetic, uint256 priceWad) internal pure returns (uint256 feeNusd) {
+        if (amountSynthetic == 0) return 0;
+        feeNusd = Math.mulDiv(amountSynthetic, priceWad, (WAD * BPS_DENOMINATOR) / MINT_FEE_BPS, Math.Rounding.Ceil);
     }
 
     function _liquidationCollateralOut(uint256 repaySynthetic, uint256 priceWad) internal pure returns (uint256) {

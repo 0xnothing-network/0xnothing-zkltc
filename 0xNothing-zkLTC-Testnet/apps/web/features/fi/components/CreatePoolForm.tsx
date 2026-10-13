@@ -48,9 +48,9 @@ export function CreatePoolForm() {
   const tokenMetadata = useReadContracts({
     contracts: normalizedAddress
       ? [
-          { address: normalizedAddress, abi: erc20Abi, functionName: "symbol" },
-          { address: normalizedAddress, abi: erc20Abi, functionName: "name" },
-          { address: normalizedAddress, abi: erc20Abi, functionName: "decimals" },
+          { chainId: deployment.chain.id, address: normalizedAddress, abi: erc20Abi, functionName: "symbol" },
+          { chainId: deployment.chain.id, address: normalizedAddress, abi: erc20Abi, functionName: "name" },
+          { chainId: deployment.chain.id, address: normalizedAddress, abi: erc20Abi, functionName: "decimals" },
         ] as const
       : [],
     query: {
@@ -72,6 +72,7 @@ export function CreatePoolForm() {
       !tokenReadFailed;
 
   const existingPair = useReadContract({
+    chainId: deployment.chain.id,
     address: factoryAddress,
     abi: dexFactoryAbi,
     functionName: "getPair",

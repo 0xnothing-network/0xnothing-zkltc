@@ -15,6 +15,7 @@ import { erc20Abi } from "@fi/lib/abis/erc20";
 import { deployment } from "@fi/config/deployment";
 import { readableError } from "@fi/lib/errors";
 import { isBlockSyncedQueryKey } from "@/lib/liveData";
+import { requireLitvmChainId } from "@/lib/chainSwitch";
 import { ReceiptConfirmationError, waitForProtocolReceipt } from "@/lib/transactionReceipt";
 import { deliveredTokenAmount } from "../../../../../../shared/transactions/tokenDelivery";
 import { LITVM_ADD_CHAIN_PARAMETER } from "@/config/network";
@@ -144,7 +145,8 @@ export function useProtocolTransaction() {
             activeWallet.getChainId(), activeWallet.getAddresses(),
           ]);
           assertAccountUnchanged();
-          if (walletChainId !== deployment.chain.id) throw new Error("Wrong network. Switch to LitVM LiteForge and try again.");
+          requireLitvmChainId(walletChainId);
+          requireLitvmChainId(getAccount(config).chainId);
           if (accounts[0]?.toLowerCase() !== address.toLowerCase()
             || activeWallet.account?.address.toLowerCase() !== address.toLowerCase()) {
             throw new Error("Wallet changed. Review the transaction with your current account and try again.");

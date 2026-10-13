@@ -12,6 +12,7 @@ import { PixelIdenticon } from "@/components/ui/TokenLogo";
 import { cx } from "@/components/ui/cx";
 import { useWalletModal } from "./WalletModalProvider";
 import { usePopover } from "./usePopover";
+import { ExternalLink } from "@/components/ExternalLink";
 
 export function shortenAddress(address: string): string {
   return address.length > 10 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address;
@@ -106,9 +107,9 @@ export function WalletMenu() {
             <button type="button" onClick={() => void copy()} className={menuItem}>
               {copied ? "Address copied" : "Copy address"}
             </button>
-            <a href={getAddressExplorerUrl(address)} target="_blank" rel="noreferrer" className={menuItem}>
+            <ExternalLink href={getAddressExplorerUrl(address)} className={menuItem}>
               View on explorer ↗
-            </a>
+            </ExternalLink>
             <button
               type="button"
               onClick={() => { close(); disconnect(); }}

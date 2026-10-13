@@ -412,6 +412,7 @@ export function handleTokenCurveReopened(event: TokenCurveReopened): void {
   }
 
   market.status = "CURVE";
+  market.readyAt = ZERO_BI;
   market.reserveNusd = event.params.realNusdReserve;
   market.reserveToken = event.params.tokenReserve;
   market.progressBps = market.graduationReserveThresholdNusd.equals(ZERO_BI)

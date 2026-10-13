@@ -7,6 +7,7 @@ import { useAccount, useReadContract } from "wagmi";
 import { OwnedNftCard, type OwnedNft } from "@/features/pixel/components/OwnedNftCard";
 import { GridSkeleton } from "@/features/pixel/components/Skeleton";
 import { PIXEL_MARKETPLACE_ADDRESS } from "@/lib/contract";
+import { LITVM_CHAIN_ID } from "@/lib/chainSwitch";
 import { fetchJson } from "@/lib/http";
 import { MarketplaceAbi } from "@/lib/marketplaceAbi";
 
@@ -22,6 +23,7 @@ export default function GalleryPage() {
     void forceRefresh();
   }, [forceRefresh]);
   const { data: paused } = useReadContract({
+    chainId: LITVM_CHAIN_ID,
     address: PIXEL_MARKETPLACE_ADDRESS,
     abi: MarketplaceAbi,
     functionName: "paused",

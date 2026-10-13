@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { PixelMist } from "@/components/PixelMist";
 import { Providers } from "@/app/providers";
 import { AppShell } from "@/components/shell/AppShell";
+import { LazyPixelMist } from "@/components/LazyPixelMist";
 import { ToastProvider } from "@fi/components/Toast";
 import "./globals.css";
 
@@ -14,7 +14,7 @@ export default function FiLayout({ children }: Readonly<{ children: React.ReactN
   return (
     <Providers withToast={false}>
       <div className="fi-root" data-product="fi">
-        <PixelMist product="fi" />
+        <LazyPixelMist product="fi" />
         <ToastProvider>
           <div className="fi-shell">
             <AppShell product="fi">

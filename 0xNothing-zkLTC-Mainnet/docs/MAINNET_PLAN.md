@@ -17,8 +17,8 @@ These are release blockers, not values to guess around.
 - Review the deliberate `type(uint256).max` supply ceiling. There is no practical protocol-wide cap, but every mint requires a native zkLTC deposit whose current oracle value equals the NUSD issued.
 - Audit the Pump curve, reserve accounting, rounding, fee isolation, and the exact transition from a `1,500 NUSD` initial virtual market cap to the fixed `6,000 NUSD` READY market-cap target.
 - Audit the paid content-reservation flow end to end so one `1 NUSD` reservation authorizes only its owner and exact canonical metadata/logo hash.
-- Add reviewed oracle-deviation and value circuit breakers in addition to the independent mint and redeem pause domains.
-- Move ownership, pause, fee-recipient, and adapter-governance roles to a Safe multisig with a documented delay.
+- Review and parameterize the DIAOracleAdapter price bounds and deviation breaker (implemented, admin-tunable) in addition to the independent mint and redeem pause domains.
+- Move ownership, pause, fee-recipient, adapter-governance, and DIAOracleAdapter admin (`setPriceBounds`, `setMaxDeviationBps`, `setMaxPriceAge`, `setEnforceAnsweredInRound`, `resetPriceAnchor`) to a Safe multisig behind a timelock. A hot EOA must not hold these keys.
 - Add redundant RPC, paid IPFS pinning, durable upload rate limits, monitoring, and incident procedures.
 
 The mainnet candidate is an oracle-priced native reserve, not an
@@ -68,7 +68,9 @@ that bound, plus the final stablecoin/route identity checks, only after the
 official interfaces are known. No placeholder or guessed address may satisfy a
 release gate.
 
-Graduation is submitted by the protocol Safe after the adapter is active. The Safe can pause curve trading before migration, while the router and adapter disable controls independently stop graduation. A failed attempt leaves the market in `READY`; until a graduation succeeds, a holder sell reopens the curve to `TRADING` instead of trapping reserves.
+Graduation is submitted by the protocol Safe after the adapter is active. Pause blocks every `graduate` call, including the Safe. The router and adapter disable controls independently stop graduation. Any account may also graduate once `permissionlessGraduationDelay` has elapsed, using the configured adapter and on-chain minLP. A failed attempt leaves the market in `READY`, where buys are frozen. Sells freeze only while graduation is possible; otherwise holders can exit immediately. When the freeze applies, only after `readyExitDelay` (default 24 hours, max 3 days) can a holder sell reopen the curve to `TRADING`.
+
+OracleNUSD keeps the owner-accepted H-1 zero-fee mint/redeem model and a 3600s `maxPriceAge`. Residual risk: a stale or manipulated DIA print can mint NUSD against native collateral at an off-market rate, and there is no protocol spread. See [`SECURITY.md`](../SECURITY.md) for H-1, R-1 (fresh-pool minLP), R-2 (72h cooldown + 72h lifetime sell-pause cap), R-3 (anchor does not auto-update), L-3 (oracle params need an external timelock), and `acceptAdmin()` on Pump, GraduationRouter, and DIAOracleAdapter. The constructor try-arms the DIA deviation breaker when the feed is readable; mint/redeem call `ensureAnchor()` on the first consume. `syncPrice()` is not part of the deploy script and remains a fallback. Mainnet admin of DIA bounds, breaker, `maxPriceAge`, `setEnforceAnsweredInRound`, Pump pause / emergency `sellPause`, and graduation controls must be a Safe multisig behind a timelock. Graduation stays disabled until `setGraduationAdapter`; do not enable an adapter against a pre-existing pair until the follow-up reserve-aware UniV2 adapter exists.
 
 ## Phase 3: indexing and web release
 

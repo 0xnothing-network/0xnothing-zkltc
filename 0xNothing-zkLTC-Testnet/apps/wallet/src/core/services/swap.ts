@@ -146,6 +146,45 @@ async function pumpPaused(client: SwapClient): Promise<boolean> {
     .catch(() => true);
 }
 
+/** Emergency sell halt. Unreadable state fails closed so a wallet cannot sell through a live pause. */
+async function pumpSellsPaused(client: SwapClient): Promise<boolean> {
+  return client
+    .readContract({
+      address: CONTRACTS.pumpFactory,
+      abi: zeroXPumpAbi,
+      functionName: "sellsPaused",
+    })
+    .catch(() => true);
+}
+
+/** READY sells stay frozen until `readyExitDelay` only while graduation is possible. Unreadable state fails closed. */
+async function pumpReadyExitOpen(client: SwapClient, token: Address): Promise<boolean> {
+  try {
+    const possible = await client.readContract({
+      address: CONTRACTS.pumpFactory,
+      abi: zeroXPumpAbi,
+      functionName: "graduationPossible",
+    });
+    if (possible === false) return true;
+    const [readyAt, delay] = await Promise.all([
+      client.readContract({
+        address: CONTRACTS.pumpFactory,
+        abi: zeroXPumpAbi,
+        functionName: "readyAt",
+        args: [token],
+      }),
+      client.readContract({
+        address: CONTRACTS.pumpFactory,
+        abi: zeroXPumpAbi,
+        functionName: "readyExitDelay",
+      }),
+    ]);
+    return BigInt(Math.floor(Date.now() / 1000)) >= (readyAt as bigint) + (delay as bigint);
+  } catch {
+    return false;
+  }
+}
+
 async function pumpBuyQuote(
   client: SwapClient,
   token: Address,
@@ -364,18 +403,14 @@ export async function quoteSwap(params: {
   const pumpToken = buyingPumpToken || sellingPumpToken;
   if (pumpToken) {
     const buying = Boolean(buyingPumpToken);
-    const [status, paused] = await Promise.all([
+    const [status, paused, sellsHalted] = await Promise.all([
       pumpStatus(client, pumpToken),
       pumpPaused(client),
+      pumpSellsPaused(client),
     ]);
-    if (status === PUMP_READY && buying) {
-      // READY means the curve has closed. The AMM becomes the source of truth
-      // only after graduation, so never show a misleading buy quote here.
-      return noRoute(identity, paused);
-    }
-    const pumpActive = status === PUMP_TRADING || (status === PUMP_READY && !buying);
-    if (pumpActive) {
-      if (buying) {
+    if (buying) {
+      if (status === PUMP_READY) return noRoute(identity, paused);
+      if (status === PUMP_TRADING) {
         const quote = await pumpBuyQuote(client, pumpToken, amountIn);
         return {
           ...identity,
@@ -387,6 +422,11 @@ export async function quoteSwap(params: {
           paused,
         };
       }
+    } else if (sellsHalted) {
+      return noRoute(identity, true);
+    } else if (status === PUMP_READY && !(await pumpReadyExitOpen(client, pumpToken))) {
+      return noRoute(identity, false);
+    } else if (status === PUMP_TRADING || status === PUMP_READY) {
       const quote = await pumpSellQuote(client, pumpToken, amountIn);
       return {
         ...identity,
@@ -395,7 +435,7 @@ export async function quoteSwap(params: {
         path: [input, output],
         feeBps: PUMP_TRADE_FEE_BPS,
         stages: 1,
-        paused,
+        paused: false,
       };
     }
   }
@@ -571,7 +611,7 @@ export async function executeSwap(params: {
     throw new Error(t("err.quoteStale"));
   }
   if (route.kind === "none" || route.amountOut <= 0n) throw new Error(t("err.noLiquidity"));
-  if (route.paused) throw new Error(t("err.swapPaused"));
+  if (route.paused && route.kind !== "pump-sell") throw new Error(t("err.swapPaused"));
 
   const paid = `${formatAmount(amountIn, tokenIn.decimals, 4)} ${tokenIn.symbol}`;
   const received = `${formatAmount(route.amountOut, tokenOut.decimals, 4)} ${tokenOut.symbol}`;

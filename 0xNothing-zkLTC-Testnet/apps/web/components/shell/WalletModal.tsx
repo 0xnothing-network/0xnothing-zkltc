@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAccount, useConnect, useConnectors, type Connector } from "wagmi";
 import { Modal } from "@/components/ui/Modal";
 import { cx } from "@/components/ui/cx";
+import { ExternalLink } from "@/components/ExternalLink";
 
 const LAST_CONNECTOR_KEY = "0xn-last-connector";
 
@@ -75,8 +76,8 @@ export function WalletModal({ open, onClose }: { open: boolean; onClose: () => v
         <div className="grid gap-3 font-ui text-sm text-fg-2">
           <p>No browser wallet detected. Install one, then refresh this page.</p>
           <div className="flex flex-wrap gap-2">
-            <a className="text-accent-text underline-offset-2 hover:underline focus-ring" href="https://metamask.io/download/" target="_blank" rel="noreferrer">Get MetaMask</a>
-            <a className="text-accent-text underline-offset-2 hover:underline focus-ring" href="https://rabby.io/" target="_blank" rel="noreferrer">Get Rabby</a>
+            <ExternalLink className="text-accent-text underline-offset-2 hover:underline focus-ring" href="https://metamask.io/download/">Get MetaMask</ExternalLink>
+            <ExternalLink className="text-accent-text underline-offset-2 hover:underline focus-ring" href="https://rabby.io/">Get Rabby</ExternalLink>
           </div>
         </div>
       ) : (
@@ -114,7 +115,7 @@ export function WalletModal({ open, onClose }: { open: boolean; onClose: () => v
       {error ? <p role="alert" className="mt-3 font-ui text-sm text-negative">{error}</p> : null}
       <p className="mt-4 font-ui text-xs text-fg-3">
         Need gas? Get testnet zkLTC from the{" "}
-        <a className="text-accent-text underline-offset-2 hover:underline focus-ring" href="https://docs.litvm.com/get-started-on-testnet/add-to-wallet" target="_blank" rel="noreferrer">LitVM docs</a>.
+        <ExternalLink className="text-accent-text underline-offset-2 hover:underline focus-ring" href="https://docs.litvm.com/get-started-on-testnet/add-to-wallet">LitVM docs</ExternalLink>.
       </p>
     </Modal>
   );

@@ -17,7 +17,7 @@ import {
 import { LendingAction, LendingMarket } from "../generated/schema";
 import { eventId, ZERO_BI } from "./helpers";
 
-const NUSD = Address.fromString("0x5317e21aba902c6c7087a84457bc02ffe99604d1");
+const NUSD = Address.fromString("0x677D63c78E77E0b1971530e1494Caee4Bd7d631e");
 const ZERO_ADDRESS = Address.zero();
 
 export function handleInitialize(block: ethereum.Block): void {

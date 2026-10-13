@@ -18,6 +18,30 @@ Keep a fixture or helper beside the domain that owns it. Move it to a shared
 `helpers` or `mocks` directory only after multiple test files consume it. Test
 doubles must never be imported by production source or deployment scripts.
 
+## Contract coverage
+
+Pump contract coverage runs without `--ir-minimum`:
+
+```powershell
+forge coverage --root 0xNothing-zkLTC-Mainnet/contracts --report summary --no-match-coverage "(test|script)/"
+```
+
+The testnet project shares the same Pump sources. Its Pixel V2 contract is
+rejected by forge's coverage analyzer, so exclude Pixel there:
+
+```powershell
+$env:FOUNDRY_SKIP='["src/0xpixel/**","test/0xPixelV2.t.sol"]'
+forge coverage --root 0xNothing-zkLTC-Testnet/contracts --no-match-path test/0xPixelV2.t.sol --report summary --no-match-coverage "(test|script)/"
+```
+
+## Testnet Pump deploy dry run
+
+The canonical LiteForge (chain ID 4441) path is `forge script
+script/DeployTestnet.s.sol:DeployTestnet --rpc-url $LITVM_RPC_URL` from
+`0xNothing-zkLTC-Testnet/contracts`, without `--broadcast`. Exact environment
+variables are listed in `0xNothing-zkLTC-Testnet/docs/DEPLOYMENT.md` and
+`0xNothing-zkLTC-Testnet/contracts/.env.example`.
+
 ## Generated outputs
 
 Preview the directories that can be regenerated safely:

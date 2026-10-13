@@ -10,6 +10,7 @@ contract MockDIAFeed {
     uint256 public startedAt;
     uint256 public updatedAt;
     uint80 public answeredInRound;
+    bool public revertLatest;
 
     constructor(uint8 feedDecimals) {
         decimals = feedDecimals;
@@ -23,7 +24,12 @@ contract MockDIAFeed {
         answeredInRound = completedInRound;
     }
 
+    function setRevertLatest(bool shouldRevert) external {
+        revertLatest = shouldRevert;
+    }
+
     function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
+        if (revertLatest) revert();
         return (roundId, answer, startedAt, updatedAt, answeredInRound);
     }
 }

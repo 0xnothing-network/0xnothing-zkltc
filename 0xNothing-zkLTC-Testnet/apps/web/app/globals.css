@@ -142,20 +142,15 @@ body {
 }
 
 /*
- * `--font-mono` is intentionally not redeclared here. It used to read
- * `--font-mono: var(--font-mono)`, a self-reference: CSS resolves a custom
- * property that names itself to the guaranteed-invalid value, which makes every
- * declaration reading `var(--font-mono)` without a fallback invalid at
- * computed-value time — including the `body` rule above, whose font-family would
- * then fall back to the browser default serif for the whole site. It only
- * rendered correctly because next/font emits an unlayered `:root` value for
- * `--font-mono`, and unlayered wins over `@layer theme`. Leaving the entry out
- * lets Tailwind supply its own monospace stack instead, so the body rule stays
- * valid on its own.
+ * `--font-mono` used to be a next/font Google family (JetBrains Mono) that the
+ * UI never actually painted first. Pointing it at Departure Mono keeps the
+ * existing `font-mono` / `var(--font-mono)` call sites on the brand face
+ * without a second webfont download. The name is not self-referential.
  */
 @theme inline {
   --font-sans: var(--font-departure);
   --font-departure: "Departure Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-mono: "Departure Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
 /* Custom scrollbar */

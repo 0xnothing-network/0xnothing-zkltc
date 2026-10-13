@@ -1,4 +1,5 @@
 import { cx } from "./cx";
+import { ExternalLink } from "@/components/ExternalLink";
 
 export type TxStepStatus = "pending" | "active" | "done" | "failed";
 
@@ -36,7 +37,7 @@ export function TxStepper({ steps, onRetry, className }: { steps: ReadonlyArray<
               <span className="sr-only"> — {step.status}</span>
             </p>
             {step.href && step.status === "done" ? (
-              <a href={step.href} target="_blank" rel="noreferrer" className="text-xs text-accent-text underline-offset-2 hover:underline focus-ring">View on explorer</a>
+              <ExternalLink href={step.href} className="text-xs text-accent-text underline-offset-2 hover:underline focus-ring">View on explorer</ExternalLink>
             ) : null}
             {step.status === "failed" ? (
               <p role="alert" className="text-xs text-negative">

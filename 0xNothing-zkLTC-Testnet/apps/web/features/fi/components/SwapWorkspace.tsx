@@ -208,10 +208,12 @@ export function SwapWorkspace() {
   ]);
 
   const nativeBalance = useBalance({
+    chainId: deployment.chain.id,
     address,
     query: { enabled: Boolean(address && assetIn?.native) },
   });
   const tokenBalance = useReadContract({
+    chainId: deployment.chain.id,
     address: assetIn?.native ? undefined : assetIn?.poolAddress,
     abi: erc20Abi,
     functionName: "balanceOf",
@@ -271,6 +273,7 @@ export function SwapWorkspace() {
   const routeReserves = useReadContracts({
     contracts: !isOracleNusdRoute && activeDexRouter && path
       ? path.slice(0, -1).map((token, index) => ({
+          chainId: deployment.chain.id,
           address: activeDexRouter,
           abi: dexRouterAbi,
           functionName: "getReserves" as const,
@@ -289,6 +292,7 @@ export function SwapWorkspace() {
     : swapRoute.kind === "direct" || swapRoute.kind === "via-nusd"
       || routeIsOracleMint || routeIsOracleRedeem;
   const mintQuote = useReadContract({
+    chainId: deployment.chain.id,
     address: deployment.contracts.nusd,
     abi: nusdOracleAbi,
     functionName: "quoteMint",
@@ -300,6 +304,7 @@ export function SwapWorkspace() {
     },
   });
   const redeemQuote = useReadContract({
+    chainId: deployment.chain.id,
     address: deployment.contracts.nusd,
     abi: nusdOracleAbi,
     functionName: "quoteRedeem",

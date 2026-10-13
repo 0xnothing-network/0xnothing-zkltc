@@ -55,7 +55,10 @@ independent pause switches limit blast radius.
 Mint output is calculated from the DIA USD price. The user-provided NUSD remains
 collateral at the quoted 1:1 USD value; the separate 0.1% NUSD fee is pulled in
 addition, bounded by a caller-supplied maximum, and never enters either the user
-or Safety Reserve collateral ledger.
+or Safety Reserve collateral ledger. Deposits merge into the account's single
+position. `repayAndWithdraw` reduces debt before the collateral check so a full
+close can repay all synth and withdraw all user NUSD atomically. The fee UI
+prints full token precision so the mint notional is not shown as the fee.
 
 Each position records user-owned NUSD separately from protocol-reserve NUSD. In
 the default mode, the user supplies the full 150% minimum. The shared
@@ -108,6 +111,11 @@ adapter, destination, pool, terminal price, liquidity amount, or minimum LP.
 The controller prepares the protected pair and graduates it atomically, with
 minimum LP fixed to the exact output implied by the live Pump reserves. A
 failed check reverts pool creation and all transfers together.
+
+`graduateReady` calls `pump.graduate` as the controller. While the controller is
+Pump admin it bypasses `permissionlessGraduationDelay`, so the keeper still
+graduates a READY market as soon as it appears. Direct `pump.graduate` callers
+who are not admin wait for that delay and cannot run while Pump is paused.
 
 The keeper only discovers READY markets and pays gas. It has no protocol role,
 so downtime delays execution without blocking another caller, and a compromised

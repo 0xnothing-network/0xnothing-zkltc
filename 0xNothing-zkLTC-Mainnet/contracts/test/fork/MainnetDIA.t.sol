@@ -13,8 +13,8 @@ contract MainnetDIAForkTest is TestBase {
         vm.createSelectFork(rpcUrl);
         assertGt(feed.code.length, 0, "configured DIA feed missing");
 
-        uint256 maxPriceAge = vm.envOr("DIA_MAX_PRICE_AGE", uint256(90 minutes));
-        DIAOracleAdapter adapter = new DIAOracleAdapter(feed, maxPriceAge);
+        uint256 maxPriceAge = vm.envOr("DIA_MAX_PRICE_AGE", uint256(60 minutes));
+        DIAOracleAdapter adapter = new DIAOracleAdapter(feed, maxPriceAge, address(this), 1, type(uint256).max, 0);
         (uint256 priceWad, uint256 updatedAt,) = adapter.readPriceWad();
 
         assertGt(priceWad, 0, "LTC/USD price");

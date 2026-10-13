@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {IGraduationAdapter} from "../../src/graduation/interfaces/IGraduationAdapter.sol";
+import {MathX} from "../../src/common/MathX.sol";
 import {SafeTransferLib} from "../../src/common/SafeTransferLib.sol";
 
 contract MockLPToken {
@@ -71,7 +72,8 @@ contract MockGraduationAdapter is IGraduationAdapter {
         SafeTransferLib.safeTransferFrom(params.token, msg.sender, address(this), params.tokenAmount);
         SafeTransferLib.safeTransferFrom(params.nusd, msg.sender, address(this), params.nusdAmount);
 
-        uint256 lpAmount = params.tokenAmount < params.nusdAmount ? params.tokenAmount : params.nusdAmount;
+        uint256 rootK = MathX.sqrt(params.tokenAmount * params.nusdAmount);
+        uint256 lpAmount = rootK > 1000 ? rootK - 1000 : 0;
         require(lpAmount >= params.minimumLp, "MIN_LP");
         if (!skipLpMint) lpToken.mint(params.lpRecipient, lpAmount);
 

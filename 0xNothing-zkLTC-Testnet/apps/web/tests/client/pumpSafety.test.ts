@@ -147,7 +147,7 @@ function descendants(value: unknown): ElementNode[] {
   return [element, ...descendants(element.props.children)];
 }
 
-function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect", mode = "buy", replacement?: "cancelled" | "replaced" | "repriced", options: { quoteSettling?: boolean; simulationError?: boolean; simulationChange?: boolean } = {}) {
+function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect", mode = "buy", replacement?: "cancelled" | "replaced" | "repriced", options: { quoteSettling?: boolean; simulationError?: boolean; simulationChange?: boolean; market?: Record<string, unknown>; paused?: boolean; pausedLoading?: boolean; sellsPaused?: boolean; readyAt?: bigint; readyAtError?: boolean; readyExitDelay?: bigint; graduationPossible?: boolean } = {}) {
   const account = { address: ACCOUNT as string, isConnected: true, chainId: 4441, connector: { uid: "wallet-a" } };
   const writes: Array<{ functionName: string; account?: string; chainId?: number }> = [];
   const errors: Error[] = [];
@@ -157,7 +157,7 @@ function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect",
   const publicClientOptions: Array<{ chainId?: number } | undefined> = [];
   let done = false;
   let stateIndex = 0;
-  const states = [mode, "1", 100n, false];
+  const states = [mode, "1", 100n, false, Math.floor(Date.now() / 1000)];
   const guardModule = evaluateModule(new URL("../../features/pump/walletSession.ts", import.meta.url), {
     "wagmi/actions": { getAccount: () => account }, "@/features/pump/config": config, "@/config/network": { LITVM_ADD_CHAIN_PARAMETER: {} },
   });
@@ -167,7 +167,7 @@ function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect",
     {
       "react/jsx-runtime": { jsx, jsxs: jsx },
       react: {
-        useMemo: (fn: () => unknown) => fn(), useRef: (current: unknown) => ({ current }),
+        useMemo: (fn: () => unknown) => fn(), useRef: (current: unknown) => ({ current }), useEffect() {},
         useState: () => { const index = stateIndex++; return [states[index], (value: unknown) => { states[index] = value as never; if (index === 3 && value === false) done = true; }]; },
       },
       "@tanstack/react-query": { useQueryClient: () => ({}) },
@@ -192,12 +192,24 @@ function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect",
             return receipt;
           } };
         },
-        useReadContract: (options: { functionName: string; chainId?: number }) => {
-          readOptions.push(options);
-          const data = options.functionName === "quoteBuy" ? [2n, 1n, 1n, 0n, false]
-            : options.functionName === "quoteSell" ? [1n, 1n, 0n]
-              : options.functionName === "balanceOf" ? 100n * 10n ** 18n : 0n;
-          return { data, refetch: async () => ({}), isLoading: false };
+        useReadContract: (read: { functionName: string; chainId?: number }) => {
+          readOptions.push(read);
+          if (read.functionName === "paused" && options.pausedLoading) {
+            return { data: undefined, refetch: async () => ({}), isLoading: true, isError: false };
+          }
+          if (read.functionName === "readyAt" && options.readyAtError) {
+            return { data: undefined, error: new Error("readyAt unavailable"), refetch: async () => ({}), isLoading: false, isError: true };
+          }
+          const data = read.functionName === "quoteBuy" ? [2n, 1n, 1n, 0n, false]
+            : read.functionName === "quoteSell" ? [1n, 1n, 0n]
+              : read.functionName === "balanceOf" ? 100n * 10n ** 18n
+                : read.functionName === "paused" ? Boolean(options.paused)
+                  : read.functionName === "sellsPaused" ? Boolean(options.sellsPaused)
+                  : read.functionName === "readyAt" ? (options.readyAt ?? 0n)
+                    : read.functionName === "readyExitDelay" ? (options.readyExitDelay ?? 86_400n)
+                      : read.functionName === "graduationPossible" ? (options.graduationPossible ?? true)
+                      : 0n;
+          return { data, refetch: async () => ({}), isLoading: false, isError: false };
         },
         useSwitchChain: () => ({}),
         useWriteContract: () => ({ writeContractAsync: async (request: typeof writes[number]) => { writes.push(request); return HASH; } }),
@@ -212,20 +224,21 @@ function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect",
       "@/lib/actionLock": { tryAcquireAction: (ref: { current: boolean }) => ref.current ? false : (ref.current = true), releaseAction: (ref: { current: boolean }) => { ref.current = false; } },
       // A settled pass-through, which is what the real hook returns once the
       // field stops changing — the only state a trade is ever submitted from.
-      // Loading it for real would also claim a fifth `useState` slot, and this
-      // harness answers positionally from a four-entry list, so the hook would
-      // read `undefined` and report itself forever pending, gating the quote
-      // off and stalling the trade these tests exist to follow.
+      // Loading it for real would also claim another `useState` slot, and this
+      // harness answers positionally (mode, amount, slippage, pending, nowSec),
+      // so the hook would read `undefined` and report itself forever pending,
+      // gating the quote off and stalling the trade these tests exist to follow.
       "@/lib/useDebouncedValue": { useDebouncedValue: (value: unknown) => ({ value, pending: options.quoteSettling ?? false }) },
     },
   );
   return {
     run: async () => {
-      const tree = component.TradePanel({ market });
+      const tree = component.TradePanel({ market: { ...market, ...options.market } });
       descendants(tree).find((node) => node.type === "button" && String(node.props.className).includes("pump-button-large"))?.props.onClick?.();
       for (let index = 0; index < 30 && !done; index += 1) await setImmediate();
       assert.equal(done, true, "trade handler completed");
     },
+    render: () => component.TradePanel({ market: { ...market, ...options.market } }),
     writes, errors, readOptions, publicClientOptions, simulations, successes: () => successes,
   };
 }
@@ -292,6 +305,91 @@ test("Pump keeps the sell approval and trade bound to the original wallet", asyn
   assert.deepEqual(harness.writes.map(({ functionName }) => functionName), ["approve", "sell"]);
   assert.equal(harness.errors.length, 0);
   assert.ok(harness.writes.every(({ account, chainId }) => account === ACCOUNT && chainId === 4441));
+});
+
+test("Pump freezes READY buys and sells until the exit delay", () => {
+  const now = BigInt(Math.floor(Date.now() / 1000));
+  const harness = tradeHarness(undefined, "sell", undefined, {
+    market: { status: "READY" },
+    readyAt: now,
+    readyExitDelay: 24n * 3600n,
+    graduationPossible: true,
+  });
+  const primary = descendants(harness.render()).find((node) => node.type === "button" && String(node.props.className).includes("pump-button-large"));
+  assert.equal(primary?.props.disabled, true);
+  assert.equal(primary?.props.children, "Awaiting graduation");
+});
+
+test("Pump lets a READY sell through when graduation is impossible", async () => {
+  const harness = tradeHarness(undefined, "sell", undefined, {
+    market: { status: "READY" },
+    readyAt: BigInt(Math.floor(Date.now() / 1000)),
+    readyExitDelay: 24n * 3600n,
+    graduationPossible: false,
+  });
+  await harness.run();
+  assert.deepEqual(harness.writes.map(({ functionName }) => functionName), ["approve", "sell"]);
+  assert.equal(harness.errors.length, 0);
+});
+
+test("Pump lets a READY sell reopen the curve after the exit delay", async () => {
+  const harness = tradeHarness(undefined, "sell", undefined, {
+    market: { status: "READY" },
+    readyAt: 1n,
+    readyExitDelay: 1n,
+  });
+  await harness.run();
+  assert.deepEqual(harness.writes.map(({ functionName }) => functionName), ["approve", "sell"]);
+  assert.equal(harness.errors.length, 0);
+});
+
+test("Pump blocks buys while paused and still lets holders sell", async () => {
+  const pausedBuy = tradeHarness(undefined, "buy", undefined, { paused: true });
+  const buyButton = descendants(pausedBuy.render()).find((node) => node.type === "button" && String(node.props.className).includes("pump-button-large"));
+  assert.equal(buyButton?.props.disabled, true);
+  assert.equal(buyButton?.props.children, "Buys paused");
+
+  const pausedSell = tradeHarness(undefined, "sell", undefined, { paused: true });
+  await pausedSell.run();
+  assert.deepEqual(pausedSell.writes.map(({ functionName }) => functionName), ["approve", "sell"]);
+  assert.equal(pausedSell.errors.length, 0);
+});
+
+test("Pump disables buys while pause state is loading", () => {
+  const harness = tradeHarness(undefined, "buy", undefined, { pausedLoading: true });
+  const buyButton = descendants(harness.render()).find((node) => node.type === "button" && String(node.props.className).includes("pump-button-large"));
+  assert.equal(buyButton?.props.disabled, true);
+  assert.equal(buyButton?.props.children, "Checking pause");
+});
+
+test("Pump treats a READY readyAt read failure as still frozen", () => {
+  const harness = tradeHarness(undefined, "sell", undefined, {
+    market: { status: "READY" },
+    readyAtError: true,
+    graduationPossible: true,
+  });
+  const primary = descendants(harness.render()).find((node) => node.type === "button" && String(node.props.className).includes("pump-button-large"));
+  assert.equal(primary?.props.disabled, true);
+  assert.equal(primary?.props.children, "Awaiting graduation");
+});
+
+test("Pump shows a READY exit countdown while sells are frozen", () => {
+  const now = BigInt(Math.floor(Date.now() / 1000));
+  const harness = tradeHarness(undefined, "sell", undefined, {
+    market: { status: "READY" },
+    readyAt: now,
+    readyExitDelay: 90n,
+    graduationPossible: true,
+  });
+  const hint = descendants(harness.render()).find((node) => node.type === "p" && String(node.props.className).includes("pump-form-hint"));
+  assert.match(JSON.stringify(hint?.props.children), /1m|2m/);
+});
+
+test("Pump blocks sells during an emergency sell pause", () => {
+  const harness = tradeHarness(undefined, "sell", undefined, { sellsPaused: true });
+  const sellButton = descendants(harness.render()).find((node) => node.type === "button" && String(node.props.className).includes("pump-button-large"));
+  assert.equal(sellButton?.props.disabled, true);
+  assert.equal(sellButton?.props.children, "Sells paused");
 });
 
 type PumpComponent = "CreateTokenForm" | "NusdOraclePanel" | "TokenDetail" | "PumpStatsDashboard";
@@ -376,6 +474,7 @@ function componentHarness(name: PumpComponent, changeAt?: "simulation" | "upload
       "@/features/pump/components/LazyPumpChart": {}, "@/features/pump/components/PumpTokenLogo": {},
       "@/features/pump/components/TradePanel": {}, "@/features/pump/components/TradeHistory": {}, "@/features/pump/components/TokenHolders": {},
       "@/lib/explorer": { getAddressExplorerUrl: String },
+      "@/components/ExternalLink": { ExternalLink: (props: { href: string; children: unknown }) => ({ type: "a", props }) },
       "@/lib/contract": { publicClient, getTransactionExplorerUrl: String },
       "@/components/Toast": { useToast: () => toast },
       "@/lib/actionLock": { tryAcquireAction: (ref: { current: boolean }) => ref.current ? false : (ref.current = true), releaseAction: (ref: { current: boolean }) => { ref.current = false; } },

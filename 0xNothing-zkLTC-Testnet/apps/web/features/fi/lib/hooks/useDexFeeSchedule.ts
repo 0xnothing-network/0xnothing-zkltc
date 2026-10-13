@@ -2,6 +2,7 @@
 
 import type { Address } from "viem";
 import { useReadContracts } from "wagmi";
+import { deployment } from "@fi/config/deployment";
 import { dexRouterAbi } from "@fi/lib/abis/dex";
 
 export interface DexFeeSchedule {
@@ -13,9 +14,9 @@ export interface DexFeeSchedule {
 export function useDexFeeSchedule(router: Address | undefined): DexFeeSchedule | undefined {
   const reads = useReadContracts({
     contracts: router ? [
-      { address: router, abi: dexRouterAbi, functionName: "LP_FEE_BPS" },
-      { address: router, abi: dexRouterAbi, functionName: "PROTOCOL_FEE_BPS" },
-      { address: router, abi: dexRouterAbi, functionName: "ROUTE_SURCHARGE_BPS" },
+      { chainId: deployment.chain.id, address: router, abi: dexRouterAbi, functionName: "LP_FEE_BPS" },
+      { chainId: deployment.chain.id, address: router, abi: dexRouterAbi, functionName: "PROTOCOL_FEE_BPS" },
+      { chainId: deployment.chain.id, address: router, abi: dexRouterAbi, functionName: "ROUTE_SURCHARGE_BPS" },
     ] as const : [],
     query: { enabled: Boolean(router), staleTime: Infinity, retry: false },
   });

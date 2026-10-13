@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { formatUnits, zeroAddress, type Address } from "viem";
+import { formatUnits, maxUint256, zeroAddress, type Address } from "viem";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { AmountField } from "@fi/components/AmountField";
@@ -63,12 +63,14 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
   const vaultStatus = useSynthVaultStatus(vault);
 
   const oracleState = useReadContract({
+    chainId: deployment.chain.id,
     address: oracle,
     abi: diaOracleAdapterAbi,
     functionName: "isFresh",
     query: { enabled: Boolean(oracle) },
   });
   const safetyReserveState = useReadContract({
+    chainId: deployment.chain.id,
     address: vault,
     abi: synthVaultAbi,
     functionName: "safetyReserve",
@@ -80,26 +82,26 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
 
   const reads = useReadContracts({
     contracts: vault ? [
-      { address: vault, abi: synthVaultAbi, functionName: "mintPaused" },
-      { address: vault, abi: synthVaultAbi, functionName: "withdrawPaused" },
+      { chainId: deployment.chain.id, address: vault, abi: synthVaultAbi, functionName: "mintPaused" },
+      { chainId: deployment.chain.id, address: vault, abi: synthVaultAbi, functionName: "withdrawPaused" },
     ] as const : [],
     query: { enabled: Boolean(vault) },
   });
   const walletReads = useReadContracts({
     contracts: vault && address ? [
-      { address: vault, abi: synthVaultAbi, functionName: "position", args: [address] },
-      { address: vault, abi: synthVaultAbi, functionName: "maxMintableSynthetic", args: [address] },
-      { address: vault, abi: synthVaultAbi, functionName: "maxUserCollateralWithdrawable", args: [address] },
+      { chainId: deployment.chain.id, address: vault, abi: synthVaultAbi, functionName: "position", args: [address] },
+      { chainId: deployment.chain.id, address: vault, abi: synthVaultAbi, functionName: "maxMintableSynthetic", args: [address] },
+      { chainId: deployment.chain.id, address: vault, abi: synthVaultAbi, functionName: "maxUserCollateralWithdrawable", args: [address] },
     ] as const : [],
     query: { enabled: Boolean(vault && address) },
   });
   const reserveReads = useReadContracts({
     contracts: safetyReserve ? [
-      { address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "totalReserveNusd" },
-      { address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "freeReserveNusd" },
-      { address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "ENTRY_TVL_NUSD" },
-      { address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "sponsorshipActive" },
-      { address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "allocationsPaused" },
+      { chainId: deployment.chain.id, address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "totalReserveNusd" },
+      { chainId: deployment.chain.id, address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "freeReserveNusd" },
+      { chainId: deployment.chain.id, address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "ENTRY_TVL_NUSD" },
+      { chainId: deployment.chain.id, address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "sponsorshipActive" },
+      { chainId: deployment.chain.id, address: safetyReserve, abi: synthSafetyReserveAbi, functionName: "allocationsPaused" },
     ] as const : [],
     query: { enabled: Boolean(safetyReserve) },
   });
@@ -117,6 +119,7 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
   const allocationsPaused = reserveReads.data?.[4]?.result as boolean | undefined;
 
   const mintQuoteState = useReadContract({
+    chainId: deployment.chain.id,
     address: vault,
     abi: synthVaultAbi,
     functionName: "quoteDepositAndMint",
@@ -131,6 +134,7 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
   const reserveRequired = mintQuote?.[1];
   const quoteUsesSponsorship = mintQuote?.[2] === true;
   const mintFeeState = useReadContract({
+    chainId: deployment.chain.id,
     address: vault,
     abi: synthVaultAbi,
     functionName: "quoteMintFee",
@@ -244,16 +248,75 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
         withdraw: "NUSD collateral withdrawn",
       };
       const detail = mode === "mint" && minimumMintAmount
-        ? `${formatTokenAmount(minimumMintAmount)} ${synth} received with a ${formatAmount(maximumMintDebit)} NUSD maximum debit.`
+        ? `${formatTokenAmount(minimumMintAmount)} ${synth} received with a ${formatTokenAmount(maximumMintFee)} NUSD maximum fee.`
         : "Vault position updated.";
       toast.show(labels[mode], detail, "success");
       setAmountText("");
-      void reads.refetch();
-      void walletReads.refetch();
-      void reserveReads.refetch();
-      void safetyReserveState.refetch();
-      void nusdBalance.refetch();
-      void synthBalance.refetch();
+      void refreshPosition();
+    }
+  }
+
+  function refreshPosition() {
+    void reads.refetch();
+    void walletReads.refetch();
+    void reserveReads.refetch();
+    void safetyReserveState.refetch();
+    void nusdBalance.refetch();
+    void synthBalance.refetch();
+  }
+
+  async function closePosition() {
+    if (!vault || !address || !synthAddress) {
+      toast.show("Cannot close", "Connect a wallet and wait for the vault to load.", "warning");
+      return;
+    }
+    if (activationBlocked) {
+      toast.show("Cannot close", "The vault is not ready yet.", "warning");
+      return;
+    }
+    if (withdrawPaused) {
+      toast.show("Cannot close", "Collateral withdrawals are paused by governance.", "warning");
+      return;
+    }
+    if (synthDebt !== undefined && synthDebt > 0n && synthBalance.data !== undefined && synthBalance.data < synthDebt) {
+      toast.show("Cannot close", `Hold the outstanding ${synth} to repay that debt first.`, "warning");
+      return;
+    }
+
+    const latestReads = await walletReads.refetch();
+    const latestPosition = latestReads.data?.[0]?.result as Position | undefined;
+    const latestUserCollateral = latestPosition?.[0];
+    const latestDebt = latestPosition?.[2];
+    if (latestUserCollateral === undefined) {
+      toast.show("Cannot close", "Could not refresh your collateral. Try again.", "error");
+      return;
+    }
+
+    const hash = await tx.execute({
+      approval: latestDebt && latestDebt > 0n
+        ? { token: synthAddress, spender: vault, amount: latestDebt }
+        : undefined,
+      call: {
+        address: vault,
+        abi: synthVaultAbi,
+        functionName: "repayAndWithdraw",
+        // Live vaults reject a max-uint withdraw as InvalidAmount. Repay max
+        // (or 0 when already debt-free) then the exact stored user NUSD. The
+        // upgraded vault also accepts max-uint collateral as "all safe after repay".
+        args: [
+          latestDebt && latestDebt > 0n ? maxUint256 : 0n,
+          latestUserCollateral,
+          address,
+        ] as const,
+      },
+    });
+    // execute() only returns a hash after the receipt confirms.
+    if (hash) {
+      toast.show("Position closed", `All ${synth} debt repaid, then your NUSD withdrawn.`, "success");
+      setAmountText("");
+      refreshPosition();
+    } else {
+      toast.show("Close failed", "The close transaction did not confirm. Try again.", "error");
     }
   }
 
@@ -286,6 +349,24 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
             <div className="fi-position-row"><span>Locked collateral</span><strong>{formatAmount(userCollateral)} NUSD</strong></div>
             <div className="fi-position-row"><span>Withdrawable</span><strong>{formatAmount(maxWithdrawable)} NUSD</strong></div>
           </dl>
+          {isConnected && configured && ((userCollateral ?? 0n) > 0n || (synthDebt ?? 0n) > 0n) ? (
+            <button
+              type="button"
+              className="fi-button fi-button-block fi-button-muted"
+              disabled={
+                activationBlocked
+                || withdrawPaused === true
+                || tx.pending
+                || (synthDebt !== undefined && synthDebt > 0n && synthBalance.data !== undefined && synthBalance.data < synthDebt)
+              }
+              onClick={() => { void closePosition(); }}
+            >
+              {tx.pending ? "Processing" : "Close position"}
+            </button>
+          ) : null}
+          {synthDebt !== undefined && synthDebt > 0n && synthBalance.data !== undefined && synthBalance.data < synthDebt ? (
+            <div className="fi-inline-state fi-inline-warning"><div><strong>Hold the outstanding {synth}</strong><span>Close repays that debt first, then withdraws your NUSD.</span></div></div>
+          ) : null}
           <details className="fi-pool-details">
             <summary>Reserve details</summary>
             <dl>
@@ -354,7 +435,8 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
                     <summary>Mint details</summary>
                     <dl>
                       <div><dt>Collateral locked</dt><dd>{formatAmount(amount)} NUSD</dd></div>
-                      <div><dt>Maximum fee</dt><dd>{formatAmount(maximumMintFee)} NUSD</dd></div>
+                      <div><dt>Maximum fee</dt><dd>{formatTokenAmount(maximumMintFee)} NUSD</dd></div>
+                      <div><dt>Fee basis</dt><dd>0.1% of this mint's oracle NUSD value</dd></div>
                       <div><dt>Reserve added</dt><dd>{formatAmount(reserveRequired)} NUSD</dd></div>
                       <div><dt>Backing</dt><dd>{mintQuote ? quoteUsesSponsorship ? "1:1 + reserve" : "150% safety" : "--"}</dd></div>
                     </dl>

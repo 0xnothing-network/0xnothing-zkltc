@@ -91,22 +91,22 @@ export function BorrowWorkspace() {
   const tx = useProtocolTransaction();
   const reads = useReadContracts({
     contracts: pool ? [
-      { address: pool, abi: lendingPoolAbi, functionName: "availableLiquidity" },
+      { chainId: deployment.chain.id, address: pool, abi: lendingPoolAbi, functionName: "availableLiquidity" },
     ] as const : [],
     query: { enabled: Boolean(pool) },
   });
   const walletReads = useReadContracts({
     contracts: pool && address ? [
-      { address: pool, abi: lendingPoolAbi, functionName: "debtBalance", args: [address] },
-      { address: pool, abi: lendingPoolAbi, functionName: "accountRisk", args: [address] },
-      { address: pool, abi: lendingPoolAbi, functionName: "maxBorrow", args: [address] },
+      { chainId: deployment.chain.id, address: pool, abi: lendingPoolAbi, functionName: "debtBalance", args: [address] },
+      { chainId: deployment.chain.id, address: pool, abi: lendingPoolAbi, functionName: "accountRisk", args: [address] },
+      { chainId: deployment.chain.id, address: pool, abi: lendingPoolAbi, functionName: "maxBorrow", args: [address] },
     ] as const : [],
     query: { enabled: Boolean(pool && address) },
   });
   const collateralReads = useReadContracts({
     contracts: pool && address && collateralAddress ? [
-      { address: pool, abi: lendingPoolAbi, functionName: "collateralBalance", args: [address, collateralAddress] },
-      { address: pool, abi: lendingPoolAbi, functionName: "maxWithdrawCollateral", args: [address, collateralAddress] },
+      { chainId: deployment.chain.id, address: pool, abi: lendingPoolAbi, functionName: "collateralBalance", args: [address, collateralAddress] },
+      { chainId: deployment.chain.id, address: pool, abi: lendingPoolAbi, functionName: "maxWithdrawCollateral", args: [address, collateralAddress] },
     ] as const : [],
     query: { enabled: Boolean(pool && address && collateralAddress) },
   });

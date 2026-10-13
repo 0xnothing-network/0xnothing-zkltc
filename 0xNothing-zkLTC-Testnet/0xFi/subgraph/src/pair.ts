@@ -3,7 +3,7 @@ import { BootstrapCompleted, Burn, Mint, Swap as SwapEvent, Sync } from "../gene
 import { Candle, LiquidityEvent, Pool, Swap, Token } from "../generated/schema";
 import { decimalAmount, eventId, loadProtocol, ONE_BI, ZERO_BI } from "./helpers";
 
-const NUSD = Address.fromString("0x5317e21aba902c6c7087a84457bc02ffe99604d1");
+const NUSD = Address.fromString("0x677D63c78E77E0b1971530e1494Caee4Bd7d631e");
 const PERIODS: i32[] = [60, 300, 3_600, 14_400, 86_400];
 
 export function handleSync(event: Sync): void {
