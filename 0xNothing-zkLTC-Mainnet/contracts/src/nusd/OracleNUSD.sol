@@ -182,7 +182,7 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
         if (feeNusd != 0 && treasury == address(0)) revert TreasuryNotSet();
 
         _checkSupplyCeiling(totalSupply + grossNusd);
-        _accountDailyMint(msg.sender, recipient, grossNusd);
+        _accountDailyMint(msg.sender, grossNusd);
 
         totalCollateralWei += msg.value;
         _mint(recipient, amountNusd);
@@ -412,7 +412,7 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
         }
     }
 
-    function _accountDailyMint(address payer, address recipient, uint256 grossNusd) private {
+    function _accountDailyMint(address minter, uint256 grossNusd) private {
         uint256 day = currentDayId();
         if (mintDayId != day) {
             mintDayId = day;
@@ -423,8 +423,7 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
             revert DailyMintCapExceeded(grossNusd, dailyMintCapNusd - (dailyMintedNusd - grossNusd));
         }
 
-        _bumpWalletMint(payer, day, grossNusd);
-        if (recipient != payer) _bumpWalletMint(recipient, day, grossNusd);
+        _bumpWalletMint(minter, day, grossNusd);
     }
 
     function _accountDailyRedeem(address account, uint256 amountNusd) private {

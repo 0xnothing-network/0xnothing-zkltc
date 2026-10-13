@@ -171,13 +171,29 @@ contract OracleNUSDPolicyTest is TestBase {
         nusd.redeemAtOracle(10 ether, 0, OTHER);
     }
 
-    function testMintToRecipientConsumesRecipientWalletMintCap() public {
+    function testWalletMintCapCreditsMinterOnly() public {
         nusd.setPerWalletDailyMintCapNusd(50 ether);
+        nusd.setDailyRedeemCapNusd(20 ether);
+
+        vm.prank(OTHER);
+        nusd.mintAtOracle{value: 1 ether}(50 ether, OTHER);
+        vm.warp(((block.timestamp / 1 days) + 1) * 1 days);
+        feed.setRound(2, 50 ether, block.timestamp, 2);
+
         vm.prank(USER);
         nusd.mintAtOracle{value: 1 ether}(50 ether, OTHER);
-        vm.prank(OTHER);
+        assertEq(nusd.remainingWalletDailyMintCapNusd(USER), 0, "minter consumed");
+        assertEq(nusd.remainingWalletDailyMintCapNusd(OTHER), 50 ether, "recipient not credited");
+
+        vm.prank(USER);
         vm.expectRevert();
-        nusd.mintAtOracle{value: 1 ether}(0, OTHER);
+        nusd.mintAtOracle{value: 1 ether}(0, USER);
+
+        vm.prank(OTHER);
+        nusd.redeemAtOracle(20 ether, 0, OTHER);
+        vm.prank(OTHER);
+        vm.expectRevert(abi.encodeWithSelector(OracleNUSD.DailyRedeemCapExceeded.selector, 1 ether, 0));
+        nusd.redeemAtOracle(1 ether, 0, OTHER);
     }
 
     function testAdminIssuanceCeilingIsOptionalAndTighterThanConstructor() public {
