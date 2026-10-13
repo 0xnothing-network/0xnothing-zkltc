@@ -17,6 +17,7 @@ interface Vm {
     function startPrank(address sender, address origin) external;
     function stopPrank() external;
     function warp(uint256 newTimestamp) external;
+    function roll(uint256 newHeight) external;
     function chainId(uint256 newChainId) external;
     function expectRevert() external;
     function expectRevert(bytes4 selector) external;

@@ -98,8 +98,10 @@ test("the wallet ABI exposes every public user points operation", () => {
     "redemptionReserve",
     "isSolvent",
     "quoteRedemption",
+    "minStakeNusd",
     "stake",
     "withdraw",
+    "exitEarly",
     "redeemPoints",
   ]) {
     assert.equal(functions.has(name), true, `${name} missing from points ABI`);
