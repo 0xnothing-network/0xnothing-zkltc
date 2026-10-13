@@ -37,6 +37,7 @@ import { PumpConfigNotice } from "@/features/pump/components/PumpStates";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { createPumpWalletGuard } from "@/features/pump/walletSession";
 import { waitForProtocolReceipt } from "@/lib/transactionReceipt";
+import { LITVM_ADD_CHAIN_PARAMETER } from "@/config/network";
 
 type CreateStage = "idle" | "switching" | "hashing" | "approving" | "reserving" | "uploading" | "creating" | "confirming";
 
@@ -133,7 +134,7 @@ export function CreateTokenForm() {
       const assertWalletUnchanged = createPumpWalletGuard(walletConfig, address);
       if (chainId !== PUMP_CHAIN_ID) {
         setStage("switching");
-        await switchChainAsync({ chainId: PUMP_CHAIN_ID });
+        await switchChainAsync({ chainId: PUMP_CHAIN_ID, addEthereumChainParameter: LITVM_ADD_CHAIN_PARAMETER });
       }
       assertWalletUnchanged();
       setStage("hashing");

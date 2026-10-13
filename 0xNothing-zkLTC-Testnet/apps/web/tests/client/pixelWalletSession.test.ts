@@ -61,7 +61,7 @@ test("Pixel mint stays on LitVM and aborts when wallet changes during gas estima
         "@/lib/pixelCollections": { PIXEL_MINT_ADDRESS: collection, PIXEL_V2_ENABLED: true, pixelUtf8Bytes: (value: string) => value.length },
         "@/lib/gridParser": { pixelDataToPNG: () => "png" }, "@/features/pixel/components/PixelButton": { PixelButton: "mint-button" },
         "@/components/Toast": { useToast: () => ({ show() {} }) }, "@/lib/errors": { normalizeError: () => ({ title: "Failed" }) },
-        "@/lib/chainSwitch": { LITVM_CHAIN_ID: 4441 }, "@/components/PageLoader": {},
+        "@/lib/chainSwitch": { LITVM_CHAIN_ID: 4441 }, "@/config/network": { LITVM_ADD_CHAIN_PARAMETER: {} }, "@/components/PageLoader": {},
         "@/lib/actionLock": { tryAcquireAction: () => true, releaseAction() {} },
       }, { setTimeout: (fn: () => void) => { fn(); return 1; }, clearTimeout() {}, console: { error() {} } });
     const tree = MintPanel({ pixelData: pixels, gridSize: 8, onMintSuccess() {} });
@@ -100,7 +100,7 @@ function listingHarness() {
       }, "@/lib/useProtocolReceipt": { useProtocolReceipt: (options: Record<string, unknown>) => { receipts.push(options); return { data: options.hash && approved ? { status: "success" } : undefined }; } },
       viem: { parseEther: (value: string) => BigInt(value), formatEther: String },
       "@/lib/contract": { PIXEL_MARKETPLACE_ADDRESS: marketplace, getTokenExplorerUrl: () => "", getMarketplaceTxUrl: () => "" },
-      "@/lib/abi": {}, "@/lib/marketplaceAbi": {}, "@/lib/chainSwitch": { LITVM_CHAIN_ID: 4441 },
+      "@/lib/abi": {}, "@/lib/marketplaceAbi": {}, "@/lib/chainSwitch": { LITVM_CHAIN_ID: 4441 }, "@/config/network": { LITVM_ADD_CHAIN_PARAMETER: {} },
       "@/lib/actionLock": { tryAcquireAction: (ref: { current: boolean }) => { if (ref.current) return false; ref.current = true; return true; }, releaseAction: (ref: { current: boolean }) => { ref.current = false; } },
     });
   states[0] = "list";
@@ -171,7 +171,7 @@ test("Pixel purchase rechecks the wallet after simulation and cancellation rejec
       viem: { formatEther: String },
       "@/lib/contract": { PIXEL_MARKETPLACE_ADDRESS: marketplace, shortenAddress: String, getTokenExplorerUrl: () => "", getMarketplaceTxUrl: () => "" },
       "@/lib/marketplaceAbi": { marketplaceNftKey: (address: string, id: bigint) => `${address}:${id}` },
-      "@/features/pixel/components/Skeleton": {}, "@/lib/chainSwitch": { LITVM_CHAIN_ID: 4441 }, "@/lib/http": {},
+      "@/features/pixel/components/Skeleton": {}, "@/lib/chainSwitch": { LITVM_CHAIN_ID: 4441 }, "@/config/network": { LITVM_ADD_CHAIN_PARAMETER: {} }, "@/lib/http": {},
       "@/components/Toast": { useToast: () => ({ warning() {}, info() {}, error() {}, handleError() {} }) },
       "@/lib/actionLock": { tryAcquireAction: () => true, releaseAction() {} },
     });

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Providers } from "@/app/providers";
+import { AppShell } from "@/components/shell/AppShell";
 import { LazyPixelMist } from "@/components/LazyPixelMist";
-import { FiHeader } from "@fi/components/FiHeader";
 import { ToastProvider } from "@fi/components/Toast";
 import "./globals.css";
 
@@ -13,12 +13,13 @@ export const metadata: Metadata = {
 export default function FiLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <Providers withToast={false}>
-      <div className="fi-root">
+      <div className="fi-root" data-product="fi">
         <LazyPixelMist product="fi" />
         <ToastProvider>
           <div className="fi-shell">
-            <FiHeader />
-            <main id="fi-main" tabIndex={-1}>{children}</main>
+            <AppShell product="fi">
+              <main id="fi-main" tabIndex={-1}>{children}</main>
+            </AppShell>
           </div>
         </ToastProvider>
       </div>

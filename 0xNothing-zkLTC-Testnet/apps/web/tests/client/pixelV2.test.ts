@@ -102,7 +102,7 @@ test("mint preflight passes immutable description and V2 bytes to the estimate a
     "@/lib/pixelCollections": { PIXEL_MINT_ADDRESS: v2, PIXEL_V2_ENABLED: true, pixelUtf8Bytes: (value: string) => new TextEncoder().encode(value).length },
     "@/lib/gridParser": { pixelDataToPNG: () => "png" }, "@/features/pixel/components/PixelButton": { PixelButton: "mint-button" },
     "@/components/Toast": { useToast: () => ({ show: () => "toast" }) }, "@/lib/errors": { normalizeError: String },
-    "@/lib/chainSwitch": { LITVM_CHAIN_ID: 4441 }, "@/components/PageLoader": {},
+    "@/lib/chainSwitch": { LITVM_CHAIN_ID: 4441 }, "@/config/network": { LITVM_ADD_CHAIN_PARAMETER: {} }, "@/components/PageLoader": {},
     "@/lib/actionLock": { tryAcquireAction: () => true, releaseAction() {} },
     "@/lib/walletSession": { createWalletSessionGuard: () => () => {} },
   }, { setTimeout: (callback: () => void) => { callback(); return 1; }, clearTimeout() {} });

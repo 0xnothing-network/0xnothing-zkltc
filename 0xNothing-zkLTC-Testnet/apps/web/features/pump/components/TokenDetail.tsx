@@ -31,6 +31,7 @@ import { useToast } from "@/components/Toast";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { createPumpWalletGuard } from "@/features/pump/walletSession";
 import { waitForProtocolReceipt } from "@/lib/transactionReceipt";
+import { LITVM_ADD_CHAIN_PARAMETER } from "@/config/network";
 
 interface TokenMetadata {
   description?: string;
@@ -151,7 +152,7 @@ function GraduationAction({ market, onComplete }: { market: PumpMarket; onComple
       return;
     }
     if (chainId !== PUMP_CHAIN_ID) {
-      switchChain({ chainId: PUMP_CHAIN_ID });
+      switchChain({ chainId: PUMP_CHAIN_ID, addEthereumChainParameter: LITVM_ADD_CHAIN_PARAMETER });
       return;
     }
     if (!publicClient) {

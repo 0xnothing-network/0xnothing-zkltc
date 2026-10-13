@@ -1,17 +1,16 @@
-import { PixelMist } from "@/components/PixelMist";
 import { Providers } from "@/app/providers";
-import { PumpHeader } from "@/features/pump/components/PumpHeader";
+import { AppShell } from "@/components/shell/AppShell";
+import { LazyPixelMist } from "@/components/LazyPixelMist";
 import "../0xPump/globals.css";
 import "./faucet.css";
 
 export default function FaucetLayout({ children }: { children: React.ReactNode }) {
   return (
     <Providers>
-      <div className="pump-shell">
-        <PixelMist product="pump" />
+      <div className="pump-shell" data-product="pump">
+        <LazyPixelMist product="pump" />
         <div className="pump-surface">
-          <PumpHeader />
-          {children}
+          <AppShell product="pump">{children}</AppShell>
         </div>
       </div>
     </Providers>

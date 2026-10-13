@@ -53,7 +53,7 @@ function portfolioHarness() {
         },
       },
       viem,
-      "@/features/pump/config": config,
+      "@/features/pump/config": config, "@/config/network": { LITVM_ADD_CHAIN_PARAMETER: {} },
       "@/features/pump/abis": { pumpTokenAbi: [] },
       "@/lib/http": { fetchJson: async () => ({ markets: [market], configured: true, source: "subgraph" }) },
       "@/lib/liveData": { STEADY_LIVE_MS: 10_000 },
@@ -159,7 +159,7 @@ function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect",
   let stateIndex = 0;
   const states = [mode, "1", 100n, false, Math.floor(Date.now() / 1000)];
   const guardModule = evaluateModule(new URL("../../features/pump/walletSession.ts", import.meta.url), {
-    "wagmi/actions": { getAccount: () => account }, "@/features/pump/config": config,
+    "wagmi/actions": { getAccount: () => account }, "@/features/pump/config": config, "@/config/network": { LITVM_ADD_CHAIN_PARAMETER: {} },
   });
   const jsx = (type: unknown, props: ElementNode["props"]) => ({ type, props });
   const component = evaluateModule<{ TradePanel: (props: unknown) => ElementNode }>(
@@ -217,7 +217,7 @@ function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect",
       "@/features/pump/walletSession": guardModule,
       "@/lib/transactionReceipt": { waitForProtocolReceipt },
       "@/features/pump/abis": { zeroXPumpAbi: [], pumpTokenAbi: [], nusdAbi: [] },
-      "@/features/pump/config": config,
+      "@/features/pump/config": config, "@/config/network": { LITVM_ADD_CHAIN_PARAMETER: {} },
       "@/features/pump/format": { formatCompactNumber: String },
       "@/components/Toast": { useToast: () => ({ info() {}, success() { successes += 1; }, warning() {}, error() {}, handleError: (error: Error) => errors.push(error) }) },
       "@/lib/liveData": { invalidateAfterPumpTrade: async () => {} },
@@ -410,7 +410,7 @@ function componentHarness(name: PumpComponent, changeAt?: "simulation" | "upload
     PUMP_GRADUATION_ROUTER_ADDRESS: router, PUMP_GRADUATION_ADAPTER_ADDRESS: adapter,
     isValidPumpExternalUrl: () => true, normalizePumpIpfsPath: () => "", ipfsToGatewayUrl: () => "https://metadata.test", normalizePumpExternalUrl: (value: string) => value.trim() };
   const guardModule = evaluateModule(new URL("../../features/pump/walletSession.ts", import.meta.url), {
-    "wagmi/actions": { getAccount: () => account }, "@/features/pump/config": pumpConfig,
+    "wagmi/actions": { getAccount: () => account }, "@/features/pump/config": pumpConfig, "@/config/network": { LITVM_ADD_CHAIN_PARAMETER: {} },
   });
   const jsx = (type: unknown, props: ElementNode["props"]) => ({ type, props });
   const toast = { info() {}, success() {}, warning() {}, error() {}, show() {}, handleError: (error: Error) => errors.push(error) };
@@ -459,7 +459,7 @@ function componentHarness(name: PumpComponent, changeAt?: "simulation" | "upload
       },
       "@/features/pump/walletSession": guardModule,
       "@/lib/transactionReceipt": { waitForProtocolReceipt },
-      "@/features/pump/config": pumpConfig,
+      "@/features/pump/config": pumpConfig, "@/config/network": { LITVM_ADD_CHAIN_PARAMETER: {} },
       "@/features/pump/abis": { zeroXPumpAbi: [], nusdAbi: [], diaOracleAdapterAbi: [], pumpGraduationControllerAbi: [], pumpGraduationRouterAbi: [] },
       "@/features/pump/hooks/useIpfsUpload": { useIpfsUpload: () => ({ upload: async () => {
         if (changeAt === "upload") account.address = OTHER;

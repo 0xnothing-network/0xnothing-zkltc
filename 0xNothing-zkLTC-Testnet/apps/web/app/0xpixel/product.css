@@ -177,7 +177,7 @@
 .pixel-product :is(.pixel-btn, .pixel-btn-soft):active { transform: translate(1px, 1px) !important; box-shadow: none !important; }
 
 /* Legacy utility classes in studio tools follow the shared square geometry. */
-.pixel-product [class*='rounded-'] { border-radius: 0 !important; }
+.pixel-product [class*='rounded-']:not(:where(.ui, .ui *)) { border-radius: 0 !important; }
 
 /* Studio and collection polish, keeping drawing geometry independent of chrome. */
 .pixel-product .pixel-studio-intro { border-bottom: 1px solid var(--pixel-line); }

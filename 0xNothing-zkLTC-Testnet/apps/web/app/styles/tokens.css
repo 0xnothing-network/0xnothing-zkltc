@@ -1,0 +1,81 @@
+/* 0xNothing design tokens: Direction A "Silver Standard".
+   Source: design/mockups/assets/tokens.css (ui-redesign-spec §4).
+   Dark is default; [data-theme=light] overrides. Per-product accent is set by
+   [data-product=hub|pump|fi|pixel]. Fonts are loaded by next/font in app/layout.tsx,
+   which exposes --font-geist and --font-geist-mono. */
+
+:root {
+  /* ---------- primitives ---------- */
+  --graphite-0: #08090B; --graphite-50: #0B0C0E; --graphite-100: #111316; --graphite-150: #16191D;
+  --graphite-200: #1C2025; --graphite-300: #23272D; --graphite-400: #2F353C; --graphite-500: #4A525C;
+  --graphite-600: #7D8590; --graphite-700: #A9B0B9; --graphite-800: #D3D8DE; --graphite-900: #F2F4F6;
+  --silver-hi: #EEF1F4; --silver: #C9CDD2; --silver-lo: #A6A9AA;            /* Litecoin silver PMS Silver C */
+  --lite-300: #A9C2FF; --lite-400: #7AA2FF; --lite-500: #5B8CFF; --lite-600: #3E6FE0; --lite-700: #345D9D; /* Litecoin blue PMS 7684 C */
+  --lime-300: #D3F7C2; --lime-400: #B6F09C; --lime-500: #8EDB6B; --lime-700: #3C7A1E;                       /* 0xNothing heritage action */
+  --prism-300: #F0CCFF; --prism-400: #E3A6FF; --prism-500: #C77DF0; --prism-700: #8A35B5;
+  --green-400: #3DD68C; --green-700: #0F8A55; --red-400: #FF5C70; --red-700: #D6334A;
+  --amber-400: #F5B544; --amber-700: #A86A00; --orange-400: #FF9F43;
+
+  /* ---------- semantic (dark default) ---------- */
+  --bg: var(--graphite-50);
+  --surface-1: var(--graphite-100);     /* cards, panels */
+  --surface-2: var(--graphite-150);     /* inputs, nested */
+  --surface-3: var(--graphite-200);     /* hover, selected rows */
+  --overlay: rgba(4,5,6,.72);
+  --line: var(--graphite-300);
+  --line-strong: var(--graphite-400);
+  --text-1: var(--graphite-900);
+  --text-2: var(--graphite-700);
+  --text-3: var(--graphite-600);
+  --text-disabled: var(--graphite-500);
+  --edge-hi: rgba(255,255,255,.05);      /* signature 1px "silver edge" */
+  --positive: var(--green-400); --negative: var(--red-400); --warning: var(--amber-400); --info: var(--lite-400);
+  --positive-bg: rgba(61,214,140,.10); --negative-bg: rgba(255,92,112,.10); --warning-bg: rgba(245,181,68,.10); --info-bg: rgba(122,162,255,.10);
+  --hf-safe: var(--green-400); --hf-caution: var(--amber-400); --hf-risk: var(--orange-400); --hf-liq: var(--red-400);
+  --focus: var(--lite-400);
+
+  /* product accent (overridden by data-product) */
+  --accent: var(--silver-hi); --accent-hover: #FFFFFF; --accent-ink: #0B0C0E; --accent-text: var(--silver-hi); --accent-soft: rgba(238,241,244,.08);
+
+  /* ---------- type ---------- */
+  --font-ui: var(--font-geist), "Geist", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-num: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  --font-brand: "Departure Mono", var(--font-geist-mono), ui-monospace, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-18: 18px;
+  --fs-20: 20px; --fs-24: 24px; --fs-30: 30px; --fs-38: 38px; --fs-48: 48px; --fs-64: 64px;
+
+  /* ---------- space / radius / elevation / motion ---------- */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px; --s-12: 48px; --s-16: 64px;
+  --r-xs: 4px; --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px; --r-pill: 999px;
+  --e-1: inset 0 1px 0 var(--edge-hi), 0 1px 2px rgba(0,0,0,.35);
+  --e-2: inset 0 1px 0 var(--edge-hi), 0 8px 24px -6px rgba(0,0,0,.55);
+  --e-3: inset 0 1px 0 var(--edge-hi), 0 24px 64px -12px rgba(0,0,0,.7);
+  --ease: cubic-bezier(.2,.7,.2,1); --t-fast: 120ms; --t-base: 180ms; --t-slow: 280ms;
+  --content: 1280px; --header-h: 64px;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #F5F6F8; --surface-1: #FFFFFF; --surface-2: #F1F3F6; --surface-3: #E8EBEF; --overlay: rgba(14,17,22,.45);
+  --line: #E2E5E9; --line-strong: #CDD2D8;
+  --text-1: #0E1116; --text-2: #48505A; --text-3: #69717B; --text-disabled: #A3AAB3;
+  --edge-hi: rgba(255,255,255,.9);
+  --positive: var(--green-700); --negative: var(--red-700); --warning: var(--amber-700); --info: var(--lite-600);
+  --positive-bg: #E6F6EE; --negative-bg: #FDECEE; --warning-bg: #FDF3E1; --info-bg: #EAF0FF;
+  --hf-safe: var(--green-700); --hf-caution: var(--amber-700); --hf-risk: #C2560B; --hf-liq: var(--red-700);
+  --focus: var(--lite-600);
+  --e-1: 0 1px 2px rgba(16,24,40,.06), 0 0 0 1px rgba(16,24,40,.02);
+  --e-2: 0 8px 24px -8px rgba(16,24,40,.16);
+  --e-3: 0 24px 64px -16px rgba(16,24,40,.28);
+  color-scheme: light;
+}
+
+/* data-product may sit on <html> or on a layout root below it. */
+/* ---------- per-product accent (one shared core, one accent each) ---------- */
+[data-product="pump"]  { --accent: var(--lime-400);  --accent-hover: var(--lime-300);  --accent-ink: #0B1A06; --accent-text: var(--lime-400);  --accent-soft: rgba(182,240,156,.10); }
+[data-product="fi"]    { --accent: var(--lite-400);  --accent-hover: var(--lite-300);  --accent-ink: #07122B; --accent-text: var(--lite-400);  --accent-soft: rgba(122,162,255,.10); }
+[data-product="pixel"] { --accent: var(--prism-400); --accent-hover: var(--prism-300); --accent-ink: #22052F; --accent-text: var(--prism-400); --accent-soft: rgba(227,166,255,.10); }
+[data-theme="light"][data-product="pump"], [data-theme="light"] [data-product="pump"]  { --accent: #9BE27A; --accent-hover: #B6F09C; --accent-ink: #0B1A06; --accent-text: var(--lime-700);  --accent-soft: #EDF9E6; }
+[data-theme="light"][data-product="fi"], [data-theme="light"] [data-product="fi"]    { --accent: var(--lite-600); --accent-hover: var(--lite-500); --accent-ink: #FFFFFF; --accent-text: var(--lite-600); --accent-soft: #EAF0FF; }
+[data-theme="light"][data-product="pixel"], [data-theme="light"] [data-product="pixel"] { --accent: var(--prism-700); --accent-hover: var(--prism-500); --accent-ink: #FFFFFF; --accent-text: var(--prism-700); --accent-soft: #F7EAFD; }
+[data-theme="light"][data-product="hub"], [data-theme="light"] [data-product="hub"], [data-theme="light"]:not([data-product]) { --accent: #0E1116; --accent-hover: #2A2F36; --accent-ink: #FFFFFF; --accent-text: #0E1116; --accent-soft: #EEF0F3; }

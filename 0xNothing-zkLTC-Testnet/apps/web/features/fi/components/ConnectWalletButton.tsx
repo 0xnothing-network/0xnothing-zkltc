@@ -3,6 +3,7 @@
 import { Wallet } from "@phosphor-icons/react";
 import { useConnect } from "wagmi";
 import { useToast } from "@fi/components/Toast";
+import { useWalletModal } from "@/components/shell/WalletModalProvider";
 
 const NO_WALLET_MESSAGE = "Install or enable an EVM wallet in this browser, then try again.";
 
@@ -46,9 +47,15 @@ export function ConnectWalletButton({
   label?: string;
 }) {
   const toast = useToast();
+  const walletModal = useWalletModal();
   const { connectors, connectAsync, isPending } = useConnect();
 
   async function connectWallet() {
+    // Inside the AppShell every "Connect wallet" opens the shared EIP-6963 picker.
+    if (walletModal) {
+      walletModal.openWalletModal();
+      return;
+    }
     const connector = connectors.find((candidate) => candidate.type === "injected") ?? connectors[0];
     if (!connector || (connector.type === "injected" && !hasInjectedWallet())) {
       toast.show("Wallet not found", NO_WALLET_MESSAGE, "warning");

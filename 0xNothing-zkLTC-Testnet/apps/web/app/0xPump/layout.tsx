@@ -1,16 +1,15 @@
 import { Providers } from "@/app/providers";
+import { AppShell } from "@/components/shell/AppShell";
 import { LazyPixelMist } from "@/components/LazyPixelMist";
-import { PumpHeader } from "@/features/pump/components/PumpHeader";
 import "./globals.css";
 
 export default function PumpLayout({ children }: { children: React.ReactNode }) {
   return (
     <Providers>
-      <div className="pump-shell">
+      <div className="pump-shell" data-product="pump">
         <LazyPixelMist product="pump" />
         <div className="pump-surface">
-          <PumpHeader />
-          {children}
+          <AppShell product="pump">{children}</AppShell>
         </div>
       </div>
     </Providers>
