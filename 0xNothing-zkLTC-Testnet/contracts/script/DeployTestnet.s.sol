@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {MathX} from "../src/common/MathX.sol";
 import {DIAOracleAdapter} from "../src/nusd/DIAOracleAdapter.sol";
 import {OracleNUSD} from "../src/nusd/OracleNUSD.sol";
 import {ZeroXPump} from "../src/pump/ZeroXPump.sol";
@@ -38,13 +39,13 @@ contract DeployTestnet {
     error InvalidOracleParameters();
     error InvalidLaunchProtection();
     error UnexpectedUniv2AdapterConfiguration();
+    error InvalidGraduationThresholds();
 
     VmDeploy private constant vm = VmDeploy(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     address public constant DEFAULT_DIA_LTC_USD_FEED = 0x45dDa5d881BD2C917976CCfde74fFd6f6412da29;
-    uint256 private constant INITIAL_VIRTUAL_NUSD_RESERVE = 1_500 ether;
-    uint256 private constant GRADUATION_MARKET_CAP_TARGET_NUSD = 6_000 ether;
-    uint256 private constant GRADUATION_RESERVE_THRESHOLD_NUSD = 1_500 ether;
+    uint256 public constant DEFAULT_INITIAL_VIRTUAL_NUSD_RESERVE = 1_500 ether;
+    uint256 public constant DEFAULT_GRADUATION_MARKET_CAP_TARGET_NUSD = 6_000 ether;
     uint256 private constant CREATE_FEE_NUSD = 1 ether;
     uint256 private constant TRADE_FEE_BPS = 10;
     uint256 public constant UNIV2_MAX_PRICE_DEVIATION_BPS = 200;
@@ -87,9 +88,15 @@ contract DeployTestnet {
         uint256 supplyCeilingNusd = vm.envOr("NUSD_DEBT_CEILING", uint256(1_000_000 ether));
         uint256 launchWindow = vm.envOr("LAUNCH_PROTECTION_WINDOW", uint256(15 minutes));
         uint256 launchMaxBuyNusd = vm.envOr("LAUNCH_MAX_BUY_NUSD", uint256(50 ether));
+        uint256 virtualNusdReserve = vm.envOr("PUMP_INITIAL_VIRTUAL_NUSD", DEFAULT_INITIAL_VIRTUAL_NUSD_RESERVE);
+        uint256 graduationMarketCapNusd =
+            vm.envOr("PUMP_GRADUATION_MARKET_CAP_NUSD", DEFAULT_GRADUATION_MARKET_CAP_TARGET_NUSD);
 
         validateOracleParameters(maxPriceAge, minPriceWad, maxPriceWad, maxDeviationBps);
         validateLaunchProtection(launchWindow, launchMaxBuyNusd);
+        uint256 reserveThresholdNusd = validateGraduationThresholds(virtualNusdReserve, graduationMarketCapNusd);
+        uint256 expectedReserveThresholdNusd = vm.envOr("PUMP_GRADUATION_RESERVE_NUSD", reserveThresholdNusd);
+        if (expectedReserveThresholdNusd != reserveThresholdNusd) revert InvalidGraduationThresholds();
 
         vm.startBroadcast(privateKey);
 
@@ -110,8 +117,8 @@ contract DeployTestnet {
             address(deployment.router),
             deployer,
             totalSupply,
-            INITIAL_VIRTUAL_NUSD_RESERVE,
-            GRADUATION_MARKET_CAP_TARGET_NUSD
+            virtualNusdReserve,
+            graduationMarketCapNusd
         );
         if (launchWindow != 0) {
             deployment.pump.setLaunchProtection(launchWindow, launchMaxBuyNusd);
@@ -137,9 +144,9 @@ contract DeployTestnet {
                 || deployment.oracleNusd.sameBlockMintRedeemBlocked()
         ) revert UnexpectedOracleNusdConfiguration();
         if (
-            deployment.pump.initialVirtualNusdReserve() != INITIAL_VIRTUAL_NUSD_RESERVE
-                || deployment.pump.graduationThresholdNusd() != GRADUATION_MARKET_CAP_TARGET_NUSD
-                || deployment.pump.graduationReserveThresholdNusd() != GRADUATION_RESERVE_THRESHOLD_NUSD
+            deployment.pump.initialVirtualNusdReserve() != virtualNusdReserve
+                || deployment.pump.graduationThresholdNusd() != graduationMarketCapNusd
+                || deployment.pump.graduationReserveThresholdNusd() != reserveThresholdNusd
                 || deployment.pump.createFee() != CREATE_FEE_NUSD || deployment.pump.tradeFeeBps() != TRADE_FEE_BPS
                 || deployment.pump.paused() || deployment.pump.readyExitDelay() != 1 days
                 || deployment.pump.permissionlessGraduationDelay() != 1 hours
@@ -244,5 +251,22 @@ contract DeployTestnet {
             adapter.maxPriceDeviationBps() != UNIV2_MAX_PRICE_DEVIATION_BPS
                 || adapter.maxPriceDeviationBps() > 200 || adapter.slippageBps() != UNIV2_SLIPPAGE_BPS
         ) revert UnexpectedUniv2AdapterConfiguration();
+    }
+
+    /// @notice Testnet-only override. Mainnet keeps its 1,500 / 6,000 constants.
+    ///         Reserve is derived as `sqrtUp(virtual * marketCap) - virtual`.
+    function validateGraduationThresholds(uint256 virtualNusdReserve, uint256 graduationMarketCapNusd)
+        public
+        pure
+        returns (uint256 reserveThresholdNusd)
+    {
+        if (
+            virtualNusdReserve < 1 ether || virtualNusdReserve > 100_000 ether
+                || graduationMarketCapNusd <= virtualNusdReserve || graduationMarketCapNusd > 1_000_000 ether
+                || virtualNusdReserve > type(uint256).max / graduationMarketCapNusd
+        ) revert InvalidGraduationThresholds();
+
+        reserveThresholdNusd = MathX.sqrtUp(virtualNusdReserve * graduationMarketCapNusd) - virtualNusdReserve;
+        if (reserveThresholdNusd == 0) revert InvalidGraduationThresholds();
     }
 }

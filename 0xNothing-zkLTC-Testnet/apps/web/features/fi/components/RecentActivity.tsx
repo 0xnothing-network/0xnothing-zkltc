@@ -9,6 +9,7 @@ import { fiPath } from "@fi/config/paths";
 import { fetchJson } from "@/lib/http";
 import { FI_LIVE_MS } from "@/lib/liveData";
 import { fiPollInterval, useFiVisibilityRefresh } from "@fi/lib/hooks/useFiPolling";
+import { ExternalLink } from "@/components/ExternalLink";
 
 function shortValue(value: string): string {
   return value.length > 12 ? `${value.slice(0, 7)}...${value.slice(-4)}` : value;
@@ -84,7 +85,7 @@ export function RecentActivity({ pair }: { pair: string }) {
                     {formatActivityAmount(event.amount0)} / {formatActivityAmount(event.amount1)}
                   </td>
                   <td>{formatRelativeTimestamp(event.timestamp)}</td>
-                  <td>{isTransactionHash(event.transactionHash) ? <a className="fi-text-link" href={`${deployment.chain.explorerUrl}/tx/${event.transactionHash}`} target="_blank" rel="noopener noreferrer">{shortValue(event.transactionHash)}</a> : "Invalid hash"}</td>
+                  <td>{isTransactionHash(event.transactionHash) ? <ExternalLink className="fi-text-link" href={`${deployment.chain.explorerUrl}/tx/${event.transactionHash}`}>{shortValue(event.transactionHash)}</ExternalLink> : "Invalid hash"}</td>
                 </tr>
               ))}
             </tbody>

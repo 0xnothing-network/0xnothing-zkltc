@@ -52,9 +52,13 @@ Optional settings, with defaults, are `PROTOCOL_ADMIN` (deployer),
 `DIA_MAX_DEVIATION_BPS` (`2000`), `GRADUATION_TIMELOCK` (`2 days`),
 `PUMP_TOKEN_TOTAL_SUPPLY` (`1_000_000_000e18`), `NUSD_DEBT_CEILING`
 (`1_000_000e18`), `LAUNCH_PROTECTION_WINDOW` (`15 minutes`), and
-`LAUNCH_MAX_BUY_NUSD` (`50e18`). The release curve fixes the initial virtual market cap at
-`1,500 NUSD` and the READY market-cap target at `6,000 NUSD`; they are not
-deployment-time environment overrides. `NUSD_DEBT_CEILING` is retained as the
+`LAUNCH_MAX_BUY_NUSD` (`50e18`). The release curve defaults the initial virtual
+market cap to `1,500 NUSD` and the READY market-cap target to `6,000 NUSD`.
+Override them on testnet only with `PUMP_INITIAL_VIRTUAL_NUSD` and
+`PUMP_GRADUATION_MARKET_CAP_NUSD` (for example `50e18` / `200e18`). The derived
+real-reserve target is `sqrtUp(virtual * marketCap) - virtual`. Optional
+`PUMP_GRADUATION_RESERVE_NUSD` must match that derived value if set. Mainnet
+keeps the 1,500 / 6,000 constants. `NUSD_DEBT_CEILING` is retained as the
 deployment environment name for compatibility, but its value is passed to
 `OracleNUSD.supplyCeilingNusd`. The full table lives in `docs/DEPLOYMENT.md`.
 
@@ -73,8 +77,14 @@ block `--broadcast`. The constructor try-arms the deviation breaker when the fee
 is readable; mint/redeem call `ensureAnchor()` on the first consume. Run
 `scripts/preflight-testnet-oracle.sh` first. After an approved broadcast,
 `cast send <adapter> "syncPrice()"` remains a fallback if the constructor could
-not read the feed. Do not use `--broadcast` until the deployment phase has been
+not read the feed; the Node/`sync-price` keeper and Cloudflare cron do the same
+call. Do not use `--broadcast` until the deployment phase has been
 explicitly approved.
+
+The LiteForge faucet is a separate script. Dry-run it with
+`forge script script/DeployFaucet.s.sol:DeployFaucet --rpc-url "$LITVM_RPC_URL"`
+and the `FAUCET_*` / `NUSD_ADDRESS` knobs in `.env.example`. It writes
+prediction-only `deployments/faucet.json`. See `docs/operations/faucet.md`.
 
 The initial deployment deliberately leaves liquidity migration unavailable. On
 the live testnet the router has since completed its delayed enable and its 0xFi

@@ -1,0 +1,13 @@
+name = "sync-price-keeper"
+main = "worker.mjs"
+compatibility_date = "2026-08-31"
+compatibility_flags = ["nodejs_compat"]
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+[vars]
+CHAIN_ID = "4441"
+ADAPTER_ADDRESS = "0x6d18728bCB57c3Ce7DFb5A522fF22836280D6C98"
+RPC_URL = "https://liteforge.rpc.caldera.xyz/infra-partner-http"
+SYNC_PRICE_LEAD_SECONDS = "300"

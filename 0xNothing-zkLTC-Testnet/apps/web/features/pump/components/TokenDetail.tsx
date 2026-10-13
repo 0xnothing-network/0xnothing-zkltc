@@ -26,6 +26,7 @@ import { TradePanel } from "@/features/pump/components/TradePanel";
 import { TradeHistory } from "@/features/pump/components/TradeHistory";
 import { TokenHolders } from "@/features/pump/components/TokenHolders";
 import { PumpConfigNotice, PumpErrorState, PumpInlineLoading } from "@/features/pump/components/PumpStates";
+import { ExternalLink } from "@/components/ExternalLink";
 import { useToast } from "@/components/Toast";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { createPumpWalletGuard } from "@/features/pump/walletSession";
@@ -270,8 +271,8 @@ export function TokenDetail({ token }: { token: Address }) {
           <p>${market.symbol}</p>
           <div className="pump-token-links">
             <button type="button" title="Copy token address" onClick={() => { void navigator.clipboard.writeText(market.tokenAddress); toast.success("Address copied", shortAddress(market.tokenAddress)); }}>{shortAddress(market.tokenAddress, 7, 6)}</button>
-            <a href={getAddressExplorerUrl(market.tokenAddress)} target="_blank" rel="noopener noreferrer">Explorer</a>
-            {links.map((item) => <a href={item.href} key={item.href} target="_blank" rel="noopener noreferrer">{item.label}</a>)}
+            <ExternalLink href={getAddressExplorerUrl(market.tokenAddress)}>Explorer</ExternalLink>
+            {links.map((item) => <ExternalLink href={item.href} key={item.href} userGenerated>{item.label}</ExternalLink>)}
           </div>
         </div>
         <div className="pump-token-price"><span>Curve price</span><strong>${formatDecimal(market.priceNusd)}</strong><small>{market.tradeCount > 0 && market.lastTradeAt ? formatRelativeTime(market.lastTradeAt) : "No trades yet"}</small></div>

@@ -1,4 +1,5 @@
 import { defineChain } from "viem";
+import { LITVM_CHAIN_ID } from "@/lib/chainSwitch";
 import {
   LITVM_EXPLORER_URL,
   LITVM_RPC_URL,
@@ -6,9 +7,10 @@ import {
 } from "@/lib/publicConfig";
 
 export { LITVM_RPC_URL } from "@/lib/publicConfig";
+export { LITVM_CHAIN_ID } from "@/lib/chainSwitch";
 
 export const litvm = defineChain({
-  id: 4441,
+  id: LITVM_CHAIN_ID,
   name: "LitVM LiteForge",
   nativeCurrency: { name: "zkLTC", symbol: "zkLTC", decimals: 18 },
   rpcUrls: {

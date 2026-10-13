@@ -25,6 +25,7 @@ const PUMP_NAV = [
   { href: "/0xPump", label: "Discover" },
   { href: "/0xPump/create", label: "Create" },
   { href: "/0xPump/nusd", label: "NUSD" },
+  { href: "/faucet", label: "Faucet" },
   { href: "/0xPump/portfolio", label: "Portfolio" },
   { href: "/0xPump/stats", label: "Stats" },
 ] as const;

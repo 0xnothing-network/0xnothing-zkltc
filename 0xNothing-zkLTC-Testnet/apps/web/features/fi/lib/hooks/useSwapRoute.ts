@@ -2,6 +2,7 @@
 
 import { zeroAddress, type Address } from "viem";
 import { useReadContract, useReadContracts } from "wagmi";
+import { deployment } from "@fi/config/deployment";
 import { dexFactoryAbi, dexPoolAbi, dexRouterAbi } from "@fi/lib/abis/dex";
 import { nusdOracleAbi } from "@fi/lib/abis/nusd";
 
@@ -63,6 +64,7 @@ function useLivePair({
   tokenB?: Address;
 }) {
   const pairQuery = useReadContract({
+    chainId: deployment.chain.id,
     address: factory,
     abi: dexFactoryAbi,
     functionName: "getPair",
@@ -78,8 +80,8 @@ function useLivePair({
   const pair = validPair(pairQuery.data);
   const liquidityQuery = useReadContracts({
     contracts: pair ? [
-      { address: pair, abi: dexPoolAbi, functionName: "getReserves" },
-      { address: pair, abi: dexPoolAbi, functionName: "totalSupply" },
+      { chainId: deployment.chain.id, address: pair, abi: dexPoolAbi, functionName: "getReserves" },
+      { chainId: deployment.chain.id, address: pair, abi: dexPoolAbi, functionName: "totalSupply" },
     ] as const : [],
     query: { enabled: Boolean(pair) },
   });
@@ -181,6 +183,7 @@ export function useSwapRoute({
     : undefined;
 
   const directQuote = useReadContract({
+    chainId: deployment.chain.id,
     address: router,
     abi: dexRouterAbi,
     functionName: "getAmountsOut",
@@ -192,6 +195,7 @@ export function useSwapRoute({
     },
   });
   const bridgeQuote = useReadContract({
+    chainId: deployment.chain.id,
     address: router,
     abi: dexRouterAbi,
     functionName: "getAmountsOut",
@@ -203,6 +207,7 @@ export function useSwapRoute({
     },
   });
   const mintLegQuote = useReadContract({
+    chainId: deployment.chain.id,
     address: bridge,
     abi: nusdOracleAbi,
     functionName: "quoteMint",
@@ -215,6 +220,7 @@ export function useSwapRoute({
   });
   const mintedNusd = mintLegQuote.error ? undefined : mintLegQuote.data;
   const mintPoolQuote = useReadContract({
+    chainId: deployment.chain.id,
     address: router,
     abi: dexRouterAbi,
     functionName: "getAmountsOut",
@@ -227,6 +233,7 @@ export function useSwapRoute({
   });
 
   const redeemPoolQuote = useReadContract({
+    chainId: deployment.chain.id,
     address: router,
     abi: dexRouterAbi,
     functionName: "getAmountsOut",
@@ -239,6 +246,7 @@ export function useSwapRoute({
   });
   const redeemNusd = redeemPoolQuote.error ? undefined : finalAmount(redeemPoolQuote.data);
   const redeemLegQuote = useReadContract({
+    chainId: deployment.chain.id,
     address: bridge,
     abi: nusdOracleAbi,
     functionName: "quoteRedeem",

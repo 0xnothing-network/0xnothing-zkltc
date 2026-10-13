@@ -30,16 +30,16 @@ export function LendingWorkspace() {
   const riskActionBlocked = mode === "supply" && !lending.supplyReady;
   const stats = useReadContracts({
     contracts: pool ? [
-      { address: pool, abi: lendingPoolAbi, functionName: "totalSupplied" },
-      { address: pool, abi: lendingPoolAbi, functionName: "totalBorrowed" },
-      { address: pool, abi: lendingPoolAbi, functionName: "availableLiquidity" },
+      { chainId: deployment.chain.id, address: pool, abi: lendingPoolAbi, functionName: "totalSupplied" },
+      { chainId: deployment.chain.id, address: pool, abi: lendingPoolAbi, functionName: "totalBorrowed" },
+      { chainId: deployment.chain.id, address: pool, abi: lendingPoolAbi, functionName: "availableLiquidity" },
     ] as const : [],
     query: { enabled: Boolean(pool) },
   });
   const walletStats = useReadContracts({
     contracts: pool && address ? [
-      { address: pool, abi: lendingPoolAbi, functionName: "supplyBalance", args: [address] },
-      { address: pool, abi: lendingPoolAbi, functionName: "maxWithdraw", args: [address] },
+      { chainId: deployment.chain.id, address: pool, abi: lendingPoolAbi, functionName: "supplyBalance", args: [address] },
+      { chainId: deployment.chain.id, address: pool, abi: lendingPoolAbi, functionName: "maxWithdraw", args: [address] },
     ] as const : [],
     query: { enabled: Boolean(pool && address) },
   });

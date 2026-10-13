@@ -1,4 +1,5 @@
 import type { Address } from "viem";
+import { LITVM_CHAIN_ID } from "@/lib/chainSwitch";
 import {
   IPFS_GATEWAY_URL,
   PUMP_FACTORY_ADDRESS,
@@ -9,6 +10,7 @@ import {
   PUMP_START_BLOCK,
   PUMP_SUBGRAPH_URL,
 } from "@/lib/publicConfig";
+import { isValidExternalHref, normalizeExternalHref } from "@/lib/safeExternalHref";
 
 export {
   IPFS_GATEWAY_URL,
@@ -23,7 +25,7 @@ export {
 
 export const ZERO_ADDRESS: Address = "0x0000000000000000000000000000000000000000";
 
-export const PUMP_CHAIN_ID = 4441 as const;
+export const PUMP_CHAIN_ID = LITVM_CHAIN_ID;
 
 export const PUMP_CREATE_FEE = 1_000_000_000_000_000_000n;
 export const PUMP_BPS_DENOMINATOR = 10_000n;
@@ -91,18 +93,11 @@ export function normalizePumpExternalUrl(
   value: string,
   maxLength = MAX_EXTERNAL_URL_LENGTH,
 ): string {
-  const trimmed = value.trim();
-  if (!trimmed || trimmed.length > maxLength) return "";
-  try {
-    const url = new URL(trimmed);
-    return url.protocol === "https:" ? url.href : "";
-  } catch {
-    return "";
-  }
+  return normalizeExternalHref(value, maxLength);
 }
 
 export function isValidPumpExternalUrl(value: string, maxLength = MAX_EXTERNAL_URL_LENGTH): boolean {
-  return Boolean(normalizePumpExternalUrl(value, maxLength));
+  return isValidExternalHref(value, maxLength);
 }
 
 /** Same-origin, content-addressed image URL used by 0xPump logo components. */

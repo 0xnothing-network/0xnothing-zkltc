@@ -30,8 +30,8 @@ function LegacyVaultRow({
   const tx = useProtocolTransaction();
   const reads = useReadContracts({
     contracts: [
-      { address: vault, abi: legacySynthVaultAbi, functionName: "mintPaused" },
-      { address: vault, abi: legacySynthVaultAbi, functionName: "withdrawPaused" },
+      { chainId: deployment.chain.id, address: vault, abi: legacySynthVaultAbi, functionName: "mintPaused" },
+      { chainId: deployment.chain.id, address: vault, abi: legacySynthVaultAbi, functionName: "withdrawPaused" },
     ] as const,
     query: { enabled: Boolean(vault) },
   });
@@ -120,6 +120,7 @@ export function LegacySynthRecovery() {
   const configured = vaults.filter((entry): entry is readonly ["nBTC" | "nETH", Address] => Boolean(entry[1]));
   const walletReads = useReadContracts({
     contracts: address ? configured.map(([, vault]) => ({
+      chainId: deployment.chain.id,
       address: vault,
       abi: legacySynthVaultAbi,
       functionName: "positions" as const,

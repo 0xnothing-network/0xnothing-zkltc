@@ -270,6 +270,74 @@ $expectedSupplyCeilingNusd = $expectedSupplyCeilingNusd.ToString(
     [System.Globalization.CultureInfo]::InvariantCulture
 )
 
+function Get-IntegerSqrtFloor {
+    param([System.Numerics.BigInteger]$Value)
+
+    if ($Value -le [System.Numerics.BigInteger]::Zero) {
+        return [System.Numerics.BigInteger]::Zero
+    }
+
+    $x = $Value
+    $y = ($Value + [System.Numerics.BigInteger]::One) / [System.Numerics.BigInteger]::new(2)
+    while ($y -lt $x) {
+        $x = $y
+        $y = ($x + $Value / $x) / [System.Numerics.BigInteger]::new(2)
+    }
+    return $x
+}
+
+function Get-IntegerSqrtUp {
+    param([System.Numerics.BigInteger]$Value)
+
+    $floor = Get-IntegerSqrtFloor -Value $Value
+    if ($floor * $floor -lt $Value) {
+        return $floor + [System.Numerics.BigInteger]::One
+    }
+    return $floor
+}
+
+$pumpTransactions = @($broadcast.transactions | Where-Object {
+    $_.transactionType -eq "CREATE" -and $_.contractName -eq "ZeroXPump"
+})
+$pumpConstructorArguments = @($pumpTransactions[0].arguments)
+if ($pumpConstructorArguments.Count -ne 7) {
+    throw "Expected seven ZeroXPump constructor arguments; found $($pumpConstructorArguments.Count)."
+}
+try {
+    $expectedInitialVirtualNusdReserve = [System.Numerics.BigInteger]::Parse(
+        [string]$pumpConstructorArguments[5],
+        [System.Globalization.CultureInfo]::InvariantCulture
+    )
+    $expectedGraduationMarketCapTargetNusd = [System.Numerics.BigInteger]::Parse(
+        [string]$pumpConstructorArguments[6],
+        [System.Globalization.CultureInfo]::InvariantCulture
+    )
+} catch {
+    throw "Invalid ZeroXPump virtual-reserve or market-cap constructor argument."
+}
+if (
+    $expectedInitialVirtualNusdReserve -le [System.Numerics.BigInteger]::Zero -or
+    $expectedGraduationMarketCapTargetNusd -le $expectedInitialVirtualNusdReserve
+) {
+    throw "ZeroXPump constructor thresholds are not a valid virtual-reserve / market-cap pair."
+}
+$expectedGraduationReserveThresholdNusd = (
+    (Get-IntegerSqrtUp -Value ($expectedInitialVirtualNusdReserve * $expectedGraduationMarketCapTargetNusd)) -
+    $expectedInitialVirtualNusdReserve
+)
+if ($expectedGraduationReserveThresholdNusd -le [System.Numerics.BigInteger]::Zero) {
+    throw "Derived Pump reserve threshold must be greater than zero."
+}
+$expectedInitialVirtualNusdReserve = $expectedInitialVirtualNusdReserve.ToString(
+    [System.Globalization.CultureInfo]::InvariantCulture
+)
+$expectedGraduationMarketCapTargetNusd = $expectedGraduationMarketCapTargetNusd.ToString(
+    [System.Globalization.CultureInfo]::InvariantCulture
+)
+$expectedGraduationReserveThresholdNusd = $expectedGraduationReserveThresholdNusd.ToString(
+    [System.Globalization.CultureInfo]::InvariantCulture
+)
+
 $liveChainId = Convert-ReceiptBlock (Invoke-Cast -Arguments @("chain-id", "--rpc-url", $RpcUrl))
 if ($liveChainId -ne $expectedChainId) {
     throw "RPC chain mismatch. Expected $expectedChainId, received $liveChainId."
@@ -337,9 +405,6 @@ Assert-LiveBoolCall $records["OracleNUSD"].address "hasRole(bytes32,address)(boo
 Assert-LiveBoolCall $records["OracleNUSD"].address "hasRole(bytes32,address)(bool)" $true `
     "OracleNUSD PAUSER_ROLE binding" @($pauserRoleMatch.Value, $protocolAdmin)
 
-$expectedInitialVirtualNusdReserve = "1500000000000000000000"
-$expectedGraduationMarketCapTargetNusd = "6000000000000000000000"
-$expectedGraduationReserveThresholdNusd = "1500000000000000000000"
 $expectedCreateFeeNusd = "1000000000000000000"
 $expectedTradeFeeBps = "10"
 
