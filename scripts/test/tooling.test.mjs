@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
+import { CI_NPM_PACKAGES, installCiDependencies } from "../ci-install.mjs";
 import { decodeEvmAddressWord, requestJsonRpc } from "../lib/evm-rpc.mjs";
 import {
   cleanGeneratedDirectories,
@@ -262,4 +263,26 @@ test("Pump subgraph parity reports source drift between testnet and mainnet", as
   await writeFile(path.join(mainnetRoot, "src", "mapping.ts"), "drift\n", "utf8");
   assert.deepEqual(await findPumpSubgraphDrift(options), ["src/mapping.ts"]);
   await assert.rejects(assertPumpSubgraphParity(options), /Pump testnet\/mainnet mirror drift/);
+});
+
+test("CI install walks every lockfile-backed package and stops on the first failure", () => {
+  assert.equal(CI_NPM_PACKAGES.length, 6);
+  assert.ok(CI_NPM_PACKAGES.every((prefix) => prefix.endsWith("web") || prefix.includes("wallet") || prefix.includes("0xFi") || prefix.includes("subgraph")));
+
+  const calls = [];
+  const installed = installCiDependencies({
+    workspace: "/workspace",
+    spawn: (command, args) => {
+      calls.push({ command, args });
+      return { status: 0 };
+    },
+  });
+  assert.equal(installed, CI_NPM_PACKAGES.length);
+  assert.equal(calls.length, CI_NPM_PACKAGES.length);
+  assert.deepEqual(calls[0].args.slice(0, 3), ["ci", "--prefix", path.join("/workspace", CI_NPM_PACKAGES[0])]);
+
+  assert.throws(() => installCiDependencies({
+    packages: ["apps/web", "apps/wallet"],
+    spawn: (_command, args) => ({ status: args[2].endsWith("wallet") ? 1 : 0 }),
+  }), /npm ci failed in apps\/wallet/);
 });

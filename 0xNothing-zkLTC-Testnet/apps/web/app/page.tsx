@@ -89,6 +89,7 @@ export default function Home() {
           <span className="nothing-network"><span className="nothing-network-mark" aria-hidden="true" />LitVM · Testnet</span>
           <nav className="nothing-footer-nav" aria-label="Resources">
             <Link href="/docs">Docs</Link>
+            <Link href="/faucet">Faucet</Link>
             <Link href="/privacy">Privacy</Link>
           </nav>
         </div>

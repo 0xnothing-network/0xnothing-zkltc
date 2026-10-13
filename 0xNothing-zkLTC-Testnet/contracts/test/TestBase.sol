@@ -12,9 +12,12 @@ interface Vm {
     function getRecordedLogs() external returns (Log[] memory logs);
     function deal(address account, uint256 newBalance) external;
     function prank(address sender) external;
+    function prank(address sender, address origin) external;
     function startPrank(address sender) external;
+    function startPrank(address sender, address origin) external;
     function stopPrank() external;
     function warp(uint256 newTimestamp) external;
+    function chainId(uint256 newChainId) external;
     function expectRevert() external;
     function expectRevert(bytes4 selector) external;
     function expectPartialRevert(bytes4 selector) external;

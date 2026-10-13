@@ -34,7 +34,7 @@ export const CONTRACTS = {
 } as const satisfies Record<string, Address>;
 
 /** First block of the 0xFi deployment — the floor for any log scan. */
-export const FI_DEPLOYMENT_BLOCK = 35_303_686n;
+export const FI_DEPLOYMENT_BLOCK = 60_287_622n;
 export const PIXEL_START_BLOCK = 56_305_414n;
 export const PIXEL_LEGACY_START_BLOCK = 24_867_130n;
 
