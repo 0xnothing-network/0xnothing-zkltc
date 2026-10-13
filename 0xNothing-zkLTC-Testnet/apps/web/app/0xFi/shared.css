@@ -39,7 +39,7 @@ textarea:not(.fi-root textarea) {
 
 button:not(.fi-root button):disabled,
 :not(.fi-root *)[disabled] {
-  color: #8e8878 !important;
+  color: var(--text-2) !important;
   opacity: 0.55 !important;
   filter: grayscale(0.35) !important;
 }
@@ -58,7 +58,7 @@ h3:not(.fi-root h3),
 h4:not(.fi-root h4) {
   color: var(--ui-text) !important;
   opacity: 1 !important;
-  text-shadow: 1px 1px 0 #000000 !important;
+  text-shadow: 1px 1px 0 var(--bg) !important;
 }
 
 p:not(.fi-root p),
@@ -79,7 +79,7 @@ input:not(.fi-root input):focus,
 select:not(.fi-root select):focus,
 textarea:not(.fi-root textarea):focus {
   box-shadow:
-    inset 0 -2px 0 #000000,
+    inset 0 -2px 0 var(--bg),
     0 0 0 1px rgba(69, 232, 255, 0.38) !important;
 }
 
@@ -105,8 +105,8 @@ nav:not(.fi-root nav) * {
 input:not(.fi-root input),
 select:not(.fi-root select),
 textarea:not(.fi-root textarea) {
-  background: #050505 !important;
-  color: #ffffff !important;
+  background: var(--bg) !important;
+  color: var(--text-1) !important;
   border-color: var(--nothing-line-soft) !important;
   border-radius: 0 !important;
   box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.08) !important;
@@ -121,13 +121,13 @@ textarea:not(.fi-root textarea)::placeholder {
 input:not(.fi-root input):focus,
 select:not(.fi-root select):focus,
 textarea:not(.fi-root textarea):focus {
-  border-color: #ffffff !important;
+  border-color: var(--text-1) !important;
   outline: 2px solid rgba(255, 255, 255, 0.24) !important;
   outline-offset: 2px;
 }
 
 button:not(.fi-root button):disabled {
-  background: #1a1a1a !important;
+  background: var(--surface-2) !important;
   color: rgba(255, 255, 255, 0.46) !important;
   border-color: rgba(255, 255, 255, 0.14) !important;
   box-shadow: none !important;

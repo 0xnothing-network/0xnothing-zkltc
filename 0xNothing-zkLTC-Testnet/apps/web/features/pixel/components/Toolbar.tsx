@@ -46,20 +46,20 @@ export const Toolbar = memo(function Toolbar({
 
   return (
     <div
-      className="pixel-tools-panel animate-fadeInUp bg-[#1A1A2E] rounded-2xl p-3 sm:p-5 border border-[#2D2D44] flex flex-col gap-4 sm:gap-6"
+      className="pixel-tools-panel animate-fadeInUp bg-(--surface-1) rounded-2xl p-3 sm:p-5 border border-(--line) flex flex-col gap-4 sm:gap-6"
     >
       <>
           <button
             onClick={onImport}
-            className="w-full rounded-xl border border-indigo-400/40 bg-indigo-500/10 py-3 text-xs font-bold uppercase tracking-wider text-indigo-200 transition-colors hover:bg-indigo-500/20"
+            className="w-full rounded-xl border border-(--accent)/40 bg-(--accent)/10 py-3 text-xs font-bold uppercase tracking-wider text-(--accent-text) transition-colors hover:bg-(--accent)/20"
           >
             Import Image
           </button>
           {/* Color Palette Section */}
           <div>
             <p
-              className="text-[#64748B] text-[11px] uppercase tracking-wider mb-2"
-              style={{ fontFamily: "var(--font-departure)" }}
+              className="text-(--text-3) text-xs uppercase tracking-wider mb-2"
+              style={{ fontFamily: "var(--font-ui)" }}
             >
               Color Palette
             </p>
@@ -77,16 +77,16 @@ export const Toolbar = memo(function Toolbar({
             {/* Current color preview */}
             <div className="flex items-center gap-2.5 mb-3">
               <div
-                className="w-10 h-10 rounded-xl border border-white/10 flex-shrink-0"
+                className="w-10 h-10 rounded-xl border border-(--text-1)/10 flex-shrink-0"
                 style={{ backgroundColor: selectedColor }}
               />
               <div className="flex-1 min-w-0">
-                <p className="text-white text-xs font-medium mb-0.5">
+                <p className="text-(--text-1) text-xs font-medium mb-0.5">
                   {selectedColor}
                 </p>
                 <p
-                  className="text-[#374151] text-[10px] uppercase"
-                  style={{ fontFamily: "var(--font-departure)" }}
+                  className="text-(--text-3) text-xs uppercase"
+                  style={{ fontFamily: "var(--font-ui)" }}
                 >
                   Current
                 </p>
@@ -96,8 +96,8 @@ export const Toolbar = memo(function Toolbar({
             {/* Custom color input */}
             <div>
               <p
-                className="text-[#64748B] text-[11px] uppercase tracking-wider mb-1.5"
-                style={{ fontFamily: "var(--font-departure)" }}
+                className="text-(--text-3) text-xs uppercase tracking-wider mb-1.5"
+                style={{ fontFamily: "var(--font-ui)" }}
               >
                 Custom Color
               </p>
@@ -109,7 +109,7 @@ export const Toolbar = memo(function Toolbar({
                     setCustomHex(e.target.value);
                     handleColorSelect(e.target.value);
                   }}
-                className="w-11 h-10 sm:w-10 sm:h-9 rounded-lg cursor-pointer border border-[#2D2D44] bg-transparent flex-shrink-0"
+                className="w-11 h-10 sm:w-10 sm:h-9 rounded-lg cursor-pointer border border-(--line) bg-transparent flex-shrink-0"
                 />
                 <input
                   type="text"
@@ -123,8 +123,8 @@ export const Toolbar = memo(function Toolbar({
                   }}
                   placeholder="#RRGGBB"
                   maxLength={7}
-                  className="flex-1 bg-[#0F0F23] border border-[#2D2D44] rounded-xl px-3 py-2.5 sm:py-2 text-white text-xs placeholder-[#374151] focus:outline-none focus:border-indigo-500 transition-all uppercase"
-                  style={{ fontFamily: "var(--font-mono)" }}
+                  className="flex-1 bg-(--surface-2) border border-(--line) rounded-xl px-3 py-2.5 sm:py-2 text-(--text-1) text-xs placeholder-(--text-3) focus:outline-none focus:border-(--accent) transition-all uppercase"
+                  style={{ fontFamily: "var(--font-num)" }}
                 />
               </div>
             </div>
@@ -134,8 +134,8 @@ export const Toolbar = memo(function Toolbar({
           {recentColors.length > 0 && (
             <div>
               <p
-                className="text-[#64748B] text-[11px] uppercase tracking-wider mb-2"
-                style={{ fontFamily: "var(--font-departure)" }}
+                className="text-(--text-3) text-xs uppercase tracking-wider mb-2"
+                style={{ fontFamily: "var(--font-ui)" }}
               >
                 Recent
               </p>
@@ -160,8 +160,8 @@ export const Toolbar = memo(function Toolbar({
           {/* Grid Size Selector */}
           <div>
             <p
-              className="text-[#64748B] text-[11px] uppercase tracking-wider mb-2"
-              style={{ fontFamily: "var(--font-departure)" }}
+              className="text-(--text-3) text-xs uppercase tracking-wider mb-2"
+              style={{ fontFamily: "var(--font-ui)" }}
             >
               Grid Size
             </p>
@@ -173,10 +173,10 @@ export const Toolbar = memo(function Toolbar({
                   className={
                     "flex-1 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-all " +
                     (gridSize === size
-                      ? "bg-indigo-500 text-white"
-                      : "bg-[#0F0F23] border border-[#2D2D44] text-[#64748B] hover:bg-[#1A1A2E] hover:text-white")
+                      ? "bg-(--accent) text-(--text-1)"
+                      : "bg-(--surface-2) border border-(--line) text-(--text-3) hover:bg-(--surface-1) hover:text-(--text-1)")
                   }
-                  style={{ fontFamily: "var(--font-departure)" }}
+                  style={{ fontFamily: "var(--font-ui)" }}
                 >
                   {size}
                 </button>
@@ -187,8 +187,8 @@ export const Toolbar = memo(function Toolbar({
           {/* Clear */}
           <button
             onClick={onClear}
-            className="w-full py-3 sm:py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold uppercase tracking-wider hover:bg-red-500/20 hover:border-red-500/30 active:translate-y-[1px] transition-all flex items-center justify-center gap-1.5"
-            style={{ fontFamily: "var(--font-departure)" }}
+            className="w-full py-3 sm:py-2.5 rounded-xl bg-(--negative)/10 border border-(--negative)/20 text-(--negative) text-xs font-bold uppercase tracking-wider hover:bg-(--negative)/20 hover:border-(--negative)/30 active:translate-y-[1px] transition-all flex items-center justify-center gap-1.5"
+            style={{ fontFamily: "var(--font-ui)" }}
           >
             <svg
               width="10"

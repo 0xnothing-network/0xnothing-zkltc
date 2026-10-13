@@ -310,7 +310,7 @@ export function PoolDetail({
                 {!configured ? "Not deployed" : tx.pending ? "Processing" : mode === "add" ? "Add liquidity & receive LP" : "Remove liquidity"}
               </button>
             )}
-            <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />
+            <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
             {earnFlowEnabled && lpBalance !== undefined && lpBalance > 0n ? (
               <Link className="fi-button fi-button-muted fi-earn-next" href={farmHref}>
                 Stake {formatAmount(lpBalance)} LP

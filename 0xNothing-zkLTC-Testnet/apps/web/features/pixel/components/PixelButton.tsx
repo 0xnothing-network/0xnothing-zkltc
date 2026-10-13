@@ -47,10 +47,10 @@ export function PixelButton({
     <button {...props} className={classes} disabled={disabled || loading} aria-busy={loading || undefined}>
       {loading ? (
         <span className="inline-grid grid-cols-2 gap-[2px]" aria-hidden="true">
-          <span className="h-1.5 w-1.5 bg-white/45 animate-pulse" />
-          <span className="h-1.5 w-1.5 bg-white/80 animate-pulse [animation-delay:120ms]" />
-          <span className="h-1.5 w-1.5 bg-white/80 animate-pulse [animation-delay:240ms]" />
-          <span className="h-1.5 w-1.5 bg-white/45 animate-pulse [animation-delay:360ms]" />
+          <span className="h-1.5 w-1.5 bg-(--text-1)/45 animate-pulse" />
+          <span className="h-1.5 w-1.5 bg-(--text-1)/80 animate-pulse [animation-delay:120ms]" />
+          <span className="h-1.5 w-1.5 bg-(--text-1)/80 animate-pulse [animation-delay:240ms]" />
+          <span className="h-1.5 w-1.5 bg-(--text-1)/45 animate-pulse [animation-delay:360ms]" />
         </span>
       ) : (
         children

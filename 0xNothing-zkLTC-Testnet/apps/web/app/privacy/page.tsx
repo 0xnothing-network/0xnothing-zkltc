@@ -217,11 +217,11 @@ export default function PrivacyPage() {
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
           <Link
             href="/"
-            className="inline-flex min-h-11 items-center text-[11px] uppercase tracking-[0.3em] text-white/80 transition-colors hover:text-white"
+            className="inline-flex min-h-11 items-center text-xs uppercase tracking-[0.3em] text-white/80 transition-colors hover:text-white"
           >
             0xNothing
           </Link>
-          <span className="text-[9px] uppercase tracking-[0.28em] text-white/35">
+          <span className="text-xs uppercase tracking-[0.28em] text-white/35">
             0xWallet / Privacy
           </span>
         </div>
@@ -229,7 +229,7 @@ export default function PrivacyPage() {
 
       <main className="relative z-10 mx-auto w-full max-w-5xl px-5 py-14 sm:px-6 sm:py-20">
         <div className="max-w-3xl">
-          <p className="mb-5 text-[10px] uppercase tracking-[0.32em] text-emerald-300/70">
+          <p className="mb-5 text-xs uppercase tracking-[0.32em] text-emerald-300/70">
             0xWallet
           </p>
           <h1 className="text-3xl uppercase tracking-[-0.04em] sm:text-5xl">
@@ -248,7 +248,7 @@ export default function PrivacyPage() {
               key={section.title}
               className="grid gap-5 border-b border-white/10 py-8 md:grid-cols-[180px_minmax(0,1fr)] md:gap-12 md:py-10"
             >
-              <h2 className="text-[11px] leading-6 uppercase tracking-[0.26em] text-white/45">
+              <h2 className="text-xs leading-6 uppercase tracking-[0.26em] text-white/45">
                 {String(index + 1).padStart(2, "0")} / {section.title}
               </h2>
               <div className="min-w-0 space-y-4 text-[13px] leading-7 text-white/65 [overflow-wrap:anywhere] [&_a]:text-emerald-200 [&_a]:underline [&_a]:decoration-white/20 [&_a]:underline-offset-4 [&_li]:pl-1 [&_strong]:font-normal [&_strong]:text-white/90 [&_ul]:list-square [&_ul]:space-y-2 [&_ul]:pl-5">
@@ -260,7 +260,7 @@ export default function PrivacyPage() {
       </main>
 
       <footer className="relative z-10 border-t border-white/10 px-5 py-6 sm:px-6">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 text-[9px] uppercase tracking-[0.28em] text-white/30">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 text-xs uppercase tracking-[0.28em] text-white/30">
           <span>0xWallet · LitVM LiteForge Testnet</span>
           <Link href="/" className="inline-flex min-h-11 items-center transition-colors hover:text-white/70">
             Back to 0xNothing

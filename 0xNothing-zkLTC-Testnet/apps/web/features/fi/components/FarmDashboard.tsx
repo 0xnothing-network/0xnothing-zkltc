@@ -346,7 +346,7 @@ function FarmRow({
               </button>
             </div>
           )}
-          <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />
+          <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
         </div>
       </div>
     </article>

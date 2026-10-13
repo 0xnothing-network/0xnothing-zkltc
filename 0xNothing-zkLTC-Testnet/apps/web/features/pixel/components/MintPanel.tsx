@@ -348,11 +348,11 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
   }
 
   return (
-    <div className="pixel-mint-panel bg-[#1A1A2E] rounded-2xl border border-[#2D2D44] overflow-hidden">
-      <div className="px-4 py-3 border-b border-[#2D2D44]">
+    <div className="pixel-mint-panel bg-(--surface-1) rounded-2xl border border-(--line) overflow-hidden">
+      <div className="px-4 py-3 border-b border-(--line)">
         <h3
-          className="text-white font-bold text-sm"
-          style={{ fontFamily: "var(--font-departure)" }}
+          className="text-(--text-1) font-bold text-sm"
+          style={{ fontFamily: "var(--font-ui)" }}
         >
           MINT YOUR ARTWORK
         </h3>
@@ -379,7 +379,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
             />
           ) : hasDrawing ? (
             <div className="grid h-full w-full place-items-center" aria-label="Preparing preview">
-              <span className="h-7 w-7 animate-spin rounded-full border-2 border-white/15 border-t-white/70" />
+              <span className="h-7 w-7 animate-spin rounded-full border-2 border-(--text-1)/15 border-t-white/70" />
             </div>
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center gap-2">
@@ -395,8 +395,8 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
                 <path d="M3 9h18M9 21V9" />
               </svg>
               <p
-                className="text-[#374151] text-[10px] text-center px-4"
-                style={{ fontFamily: "var(--font-departure)" }}
+                className="text-(--text-3) text-xs text-center px-4"
+                style={{ fontFamily: "var(--font-ui)" }}
               >
                 Draw something to see preview
               </p>
@@ -406,23 +406,23 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
             <div className="absolute top-2 right-2 flex items-center gap-1.5">
               {isCheckingOriginal ? (
                 <span
-                  className="flex items-center gap-1 text-[9px] px-2 py-1 rounded-md bg-black/40 text-indigo-300"
-                  style={{ fontFamily: "var(--font-departure)" }}
+                  className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-black/40 text-(--accent-text)"
+                  style={{ fontFamily: "var(--font-ui)" }}
                 >
-                  <span className="w-2.5 h-2.5 border border-indigo-400/50 border-t-indigo-400 rounded-full animate-spin" />
+                  <span className="w-2.5 h-2.5 border border-(--accent)/50 border-t-indigo-400 rounded-full animate-spin" />
                   CHECKING
                 </span>
               ) : isOriginal === false || originalCheckFailed ? (
                 <span
-                  className="text-[9px] px-2 py-1 rounded-md bg-red-500/20 text-red-300 border border-red-500/30 font-bold"
-                  style={{ fontFamily: "var(--font-departure)" }}
+                  className="text-xs px-2 py-1 rounded-md bg-(--negative)/20 text-(--negative) border border-(--negative)/30 font-bold"
+                  style={{ fontFamily: "var(--font-ui)" }}
                 >
                   {originalCheckFailed ? "CHECK FAILED" : "TAKEN"}
                 </span>
               ) : isOriginal === true ? (
                 <span
-                  className="text-[9px] px-2 py-1 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold"
-                  style={{ fontFamily: "var(--font-departure)" }}
+                  className="text-xs px-2 py-1 rounded-md bg-(--positive)/20 text-(--positive) border border-(--positive)/30 font-bold"
+                  style={{ fontFamily: "var(--font-ui)" }}
                 >
                   ORIGINAL
                 </span>
@@ -432,29 +432,29 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
         </div>
 
         <div
-          className="flex items-center justify-between text-[11px]"
-          style={{ fontFamily: "var(--font-departure)" }}
+          className="flex items-center justify-between text-xs"
+          style={{ fontFamily: "var(--font-ui)" }}
         >
           <div className="flex items-center gap-1">
-            <span className="text-[#64748B]">Grid:</span>
-            <span className="text-white font-medium">
+            <span className="text-(--text-3)">Grid:</span>
+            <span className="text-(--text-1) font-medium">
               {gridSize}x{gridSize}
             </span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-[#64748B]">Size:</span>
-            <span className="text-white font-medium">~{gridByteSize} KB</span>
+            <span className="text-(--text-3)">Size:</span>
+            <span className="text-(--text-1) font-medium">~{gridByteSize} KB</span>
           </div>
         </div>
 
-        <p className="text-[11px] text-[#94A3B8]">{runCount.toLocaleString()}/4,096 color runs · fully on-chain</p>
-        {encodingError ? <p className="text-xs text-red-300" role="alert">{encodingError}</p> : null}
-        {pixelUtf8Bytes(name.trim()) > 64 || pixelUtf8Bytes(description) > 1024 ? <p className="text-xs text-red-300" role="alert">Name: {pixelUtf8Bytes(name.trim())}/64 UTF-8 bytes · Description: {pixelUtf8Bytes(description)}/1024 UTF-8 bytes</p> : null}
-        <div className="h-px bg-[#2D2D44]" />
+        <p className="text-xs text-(--text-2)">{runCount.toLocaleString()}/4,096 color runs · fully on-chain</p>
+        {encodingError ? <p className="text-xs text-(--negative)" role="alert">{encodingError}</p> : null}
+        {pixelUtf8Bytes(name.trim()) > 64 || pixelUtf8Bytes(description) > 1024 ? <p className="text-xs text-(--negative)" role="alert">Name: {pixelUtf8Bytes(name.trim())}/64 UTF-8 bytes · Description: {pixelUtf8Bytes(description)}/1024 UTF-8 bytes</p> : null}
+        <div className="h-px bg-(--surface-3)" />
 
         {!isConnected ? (
           <div className="flex items-center gap-3 py-1">
-            <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-(--accent)/10 border border-(--accent)/20 flex items-center justify-center flex-shrink-0">
               <svg
                 width="16"
                 height="16"
@@ -467,7 +467,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
                 <path d="M16 16l2 2 4-4" />
               </svg>
             </div>
-            <p className="text-[#64748B] text-sm">Connect wallet to mint</p>
+            <p className="text-(--text-3) text-sm">Connect wallet to mint</p>
           </div>
         ) : (
           <>
@@ -478,8 +478,8 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Artwork name"
                 maxLength={64}
-                className="w-full bg-[#1A1A2E] border border-[#2D2D44] rounded-xl px-3.5 py-3 sm:py-2.5 text-white placeholder-[#374151] focus:outline-none focus:border-indigo-500/50 transition-all text-sm"
-                style={{ fontFamily: "var(--font-departure)" }}
+                className="w-full bg-(--surface-1) border border-(--line) rounded-xl px-3.5 py-3 sm:py-2.5 text-(--text-1) placeholder-(--text-3) focus:outline-none focus:border-(--accent)/50 transition-all text-sm"
+                style={{ fontFamily: "var(--font-ui)" }}
               />
             </div>
 
@@ -490,12 +490,12 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
                 placeholder="Description (stored on-chain)"
                 maxLength={1024}
                 rows={2}
-                className="w-full bg-[#1A1A2E] border border-[#2D2D44] rounded-xl px-3.5 py-3 sm:py-2.5 text-white placeholder-[#374151] focus:outline-none focus:border-indigo-500/50 transition-all resize-none text-sm"
-                style={{ fontFamily: "var(--font-departure)" }}
+                className="w-full bg-(--surface-1) border border-(--line) rounded-xl px-3.5 py-3 sm:py-2.5 text-(--text-1) placeholder-(--text-3) focus:outline-none focus:border-(--accent)/50 transition-all resize-none text-sm"
+                style={{ fontFamily: "var(--font-ui)" }}
               />
             </div>
 
-            <p className="text-[11px] text-[#94A3B8]">Name: {pixelUtf8Bytes(name.trim())}/64 UTF-8 bytes · Description: {pixelUtf8Bytes(description)}/1,024 UTF-8 bytes</p>
+            <p className="text-xs text-(--text-2)">Name: {pixelUtf8Bytes(name.trim())}/64 UTF-8 bytes · Description: {pixelUtf8Bytes(description)}/1,024 UTF-8 bytes</p>
             <PixelButton
               variant="indigo"
               onClick={originalCheckFailed ? () => { void retryOriginalCheck(); } : handleMint}

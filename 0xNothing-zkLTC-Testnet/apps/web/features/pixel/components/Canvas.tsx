@@ -567,7 +567,7 @@ export function Canvas({
       {/* Toolbar Bar */}
       <div className="canvas-tool-strip flex w-full max-w-[min(100%,640px)] flex-nowrap items-center gap-1.5 overflow-x-auto overscroll-x-contain pb-1 sm:flex-wrap sm:justify-center">
         {/* Tools */}
-        <div className="flex flex-shrink-0 gap-0.5 bg-[#1A1A2E] rounded-xl p-1 border border-[#2D2D44]">
+        <div className="flex flex-shrink-0 gap-0.5 bg-(--surface-1) rounded-xl p-1 border border-(--line)">
           <ToolButton active={currentTool === "pencil"} onClick={() => setCurrentTool("pencil")} title="Pencil">
             <PencilIcon />
           </ToolButton>
@@ -581,35 +581,35 @@ export function Canvas({
             <PickerIcon />
           </ToolButton>
 
-          <div className="w-px h-6 bg-[#2D2D44] mx-0.5 self-center" />
+          <div className="w-px h-6 bg-(--surface-3) mx-0.5 self-center" />
 
           <button
             onClick={onUndo}
             disabled={!canUndo}
             title="Undo (Ctrl+Z)"
-            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-100 ${canUndo ? "text-[#94A3B8] hover:text-white hover:bg-white/5" : "text-[#374151] cursor-not-allowed"}`}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-100 ${canUndo ? "text-(--text-2) hover:text-(--text-1) hover:bg-(--text-1)/5" : "text-(--text-3) cursor-not-allowed"}`}
           >
             <UndoIcon />
           </button>
         </div>
 
         {/* Zoom */}
-        <div className="flex flex-shrink-0 items-center gap-0.5 bg-[#1A1A2E] rounded-xl p-1 border border-[#2D2D44]">
+        <div className="flex flex-shrink-0 items-center gap-0.5 bg-(--surface-1) rounded-xl p-1 border border-(--line)">
           <button
             onClick={() => setZoom(z => Math.max(z / 1.5, 0.5))}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-[#94A3B8] hover:text-white hover:bg-white/5 transition-all"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-(--text-2) hover:text-(--text-1) hover:bg-(--text-1)/5 transition-all"
             title="Zoom Out"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </button>
-          <span className="text-[#94A3B8] text-[10px] w-10 text-center font-mono bg-white/5 rounded-md py-1" style={{ fontFamily: "var(--font-departure)" }}>
+          <span className="text-(--text-2) text-xs w-10 text-center font-mono bg-(--text-1)/5 rounded-md py-1" style={{ fontFamily: "var(--font-ui)" }}>
             {Math.round(zoom * 100)}%
           </span>
           <button
             onClick={() => setZoom(z => Math.min(z * 1.5, 10))}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-[#94A3B8] hover:text-white hover:bg-white/5 transition-all"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-(--text-2) hover:text-(--text-1) hover:bg-(--text-1)/5 transition-all"
             title="Zoom In"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -619,26 +619,26 @@ export function Canvas({
           </button>
           <button
             onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-[#94A3B8] hover:text-white hover:bg-white/5 transition-all text-[10px] font-bold"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-(--text-2) hover:text-(--text-1) hover:bg-(--text-1)/5 transition-all text-xs font-bold"
             title="Reset View"
-            style={{ fontFamily: "var(--font-departure)" }}
+            style={{ fontFamily: "var(--font-ui)" }}
           >
             R
           </button>
         </div>
 
         {/* Brush Size */}
-        <div className="flex flex-shrink-0 items-center gap-0.5 bg-[#1A1A2E] rounded-xl p-1 border border-[#2D2D44]">
-          <span className="text-[#64748B] text-[9px] px-1 font-mono self-center" style={{ fontFamily: "var(--font-departure)" }}>SZ</span>
+        <div className="flex flex-shrink-0 items-center gap-0.5 bg-(--surface-1) rounded-xl p-1 border border-(--line)">
+          <span className="text-(--text-3) text-xs px-1 font-mono self-center" style={{ fontFamily: "var(--font-ui)" }}>SZ</span>
           {BRUSH_SIZES.map(size => (
             <button
               key={size}
               onClick={() => setBrushSize(size)}
               title={`Brush ${size}x${size}`}
-              className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold transition-all ${
-                brushSize === size ? "bg-indigo-500/20 text-indigo-300" : "text-[#64748B] hover:text-white hover:bg-white/5"
+              className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
+                brushSize === size ? "bg-(--accent)/20 text-(--accent-text)" : "text-(--text-3) hover:text-(--text-1) hover:bg-(--text-1)/5"
               }`}
-              style={{ fontFamily: "var(--font-departure)" }}
+              style={{ fontFamily: "var(--font-ui)" }}
             >
               {size}
             </button>
@@ -646,7 +646,7 @@ export function Canvas({
         </div>
 
         {/* Symmetry */}
-        <div className="flex flex-shrink-0 items-center gap-0.5 bg-[#1A1A2E] rounded-xl p-1 border border-[#2D2D44]">
+        <div className="flex flex-shrink-0 items-center gap-0.5 bg-(--surface-1) rounded-xl p-1 border border-(--line)">
           <SymmetryButton active={symmetry === "horizontal"} onClick={() => setSymmetry(s => s === "horizontal" ? "none" : "horizontal")} title="Symmetry Horizontal">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2v20" />
@@ -671,17 +671,17 @@ export function Canvas({
         </div>
 
         {/* Subdivision */}
-        <div className="flex flex-shrink-0 items-center gap-0.5 bg-[#1A1A2E] rounded-xl p-1 border border-[#2D2D44]">
-          <span className="text-[#64748B] text-[9px] px-1 font-mono self-center" style={{ fontFamily: "var(--font-departure)" }}>GRID</span>
+        <div className="flex flex-shrink-0 items-center gap-0.5 bg-(--surface-1) rounded-xl p-1 border border-(--line)">
+          <span className="text-(--text-3) text-xs px-1 font-mono self-center" style={{ fontFamily: "var(--font-ui)" }}>GRID</span>
           {SUBDIVISION_OPTIONS.map(opt => (
             <button
               key={opt}
               onClick={() => setSubdivision(opt)}
               title={opt === 0 ? "No grid" : `${opt}x${opt} sub-grid`}
-              className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold transition-all ${
-                subdivision === opt ? "bg-indigo-500/20 text-indigo-300" : "text-[#64748B] hover:text-white hover:bg-white/5"
+              className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
+                subdivision === opt ? "bg-(--accent)/20 text-(--accent-text)" : "text-(--text-3) hover:text-(--text-1) hover:bg-(--text-1)/5"
               }`}
-              style={{ fontFamily: "var(--font-departure)" }}
+              style={{ fontFamily: "var(--font-ui)" }}
             >
               {opt === 0 ? "-" : opt}
             </button>
@@ -694,7 +694,7 @@ export function Canvas({
       {/* Canvas */}
       <div
         ref={containerRef}
-        className="pixel-canvas-frame relative flex w-full max-w-[min(100%,520px)] items-center justify-center overflow-hidden rounded-xl border border-[#2D2D44] bg-[#0F0F23] shadow-2xl shadow-black/20"
+        className="pixel-canvas-frame relative flex w-full max-w-[min(100%,520px)] items-center justify-center overflow-hidden rounded-xl border border-(--line) bg-(--surface-2) shadow-2xl shadow-black/20"
         style={{
           aspectRatio: "1 / 1",
           touchAction: "none",
@@ -732,7 +732,7 @@ export function Canvas({
         />
       </div>
 
-      <p className="text-center text-[#64748B] text-[10px]" style={{ fontFamily: "var(--font-departure)" }}>
+      <p className="text-center text-(--text-3) text-xs" style={{ fontFamily: "var(--font-ui)" }}>
         Drag to draw <span className="hidden sm:inline">&middot; Scroll to zoom &middot; Right-click to pan</span>
       </p>
     </div>
@@ -745,7 +745,7 @@ function ToolButton({ children, active, onClick, title }: { children: React.Reac
       onClick={onClick}
       title={title}
       className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-100 ${
-        active ? "bg-indigo-500/20 text-indigo-300" : "text-[#64748B] hover:text-white hover:bg-white/5"
+        active ? "bg-(--accent)/20 text-(--accent-text)" : "text-(--text-3) hover:text-(--text-1) hover:bg-(--text-1)/5"
       }`}
     >
       {children}
@@ -759,7 +759,7 @@ function SymmetryButton({ children, active, onClick, title }: { children: React.
       onClick={onClick}
       title={title}
       className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-100 ${
-        active ? "bg-indigo-500/20 text-indigo-300" : "text-[#64748B] hover:text-white hover:bg-white/5"
+        active ? "bg-(--accent)/20 text-(--accent-text)" : "text-(--text-3) hover:text-(--text-1) hover:bg-(--text-1)/5"
       }`}
     >
       {children}
@@ -909,8 +909,8 @@ function ExportMenu({ pixelData, gridSize }: { pixelData: string[][]; gridSize: 
     <div ref={ref} className="relative">
       <button
         onClick={toggleOpen}
-        className="pixel-btn pixel-btn-secondary pixel-btn-sm flex items-center gap-1 text-[#64748B] hover:text-white"
-        style={{ fontFamily: "var(--font-departure)" }}
+        className="pixel-btn pixel-btn-secondary pixel-btn-sm flex items-center gap-1 text-(--text-3) hover:text-(--text-1)"
+        style={{ fontFamily: "var(--font-ui)" }}
       >
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -927,7 +927,7 @@ function ExportMenu({ pixelData, gridSize }: { pixelData: string[][]; gridSize: 
         <>
           <div
             ref={menuRef}
-            className="hidden sm:block fixed z-[90] w-[184px] rounded-lg border border-[#2D2D44] bg-[#1A1A2E] shadow-[4px_4px_0_0_#060614]"
+            className="hidden sm:block fixed z-[90] w-[184px] rounded-lg border border-(--line) bg-(--surface-1) shadow-[4px_4px_0_0_#060614]"
             style={{
               top: menuPosition.top,
               right: menuPosition.right,
@@ -941,27 +941,27 @@ function ExportMenu({ pixelData, gridSize }: { pixelData: string[][]; gridSize: 
             onClick={() => setOpen(false)}
           >
             <div
-              className="w-full overflow-hidden rounded-2xl border border-[#2D2D44] bg-[#13133A] shadow-2xl shadow-black/40"
+              className="w-full overflow-hidden rounded-2xl border border-(--line) bg-(--surface-2) shadow-2xl shadow-black/40"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between border-b border-[#2D2D44] px-4 py-3">
+              <div className="flex items-center justify-between border-b border-(--line) px-4 py-3">
                 <div>
                   <p
-                    className="text-[10px] font-bold uppercase tracking-wider text-[#8888ff]"
-                    style={{ fontFamily: "var(--font-departure)" }}
+                    className="text-xs font-bold uppercase tracking-wider text-(--accent-text)"
+                    style={{ fontFamily: "var(--font-ui)" }}
                   >
                     Export
                   </p>
                   <p
-                    className="mt-0.5 text-xs text-[#94A3B8]"
-                    style={{ fontFamily: "var(--font-departure)" }}
+                    className="mt-0.5 text-xs text-(--text-2)"
+                    style={{ fontFamily: "var(--font-ui)" }}
                   >
                     Save or copy your pixel grid
                   </p>
                 </div>
                 <button
                   onClick={() => setOpen(false)}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#2D2D44] text-[#94A3B8] active:translate-y-px"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-(--line) text-(--text-2) active:translate-y-px"
                   aria-label="Close export menu"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -997,22 +997,22 @@ function ExportActions({
             disabled={!hasDrawing}
             className={
               mobile
-                ? "flex w-full items-center gap-3 px-4 py-4 text-left text-[#CBD5E1] transition-colors active:bg-white/5 disabled:cursor-not-allowed disabled:opacity-30"
-                : "flex w-full items-center gap-2 px-3 py-2.5 text-left text-[#94A3B8] transition-colors hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+                ? "flex w-full items-center gap-3 px-4 py-4 text-left text-(--text-1) transition-colors active:bg-(--text-1)/5 disabled:cursor-not-allowed disabled:opacity-30"
+                : "flex w-full items-center gap-2 px-3 py-2.5 text-left text-(--text-2) transition-colors hover:bg-(--text-1)/5 hover:text-(--text-1) disabled:cursor-not-allowed disabled:opacity-30"
             }
             style={{
-              fontFamily: "var(--font-departure)",
+              fontFamily: "var(--font-ui)",
               fontSize: mobile ? 11 : 9,
               fontWeight: 700,
               letterSpacing: "0.05em",
             }}
           >
-            <span className={mobile ? "flex h-8 w-8 items-center justify-center rounded-lg bg-[#0F0F23] text-[#8888ff]" : ""}>
+            <span className={mobile ? "flex h-8 w-8 items-center justify-center rounded-lg bg-(--surface-2) text-(--accent-text)" : ""}>
               {item.icon}
             </span>
             {item.label}
           </button>
-          {i < arr.length - 1 && <div className="h-px bg-[#2D2D44]" />}
+          {i < arr.length - 1 && <div className="h-px bg-(--surface-3)" />}
         </div>
       ))}
     </div>

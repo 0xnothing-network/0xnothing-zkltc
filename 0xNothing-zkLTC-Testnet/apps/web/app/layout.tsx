@@ -1,14 +1,20 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { LITVM_RPC_URL, PUBLIC_APP_URL } from "@/lib/publicConfig";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 
-const jetbrainsMono = JetBrains_Mono({
+const geist = Geist({
   subsets: ["latin"],
-  variable: "--font-mono",
+  variable: "--font-geist",
   display: "swap",
-  preload: false,
+});
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
+  display: "swap",
 });
 
 // Every contract read leaves the browser for this origin, and the first one only
@@ -41,8 +47,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" data-scroll-behavior="smooth">
+    // Font variables live on <html> so :root tokens such as --font-ui can resolve them.
+    <html lang="en" className={`dark ${geist.variable} ${geistMono.variable}`} data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <link rel="preconnect" href={rpcOrigin} crossOrigin="anonymous" />
         <link
           rel="preload"
@@ -52,7 +60,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
       </head>
-      <body className={`${jetbrainsMono.variable} font-sans antialiased`}>
+      <body className="font-sans antialiased">
         <a href="#main-content" className="skip-link">Skip to content</a>
         <div id="main-content" tabIndex={-1}>{children}</div>
         {vercelAnalyticsEnabled ? <Analytics /> : null}

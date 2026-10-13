@@ -57,18 +57,18 @@ export default function GalleryPage() {
   }, [data, sort]);
 
   return (
-    <div className="pixel-collection-page min-h-[calc(100vh-64px)] px-3 py-6 sm:px-5 sm:py-10 max-w-7xl mx-auto" style={{ fontFamily: "var(--font-departure)" }}>
+    <div className="pixel-collection-page min-h-[calc(100vh-64px)] px-3 py-6 sm:px-5 sm:py-10 max-w-7xl mx-auto" style={{ fontFamily: "var(--font-ui)" }}>
       <div className="pixel-collection-heading mb-6 sm:mb-10 flex items-end justify-between flex-wrap gap-4">
         <div>
           <h1
-            className="hero-fade-in text-2xl sm:text-4xl font-bold text-white mb-2"
-            style={{ fontFamily: "var(--font-departure)" }}
+            className="hero-fade-in text-2xl sm:text-4xl font-bold text-(--text-1) mb-2"
+            style={{ fontFamily: "var(--font-ui)" }}
           >
             MY GALLERY
           </h1>
           <p
-            className="hero-fade-in-delay text-[#94A3B8] text-sm"
-            style={{ fontFamily: "var(--font-departure)" }}
+            className="hero-fade-in-delay text-(--text-2) text-sm"
+            style={{ fontFamily: "var(--font-ui)" }}
           >
             Your 0xPIXEL collection
           </p>
@@ -89,8 +89,8 @@ export default function GalleryPage() {
 
       {paused === true ? (
         <div
-          className="mb-4 px-4 py-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-sm"
-          style={{ fontFamily: "var(--font-departure)" }}
+          className="mb-4 px-4 py-3 rounded-lg bg-(--warning)/10 border border-(--warning)/30 text-(--warning) text-sm"
+          style={{ fontFamily: "var(--font-ui)" }}
         >
           Marketplace is paused. New listings and purchases are temporarily disabled; you can still cancel listings and withdraw credits.
         </div>
@@ -99,7 +99,7 @@ export default function GalleryPage() {
       {isConnected && address && data?.length ? <LegacyListingsNotice address={address} tokens={data} /> : null}
 
       {error && data ? (
-        <div className="mb-4 flex items-center justify-between gap-3 border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300" role="alert">
+        <div className="mb-4 flex items-center justify-between gap-3 border border-(--negative)/30 bg-(--negative)/10 px-4 py-3 text-sm text-(--negative)" role="alert">
           <span>Could not refresh the gallery. The items below may be out of date.</span>
           <button type="button" onClick={refresh} className="pixel-btn pixel-btn-secondary pixel-btn-sm shrink-0">
             Retry
@@ -119,16 +119,16 @@ export default function GalleryPage() {
         <>
           <div className="flex items-center justify-between mb-4 sm:mb-6 flex-wrap gap-3">
             <div
-              className="text-sm text-[#94A3B8]"
-              style={{ fontFamily: "var(--font-departure)" }}
+              className="text-sm text-(--text-2)"
+              style={{ fontFamily: "var(--font-ui)" }}
             >
               {sorted.length} {sorted.length === 1 ? "pixel" : "pixels"}
             </div>
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
-              className="bg-[#0F0F23] border border-[#2D2D44] text-white text-sm rounded-lg px-3 py-2.5 sm:px-4 sm:py-2 focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
-              style={{ fontFamily: "var(--font-departure)" }}
+              className="bg-(--surface-2) border border-(--line) text-(--text-1) text-sm rounded-lg px-3 py-2.5 sm:px-4 sm:py-2 focus:outline-none focus:border-(--accent) transition-colors cursor-pointer"
+              style={{ fontFamily: "var(--font-ui)" }}
             >
               <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>
@@ -157,14 +157,14 @@ function NotConnected() {
   return (
     <div className="pixel-collection-empty animate-fadeInUp text-center py-20">
       <h2
-        className="text-xl font-bold text-white mb-2"
-        style={{ fontFamily: "var(--font-departure)" }}
+        className="text-xl font-bold text-(--text-1) mb-2"
+        style={{ fontFamily: "var(--font-ui)" }}
       >
         Connect Your Wallet
       </h2>
       <p
-        className="text-[#94A3B8] max-w-sm mx-auto"
-        style={{ fontFamily: "var(--font-departure)" }}
+        className="text-(--text-2) max-w-sm mx-auto"
+        style={{ fontFamily: "var(--font-ui)" }}
       >
         Connect a wallet to view your 0xPIXEL collection
       </p>
@@ -175,7 +175,7 @@ function NotConnected() {
 function EmptyState() {
   return (
     <div className="pixel-collection-empty animate-fadeInUp text-center py-20">
-      <div className="w-24 h-24 mx-auto mb-6 bg-[#1A1A2E] rounded-2xl flex items-center justify-center border border-[#2D2D44]">
+      <div className="w-24 h-24 mx-auto mb-6 bg-(--surface-1) rounded-2xl flex items-center justify-center border border-(--line)">
         <svg
           width="48"
           height="48"
@@ -189,14 +189,14 @@ function EmptyState() {
         </svg>
       </div>
       <h2
-        className="text-xl font-bold text-white mb-2"
-        style={{ fontFamily: "var(--font-departure)" }}
+        className="text-xl font-bold text-(--text-1) mb-2"
+        style={{ fontFamily: "var(--font-ui)" }}
       >
         No Pixels Yet
       </h2>
       <p
-        className="text-[#94A3B8] max-w-sm mx-auto mb-8"
-        style={{ fontFamily: "var(--font-departure)" }}
+        className="text-(--text-2) max-w-sm mx-auto mb-8"
+        style={{ fontFamily: "var(--font-ui)" }}
       >
         Mint your first pixel art NFT
       </p>
@@ -225,11 +225,11 @@ function ErrorState({
 }) {
   return (
     <div
-      className="animate-fadeInUp text-center py-16 bg-[#1A1A2E] border border-red-500/30 rounded-2xl"
+      className="animate-fadeInUp text-center py-16 bg-(--surface-1) border border-(--negative)/30 rounded-2xl"
     >
       <p
-        className="text-red-300 mb-4"
-        style={{ fontFamily: "var(--font-departure)" }}
+        className="text-(--negative) mb-4"
+        style={{ fontFamily: "var(--font-ui)" }}
       >
         Failed to load gallery: {message}
       </p>

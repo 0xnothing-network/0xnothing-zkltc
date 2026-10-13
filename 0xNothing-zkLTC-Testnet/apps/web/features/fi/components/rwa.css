@@ -15,7 +15,7 @@
 .rwa-form input { width: 100%; box-sizing: border-box; padding: 14px; font-size: 20px; color: inherit; background: transparent; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); }
 .rwa-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .rwa-form button { cursor: pointer; border: 1px solid color-mix(in srgb, currentColor 35%, transparent); padding: 12px 18px; color: inherit; background: transparent; font: inherit; }
-.rwa-form button[aria-pressed=true], .rwa-form .rwa-submit { background: #b6ff54; color: #14200c; border-color: #b6ff54; }
+.rwa-form button[aria-pressed=true], .rwa-form .rwa-submit { background: var(--text-1); color: var(--text-3); border-color: var(--text-1); }
 .rwa-form button:disabled { opacity: .4; cursor: not-allowed; }
 .rwa-market details { margin-top: 22px; font-size: 13px; line-height: 1.8; }
 .rwa-market summary { cursor: pointer; margin-bottom: 10px; }

@@ -99,7 +99,7 @@ function LegacyVaultRow({
                   ? tx.pending ? "Recovering" : "Recover NUSD"
                   : "Nothing to recover"}
         </button>
-        <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />
+        <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
       </div>
       {mintPaused === false ? (
         <small className="fi-inline-warning">Legacy minting has not been retired.</small>

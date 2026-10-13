@@ -304,7 +304,7 @@ export function EarnDashboard() {
                 {tx.pending ? "Processing" : stakingPaused ? "New stakes paused" : `Stake for ${selectedLock.days} days`}
               </button>
             )}
-            <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />
+            <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
           </div>
         </article>
 
@@ -371,7 +371,7 @@ export function EarnDashboard() {
                   {redemptionTx.pending ? "Processing" : "Redeem for NUSD"}
                 </button>
               )}
-              <TransactionStatus phase={redemptionTx.phase} message={redemptionTx.message} hash={redemptionTx.hash} />
+              <TransactionStatus phase={redemptionTx.phase} message={redemptionTx.message} hash={redemptionTx.hash} step={redemptionTx.step} totalSteps={redemptionTx.totalSteps} />
             </div>
             <dl className="fi-points-redemption-quote" aria-label="xPoints redemption quote">
               <div><dt>You receive</dt><dd data-tone="positive">{formatAmount(redeemQuote, 18, 6)} NUSD</dd></div>

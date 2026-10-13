@@ -7,6 +7,7 @@ import { AmountField } from "@fi/components/AmountField";
 import { AssetSelect } from "@fi/components/AssetSelect";
 import { ConnectWalletButton } from "@fi/components/ConnectWalletButton";
 import { MetricStrip, NotDeployed, PanelHeading, TransactionStatus } from "@fi/components/UiStates";
+import { HealthGauge } from "@/components/Signature";
 import { useToast } from "@fi/components/Toast";
 import { assets } from "@fi/config/assets";
 import { deployment } from "@fi/config/deployment";
@@ -243,6 +244,14 @@ export function BorrowWorkspace() {
                 <div className="fi-position-row"><span>Debt</span><strong>{formatAmount(debt)} NUSD</strong></div>
                 <div className="fi-position-row"><span>Position health</span><strong className="fi-health-value" data-state={risk.state}>{risk.label}</strong></div>
               </dl>
+              {debt !== undefined && debt > 0n && selectedConfig ? (
+                <HealthGauge
+                  risk={currentLtvBps === undefined ? undefined : Number(currentLtvBps) / selectedConfig[3]}
+                  warnAt={selectedConfig[7] / selectedConfig[3]}
+                  value={formatBps(currentLtvBps)}
+                  caption={risk.label}
+                />
+              ) : null}
               <details className="fi-pool-details">
                 <summary>Risk thresholds</summary>
                 <dl>
@@ -345,7 +354,7 @@ export function BorrowWorkspace() {
                           : `${mode[0].toUpperCase()}${mode.slice(1)}`}
               </button>
             )}
-            <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />
+            <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
           </form>
         </section>
       </div>

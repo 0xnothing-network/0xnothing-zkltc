@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TxSteps } from "@/components/Signature";
 import {
   ArrowSquareOut,
   ChartLineDown,
@@ -135,10 +136,14 @@ export function TransactionStatus({
   phase,
   message,
   hash,
+  step,
+  totalSteps,
 }: {
   phase: string;
   message: string;
   hash?: Hash;
+  step?: number;
+  totalSteps?: number;
 }) {
   if (phase === "idle" || !message) return null;
   return (
@@ -148,6 +153,9 @@ export function TransactionStatus({
       role={phase === "error" ? "alert" : "status"}
       aria-live={phase === "error" ? "assertive" : "polite"}
     >
+      {totalSteps && totalSteps > 1 && step ? (
+        <TxSteps step={step} total={totalSteps} failed={phase === "error"} done={phase === "success"} />
+      ) : null}
       <span>{message}</span>
       {hash ? (
         <a href={explorerTransactionUrl(hash)} target="_blank" rel="noopener noreferrer">

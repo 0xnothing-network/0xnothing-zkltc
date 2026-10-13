@@ -36,7 +36,7 @@ function PanelSkeleton({ label }: { label: string }) {
 function CanvasSkeleton() {
   return (
     <div
-      className="pixel-canvas-skeleton flex aspect-square w-full max-w-[640px] items-center justify-center border border-[#2D2D44]"
+      className="pixel-canvas-skeleton flex aspect-square w-full max-w-[640px] items-center justify-center border border-(--line)"
       role="status"
       aria-label="Canvas loading"
     >
@@ -124,21 +124,21 @@ export default function PixelPage() {
   const handleMintSuccess = useCallback(() => {}, []);
 
   return (
-    <div style={{ fontFamily: "var(--font-departure)" }}>
-      <section className="pixel-studio-intro relative overflow-hidden border-b border-white/5">
+    <div style={{ fontFamily: "var(--font-ui)" }}>
+      <section className="pixel-studio-intro relative overflow-hidden border-b border-(--text-1)/5">
         <div className="pixel-studio-intro-inner max-w-7xl mx-auto px-4 pt-7 pb-6 relative sm:px-5 sm:pt-12 sm:pb-10">
           <h1
-            className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-3 sm:mb-4 tracking-tight leading-tight hero-fade-in text-balance"
-            style={{ fontFamily: "var(--font-departure)" }}
+            className="text-2xl sm:text-3xl md:text-5xl font-bold text-(--text-1) mb-3 sm:mb-4 tracking-tight leading-tight hero-fade-in text-balance"
+            style={{ fontFamily: "var(--font-ui)" }}
           >
             Create your{" "}
-            <span className="text-white/70">
+            <span className="text-(--text-1)/70">
               pixel masterpiece
             </span>
           </h1>
           <p
-            className="text-[#94A3B8] text-sm sm:text-base md:text-lg max-w-md mx-auto hero-fade-in-delay"
-            style={{ fontFamily: "var(--font-departure)" }}
+            className="text-(--text-2) text-sm sm:text-base md:text-lg max-w-md mx-auto hero-fade-in-delay"
+            style={{ fontFamily: "var(--font-ui)" }}
           >
             Draw. Mint. Trade on LitVM.
           </p>
@@ -203,12 +203,12 @@ export default function PixelPage() {
 
 function Footer() {
   return (
-    <footer className="border-t border-white/5 py-5 mt-8">
+    <footer className="border-t border-(--text-1)/5 py-5 mt-8">
       <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
         <Link
           href="/"
-          className="flex items-center gap-2 text-[#64748B] text-xs hover:text-white transition-colors"
-          style={{ fontFamily: "var(--font-departure)" }}
+          className="flex items-center gap-2 text-(--text-3) text-xs hover:text-(--text-1) transition-colors"
+          style={{ fontFamily: "var(--font-ui)" }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -222,8 +222,8 @@ function Footer() {
           <span>by 0xNothing</span>
         </Link>
         <p
-          className="text-[#374151] text-xs"
-          style={{ fontFamily: "var(--font-departure)" }}
+          className="text-(--text-3) text-xs"
+          style={{ fontFamily: "var(--font-ui)" }}
         >
           Built on LitVM
         </p>

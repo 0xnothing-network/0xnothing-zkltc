@@ -8,6 +8,7 @@ import { AmountField } from "@fi/components/AmountField";
 import { AssetSelect } from "@fi/components/AssetSelect";
 import { ConnectWalletButton } from "@fi/components/ConnectWalletButton";
 import { MetricStrip, NotDeployed, PanelHeading, TransactionStatus } from "@fi/components/UiStates";
+import { HealthGauge } from "@/components/Signature";
 import { useToast } from "@fi/components/Toast";
 import { assets } from "@fi/config/assets";
 import { deployment } from "@fi/config/deployment";
@@ -286,6 +287,13 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
             <div className="fi-position-row"><span>Locked collateral</span><strong>{formatAmount(userCollateral)} NUSD</strong></div>
             <div className="fi-position-row"><span>Withdrawable</span><strong>{formatAmount(maxWithdrawable)} NUSD</strong></div>
           </dl>
+          {synthDebt !== undefined && synthDebt > 0n ? (
+            <HealthGauge
+              risk={healthNumber === undefined || healthNumber <= 0 ? undefined : 1 / healthNumber}
+              value={healthNumber === undefined ? "--" : healthNumber.toFixed(2)}
+              caption="Health factor"
+            />
+          ) : null}
           <details className="fi-pool-details">
             <summary>Reserve details</summary>
             <dl>
@@ -377,7 +385,7 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
                 {!configured ? "Not deployed" : activationBlocked ? vaultStatus.actionLabel : tx.pending ? "Processing" : mode === "mint" ? `Mint ${synth}` : mode === "topup" ? "Top up" : `${mode[0].toUpperCase()}${mode.slice(1)}`}
               </button>
             )}
-            <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />
+            <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
           </form>
         </section>
       </div>

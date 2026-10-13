@@ -121,7 +121,7 @@ export function LendingWorkspace() {
             {!isConnected ? <ConnectWalletButton /> : (
               <button type="submit" className={`fi-button fi-button-block ${mode === "supply" ? "fi-button-primary" : "fi-button-muted"}`} disabled={!pool || !assets.NUSD.address || riskActionBlocked || !amount || Boolean(error) || tx.pending}>{!pool ? "Not deployed" : riskActionBlocked ? lending.actionLabel : tx.pending ? "Processing" : mode === "supply" ? "Supply NUSD" : "Withdraw NUSD"}</button>
             )}
-            <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />
+            <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
           </form>
         </section>
       </div>

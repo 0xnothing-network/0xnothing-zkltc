@@ -753,7 +753,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
                 {!poolReady ? poolLoading ? "Loading pool" : "Pool unavailable" : tx.pending ? "Processing" : mode === "swap" ? !poolHasLiquidity ? "No liquidity" : routeReadError ? "Route unavailable" : !swapStateReady ? "Checking route" : swapsPaused.data ? "Swaps paused" : "Swap" : mode === "add" ? "Add liquidity" : !poolHasLiquidity ? "No liquidity" : "Remove liquidity"}
               </button>
             )}
-            <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />
+            <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
           </div>
           {poolReady && (lpBalance !== undefined && lpBalance > 0n || hasLockedLp || hasBurnedLp) ? (
             <details className="fi-settings-details fi-lock-lp-details">
@@ -881,7 +881,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
                     )}
                   </>}
                 </> : null}
-                <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />
+                <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
               </div>
             </details>
           ) : null}

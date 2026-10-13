@@ -1,0 +1,54 @@
+/* Signature components (components/Signature.tsx). */
+
+/* Pixel progress: square cells, filled cells use the product accent. */
+.ox-pixel-progress {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 2px;
+  height: 10px;
+}
+.ox-pixel-progress i { border-radius: 1px; background: var(--surface-3); }
+.ox-pixel-progress i[data-on] { background: var(--accent); }
+
+/* Health gauge */
+.ox-health-gauge { display: grid; justify-items: center; gap: 2px; margin: 4px 0 0; }
+.ox-health-gauge svg { width: min(100%, 200px); overflow: visible; }
+.ox-health-track,
+.ox-health-fill { fill: none; stroke-width: 9; stroke-linecap: round; }
+.ox-health-track { stroke: var(--surface-3); }
+.ox-health-fill { stroke: var(--positive); transition: stroke-dasharray 400ms var(--ease), stroke 200ms var(--ease); }
+.ox-health-gauge[data-state="warning"] .ox-health-fill { stroke: var(--warning); }
+.ox-health-gauge[data-state="danger"] .ox-health-fill { stroke: var(--negative); }
+.ox-health-gauge[data-state="unknown"] .ox-health-fill { stroke: transparent; }
+.ox-health-gauge figcaption { display: grid; justify-items: center; margin-top: -26px; }
+.ox-health-gauge strong { font-family: var(--font-num); font-size: 22px; font-weight: 500; color: var(--text-1); }
+.ox-health-gauge span { color: var(--text-3); font-size: 12px; }
+.ox-health-gauge[data-state="warning"] span { color: var(--warning); }
+.ox-health-gauge[data-state="danger"] span { color: var(--negative); }
+
+/* Transaction steps */
+.ox-tx-steps { display: flex; align-items: center; gap: 0; margin: 0 0 8px; padding: 0; list-style: none; }
+.ox-tx-steps li { display: flex; align-items: center; flex: 1; min-width: 0; }
+.ox-tx-steps li:last-child { flex: none; }
+.ox-tx-steps li:not(:last-child)::after { content: ""; flex: 1; height: 2px; margin: 0 6px; border-radius: 2px; background: var(--line-strong); }
+.ox-tx-steps li[data-state="complete"]:not(:last-child)::after { background: var(--accent); }
+.ox-tx-steps span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-pill);
+  color: var(--text-3);
+  font-family: var(--font-num);
+  font-size: 12px;
+}
+.ox-tx-steps li[data-state="active"] span { border-color: var(--accent); color: var(--text-1); box-shadow: var(--ring); }
+.ox-tx-steps li[data-state="complete"] span { border-color: transparent; background: var(--accent); color: var(--accent-ink); }
+.ox-tx-steps li[data-state="failed"] span { border-color: var(--negative); color: var(--negative); }
+@media (prefers-reduced-motion: no-preference) {
+  .ox-tx-steps li[data-state="active"] span { animation: ox-step-pulse 1.4s var(--ease) infinite; }
+  @keyframes ox-step-pulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 12%, transparent); } }
+}

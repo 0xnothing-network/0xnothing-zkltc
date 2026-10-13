@@ -62,6 +62,9 @@ interface TransactionState {
   phase: TransactionPhase;
   message: string;
   hash?: Hash;
+  /** 1-based wallet step of a multi-transaction flow, for the step indicator. */
+  step?: number;
+  totalSteps?: number;
 }
 
 const INITIAL_STATE: TransactionState = { phase: "idle", message: "" };
@@ -117,7 +120,8 @@ export function useProtocolTransaction() {
       const connectorUid = getAccount(config).connector?.uid;
       let submittedHash: Hash | undefined;
       let confirmedStep = false;
-      setState({ phase: "simulating", message: "Preparing latest on-chain state" });
+      let currentStep = 0;
+      setState({ phase: "simulating", message: "Preparing latest on-chain state", totalSteps });
       try {
         let wallet = walletClient;
         if (chainId !== deployment.chain.id) {
@@ -156,6 +160,7 @@ export function useProtocolTransaction() {
         for (const stage of stages) {
           for (const item of approvalList(stage.approval)) {
             step += 1;
+            currentStep = step;
             const amount = item.amount ?? delivered;
             if (!item.token || !item.spender || amount <= 0n) continue;
             const allowance = await publicClient.readContract({
@@ -166,7 +171,7 @@ export function useProtocolTransaction() {
             });
 
             if (allowance < amount) {
-              setState({ phase: "approving", message: `Step ${step}/${totalSteps} · Approve token` });
+              setState({ phase: "approving", message: `Step ${step}/${totalSteps} · Approve token`, step, totalSteps });
               const approvalSimulation = await publicClient.simulateContract({
                 account: address,
                 address: item.token,
@@ -185,7 +190,7 @@ export function useProtocolTransaction() {
 
           const call = typeof stage.call === "function" ? stage.call(delivered) : stage.call;
           if (!call.address) throw new Error("Not deployed. This transaction is disabled.");
-          setState({ phase: "simulating", message: "Checking latest on-chain state" });
+          setState({ phase: "simulating", message: "Checking latest on-chain state", step: step + 1, totalSteps });
           const simulation = await publicClient.simulateContract({
             account: address,
             address: call.address,
@@ -196,11 +201,12 @@ export function useProtocolTransaction() {
           });
 
           step += 1;
-          setState({ phase: "confirming", message: `Step ${step}/${totalSteps} · Confirm transaction` });
+          currentStep = step;
+          setState({ phase: "confirming", message: `Step ${step}/${totalSteps} · Confirm transaction`, step, totalSteps });
           await assertWalletReady();
           const hash = await activeWallet.writeContract(simulation.request);
           submittedHash = hash;
-          setState({ phase: "confirming", message: "Submitted · Confirming on-chain", hash });
+          setState({ phase: "confirming", message: "Submitted · Confirming on-chain", hash, step, totalSteps });
           const receipt = await waitForProtocolReceipt(publicClient, hash);
           submittedHash = receipt.transactionHash;
           confirmedStep = true;
@@ -210,7 +216,7 @@ export function useProtocolTransaction() {
           }
         }
 
-        setState({ phase: "success", message: "Confirmed on LitVM", hash: lastHash });
+        setState({ phase: "success", message: "Confirmed on LitVM", hash: lastHash, step: totalSteps, totalSteps });
         return lastHash;
 
       } catch (error) {
@@ -218,7 +224,7 @@ export function useProtocolTransaction() {
           submittedHash = error.hash;
           confirmedStep = true;
         }
-        setState({ phase: "error", message: readableError(error), hash: submittedHash });
+        setState({ phase: "error", message: readableError(error), hash: submittedHash, step: currentStep || undefined, totalSteps });
         return undefined;
       } finally {
         if (confirmedStep) void queryClient.invalidateQueries({

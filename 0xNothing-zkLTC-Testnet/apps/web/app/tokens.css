@@ -1,0 +1,169 @@
+/*
+ * 0xNothing design system — "Direction A · Silver standard".
+ * One graphite core, Litecoin silver as the brand metal, one accent per product.
+ *
+ * Identity rules
+ * 1. The core (background, text, lines, status colours, spacing, type, Phosphor
+ *    icons) is shared and never takes a product colour.
+ * 2. A product accent (--accent) appears in exactly five places: primary
+ *    buttons, the active-menu underline, the focus border of amount fields,
+ *    progress bars, and accent text (wordmark tail, MAX).
+ * 3. Buy/sell green and red are identical in every product (--positive/--negative).
+ * 4. All products share one header: 0x wordmark + product, product switcher,
+ *    network pill and wallet menu.
+ * 5. The hub (home, docs, privacy, dev) uses silver as its accent.
+ *
+ * Theme: dark by default; <html data-theme="light"> switches every token.
+ */
+:root {
+  color-scheme: dark;
+
+  /* Graphite core */
+  --bg: #0b0c0e;
+  --surface-1: #111316;
+  --surface-2: #16191d;
+  --surface-3: #1c2025;
+  --line: #23272d;
+  --line-strong: #2f353c;
+  --text-1: #f2f4f6;
+  --text-2: #a9b0b9;
+  --text-3: #7d8590;
+
+  /* Shared status */
+  --positive: #3dd68c;
+  --negative: #ff5c70;
+  --warning: #f5b544;
+  --info: #7aa2ff;
+
+  /* Litecoin silver */
+  --silver-1: #eef1f4;
+  --silver-2: #c9cdd2;
+  --silver-3: #a6a9aa;
+  /* Hero wordmark gradient (silver on graphite, ink on light). */
+  --hero-from: var(--silver-1);
+  --hero-to: var(--silver-3);
+  /* The 1px "silver edge" along the top of raised surfaces. */
+  --edge-highlight: inset 0 1px 0 rgba(238, 241, 244, .06);
+
+  /* Product accents (dark) */
+  --accent-hub: #eef1f4;
+  --accent-pump: #b6f09c;
+  --accent-fi: #7aa2ff;
+  --accent-pixel: #e3a6ff;
+
+  /* Default accent = hub silver; product roots override below. */
+  --accent: var(--accent-hub);
+  --accent-ink: #0b0c0e;
+  --accent-text: var(--accent);
+
+  /* Typography */
+  --font-ui: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-num: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-brand: "Departure Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Radius */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+
+  /* Elevation */
+  --e-0: none;
+  --e-1: var(--edge-highlight), 0 1px 2px rgba(0, 0, 0, .3);
+  --e-2: var(--edge-highlight), 0 12px 32px -12px rgba(0, 0, 0, .65), 0 0 0 1px var(--line);
+  --e-3: var(--edge-highlight), 0 24px 64px -16px rgba(0, 0, 0, .8), 0 0 0 1px var(--line-strong);
+
+  /* Spacing (4pt) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+
+  /* Focus ring and overlays */
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
+  --hover: rgba(242, 244, 246, .05);
+  --pressed: rgba(242, 244, 246, .08);
+  --scrim: rgba(5, 6, 8, .72);
+  --header-bg: rgba(11, 12, 14, .78);
+  --ease: cubic-bezier(.22, .7, .2, 1);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f5f6f8;
+  --surface-1: #ffffff;
+  --surface-2: #f1f3f6;
+  --surface-3: #e8ebef;
+  --line: #dde1e6;
+  --line-strong: #cdd2d8;
+  --text-1: #0e1116;
+  --text-2: #48505a;
+  --text-3: #69717b;
+  --positive: #0f8a55;
+  --negative: #d6334a;
+  --warning: #b7791f;
+  --info: #3e6fe0;
+  --edge-highlight: inset 0 1px 0 rgba(255, 255, 255, .9);
+  --accent-hub: #0e1116;
+  --accent-pump: #9be27a;
+  --accent-fi: #3e6fe0;
+  --accent-pixel: #8a35b5;
+  --accent-ink: #ffffff;
+  --hero-from: #0e1116;
+  --hero-to: #69717b;
+  --e-1: var(--edge-highlight), 0 1px 2px rgba(14, 17, 22, .06);
+  --e-2: var(--edge-highlight), 0 12px 32px -14px rgba(14, 17, 22, .18), 0 0 0 1px var(--line);
+  --e-3: var(--edge-highlight), 0 24px 64px -16px rgba(14, 17, 22, .25), 0 0 0 1px var(--line-strong);
+  --hover: rgba(14, 17, 22, .04);
+  --pressed: rgba(14, 17, 22, .07);
+  --scrim: rgba(14, 17, 22, .4);
+  --header-bg: rgba(245, 246, 248, .82);
+}
+
+/* Product accents. Text on a lime fill stays dark in both themes. */
+.pump-shell { --accent: var(--accent-pump); --accent-ink: #0b1a05; --accent-text: var(--accent-pump); }
+.fi-root { --accent: var(--accent-fi); --accent-ink: #050b1a; --accent-text: var(--accent-fi); }
+.pixel-product { --accent: var(--accent-pixel); --accent-ink: #1d0629; --accent-text: var(--accent-pixel); }
+:root[data-theme="light"] .pump-shell { --accent-ink: #0b1a05; --accent-text: #3c7a1e; }
+:root[data-theme="light"] :is(.fi-root, .pixel-product) { --accent-ink: #ffffff; }
+
+/*
+ * Legacy aliases. Product stylesheets predate the system; mapping their
+ * variables here moves them onto the semantic tokens (and light mode) without
+ * rewriting every rule.
+ */
+:root {
+  --background: var(--bg);
+  --foreground: var(--text-1);
+  --surface: var(--surface-1);
+  --surface-elevated: var(--surface-2);
+  --surface-dark: var(--bg);
+  --border: var(--line);
+  --border-strong: var(--line-strong);
+  --primary: var(--text-1);
+  --secondary: var(--text-2);
+  --success: var(--positive);
+  --error: var(--negative);
+  --amber: var(--warning);
+  --muted: var(--text-2);
+  --muted-light: var(--text-2);
+  --font-prose: var(--font-ui);
+  --pixel-ui-bg: var(--bg);
+  --pixel-ui-panel: var(--surface-1);
+  --pixel-ui-raised: var(--surface-2);
+  --pixel-ui-border: var(--line);
+  --pixel-ui-border-strong: var(--line-strong);
+  --pixel-ui-text: var(--text-1);
+  --pixel-ui-muted: var(--text-2);
+  --pixel-ui-action: var(--accent);
+  --pixel-ui-shadow: var(--e-1);
+  --pixel-window-edge: var(--line);
+  --pixel-control-shadow: var(--edge-highlight);
+  --pixel-pattern: none;
+}

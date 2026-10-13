@@ -36,16 +36,16 @@ export function LegacyListingsNotice({ address, tokens }: { address: Address; to
 
   return (
     <section
-      className="mb-4 px-4 py-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-sm space-y-3"
-      style={{ fontFamily: "var(--font-departure)" }}
+      className="mb-4 px-4 py-3 rounded-lg bg-(--warning)/10 border border-(--warning)/30 text-(--warning) text-sm space-y-3"
+      style={{ fontFamily: "var(--font-ui)" }}
       aria-labelledby="legacy-listings-title"
       role="alert"
     >
       <div>
-        <h2 id="legacy-listings-title" className="font-bold text-amber-200">
+        <h2 id="legacy-listings-title" className="font-bold text-(--warning)">
           {listings.length} NFT{listings.length === 1 ? " is" : "s are"} still listed on the old zkLTC marketplace
         </h2>
-        <p className="text-xs text-amber-300/90 mt-1">
+        <p className="text-xs text-(--warning)/90 mt-1">
           Anyone can still buy {listings.length === 1 ? "it" : "them"} there at the old zkLTC price. Cancel the old listing to keep your NFT, then relist it for NUSD if you want to sell.
           {paused === true ? " The old marketplace is paused, so cancelling is unavailable; revoke its NFT approval in your wallet instead." : ""}
         </p>
@@ -53,9 +53,9 @@ export function LegacyListingsNotice({ address, tokens }: { address: Address; to
       <ul className="space-y-2">
         {listings.map((listing) => (
           <li key={listing.listingId.toString()} className="flex items-center justify-between gap-3 flex-wrap">
-            <span className="text-white">
+            <span className="text-(--text-1)">
               {names.get(`${listing.collection.toLowerCase()}:${listing.tokenId}`) || "Untitled"} #{listing.tokenId.toString()}
-              <span className="text-[#94A3B8]"> · {formatEther(listing.price)} zkLTC</span>
+              <span className="text-(--text-2)"> · {formatEther(listing.price)} zkLTC</span>
             </span>
             <LegacyCancelButton listing={listing} disabled={paused === true} onDone={() => void legacy.refetch()} />
           </li>
@@ -119,7 +119,7 @@ function LegacyCancelButton({ listing, disabled, onDone }: { listing: LegacyList
       {receipt?.status === "success" && txHash ? (
         <a className="text-xs underline" href={getMarketplaceTxUrl(receipt.transactionHash)} target="_blank" rel="noopener noreferrer">Cancelled · view transaction</a>
       ) : null}
-      {failure ? <p className="text-xs text-red-300 break-all max-w-xs">{failure}</p> : null}
+      {failure ? <p className="text-xs text-(--negative) break-all max-w-xs">{failure}</p> : null}
     </div>
   );
 }

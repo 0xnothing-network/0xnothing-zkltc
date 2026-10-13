@@ -1,14 +1,14 @@
 .ox-docs-root {
-  --docs-bg: #101113;
-  --docs-panel: #181a1d;
-  --docs-panel-strong: #202328;
-  --docs-line: #30343a;
-  --docs-line-strong: #565e68;
-  --docs-text: #f1f2f3;
-  --docs-muted: #a6adb7;
-  --docs-faint: #929ba7;
-  --docs-accent: #b8e8cb;
-  --docs-accent-ink: #101113;
+  --docs-bg: var(--bg);
+  --docs-panel: var(--surface-1);
+  --docs-panel-strong: var(--surface-2);
+  --docs-line: var(--line);
+  --docs-line-strong: var(--line-strong);
+  --docs-text: var(--text-1);
+  --docs-muted: var(--text-2);
+  --docs-faint: var(--text-3);
+  --docs-accent: var(--accent);
+  --docs-accent-ink: var(--accent-ink);
   min-height: 100dvh;
   background:
     linear-gradient(rgba(211, 220, 231, 0.025) 1px, transparent 1px),
@@ -16,7 +16,7 @@
     var(--docs-bg);
   background-size: 40px 40px;
   color: var(--docs-text);
-  font-family: var(--font-departure), monospace;
+  font-family: var(--font-ui), monospace;
   color-scheme: dark;
 }
 
@@ -79,18 +79,16 @@
 
 .ox-docs-brand span {
   font-size: 13px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .ox-docs-brand strong {
   border-left: 1px solid var(--docs-line-strong);
   padding-left: 10px;
-  color: var(--docs-accent);
+  color: var(--accent-text);
   font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .ox-docs-topbar nav {
@@ -102,8 +100,7 @@
 .ox-docs-network-label {
   color: var(--docs-muted);
   font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .ox-docs-topbar nav a,
@@ -120,9 +117,8 @@
   color: var(--docs-accent-ink);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   text-decoration: none;
-  text-transform: uppercase;
   white-space: nowrap;
   transition: transform 120ms steps(2, end), background-color 120ms steps(2, end), border-color 120ms steps(2, end);
 }
@@ -130,8 +126,8 @@
 .ox-docs-topbar nav a:hover,
 .ox-docs-hero-actions a:hover,
 .ox-docs-footer-actions a:hover {
-  background: #ffffff;
-  border-color: #ffffff;
+  background: var(--text-1);
+  border-color: var(--text-1);
   transform: translate(-1px, -1px);
 }
 
@@ -173,8 +169,7 @@
   color: var(--docs-faint);
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .ox-docs-nav-group a {
@@ -208,8 +203,7 @@
 .ox-docs-sidebar-meta small {
   color: var(--docs-faint);
   font-size: 12px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .ox-docs-sidebar-meta strong {
@@ -249,10 +243,9 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--docs-accent);
+  color: var(--accent-text);
   font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .ox-docs-hero h1 {
@@ -322,8 +315,7 @@
 .ox-docs-hero dt {
   color: var(--docs-faint);
   font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .ox-docs-hero dd {
@@ -337,11 +329,11 @@
   align-items: center;
   gap: 12px;
   border: 1px solid rgba(220, 197, 128, 0.24);
-  border-left: 2px solid #d8c58e;
+  border-left: 2px solid var(--warning);
   margin-top: 20px;
   padding: 12px 14px;
   background: rgba(216, 197, 142, 0.035);
-  color: #d8c58e;
+  color: var(--warning);
 }
 
 .ox-docs-warning div {
@@ -352,11 +344,10 @@
 .ox-docs-warning strong {
   font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
 }
 
 .ox-docs-warning span {
-  color: #b5ab8b;
+  color: var(--warning);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -386,7 +377,7 @@
   place-items: center;
   border: 1px solid var(--docs-line-strong);
   background: var(--docs-panel);
-  color: var(--docs-accent);
+  color: var(--accent-text);
 }
 
 .ox-docs-section-heading h2 {
@@ -428,10 +419,9 @@
 }
 
 .ox-docs-flow strong {
-  color: var(--docs-accent);
+  color: var(--accent-text);
   font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
 }
 
 .ox-docs-flow span {
@@ -444,7 +434,7 @@
   overflow: hidden;
   border: 1px solid var(--docs-line-strong);
   margin: 24px 0 0;
-  background: #121416;
+  background: var(--surface-1);
 }
 
 .ox-docs-code figcaption {
@@ -468,7 +458,6 @@
   margin-left: 12px;
   color: var(--docs-faint);
   font-size: 12px;
-  text-transform: uppercase;
 }
 
 .ox-docs-code button {
@@ -489,14 +478,13 @@
   cursor: pointer;
   font: inherit;
   font-size: 12px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   transition: background-color 120ms steps(2, end), color 120ms steps(2, end);
 }
 
 .ox-docs-code button:hover {
   background: rgba(211, 220, 231, 0.07);
-  color: var(--docs-accent);
+  color: var(--accent-text);
 }
 
 .ox-docs-code pre {
@@ -504,8 +492,8 @@
   overflow: auto;
   margin: 0;
   padding: 20px;
-  color: #d4dae3;
-  font-family: var(--font-departure), monospace;
+  color: var(--text-1);
+  font-family: var(--font-ui), monospace;
   font-size: 13px;
   line-height: 1.72;
   tab-size: 2;
@@ -535,7 +523,6 @@
   color: var(--docs-text);
   font-size: 13px;
   font-weight: 500;
-  text-transform: uppercase;
 }
 
 .ox-docs-contract {
@@ -568,7 +555,7 @@
   min-width: 0;
   align-items: center;
   gap: 6px;
-  color: var(--docs-accent);
+  color: var(--accent-text);
   font-size: 12px;
   text-decoration: none;
 }
@@ -598,7 +585,6 @@
   color: var(--docs-text);
   cursor: pointer;
   font-size: 12px;
-  text-transform: uppercase;
 }
 
 .ox-docs-pool-addresses {
@@ -640,7 +626,7 @@
   gap: 11px;
   padding: 22px;
   background: var(--docs-panel);
-  color: var(--docs-accent);
+  color: var(--accent-text);
 }
 
 .ox-docs-ecosystem-map > div:nth-child(2),
@@ -712,7 +698,6 @@
 .ox-docs-spec-line span {
   color: var(--docs-faint);
   font-size: 12px;
-  text-transform: uppercase;
 }
 
 .ox-docs-spec-line strong {
@@ -726,7 +711,7 @@
   align-items: center;
   gap: 8px;
   margin-top: 22px;
-  color: var(--docs-accent);
+  color: var(--accent-text);
   font-size: 12px;
   text-decoration: none;
 }
@@ -741,7 +726,7 @@
   align-items: center;
   gap: 12px;
   margin-top: 32px;
-  color: var(--docs-accent);
+  color: var(--accent-text);
 }
 
 .ox-docs-lifecycle > div {
@@ -758,7 +743,6 @@
   color: var(--docs-text);
   font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
 }
 
 .ox-docs-lifecycle span {
@@ -796,11 +780,10 @@
 }
 
 .ox-docs-facts span {
-  text-transform: uppercase;
 }
 
 .ox-docs-facts strong {
-  color: var(--docs-accent);
+  color: var(--accent-text);
   font-size: 20px;
   font-weight: 500;
   letter-spacing: -0.04em;
@@ -809,7 +792,7 @@
 .ox-docs-note {
   display: grid;
   gap: 6px;
-  border-left: 2px solid var(--docs-accent);
+  border-left: 1px solid var(--line-strong);
   margin-top: 22px;
   padding: 13px 15px;
   background: rgba(211, 220, 231, 0.045);
@@ -844,8 +827,8 @@
 
 .ox-docs-method-list code,
 .ox-docs-native-rules code {
-  color: var(--docs-accent);
-  font-family: var(--font-departure), monospace;
+  color: var(--accent-text);
+  font-family: var(--font-ui), monospace;
   font-size: 12px;
 }
 
@@ -910,8 +893,7 @@
   color: var(--docs-faint);
   font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .ox-docs-fee-table-wrap td {
@@ -929,8 +911,8 @@
 
 .ox-docs-fee-table-wrap code,
 .ox-docs-copy code {
-  color: var(--docs-accent);
-  font-family: var(--font-departure), monospace;
+  color: var(--accent-text);
+  font-family: var(--font-ui), monospace;
   font-size: 12px;
 }
 
@@ -944,7 +926,7 @@
 
 .ox-docs-universe {
   position: relative;
-  border-top: 2px solid var(--docs-accent);
+  border-top: 1px solid var(--line-strong);
   margin-top: 18px;
   padding-inline: 24px;
   background: rgba(211, 220, 231, 0.025);
@@ -958,10 +940,9 @@
   margin-bottom: 22px;
   padding: 0 10px;
   background: var(--docs-panel-strong);
-  color: var(--docs-accent);
+  color: var(--accent-text);
   font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .ox-docs-note-strong {
@@ -1022,8 +1003,8 @@
 
 .ox-docs-indexers code {
   overflow: hidden;
-  color: var(--docs-accent);
-  font-family: var(--font-departure), monospace;
+  color: var(--accent-text);
+  font-family: var(--font-ui), monospace;
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1045,7 +1026,7 @@
   gap: 9px;
   padding: 12px 14px;
   background: var(--docs-panel);
-  color: var(--docs-accent);
+  color: var(--accent-text);
 }
 
 .ox-docs-checklist span {
@@ -1070,8 +1051,7 @@
   border-top: 1px solid var(--docs-line);
   color: var(--docs-faint);
   font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 @media (max-width: 1180px) {
@@ -1338,32 +1318,32 @@
 .ox-docs-root :is(code, pre, dt, dd),
 .ox-docs-eyebrow, .ox-docs-network-label, .ox-docs-nav-group > strong,
 .ox-docs-facts strong, .ox-docs-code figcaption {
-  font-family: var(--font-departure), monospace;
+  font-family: var(--font-ui), monospace;
   font-variant-numeric: tabular-nums;
 }
 .ox-docs-main { width: 100%; max-width: 1180px; padding-top: 28px; }
 .ox-docs-hero { grid-template-columns: minmax(0, 1.6fr) minmax(230px, .75fr); }
 .ox-docs-hero h1 { font-weight: 400; line-height: 1.04; letter-spacing: -.025em; }
 .ox-docs-hero p, .ox-docs-section-heading p, .ox-docs-copy { font-size: 14px; line-height: 1.8; max-width: 65ch; }
-.ox-docs-nav-group a { min-height: 44px; border-radius: 0; font-size: 13px; }
+.ox-docs-nav-group a { min-height: 44px; border-radius: var(--r-md); font-size: 13px; }
 .ox-docs-section-heading h2 { line-height: 1.2; }
 .ox-docs-section:target .ox-docs-section-icon { border-color: var(--docs-accent); background: var(--docs-panel-strong); }
 .ox-docs-topbar nav a, .ox-docs-hero-actions a, .ox-docs-footer-actions a,
-.ox-docs-section-icon, .ox-docs-universe-status { border-radius: 0; }
+.ox-docs-section-icon, .ox-docs-universe-status { border-radius: var(--r-md); }
 .ox-docs-topbar nav a:hover, .ox-docs-hero-actions a:hover, .ox-docs-footer-actions a:hover { transform: translateY(-1px); }
 .ox-docs-code, .ox-docs-disclosure, .ox-docs-mobile-nav, .ox-docs-fee-table-wrap,
 .ox-docs-warning, .ox-docs-facts, .ox-docs-flow, .ox-docs-lifecycle > div,
 .ox-docs-ecosystem-map, .ox-docs-mechanism-grid, .ox-docs-universe-grid,
 .ox-docs-method-list, .ox-docs-fi-surfaces, .ox-docs-native-rules,
-.ox-docs-indexers, .ox-docs-checklist { border-radius: 0; }
+.ox-docs-indexers, .ox-docs-checklist { border-radius: var(--r-md); }
 .ox-docs-ecosystem-map, .ox-docs-mechanism-grid, .ox-docs-universe-grid,
 .ox-docs-method-list, .ox-docs-fi-surfaces, .ox-docs-native-rules,
 .ox-docs-indexers, .ox-docs-checklist { overflow: hidden; }
 .ox-docs-code figcaption { min-height: 48px; gap: 8px; }
 .ox-docs-code pre { font-size: 13px; line-height: 1.85; padding: 24px; }
 .ox-docs-code-language { margin-left: 4px; }
-.ox-docs-code button { font-size: 11px; }
-.ox-docs-note { border-radius: 0; }
+.ox-docs-code button { font-size: 12px; }
+.ox-docs-note { border-radius: var(--r-md); }
 .ox-docs-contract-columns h3, .ox-docs-mechanism-grid strong,
 .ox-docs-universe-grid strong, .ox-docs-fi-surfaces strong { font-size: 15px; }
 .ox-docs-fee-table-wrap tbody tr:hover { background: var(--docs-panel); }
@@ -1385,12 +1365,12 @@
 
 /* Pixel reading rhythm and a single interaction treatment. */
 .ox-docs-topbar nav a, .ox-docs-hero-actions a, .ox-docs-footer-actions a {
-  box-shadow: 3px 3px 0 #050606;
-  font-size: 11px;
+  box-shadow: var(--e-2);
+  font-size: 12px;
 }
 .ox-docs-topbar nav a:active, .ox-docs-hero-actions a:active, .ox-docs-footer-actions a:active {
   transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0 #050606;
+  box-shadow: var(--e-2);
 }
 .ox-docs-article :is(p, li), .ox-docs-ecosystem-map span,
 .ox-docs-method-list span, .ox-docs-native-rules span,
@@ -1405,7 +1385,7 @@
 .ox-docs-root .ox-docs-hero { border-bottom: 1px solid var(--docs-line-strong); }
 .ox-docs-root .ox-docs-section { scroll-margin-top: 88px; }
 .ox-docs-root .ox-docs-section-heading { margin-bottom: 28px; }
-.ox-docs-root .ox-docs-code { border-top: 2px solid var(--docs-line-strong); box-shadow: 3px 3px 0 #080909; }
+.ox-docs-root .ox-docs-code { border-top: 2px solid var(--docs-line-strong); box-shadow: var(--e-2); }
 .ox-docs-root .ox-docs-code figcaption { background: var(--docs-panel-strong); }
 .ox-docs-root .ox-docs-code pre { scrollbar-width: thin; scrollbar-color: var(--docs-line-strong) var(--docs-bg); overscroll-behavior: contain; }
 .ox-docs-root .ox-docs-nav-group a { border-left: 2px solid transparent; transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease; }

@@ -66,13 +66,13 @@ export const AIPromptGenerator = memo(function AIPromptGenerator({ gridSize, onA
   );
 
   return (
-    <div className="pixel-generator-panel bg-[#1A1A2E] rounded-2xl p-3 sm:p-5 border border-[#2D2D44]">
+    <div className="pixel-generator-panel bg-(--surface-1) rounded-2xl p-3 sm:p-5 border border-(--line)">
       <div className="flex items-center gap-2 mb-3">
         <svg width="18" height="18" fill="none" stroke="#6366F1" strokeWidth="2" viewBox="0 0 24 24">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
           <path d="M12 6v6l4 2" />
         </svg>
-        <h3 className="text-white font-bold text-sm" style={{ fontFamily: "var(--font-departure)" }}>
+        <h3 className="text-(--text-1) font-bold text-sm" style={{ fontFamily: "var(--font-ui)" }}>
           Grid Data Parser
         </h3>
       </div>
@@ -81,12 +81,12 @@ export const AIPromptGenerator = memo(function AIPromptGenerator({ gridSize, onA
         value={generated}
         onChange={(e) => setGenerated(e.target.value)}
         placeholder="[0,0]=#FF0000&#10;[1,0]=#00FF00"
-        className="w-full px-3 py-3 sm:py-2.5 rounded-xl bg-[#0F0F23] text-white placeholder-[#374151] focus:outline-none focus:border-indigo-500 resize-none font-mono text-[11px] leading-relaxed border border-[#2D2D44] transition-all"
+        className="w-full px-3 py-3 sm:py-2.5 rounded-xl bg-(--surface-2) text-(--text-1) placeholder-(--text-3) focus:outline-none focus:border-(--accent) resize-none font-mono text-xs leading-relaxed border border-(--line) transition-all"
         rows={4}
       />
 
       {count > 0 && (
-        <p className="text-[#64748B] text-xs mt-2 mb-2" style={{ fontFamily: "var(--font-departure)" }}>
+        <p className="text-(--text-3) text-xs mt-2 mb-2" style={{ fontFamily: "var(--font-ui)" }}>
           {count} pixel{count !== 1 ? "s" : ""} detected
         </p>
       )}
@@ -96,10 +96,10 @@ export const AIPromptGenerator = memo(function AIPromptGenerator({ gridSize, onA
         className={
           "w-full py-3 sm:py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all mt-2 " +
           (parsed
-            ? "bg-emerald-500 text-white"
-            : "bg-[#0F0F23] border border-[#2D2D44] text-[#64748B] hover:bg-[#252540] hover:text-white")
+            ? "bg-(--positive) text-(--text-1)"
+            : "bg-(--surface-2) border border-(--line) text-(--text-3) hover:bg-(--surface-3) hover:text-(--text-1)")
         }
-        style={{ fontFamily: "var(--font-departure)" }}
+        style={{ fontFamily: "var(--font-ui)" }}
       >
         {parsed ? "APPLIED!" : "Apply to Canvas"}
       </button>

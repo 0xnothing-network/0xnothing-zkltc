@@ -1,0 +1,307 @@
+/*
+ * Shared visual skin over every product (rules and tokens: tokens.css).
+ * Product stylesheets own layout and sizing; this layer owns surfaces,
+ * controls, type roles and the accent's five permitted placements.
+ */
+
+/* Canvas */
+:is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product,
+  .ox-docs-root.ox-docs-root, .ox-privacy.ox-privacy, .nothing-home.nothing-home) {
+  background: var(--bg);
+  color: var(--text-1);
+  font-family: var(--font-ui);
+}
+
+/* Type roles. Departure Mono: wordmarks, hero and eyebrows only. */
+:is(.nothing-brand, .fi-wordmark, .pump-wordmark, .pixel-wordmark, .ox-docs-brand) {
+  font-family: var(--font-brand) !important;
+  font-weight: 400 !important;
+  letter-spacing: .02em;
+}
+:is(.fi-wordmark span, .pump-wordmark-zero) { color: var(--text-1); }
+.ox-eyebrow,
+.pump-shell.pump-shell .pump-eyebrow,
+.fi-root.fi-root .fi-eyebrow {
+  font-family: var(--font-brand);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.fi-root.fi-root :is(h1, h2, h3), .pump-shell.pump-shell :is(h1, h2, h3),
+.pixel-product.pixel-product :is(h1, h2, h3), .ox-docs-root.ox-docs-root :is(h1, h2, h3),
+.ox-privacy.ox-privacy :is(h1, h2, h3) {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  letter-spacing: -.02em;
+  text-shadow: none;
+  text-transform: none;
+}
+.fi-root.fi-root .fi-page-heading h1,
+.pump-shell.pump-shell :is(.pump-page-heading h1, .pump-trending-heading h1),
+.pixel-product.pixel-product :is(.pixel-studio-intro h1, .pixel-collection-heading h1),
+.ox-docs-root.ox-docs-root .ox-docs-hero h1,
+.ox-privacy.ox-privacy h1 { font-size: clamp(24px, 2.4vw, 30px); line-height: 1.15; }
+.fi-root.fi-root :is(.fi-table td, .fi-amount-input input, .fi-metric-strip dd),
+.pump-shell.pump-shell :is(.pump-table td, .pump-amount-field input, .pump-metric strong) {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Headers (until every product mounts the shared ProductHeader). */
+.fi-root.fi-root .fi-header, .pump-shell.pump-shell .pump-header,
+.pixel-product.pixel-product .pixel-app-header,
+.ox-docs-root.ox-docs-root .ox-docs-topbar,
+.ox-privacy.ox-privacy header, .nothing-home.nothing-home .nothing-header {
+  background: var(--header-bg) !important;
+  border-bottom: 1px solid var(--line) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+  backdrop-filter: saturate(160%) blur(14px);
+}
+
+/* Navigation: neutral text; the active item gets the accent underline (accent use #2). */
+.fi-root.fi-root :is(.fi-nav a, .fi-nav-mobile a),
+.pump-shell.pump-shell .pump-nav-link,
+.pixel-product.pixel-product :is(.pixel-nav, .pixel-nav-mobile) {
+  position: relative;
+  border: 0 !important;
+  border-radius: var(--r-sm) !important;
+  background: transparent !important;
+  color: var(--text-2) !important;
+  box-shadow: none !important;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.fi-root.fi-root :is(.fi-nav a, .fi-nav-mobile a):hover,
+.pump-shell.pump-shell .pump-nav-link:hover,
+.pixel-product.pixel-product :is(.pixel-nav, .pixel-nav-mobile):hover { color: var(--text-1) !important; background: var(--hover) !important; }
+.fi-root.fi-root :is(.fi-nav a.active, .fi-nav-mobile a.active),
+.pump-shell.pump-shell .pump-nav-link.active,
+.pixel-product.pixel-product :is(.pixel-nav-active, .pixel-nav-mobile-active) {
+  color: var(--text-1) !important;
+  box-shadow: inset 0 -2px 0 var(--accent) !important;
+  border-radius: var(--r-sm) var(--r-sm) 0 0 !important;
+}
+
+/* Surfaces: 1px line, silver top edge, soft depth. */
+.fi-root.fi-root :is(.fi-panel, .fi-market-list, .fi-metric-strip, .fi-points-stake-card, .fi-points-positions, .fi-points-redemption, .fi-empty-state),
+.pump-shell.pump-shell :is(.pump-panel, .pump-token-card, .pump-empty-state),
+.pixel-product.pixel-product :is(.pixel-panel, .pixel-tools-panel, .pixel-mint-panel, .pixel-generator-panel, .nft-card, .pixel-collection-empty),
+.pixel-product.pixel-product .pixel-market-grid > div,
+.ox-docs-root.ox-docs-root :is(.ox-docs-hero, .ox-docs-section-icon) {
+  border: 1px solid var(--line) !important;
+  border-radius: var(--r-lg) !important;
+  background-color: var(--surface-1) !important;
+  box-shadow: var(--e-1) !important;
+  clip-path: none !important;
+}
+.fi-root.fi-root .fi-panel-heading,
+.pump-shell.pump-shell .pump-panel-heading {
+  padding: 14px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+}
+.fi-root.fi-root .fi-panel-heading h2,
+.pump-shell.pump-shell .pump-panel-heading h2 { font-size: 15px; }
+.fi-root.fi-root .fi-panel-heading h2::before,
+.pump-shell.pump-shell .pump-panel-heading h2::before { display: none; }
+.fi-root.fi-root .fi-page-heading,
+.pump-shell.pump-shell .pump-page-heading,
+.pixel-product.pixel-product .pixel-collection-heading { border-bottom: 1px solid var(--line); }
+
+/* Buttons: 10px radius, sentence case. Primary = accent fill (accent use #1). */
+.fi-root.fi-root .fi-button,
+.pump-shell.pump-shell .pump-button,
+.pixel-product.pixel-product :is(.pixel-btn, .pixel-btn-soft),
+.ox-docs-root.ox-docs-root .ox-docs-hero-actions a {
+  min-height: 40px;
+  border: 1px solid var(--line-strong) !important;
+  border-radius: var(--r-md) !important;
+  background: var(--surface-2) !important;
+  color: var(--text-1) !important;
+  box-shadow: var(--edge-highlight) !important;
+  clip-path: none !important;
+  font-family: var(--font-ui) !important;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  text-shadow: none !important;
+  image-rendering: auto;
+}
+.fi-root.fi-root .fi-button-primary,
+.pump-shell.pump-shell .pump-button-primary,
+.pixel-product.pixel-product :is(.pixel-btn-emerald, .pixel-btn-indigo, .pixel-connect-wallet),
+.pixel-product.pixel-product .pixel-market-grid button[class~="bg-[#8888ff]"],
+.ox-docs-root.ox-docs-root .ox-docs-hero-actions a:first-child {
+  border-color: transparent !important;
+  background: var(--accent) !important;
+  color: var(--accent-ink) !important;
+}
+.pixel-product.pixel-product :is(.pixel-btn-red),
+.fi-root.fi-root .fi-button-danger {
+  border-color: color-mix(in srgb, var(--negative) 40%, transparent) !important;
+  background: color-mix(in srgb, var(--negative) 10%, transparent) !important;
+  color: var(--negative) !important;
+}
+.pixel-product.pixel-product :is(.pixel-btn-amber, .pixel-btn-soft-amber),
+.fi-root.fi-root .fi-button-warning {
+  border-color: transparent !important;
+  background: var(--warning) !important;
+  color: #1a1204 !important;
+}
+.fi-root.fi-root .fi-button:hover:not(:disabled),
+.pump-shell.pump-shell .pump-button:hover:not(:disabled),
+.pixel-product.pixel-product :is(.pixel-btn, .pixel-btn-soft):hover:not(:disabled) { filter: brightness(1.08); transform: none; }
+.fi-root.fi-root .fi-button:active:not(:disabled),
+.pump-shell.pump-shell .pump-button:active:not(:disabled),
+.pixel-product.pixel-product :is(.pixel-btn, .pixel-btn-soft):active:not(:disabled) { transform: scale(.98) !important; }
+.fi-root.fi-root .fi-button:disabled,
+.pump-shell.pump-shell .pump-button:disabled,
+.pixel-product.pixel-product :is(.pixel-btn, .pixel-btn-soft):disabled {
+  border-color: var(--line) !important;
+  background: var(--surface-2) !important;
+  color: var(--text-3) !important;
+  box-shadow: none !important;
+  filter: none;
+  opacity: 1;
+}
+
+/* Trade sides use the shared status colours, never the product accent. */
+.pump-shell.pump-shell .pump-trade-tabs button.active.buy { background: var(--positive) !important; color: #04150c !important; }
+.pump-shell.pump-shell .pump-trade-tabs button.active.sell { background: var(--negative) !important; color: #1a0408 !important; }
+
+/* Fields. Amount fields focus with the accent border (accent use #3). */
+.fi-root.fi-root :is(.fi-amount-input, .fi-contract-input, .fi-market-search, .fi-input),
+.pump-shell.pump-shell :is(.pump-search, .pump-field input, .pump-field textarea, .pump-amount-field),
+.pixel-product.pixel-product :is(textarea, select, input[type="text"], input[type="search"], input[type="number"]) {
+  border: 1px solid var(--line-strong) !important;
+  border-radius: var(--r-md) !important;
+  background-color: var(--surface-2) !important;
+  color: var(--text-1);
+  box-shadow: none !important;
+}
+.fi-root.fi-root :is(.fi-amount-input, .fi-market-search, .fi-contract-input):focus-within,
+.pump-shell.pump-shell :is(.pump-search, .pump-field input, .pump-field textarea, .pump-amount-field):focus-within,
+.pixel-product.pixel-product :is(textarea, select, input):focus-visible {
+  border-color: var(--accent) !important;
+  box-shadow: var(--ring) !important;
+  outline: none;
+}
+.fi-root.fi-root .fi-segmented, .pump-shell.pump-shell .pump-segmented {
+  padding: 4px;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.fi-root.fi-root .fi-segmented button, .pump-shell.pump-shell .pump-segmented button {
+  border: 0;
+  border-radius: var(--r-sm);
+  color: var(--text-2);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.fi-root.fi-root .fi-segmented button.active,
+.pump-shell.pump-shell .pump-segmented button.active { background: var(--surface-3); color: var(--text-1); box-shadow: var(--e-1); }
+
+/* Status badges: pill with a dot, coloured by meaning. */
+.fi-root.fi-root :is(.fi-swap-asset-badge, .fi-status),
+.pump-shell.pump-shell :is(.pump-status, .pump-fee-chip, .pump-holder-badge, .pump-dev-badge) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+  padding: 0 9px;
+  border: 0 !important;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, currentColor 13%, transparent);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.pump-shell.pump-shell .pump-status::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: currentColor;
+}
+.pump-shell.pump-shell .pump-status-graduated { color: var(--info); }
+
+/* Tables */
+.fi-root.fi-root .fi-table th, .pump-shell.pump-shell .pump-table th {
+  background: transparent;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.fi-root.fi-root .fi-table td, .pump-shell.pump-shell .pump-table td { border-color: var(--line); font-size: 13px; }
+.fi-root.fi-root .fi-table tbody tr:nth-child(even),
+.pump-shell.pump-shell .pump-table tbody tr:nth-child(even) { background: transparent; }
+.fi-root.fi-root .fi-table tbody tr:hover, .pump-shell.pump-shell .pump-table tbody tr:hover { background: var(--hover); }
+
+/* Popovers */
+.fi-root.fi-root :is(.fi-swap-asset-picker, .fi-token-select-menu, .fi-wallet-menu),
+.pump-shell.pump-shell .pump-wallet-menu,
+.pixel-product.pixel-product .pixel-address-menu {
+  border: 0 !important;
+  border-radius: var(--r-lg) !important;
+  background: var(--surface-1) !important;
+  box-shadow: var(--e-3) !important;
+}
+
+/* Progress bars use the accent (accent use #4) and the pixel-cell signature. */
+.pump-shell.pump-shell .pump-progress {
+  position: relative;
+  height: 8px;
+  border-radius: 2px;
+  background: transparent;
+  overflow: hidden;
+}
+.pump-shell.pump-shell .pump-progress::before,
+.pump-shell.pump-shell .pump-progress span {
+  -webkit-mask: repeating-linear-gradient(90deg, #000 0 6px, transparent 6px 8px);
+  mask: repeating-linear-gradient(90deg, #000 0 6px, transparent 6px 8px);
+}
+.pump-shell.pump-shell .pump-progress::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--surface-3);
+}
+.pump-shell.pump-shell .pump-progress::after { display: none; }
+.pump-shell.pump-shell .pump-progress span { position: relative; background: var(--accent); border-radius: 0; }
+
+/* Information pages */
+.ox-docs-root.ox-docs-root .ox-docs-section-icon { border-radius: var(--r-md) !important; }
+.ox-docs-root.ox-docs-root .ox-docs-section-heading,
+.ox-privacy.ox-privacy main > div:first-child { border-bottom: 1px solid var(--line); }
+.ox-docs-root.ox-docs-root .ox-docs-hero { padding: 28px; }
+.ox-privacy.ox-privacy section { border-color: var(--line); }
+
+@media (hover: hover) {
+  :is(.pump-shell.pump-shell .pump-token-card, .pixel-product.pixel-product .nft-card):hover {
+    border-color: var(--line-strong) !important;
+    transform: translateY(-2px);
+  }
+}
+@media (max-width: 640px) {
+  .ox-docs-root.ox-docs-root .ox-docs-hero { padding: 18px; }
+  .fi-root.fi-root .fi-panel-heading, .pump-shell.pump-shell .pump-panel-heading { padding: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.pump-shell.pump-shell .pump-token-card, .pixel-product.pixel-product .nft-card):hover { transform: none; }
+}

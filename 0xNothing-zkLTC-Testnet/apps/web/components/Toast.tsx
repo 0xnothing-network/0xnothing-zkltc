@@ -163,24 +163,24 @@ function ToastViewport({
 
 const KIND_STYLES: Record<ToastKind, { ring: string; icon: string; iconColor: string }> = {
   success: {
-    ring: "ring-emerald-500/40 bg-[#0F1F1A]/95 border-emerald-500/30",
+    ring: "ring-(--positive)/40 bg-(--surface-2)/95 border-(--positive)/30",
     icon: "M5 13l4 4L19 7",
-    iconColor: "text-emerald-300",
+    iconColor: "text-(--positive)",
   },
   error: {
-    ring: "ring-red-500/40 bg-[#1F0F14]/95 border-red-500/30",
+    ring: "ring-(--negative)/40 bg-(--surface-2)/95 border-(--negative)/30",
     icon: "M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
-    iconColor: "text-red-300",
+    iconColor: "text-(--negative)",
   },
   warning: {
-    ring: "ring-amber-500/40 bg-[#1F1A0F]/95 border-amber-500/30",
+    ring: "ring-(--warning)/40 bg-(--surface-2)/95 border-(--warning)/30",
     icon: "M12 9v3m0 4h.01M5.07 19h13.86a2 2 0 001.74-3L13.74 4a2 2 0 00-3.48 0L3.33 16a2 2 0 001.74 3z",
-    iconColor: "text-amber-300",
+    iconColor: "text-(--warning)",
   },
   info: {
-    ring: "ring-indigo-500/40 bg-[#13133A]/95 border-indigo-500/30",
+    ring: "ring-(--accent)/40 bg-(--surface-2)/95 border-(--accent)/30",
     icon: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
-    iconColor: "text-indigo-300",
+    iconColor: "text-(--accent-text)",
   },
 };
 
@@ -224,13 +224,13 @@ function ToastCard({
 
         <div className="flex-1 min-w-0">
           <p
-            className="text-white text-xs font-semibold leading-snug break-words"
-            style={{ fontFamily: "var(--font-departure)" }}
+            className="text-(--text-1) text-xs font-semibold leading-snug break-words"
+            style={{ fontFamily: "var(--font-ui)" }}
           >
             {toast.title}
           </p>
           {toast.description ? (
-            <p className="mt-1 text-[#94A3B8] text-[11px] leading-relaxed break-words">
+            <p className="mt-1 text-(--text-2) text-xs leading-relaxed break-words">
               {toast.description}
             </p>
           ) : null}
@@ -239,8 +239,8 @@ function ToastCard({
               href={toast.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-indigo-300 hover:text-indigo-200"
-              style={{ fontFamily: "var(--font-departure)" }}
+              className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-(--accent-text) hover:text-(--accent-text)"
+              style={{ fontFamily: "var(--font-ui)" }}
             >
               {toast.hrefLabel ?? "View"}
               <svg
@@ -263,7 +263,7 @@ function ToastCard({
           type="button"
           onClick={() => onDismiss(toast.id)}
           aria-label="Dismiss notification"
-          className="flex-shrink-0 -mr-1 -mt-1 flex h-6 w-6 items-center justify-center border border-white/[0.08] text-[#64748B] transition-colors hover:bg-white/10 hover:text-white"
+          className="flex-shrink-0 -mr-1 -mt-1 flex h-6 w-6 items-center justify-center border border-(--text-1)/[0.08] text-(--text-3) transition-colors hover:bg-(--text-1)/10 hover:text-(--text-1)"
         >
           <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.4" viewBox="0 0 24 24">
             <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />

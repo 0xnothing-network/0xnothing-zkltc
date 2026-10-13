@@ -253,7 +253,7 @@ export function CreatePoolForm() {
           </button>
         )}
 
-        <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} />
+        <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
       </div>
     </section>
   );
