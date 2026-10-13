@@ -60,7 +60,7 @@ test("Pixel mint stays on LitVM and aborts when wallet changes during gas estima
         "@/lib/pixelCollections": { PIXEL_MINT_ADDRESS: collection, PIXEL_V2_ENABLED: true, pixelUtf8Bytes: (value: string) => value.length },
         "@/lib/gridParser": { pixelDataToPNG: () => "png" }, "@/features/pixel/components/PixelButton": { PixelButton: "mint-button" },
         "@/components/Toast": { useToast: () => ({ show() {} }) }, "@/lib/errors": { normalizeError: () => ({ title: "Failed" }) },
-        "@/lib/chainSwitch": { LITVM_CHAIN_ID: 4441 }, "@/components/PageLoader": {},
+        "@/lib/chainSwitch": { LITVM_CHAIN_ID: 4441 }, "@/config/network": { LITVM_ADD_CHAIN_PARAMETER: {} }, "@/components/PageLoader": {},
         "@/lib/actionLock": { tryAcquireAction: () => true, releaseAction() {} },
       }, { setTimeout: (fn: () => void) => { fn(); return 1; }, clearTimeout() {}, console: { error() {} } });
     const tree = MintPanel({ pixelData: pixels, gridSize: 8, onMintSuccess() {} });

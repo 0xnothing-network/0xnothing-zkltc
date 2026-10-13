@@ -47,7 +47,7 @@ test("originality is only advertised after a successful check and failures offer
       "@/lib/pixelCollections": { PIXEL_V2_ENABLED: true, pixelUtf8Bytes: (value: string) => new TextEncoder().encode(value).length },
       "@/features/pixel/components/PixelButton": { PixelButton: "pixel-button" },
       "@/lib/gridParser": {}, "@/components/Toast": { useToast: () => ({}) },
-      "@/lib/errors": {}, "@/lib/chainSwitch": { LITVM_CHAIN_ID: 4441 },
+      "@/lib/errors": {}, "@/lib/chainSwitch": { LITVM_CHAIN_ID: 4441 }, "@/config/network": { LITVM_ADD_CHAIN_PARAMETER: {} },
       "@/components/PageLoader": {}, "@/lib/actionLock": {}, "@/lib/walletSession": {},
     },
   );
