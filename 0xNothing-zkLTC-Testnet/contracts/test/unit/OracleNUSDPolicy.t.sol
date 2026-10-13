@@ -3,9 +3,14 @@ pragma solidity ^0.8.24;
 
 import {TestBase} from "../TestBase.sol";
 import {RoleControl} from "../../src/common/RoleControl.sol";
+import {SafeTransferLib} from "../../src/common/SafeTransferLib.sol";
 import {DIAOracleAdapter} from "../../src/nusd/DIAOracleAdapter.sol";
 import {OracleNUSD} from "../../src/nusd/OracleNUSD.sol";
 import {MockDIAFeed} from "../mocks/MockDIAFeed.sol";
+
+contract RejectingTreasury {
+    // No receive/fallback: native pushes revert.
+}
 
 contract OracleNUSDPolicyTest is TestBase {
     MockDIAFeed private feed;
@@ -70,9 +75,15 @@ contract OracleNUSDPolicyTest is TestBase {
         uint256 received = nusd.redeemAtOracle(10 ether, 0.198 ether, USER);
 
         assertEq(received, 0.198 ether, "user collateral");
-        assertEq(TREASURY.balance, treasuryBefore + 0.002 ether, "treasury native");
+        assertEq(nusd.pendingTreasuryNative(), 0.002 ether, "fee held for pull");
+        assertEq(TREASURY.balance, treasuryBefore, "treasury not pushed");
         assertEq(nusd.totalSupply(), 40 ether, "burned");
         assertEq(nusd.totalCollateralWei(), 0.8 ether, "gross reserve drop");
+        assertEq(address(nusd).balance, 0.802 ether, "collateral plus pending fee");
+
+        nusd.withdrawTreasuryFees();
+        assertEq(TREASURY.balance, treasuryBefore + 0.002 ether, "treasury pulled");
+        assertEq(nusd.pendingTreasuryNative(), 0, "cleared");
         assertEq(address(nusd).balance, 0.8 ether, "native remaining");
     }
 
@@ -101,7 +112,7 @@ contract OracleNUSDPolicyTest is TestBase {
         vm.expectRevert(abi.encodeWithSelector(RoleControl.MissingRole.selector, bytes32(0), USER));
         nusd.setTreasury(TREASURY);
         vm.expectRevert(abi.encodeWithSelector(RoleControl.MissingRole.selector, bytes32(0), USER));
-        nusd.setDailyMintCapNusd(1);
+        nusd.setDailyMintCapNusd(1 ether);
         vm.expectRevert(abi.encodeWithSelector(RoleControl.MissingRole.selector, bytes32(0), USER));
         nusd.setSameBlockMintRedeemBlocked(true);
         vm.stopPrank();
@@ -118,17 +129,21 @@ contract OracleNUSDPolicyTest is TestBase {
         nusd.mintAtOracle{value: 1 ether}(0, USER);
 
         vm.prank(USER);
-        nusd.redeemAtOracle(20 ether, 0, USER);
-        vm.prank(USER);
+        nusd.transfer(OTHER, 21 ether);
+        vm.prank(OTHER);
+        nusd.redeemAtOracle(20 ether, 0, OTHER);
+        vm.prank(OTHER);
         vm.expectRevert(abi.encodeWithSelector(OracleNUSD.DailyRedeemCapExceeded.selector, 1 ether, 0));
-        nusd.redeemAtOracle(1 ether, 0, USER);
+        nusd.redeemAtOracle(1 ether, 0, OTHER);
 
         vm.warp(((block.timestamp / 1 days) + 1) * 1 days);
         feed.setRound(2, 50 ether, block.timestamp, 2);
         vm.prank(USER);
         nusd.mintAtOracle{value: 1 ether}(50 ether, USER);
         vm.prank(USER);
-        nusd.redeemAtOracle(20 ether, 0, USER);
+        nusd.transfer(OTHER, 21 ether);
+        vm.prank(OTHER);
+        nusd.redeemAtOracle(20 ether, 0, OTHER);
         assertEq(nusd.dailyMintedNusd(), 50 ether, "new mint day");
         assertEq(nusd.dailyRedeemedNusd(), 20 ether, "new redeem day");
     }
@@ -211,5 +226,91 @@ contract OracleNUSDPolicyTest is TestBase {
     function testZeroFeeQuotesMatchLegacyOneToOneModel() public {
         assertEq(nusd.quoteMint(1 ether), 50 ether, "mint 1:1");
         assertEq(nusd.quoteRedeem(50 ether), 1 ether, "redeem 1:1");
+    }
+
+    function testDailyRedeemCapIgnoresSameWalletMintRedeemCycle() public {
+        nusd.setDailyRedeemCapNusd(20 ether);
+
+        vm.prank(USER);
+        nusd.mintAtOracle{value: 1 ether}(50 ether, USER);
+        vm.prank(USER);
+        nusd.redeemAtOracle(50 ether, 0, USER);
+        assertEq(nusd.dailyRedeemedNusd(), 0, "cycle excluded from global redeem");
+
+        vm.prank(OTHER);
+        nusd.mintAtOracle{value: 1 ether}(50 ether, OTHER);
+        vm.warp(((block.timestamp / 1 days) + 1) * 1 days);
+        feed.setRound(2, 50 ether, block.timestamp, 2);
+
+        vm.prank(USER);
+        nusd.mintAtOracle{value: 1 ether}(50 ether, USER);
+        vm.prank(USER);
+        nusd.redeemAtOracle(40 ether, 0, USER);
+        assertEq(nusd.dailyRedeemedNusd(), 0, "same-day mint still excluded");
+
+        vm.prank(OTHER);
+        nusd.redeemAtOracle(20 ether, 0, OTHER);
+        vm.prank(OTHER);
+        vm.expectRevert(abi.encodeWithSelector(OracleNUSD.DailyRedeemCapExceeded.selector, 1 ether, 0));
+        nusd.redeemAtOracle(1 ether, 0, OTHER);
+    }
+
+    function testDailyCapsRejectDustMinimum() public {
+        vm.expectRevert(OracleNUSD.InvalidDailyCap.selector);
+        nusd.setDailyMintCapNusd(1);
+        vm.expectRevert(OracleNUSD.InvalidDailyCap.selector);
+        nusd.setDailyRedeemCapNusd(1 ether - 1);
+        vm.expectRevert(OracleNUSD.InvalidDailyCap.selector);
+        nusd.setPerWalletDailyMintCapNusd(1);
+        vm.expectRevert(OracleNUSD.InvalidDailyCap.selector);
+        nusd.setPerWalletDailyRedeemCapNusd(1);
+
+        nusd.setDailyMintCapNusd(1 ether);
+        nusd.setDailyRedeemCapNusd(0);
+        nusd.setPerWalletDailyMintCapNusd(1 ether);
+        nusd.setPerWalletDailyRedeemCapNusd(0);
+        assertEq(nusd.dailyMintCapNusd(), 1 ether, "min mint cap");
+        assertEq(nusd.dailyRedeemCapNusd(), 0, "zero still unlimited");
+    }
+
+    function testSameBlockGuardKeysOnMinterNotRecipient() public {
+        nusd.setSameBlockMintRedeemBlocked(true);
+        vm.roll(2_000);
+        vm.prank(OTHER);
+        nusd.mintAtOracle{value: 1 ether}(50 ether, OTHER);
+
+        vm.roll(2_001);
+        vm.prank(USER);
+        nusd.mintAtOracle{value: 1 ether}(50 ether, OTHER);
+        vm.prank(OTHER);
+        uint256 out = nusd.redeemAtOracle(10 ether, 0, OTHER);
+        assertGt(out, 0, "dust mint to victim does not grief redeem");
+
+        vm.prank(USER);
+        nusd.mintAtOracle{value: 1 ether}(50 ether, USER);
+        vm.prank(USER);
+        vm.expectRevert(OracleNUSD.SameBlockMintRedeem.selector);
+        nusd.redeemAtOracle(10 ether, 0, USER);
+    }
+
+    function testRejectingTreasuryCannotBrickRedeem() public {
+        RejectingTreasury rejecting = new RejectingTreasury();
+        nusd.setTreasury(address(rejecting));
+        nusd.setRedeemFeeBps(100);
+        vm.prank(USER);
+        nusd.mintAtOracle{value: 1 ether}(50 ether, USER);
+
+        vm.prank(USER);
+        uint256 received = nusd.redeemAtOracle(10 ether, 0, USER);
+        assertEq(received, 0.198 ether, "redeem paid user");
+        assertEq(nusd.pendingTreasuryNative(), 0.002 ether, "fee queued");
+
+        vm.expectRevert(SafeTransferLib.NativeTransferFailed.selector);
+        nusd.withdrawTreasuryFees();
+
+        nusd.setTreasury(TREASURY);
+        nusd.withdrawTreasuryFees();
+        assertEq(TREASURY.balance, 0.002 ether, "retargeted pull");
+        assertEq(nusd.pendingTreasuryNative(), 0, "cleared after pull");
     }
 }

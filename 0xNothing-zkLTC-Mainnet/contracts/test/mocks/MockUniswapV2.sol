@@ -67,6 +67,24 @@ contract MockUniswapV2Pair {
         _update(IERC20Minimal(token0).balanceOf(address(this)), IERC20Minimal(token1).balanceOf(address(this)));
     }
 
+    function swap(uint256 amount0Out, uint256 amount1Out, address to, bytes calldata) external {
+        require(amount0Out > 0 || amount1Out > 0, "INSUFFICIENT_OUTPUT");
+        require(amount0Out < reserve0 && amount1Out < reserve1, "INSUFFICIENT_LIQUIDITY");
+        if (amount0Out > 0) _safeTransfer(token0, to, amount0Out);
+        if (amount1Out > 0) _safeTransfer(token1, to, amount1Out);
+        uint256 balance0 = IERC20Minimal(token0).balanceOf(address(this));
+        uint256 balance1 = IERC20Minimal(token1).balanceOf(address(this));
+        uint256 amount0In = balance0 > uint256(reserve0) - amount0Out ? balance0 - (uint256(reserve0) - amount0Out) : 0;
+        uint256 amount1In = balance1 > uint256(reserve1) - amount1Out ? balance1 - (uint256(reserve1) - amount1Out) : 0;
+        require(amount0In > 0 || amount1In > 0, "INSUFFICIENT_INPUT");
+        require(
+            (balance0 * 1000 - amount0In * 3) * (balance1 * 1000 - amount1In * 3)
+                >= uint256(reserve0) * uint256(reserve1) * 1_000_000,
+            "K"
+        );
+        _update(balance0, balance1);
+    }
+
     function mint(address to) external returns (uint256 liquidity) {
         uint256 balance0 = IERC20Minimal(token0).balanceOf(address(this));
         uint256 balance1 = IERC20Minimal(token1).balanceOf(address(this));

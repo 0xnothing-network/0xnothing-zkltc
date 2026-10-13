@@ -10,8 +10,9 @@ import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
 
 /// @notice Seeds a Uniswap V2 token/NUSD pair from Pump graduation reserves.
 /// @dev Skims donations before minting, quotes minLP from live reserves, and
-///      rejects reserve skew beyond `maxPriceDeviationBps`. Empty pairs keep the
-///      classic `sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY` floor.
+///      rejects a *final* reserve/deposit price outside `maxPriceDeviationBps`
+///      unless both live reserves are dust versus the deposit. Empty pairs keep
+///      the classic `sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY` floor.
 contract UniswapV2GraduationAdapter is IGraduationAdapter, ReentrancyGuard {
     error InvalidConfiguration();
     error InvalidGraduationCaller();
@@ -24,6 +25,10 @@ contract UniswapV2GraduationAdapter is IGraduationAdapter, ReentrancyGuard {
     uint256 public constant WAD = 1e18;
     uint256 public constant BPS_DENOMINATOR = 10_000;
     uint256 public constant MINIMUM_LIQUIDITY = 1_000;
+    /// @notice Hard cap for the constructor `maxPriceDeviationBps` argument.
+    uint256 public constant MAX_PRICE_DEVIATION_BPS = 200;
+    /// @notice Per-side reserve share of the graduation deposit treated as dust.
+    uint256 public constant DUST_RESERVE_BPS = 100;
     address public constant DONATION_SINK = address(1);
 
     IUniswapV2Factory public immutable factory;
@@ -51,8 +56,8 @@ contract UniswapV2GraduationAdapter is IGraduationAdapter, ReentrancyGuard {
     ) {
         if (
             factory_ == address(0) || factory_.code.length == 0 || nusd_ == address(0) || nusd_.code.length == 0
-                || pumpRouter_ == address(0) || pumpRouter_.code.length == 0 || maxPriceDeviationBps_ > BPS_DENOMINATOR
-                || slippageBps_ > 1_000
+                || pumpRouter_ == address(0) || pumpRouter_.code.length == 0
+                || maxPriceDeviationBps_ > MAX_PRICE_DEVIATION_BPS || slippageBps_ > 1_000
         ) revert InvalidConfiguration();
 
         factory = IUniswapV2Factory(factory_);
@@ -159,16 +164,30 @@ contract UniswapV2GraduationAdapter is IGraduationAdapter, ReentrancyGuard {
         existingReserves = true;
     }
 
+    /// @dev Dust pairs and tiny skews must not brick READY. Compare the *final*
+    ///      pool price after the deposit against the deposit ratio; skip the
+    ///      check entirely when both live reserves are dust versus that deposit.
     function _checkPriceDeviation(uint256 reserveToken, uint256 reserveNusd, uint256 tokenAmount, uint256 nusdAmount)
         private
         view
     {
-        uint256 reservePriceWad = MathX.mulDiv(reserveNusd, WAD, reserveToken);
+        if (_isDustReserves(reserveToken, reserveNusd, tokenAmount, nusdAmount)) return;
+
         uint256 depositPriceWad = MathX.mulDiv(nusdAmount, WAD, tokenAmount);
+        uint256 finalPriceWad = MathX.mulDiv(reserveNusd + nusdAmount, WAD, reserveToken + tokenAmount);
         uint256 difference =
-            reservePriceWad > depositPriceWad ? reservePriceWad - depositPriceWad : depositPriceWad - reservePriceWad;
-        uint256 allowed = MathX.mulDiv(reservePriceWad, maxPriceDeviationBps, BPS_DENOMINATOR);
-        if (difference > allowed) revert PriceDeviationExceeded(reservePriceWad, depositPriceWad, allowed);
+            finalPriceWad > depositPriceWad ? finalPriceWad - depositPriceWad : depositPriceWad - finalPriceWad;
+        uint256 allowed = MathX.mulDiv(depositPriceWad, maxPriceDeviationBps, BPS_DENOMINATOR);
+        if (difference > allowed) revert PriceDeviationExceeded(finalPriceWad, depositPriceWad, allowed);
+    }
+
+    function _isDustReserves(uint256 reserveToken, uint256 reserveNusd, uint256 tokenAmount, uint256 nusdAmount)
+        private
+        pure
+        returns (bool)
+    {
+        return reserveToken <= MathX.mulDiv(tokenAmount, DUST_RESERVE_BPS, BPS_DENOMINATOR)
+            && reserveNusd <= MathX.mulDiv(nusdAmount, DUST_RESERVE_BPS, BPS_DENOMINATOR);
     }
 
     function _orderedReserves(address pair, address token)

@@ -154,7 +154,7 @@ contract UniswapV2GraduationAdapterInvariantTest is InvariantBase {
         GraduationRouter router = new GraduationRouter(address(this), 1 hours, address(locker));
         locker.bindRouter(address(router));
         MockUniswapV2Factory factory = new MockUniswapV2Factory();
-        adapter = new UniswapV2GraduationAdapter(address(factory), address(nusd), address(router), 1_000, 100);
+        adapter = new UniswapV2GraduationAdapter(address(factory), address(nusd), address(router), 200, 100);
         router.bindPump(address(handlerPlaceholder(router, factory)));
         router.scheduleAdapter(address(adapter));
         router.scheduleEnable();

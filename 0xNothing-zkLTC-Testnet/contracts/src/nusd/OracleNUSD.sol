@@ -27,6 +27,8 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
     error PerWalletDailyMintCapExceeded(uint256 requestedAmountNusd, uint256 remainingAmountNusd);
     error PerWalletDailyRedeemCapExceeded(uint256 requestedAmountNusd, uint256 remainingAmountNusd);
     error SameBlockMintRedeem();
+    error InvalidDailyCap();
+    error NothingToWithdraw();
     error ERC20InvalidAddress();
     error ERC20InsufficientBalance(address account, uint256 balance, uint256 requiredAmount);
     error ERC20InsufficientAllowance(address owner, address spender, uint256 allowance, uint256 requiredAmount);
@@ -37,6 +39,8 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
     uint256 public constant WAD = 1e18;
     uint256 public constant BPS_DENOMINATOR = 10_000;
     uint256 public constant MAX_FEE_BPS = 100;
+    /// @notice Smallest non-zero daily mint/redeem cap. Zero still means unlimited.
+    uint256 public constant MIN_DAILY_CAP_NUSD = 1 ether;
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     DIAOracleAdapter public immutable oracle;
@@ -53,6 +57,8 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
     uint256 public redeemFeeBps;
     /// @notice Recipient of mint (NUSD) and redeem (native) protocol fees.
     address public treasury;
+    /// @notice Native redeem fees waiting for `withdrawTreasuryFees`.
+    uint256 public pendingTreasuryNative;
 
     /// @notice Optional admin issuance ceiling. Zero disables it; the immutable constructor ceiling still applies.
     uint256 public issuanceCeilingNusd;
@@ -102,6 +108,7 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
     event PerWalletDailyRedeemCapUpdated(uint256 perWalletDailyRedeemCapNusd);
     event SameBlockMintRedeemGuardUpdated(bool blocked);
     event ProtocolFeeCollected(address indexed treasury, uint256 amount, bool indexed mintedNusd);
+    event TreasuryFeesWithdrawn(address indexed treasury, uint256 amount);
 
     constructor(DIAOracleAdapter oracleAdapter, address initialAdmin, uint256 supplyCeilingNusd_)
         RoleControl(initialAdmin)
@@ -162,7 +169,7 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
         if (mintPaused) revert MintPaused();
         if (msg.value == 0) revert InvalidAmount();
         if (recipient == address(0)) revert InvalidRecipient();
-        _enforceSameBlockMint(msg.sender, recipient);
+        _enforceSameBlockMint(msg.sender);
 
         (uint256 priceWad,,) = oracle.ensureAnchor();
         uint256 grossNusd = MathX.mulDiv(msg.value, priceWad, WAD);
@@ -185,7 +192,6 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
         }
 
         lastMintBlock[msg.sender] = block.number;
-        lastMintBlock[recipient] = block.number;
 
         emit MintedAtOracle(msg.sender, recipient, msg.value, amountNusd);
     }
@@ -222,7 +228,7 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
         lastRedeemBlock[msg.sender] = block.number;
 
         if (feeWei != 0) {
-            SafeTransferLib.safeTransferNative(treasury, feeWei);
+            pendingTreasuryNative += feeWei;
             emit ProtocolFeeCollected(treasury, feeWei, false);
         }
         SafeTransferLib.safeTransferNative(recipient, collateralOutWei);
@@ -277,16 +283,19 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
     }
 
     function setDailyMintCapNusd(uint256 newDailyMintCapNusd) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _requireSaneDailyCap(newDailyMintCapNusd);
         dailyMintCapNusd = newDailyMintCapNusd;
         emit DailyMintCapUpdated(newDailyMintCapNusd);
     }
 
     function setDailyRedeemCapNusd(uint256 newDailyRedeemCapNusd) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _requireSaneDailyCap(newDailyRedeemCapNusd);
         dailyRedeemCapNusd = newDailyRedeemCapNusd;
         emit DailyRedeemCapUpdated(newDailyRedeemCapNusd);
     }
 
     function setPerWalletDailyMintCapNusd(uint256 newPerWalletDailyMintCapNusd) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _requireSaneDailyCap(newPerWalletDailyMintCapNusd);
         perWalletDailyMintCapNusd = newPerWalletDailyMintCapNusd;
         emit PerWalletDailyMintCapUpdated(newPerWalletDailyMintCapNusd);
     }
@@ -295,8 +304,20 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
+        _requireSaneDailyCap(newPerWalletDailyRedeemCapNusd);
         perWalletDailyRedeemCapNusd = newPerWalletDailyRedeemCapNusd;
         emit PerWalletDailyRedeemCapUpdated(newPerWalletDailyRedeemCapNusd);
+    }
+
+    /// @notice Sends accrued native redeem fees to the current treasury. Anyone may call.
+    function withdrawTreasuryFees() external nonReentrant {
+        address to = treasury;
+        if (to == address(0)) revert TreasuryNotSet();
+        uint256 amount = pendingTreasuryNative;
+        if (amount == 0) revert NothingToWithdraw();
+        pendingTreasuryNative = 0;
+        SafeTransferLib.safeTransferNative(to, amount);
+        emit TreasuryFeesWithdrawn(to, amount);
     }
 
     function setSameBlockMintRedeemBlocked(bool blocked) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -412,15 +433,21 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
             redeemDayId = day;
             dailyRedeemedNusd = 0;
         }
-        dailyRedeemedNusd += amountNusd;
-        if (dailyRedeemCapNusd != 0 && dailyRedeemedNusd > dailyRedeemCapNusd) {
-            revert DailyRedeemCapExceeded(amountNusd, dailyRedeemCapNusd - (dailyRedeemedNusd - amountNusd));
-        }
-
         if (walletRedeemDayId[account] != day) {
             walletRedeemDayId[account] = day;
             dailyRedeemedNusdByWallet[account] = 0;
         }
+
+        uint256 mintedToday = _walletDayValue(account, true);
+        uint256 redeemedToday = dailyRedeemedNusdByWallet[account];
+        uint256 cycleCredit = mintedToday > redeemedToday ? mintedToday - redeemedToday : 0;
+        uint256 globalCharge = amountNusd > cycleCredit ? amountNusd - cycleCredit : 0;
+
+        dailyRedeemedNusd += globalCharge;
+        if (dailyRedeemCapNusd != 0 && dailyRedeemedNusd > dailyRedeemCapNusd) {
+            revert DailyRedeemCapExceeded(amountNusd, dailyRedeemCapNusd - (dailyRedeemedNusd - globalCharge));
+        }
+
         dailyRedeemedNusdByWallet[account] += amountNusd;
         uint256 walletCap = perWalletDailyRedeemCapNusd;
         if (walletCap != 0 && dailyRedeemedNusdByWallet[account] > walletCap) {
@@ -440,16 +467,18 @@ contract OracleNUSD is RoleControl, ReentrancyGuard {
         }
     }
 
-    function _enforceSameBlockMint(address payer, address recipient) private view {
+    function _enforceSameBlockMint(address payer) private view {
         if (!sameBlockMintRedeemBlocked) return;
-        if (lastRedeemBlock[payer] == block.number || lastRedeemBlock[recipient] == block.number) {
-            revert SameBlockMintRedeem();
-        }
+        if (lastRedeemBlock[payer] == block.number) revert SameBlockMintRedeem();
     }
 
     function _enforceSameBlockRedeem(address account) private view {
         if (!sameBlockMintRedeemBlocked) return;
         if (lastMintBlock[account] == block.number) revert SameBlockMintRedeem();
+    }
+
+    function _requireSaneDailyCap(uint256 cap) private pure {
+        if (cap != 0 && cap < MIN_DAILY_CAP_NUSD) revert InvalidDailyCap();
     }
 
     function _remainingCap(uint256 cap, uint256 used) private pure returns (uint256 remaining) {

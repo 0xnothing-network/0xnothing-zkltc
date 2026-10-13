@@ -6,6 +6,7 @@ import {OracleNUSD} from "../src/nusd/OracleNUSD.sol";
 import {ZeroXPump} from "../src/pump/ZeroXPump.sol";
 import {GraduationRouter} from "../src/graduation/GraduationRouter.sol";
 import {PermanentLiquidityLocker} from "../src/graduation/PermanentLiquidityLocker.sol";
+import {UniswapV2GraduationAdapter} from "../src/graduation/UniswapV2GraduationAdapter.sol";
 
 interface VmDeploy {
     function addr(uint256 privateKey) external returns (address keyAddress);
@@ -40,6 +41,7 @@ contract DeployMainnet {
     error UnsafeInitialGraduationState();
     error InvalidOracleParameters();
     error InvalidLaunchProtection();
+    error UnexpectedUniv2AdapterConfiguration();
 
     VmDeploy private constant vm = VmDeploy(address(uint160(uint256(keccak256("hevm cheat code")))));
 
@@ -47,6 +49,8 @@ contract DeployMainnet {
     uint256 public constant PUMP_GRADUATION_MARKET_CAP_NUSD = 6_000 ether;
     uint256 public constant PUMP_GRADUATION_RESERVE_NUSD = 1_500 ether;
     uint256 public constant NUSD_SUPPLY_CEILING = type(uint256).max;
+    uint256 public constant UNIV2_MAX_PRICE_DEVIATION_BPS = 200;
+    uint256 public constant UNIV2_SLIPPAGE_BPS = 100;
 
     struct Deployment {
         DIAOracleAdapter oracle;
@@ -54,6 +58,7 @@ contract DeployMainnet {
         PermanentLiquidityLocker locker;
         GraduationRouter router;
         ZeroXPump pump;
+        address univ2Adapter;
     }
 
     event DeploymentCompleted(
@@ -120,6 +125,11 @@ contract DeployMainnet {
         }
         deployment.router.bindPump(address(deployment.pump));
         deployment.locker.bindRouter(address(deployment.router));
+        address univ2Factory = vm.envOr("UNIV2_FACTORY", address(0));
+        if (univ2Factory != address(0)) {
+            deployment.univ2Adapter =
+                address(deployPinnedUniv2Adapter(univ2Factory, address(deployment.oracleNusd), address(deployment.router)));
+        }
 
         if (
             address(deployment.oracleNusd.oracle()) != address(deployment.oracle)
@@ -184,6 +194,9 @@ contract DeployMainnet {
         vm.serializeUint(objectKey, "launchProtectionWindow", deployment.pump.launchProtectionWindow());
         vm.serializeUint(objectKey, "launchMaxBuyNusd", deployment.pump.launchMaxBuyNusd());
         vm.serializeAddress(objectKey, "graduationAdapter", deployment.pump.graduationAdapter());
+        vm.serializeUint(objectKey, "univ2MaxPriceDeviationBps", UNIV2_MAX_PRICE_DEVIATION_BPS);
+        vm.serializeUint(objectKey, "univ2SlippageBps", UNIV2_SLIPPAGE_BPS);
+        vm.serializeAddress(objectKey, "univ2GraduationAdapter", deployment.univ2Adapter);
         vm.serializeUint(objectKey, "maxPriceAge", deployment.oracle.maxPriceAge());
         vm.serializeUint(objectKey, "minPriceWad", deployment.oracle.minPriceWad());
         vm.serializeUint(objectKey, "maxPriceWad", deployment.oracle.maxPriceWad());
@@ -220,5 +233,18 @@ contract DeployMainnet {
         if (window > 1 hours || (window != 0 && maxBuyNusd == 0)) {
             revert InvalidLaunchProtection();
         }
+    }
+
+    function deployPinnedUniv2Adapter(address factory, address nusd, address pumpRouter)
+        public
+        returns (UniswapV2GraduationAdapter adapter)
+    {
+        adapter = new UniswapV2GraduationAdapter(
+            factory, nusd, pumpRouter, UNIV2_MAX_PRICE_DEVIATION_BPS, UNIV2_SLIPPAGE_BPS
+        );
+        if (
+            adapter.maxPriceDeviationBps() != UNIV2_MAX_PRICE_DEVIATION_BPS
+                || adapter.maxPriceDeviationBps() > 200 || adapter.slippageBps() != UNIV2_SLIPPAGE_BPS
+        ) revert UnexpectedUniv2AdapterConfiguration();
     }
 }

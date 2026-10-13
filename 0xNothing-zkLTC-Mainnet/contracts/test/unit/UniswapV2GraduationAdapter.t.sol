@@ -21,7 +21,7 @@ contract UniswapV2GraduationAdapterTest is TestBase {
     uint256 private constant RESERVE_THRESHOLD = 1_500 ether;
     uint256 private constant DELAY = 1 hours;
     uint256 private constant SLIPPAGE_BPS = 100;
-    uint256 private constant MAX_DEV_BPS = 1_000;
+    uint256 private constant MAX_DEV_BPS = 200;
 
     NUSD private nusd;
     PermanentLiquidityLocker private locker;
@@ -78,9 +78,12 @@ contract UniswapV2GraduationAdapterTest is TestBase {
         vm.expectRevert(UniswapV2GraduationAdapter.InvalidConfiguration.selector);
         new UniswapV2GraduationAdapter(address(0), address(nusd), address(router), MAX_DEV_BPS, SLIPPAGE_BPS);
         vm.expectRevert(UniswapV2GraduationAdapter.InvalidConfiguration.selector);
-        new UniswapV2GraduationAdapter(address(factory), address(nusd), address(router), 10_001, SLIPPAGE_BPS);
+        new UniswapV2GraduationAdapter(address(factory), address(nusd), address(router), 201, SLIPPAGE_BPS);
         vm.expectRevert(UniswapV2GraduationAdapter.InvalidConfiguration.selector);
         new UniswapV2GraduationAdapter(address(factory), address(nusd), address(router), MAX_DEV_BPS, 1_001);
+        UniswapV2GraduationAdapter pinned =
+            new UniswapV2GraduationAdapter(address(factory), address(nusd), address(router), 200, SLIPPAGE_BPS);
+        assertEq(pinned.maxPriceDeviationBps(), 200, "hard cap is also the pinned deploy value");
     }
 
     function testFreshPairQuoteMatchesSqrtMinusMinimumLiquidityWithSlippage() public {
@@ -150,7 +153,7 @@ contract UniswapV2GraduationAdapterTest is TestBase {
         IGraduationAdapter.GraduationResult memory result = directRouter.executeGraduation(
             address(directAdapter), address(token), address(nusd), 400 ether, 100 ether, quoted, block.timestamp
         );
-        assertGe(result.lpAmount, quoted, "skew within 10%");
+        assertGe(result.lpAmount, quoted, "final price within 200 bps");
     }
 
     function testSkewedPairBeyondBoundReverts() public {
@@ -181,6 +184,45 @@ contract UniswapV2GraduationAdapterTest is TestBase {
             address(directAdapter), address(token), address(nusd), 400 ether, 100 ether, quoted, block.timestamp
         );
         assertEq(token.balanceOf(address(1)), sinkBefore + 25 ether, "skimmed donation");
+    }
+
+    function testDustPairSkewDoesNotBrickGraduation() public {
+        directAdapter.preparePool(address(token));
+        address pair = factory.getPair(address(token), address(nusd));
+        token.transfer(pair, 0.4 ether);
+        nusd.transfer(pair, 1 ether);
+        MockUniswapV2Pair(pair).mint(address(this));
+
+        uint256 quoted = directAdapter.quoteMinimumLp(address(token), address(nusd), 400 ether, 100 ether);
+        _enableDirect();
+        IGraduationAdapter.GraduationResult memory result = directRouter.executeGraduation(
+            address(directAdapter), address(token), address(nusd), 400 ether, 100 ether, quoted, block.timestamp
+        );
+        assertGe(result.lpAmount, quoted, "dust pair graduated");
+        assertGt(MockUniswapV2Pair(pair).balanceOf(directRouter.lpRecipient()), 0, "locker received LP");
+    }
+
+    function testTinyFrontrunSwapDoesNotBrickGraduation() public {
+        directAdapter.preparePool(address(token));
+        address pair = factory.getPair(address(token), address(nusd));
+        token.transfer(pair, 40 ether);
+        nusd.transfer(pair, 10 ether);
+        MockUniswapV2Pair(pair).mint(address(this));
+
+        bool tokenIs0 = MockUniswapV2Pair(pair).token0() == address(token);
+        token.transfer(pair, 1 ether);
+        if (tokenIs0) {
+            MockUniswapV2Pair(pair).swap(0, 0.2 ether, address(this), "");
+        } else {
+            MockUniswapV2Pair(pair).swap(0.2 ether, 0, address(this), "");
+        }
+
+        uint256 quoted = directAdapter.quoteMinimumLp(address(token), address(nusd), 400 ether, 100 ether);
+        _enableDirect();
+        IGraduationAdapter.GraduationResult memory result = directRouter.executeGraduation(
+            address(directAdapter), address(token), address(nusd), 400 ether, 100 ether, quoted, block.timestamp
+        );
+        assertGe(result.lpAmount, quoted, "tiny frontrun still graduated");
     }
 
     function testOnlyRouterCanGraduate() public {
@@ -235,6 +277,49 @@ contract UniswapV2GraduationAdapterTest is TestBase {
         pump.graduate(market, address(0), 0, type(uint256).max);
         assertEq(pump.status(market), uint8(ZeroXPump.Lifecycle.GRADUATED), "preexisting pair");
         assertTrue(tokenReserve > tokenLiquidity, "unused curve inventory burned");
+    }
+
+    function testPumpGraduateSurvivesDustPairAttack() public {
+        _enableAdapter();
+        address market = _createMarket();
+        vm.prank(TRADER);
+        pump.buy(market, 50_000 ether, 0, type(uint256).max);
+
+        adapter.preparePool(market);
+        address pair = factory.getPair(market, address(nusd));
+        vm.prank(TRADER);
+        PumpToken(market).transfer(pair, 0.05 ether);
+        nusd.mint(pair, 1 ether);
+        MockUniswapV2Pair(pair).mint(address(this));
+
+        pump.graduate(market, address(0), 0, type(uint256).max);
+        assertEq(pump.status(market), uint8(ZeroXPump.Lifecycle.GRADUATED), "dust pair did not stick READY");
+    }
+
+    function testPumpGraduateSurvivesTinyFrontrunSwap() public {
+        _enableAdapter();
+        address market = _createMarket();
+        vm.prank(TRADER);
+        pump.buy(market, 50_000 ether, 0, type(uint256).max);
+
+        adapter.preparePool(market);
+        address pair = factory.getPair(market, address(nusd));
+        vm.prank(TRADER);
+        PumpToken(market).transfer(pair, 0.4 ether);
+        nusd.mint(pair, 0.1 ether);
+        MockUniswapV2Pair(pair).mint(address(this));
+
+        bool tokenIs0 = MockUniswapV2Pair(pair).token0() == market;
+        vm.prank(TRADER);
+        PumpToken(market).transfer(pair, 0.05 ether);
+        if (tokenIs0) {
+            MockUniswapV2Pair(pair).swap(0, 0.01 ether, address(this), "");
+        } else {
+            MockUniswapV2Pair(pair).swap(0.01 ether, 0, address(this), "");
+        }
+
+        pump.graduate(market, address(0), 0, type(uint256).max);
+        assertEq(pump.status(market), uint8(ZeroXPump.Lifecycle.GRADUATED), "tiny swap did not stick READY");
     }
 
     function _enableDirect() private {
