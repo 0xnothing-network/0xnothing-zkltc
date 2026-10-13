@@ -1,19 +1,19 @@
 # syntax=docker/dockerfile:1
 
-FROM node:22-alpine AS dependencies
+FROM node:24-alpine AS dependencies
 WORKDIR /app
 
 COPY 0xNothing-zkLTC-Testnet/apps/web/package.json ./package.json
 COPY 0xNothing-zkLTC-Testnet/apps/web/package-lock.json ./package-lock.json
 RUN npm ci
 
-FROM node:22-alpine AS dogeos-dependencies
+FROM node:24-alpine AS dogeos-dependencies
 WORKDIR /dogeos-source
 COPY 0xPixel-Dogeos/package.json ./package.json
 COPY 0xPixel-Dogeos/package-lock.json ./package-lock.json
 RUN npm ci
 
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DOGEOS_SOURCE_DIR=/dogeos-source
@@ -73,7 +73,7 @@ COPY 0xPixel-Dogeos/deployments/chikyu.json /dogeos-source/deployments/chikyu.js
 COPY 0xNothing-zkLTC-Testnet/apps/web/ ./
 RUN npm run build
 
-FROM node:22-alpine AS runner
+FROM node:24-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
