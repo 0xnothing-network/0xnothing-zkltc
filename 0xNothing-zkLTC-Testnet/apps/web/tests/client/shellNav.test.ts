@@ -32,3 +32,9 @@ test("Pixel Draw is exact; gallery and marketplace match their subtrees", () => 
   assert.equal(isNavItemActive("/0xpixel/marketplace/12", item("pixel", "Marketplace")), true);
   assert.equal(isNavItemActive(null, item("pixel", "Gallery")), false);
 });
+
+test("Faucet (PR #10) stays reachable from the Pump nav", () => {
+  const faucet = item("pump", "Faucet");
+  assert.equal(faucet.href, "/faucet");
+  assert.equal(isNavItemActive("/faucet", faucet), true);
+});

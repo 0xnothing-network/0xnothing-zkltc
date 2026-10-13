@@ -31,6 +31,7 @@ export const PRODUCTS: ReadonlyArray<ProductNav> = [
       { href: "/0xPump", label: "Discover", exact: true, match: ["/0xPump/token/"] },
       { href: "/0xPump/create", label: "Create" },
       { href: "/0xPump/nusd", label: "NUSD" },
+      { href: "/faucet", label: "Faucet" },
       { href: "/0xPump/portfolio", label: "Portfolio" },
       { href: "/0xPump/stats", label: "Stats" },
     ],
