@@ -1,0 +1,96 @@
+/*
+ * 0xPixel is the one product that is 100% pixel. It keeps the shared colour
+ * tokens (graphite core, prism-violet accent, status colours) and the shared
+ * header structure, but swaps the shape layer: square corners, Departure Mono
+ * everywhere, bevelled 1px edges, hard offset shadows and stepped motion.
+ * Every rule is scoped to .pixel-product so Pump, Fi and the hub stay untouched.
+ */
+.pixel-product {
+  --font-ui: var(--font-brand);
+  --font-num: var(--font-brand);
+  --r-xs: 0;
+  --r-sm: 0;
+  --r-md: 0;
+  --r-lg: 0;
+  --r-xl: 0;
+  --r-pill: 0;
+  --px-unit: 4px;
+  --px-hi: rgba(255, 255, 255, .07);
+  --px-lo: rgba(0, 0, 0, .45);
+  --px-drop: #000;
+  --edge-highlight: inset 1px 1px 0 var(--px-hi), inset -1px -1px 0 var(--px-lo);
+  --e-1: var(--edge-highlight), 4px 4px 0 0 var(--px-drop);
+  --e-2: var(--edge-highlight), 6px 6px 0 0 var(--px-drop);
+  --e-3: var(--edge-highlight), 8px 8px 0 0 var(--px-drop);
+  --ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+  --ease: steps(3, end);
+  /* Corner notch used by buttons, chips and the header controls. */
+  --px-notch: polygon(0 4px, 4px 4px, 4px 0, calc(100% - 4px) 0, calc(100% - 4px) 4px, 100% 4px,
+    100% calc(100% - 4px), calc(100% - 4px) calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 4px calc(100% - 4px), 0 calc(100% - 4px));
+  font-family: var(--font-brand);
+  letter-spacing: .01em;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+:root[data-theme="light"] .pixel-product {
+  --px-hi: rgba(255, 255, 255, .9);
+  --px-lo: rgba(14, 17, 22, .18);
+  --px-drop: var(--line-strong);
+}
+
+/* Everything inherits the pixel face, including form controls. */
+.pixel-product :is(h1, h2, h3, h4, p, span, a, button, input, select, textarea, label, dt, dd, small, strong, td, th, li) {
+  font-family: var(--font-brand) !important;
+}
+.pixel-product :is(h1, h2, h3) { font-weight: 400 !important; letter-spacing: 0 !important; }
+.pixel-product img, .pixel-product canvas, .pixel-product svg image { image-rendering: pixelated; }
+/* Tailwind rounded-* utilities in studio components square off too. */
+.pixel-product [class*="rounded"] { border-radius: 0 !important; }
+.pixel-product input[type="color"]::-webkit-color-swatch-wrapper { padding: 3px; }
+.pixel-product input[type="color"]::-webkit-color-swatch { border-radius: 0; border: 0; }
+.pixel-product input[type="color"]::-moz-color-swatch { border-radius: 0; border: 0; }
+
+/* Buttons and chips: notched corners, hard press. */
+.pixel-product :is(button, .pixel-btn, a[class*="Button"], a[class*="button"], .ox-connect, .ox-wallet-button, .ox-network-pill, .ox-theme-toggle, .ox-menu-button, .ox-switcher, .ox-switcher a) {
+  border-radius: 0 !important;
+}
+.pixel-product :is(.pixel-btn, .ox-connect, [class*="primaryButton"], [class*="secondaryButton"]) {
+  clip-path: var(--px-notch);
+  box-shadow: inset 0 -3px 0 var(--px-lo), inset 0 1px 0 var(--px-hi) !important;
+  transition: transform 80ms steps(2, end), filter 80ms steps(2, end) !important;
+}
+.pixel-product :is(.pixel-btn, .ox-connect, [class*="primaryButton"], [class*="secondaryButton"]):active:not(:disabled) {
+  transform: translateY(2px) !important;
+  box-shadow: inset 0 1px 0 var(--px-lo) !important;
+}
+
+/* Surfaces: bevel + hard drop shadow; no blur anywhere. */
+.pixel-product :is(.pixel-panel, .pixel-tools-panel, .pixel-mint-panel, .pixel-generator-panel, .nft-card, .pixel-drawing-column, .pixel-collection-empty, [class*="walletPanel"], [class*="nftCard"], [class*="tradeWorkspace"], [class*="emptyState"], [class*="table"]) {
+  border-radius: 0 !important;
+  box-shadow: var(--e-1) !important;
+}
+.pixel-product .ox-header { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--bg); border-bottom: 2px solid var(--line-strong); }
+.pixel-product .ox-wordmark-mark { border-radius: 0; box-shadow: 3px 3px 0 0 var(--accent); }
+.pixel-product .ox-nav-link.active::after { border-radius: 0; height: 4px; }
+.pixel-product .ox-wallet-menu { border: 2px solid var(--line-strong); box-shadow: var(--e-3); }
+.pixel-product .ox-switcher a::before,
+.pixel-product .ox-network-pill i { border-radius: 0; box-shadow: none; }
+
+/* Fields: inset bevel, hard focus ring. */
+.pixel-product :is(input:not([type="color"]):not([type="checkbox"]):not([type="range"]), textarea, select) {
+  border-radius: 0 !important;
+  box-shadow: inset 2px 2px 0 var(--px-lo) !important;
+}
+.pixel-product :is(input, textarea, select, button, a):focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
+
+/* Scrollbars and selection join the grid. */
+.pixel-product ::selection { background: var(--accent); color: var(--accent-ink); }
+.pixel-product * { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pixel-product :is(.pixel-btn, .ox-connect, [class*="primaryButton"], [class*="secondaryButton"]):active:not(:disabled) { transform: none !important; }
+}

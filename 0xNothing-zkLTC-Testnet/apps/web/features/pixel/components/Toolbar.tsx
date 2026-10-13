@@ -123,7 +123,7 @@ export const Toolbar = memo(function Toolbar({
                   }}
                   placeholder="#RRGGBB"
                   maxLength={7}
-                  className="flex-1 bg-(--surface-2) border border-(--line) rounded-xl px-3 py-2.5 sm:py-2 text-(--text-1) text-xs placeholder-(--text-3) focus:outline-none focus:border-(--accent) transition-all uppercase"
+                  className="flex-1 min-w-0 w-full bg-(--surface-2) border border-(--line) rounded-xl px-3 py-2.5 sm:py-2 text-(--text-1) text-xs placeholder-(--text-3) focus:outline-none focus:border-(--accent) transition-all uppercase"
                   style={{ fontFamily: "var(--font-num)" }}
                 />
               </div>

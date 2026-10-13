@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import "./home.css";
+import { HomeMosaic } from "@/components/HomeMosaic";
 
 export const metadata: Metadata = {
   title: "0xNothing | Nothing to everything",
@@ -20,9 +21,9 @@ export const metadata: Metadata = {
 };
 
 const links = [
-  { href: "/0xPump", label: "0xPump", description: "Launch & discover tokens", tone: "dark" },
-  { href: "/0xFi", label: "0xFi", description: "Swap, lend & earn", tone: "ghost" },
-  { href: "/0xpixel", label: "0xPixel", description: "Create & collect pixel art", tone: "light" },
+  { href: "/0xPump", label: "0xPump", description: "Launch & discover tokens" },
+  { href: "/0xFi", label: "0xFi", description: "Swap, lend & earn" },
+  { href: "/0xpixel", label: "0xPixel", description: "Create & collect pixel art" },
 ] as const;
 
 export default function Home() {
@@ -60,28 +61,27 @@ export default function Home() {
 
       <main className="nothing-main">
         <section className="nothing-stage" aria-labelledby="nothing-title">
-          <p className="nothing-eyebrow">A creative ecosystem on LitVM</p>
-          <h1 id="nothing-title" className="nothing-title">
-            <span>Nothing</span>
-            <span>to everything</span>
-          </h1>
-          <p className="nothing-intro">Create something. Make it yours.</p>
-
-          <nav className="nothing-nav" aria-label="0xNothing apps">
-            {links.map((link) => {
-              const className = `nothing-link nothing-link-${link.tone}`;
-              return (
-                <Link key={link.href} href={link.href} className={className}>
-                  <span className="nothing-link-heading">
-                    <span>{link.label}</span>
-                    <span className="nothing-link-arrow" aria-hidden="true">&gt;</span>
-                  </span>
-                  <span className="nothing-link-description">{link.description}</span>
-                </Link>
-              );
-            })}
-          </nav>
+          <div className="nothing-copy">
+            <p className="nothing-eyebrow">A creative ecosystem on LitVM</p>
+            <h1 id="nothing-title" className="nothing-title">
+              <span>Nothing</span>
+              <span>to everything</span>
+            </h1>
+            <p className="nothing-intro">Create something. Make it yours.</p>
+          </div>
+          <HomeMosaic />
         </section>
+
+        <nav className="nothing-nav" aria-label="0xNothing apps">
+          {links.map((link, index) => (
+            <Link key={link.href} href={link.href} className="nothing-link">
+              <span className="nothing-link-index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+              <span className="nothing-link-name">{link.label}</span>
+              <span className="nothing-link-description">{link.description}</span>
+              <span className="nothing-link-arrow" aria-hidden="true">&gt;</span>
+            </Link>
+          ))}
+        </nav>
       </main>
 
       <footer className="nothing-footer">
