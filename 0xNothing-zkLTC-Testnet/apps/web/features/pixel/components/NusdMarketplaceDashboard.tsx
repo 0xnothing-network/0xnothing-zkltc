@@ -10,10 +10,11 @@ import { useAccount, useConfig, useConnect, usePublicClient, useSwitchChain } fr
 import { useProtocolTransaction, type ProtocolCall, type ProtocolStage } from "@fi/lib/hooks/useProtocolTransaction";
 import { getAddressExplorerUrl, getMarketplaceTxUrl, getTokenExplorerUrl, shortenAddress } from "@/lib/contract";
 import { NFT_NUSD_ADDRESS, NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
-import { NUSD_CATALOGUE_LIMIT, NUSD_MARKET_PAGE_SIZE, NusdMarketplaceAbi, nusdFunding, offerExpiry, parseNusdPrice, readNusdListing, readNusdMarket, readNusdOffer, requireFreshNusdMarket } from "@/lib/nusdMarketplace";
+import { NUSD_CATALOGUE_LIMIT, NUSD_MARKET_PAGE_SIZE, NusdMarketplaceAbi, nusdFunding, nusdNftSelection, offerExpiry, parseNusdPrice, readNusdListing, readNusdMarket, readNusdOffer, requireFreshNusdMarket } from "@/lib/nusdMarketplace";
 import { fetchJson } from "@/lib/http";
 import { createWalletSessionGuard } from "@/lib/walletSession";
 import { getPixelImageUrl } from "@/lib/pixelImage";
+import { PIXEL_COLLECTIONS } from "@/lib/pixelCollections";
 import { filterNusdListings, nusdArtworkKey, nusdArtworkRequests, readNusdArtwork, type NusdListingSort } from "@/lib/nusdMarketplaceView";
 import styles from "./NusdMarketplaceDashboard.module.css";
 import { NusdMarketplaceActivity } from "./NusdMarketplaceActivity";
@@ -22,6 +23,7 @@ const nftApprovalAbi = parseAbi([
   "function getApproved(uint256 tokenId) view returns (address)",
   "function isApprovedForAll(address owner, address operator) view returns (bool)",
   "function approve(address spender, uint256 tokenId)",
+  "function ownerOf(uint256 tokenId) view returns (address)",
 ]);
 type OwnedToken = { collection: Address; tokenId: string; name: string; listing: { listingId: string; price: string } | null };
 type MarketState = Awaited<ReturnType<typeof readNusdMarket>>;
@@ -66,6 +68,10 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
   // A complete catalogue (up to 1,000 listings) is paged locally, so only a larger
   // market needs a new listing read per page; offers are always paged onchain.
   const [pagedCatalogue, setPagedCatalogue] = useState(false);
+  // Offers are not limited to listed NFTs: the contract escrows an offer on any
+  // existing token of an allowed collection, so the desk also accepts a token ID.
+  const [offerCollection, setOfferCollection] = useState<string>(PIXEL_COLLECTIONS[PIXEL_COLLECTIONS.length - 1].address);
+  const [offerTokenId, setOfferTokenId] = useState("");
   const listingPage = pagedCatalogue ? page : 0;
   const market = useQuery({
     queryKey: ["pixel-nusd-market", NUSD_MARKETPLACE_ADDRESS, address, listingPage],
@@ -111,6 +117,11 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
   const paused = state?.paused ?? true;
   const selectedToken = owned.data?.find((token) => `${token.collection.toLowerCase()}:${token.tokenId}` === tokenKey);
   const selectedListing = state?.listings.find((listing) => listing.id.toString() === offerListing);
+  const manualCollection = PIXEL_COLLECTIONS.find((entry) => entry.address === offerCollection)?.address;
+  const manualTarget = !selectedListing && manualCollection && nusdNftSelection(manualCollection, offerTokenId.trim())
+    ? { collection: manualCollection as Address, tokenId: BigInt(offerTokenId.trim()) }
+    : undefined;
+  const offerAsset = selectedListing ?? manualTarget;
   const listedPrice = parseNusdPrice(listPrice);
   const offeredPrice = parseNusdPrice(offerPrice);
   const filteredListings = filterNusdListings(state?.listings ?? [], artwork.data?.tokens ?? {}, { search, collection, ownOnly, address, sort });
@@ -127,8 +138,8 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
   const collections = Array.from(new Set([collection, ...(state?.listings.map((listing) => listing.collection.toLowerCase()) ?? [])])).filter(Boolean);
   const filtered = Boolean(search.trim() || collection || ownOnly);
   const offerFunding = state && offeredPrice ? nusdFunding(offeredPrice, state.credit) : undefined;
-  const tradeAsset = workflow === "sell" ? selectedToken : selectedListing
-    ? { collection: selectedListing.collection, tokenId: selectedListing.tokenId.toString(), name: nftName(selectedListing.collection, selectedListing.tokenId) }
+  const tradeAsset = workflow === "sell" ? selectedToken : offerAsset
+    ? { collection: offerAsset.collection, tokenId: offerAsset.tokenId.toString(), name: nftName(offerAsset.collection, offerAsset.tokenId) }
     : undefined;
   const tradeAmount = workflow === "sell" ? listedPrice : offeredPrice;
   const tradeStep = !tradeAsset ? 0 : !tradeAmount ? 1 : 2;
@@ -331,7 +342,7 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
                     ? <ArtworkPreview key={nusdArtworkKey(tradeAsset.collection, tradeAsset.tokenId)} collection={tradeAsset.collection} tokenId={tradeAsset.tokenId} name={tradeAsset.name || `#${tradeAsset.tokenId}`} />
                     : <div className={styles.previewPlaceholder}><ImageSquare size={54} weight="thin" aria-hidden="true" /><span>{workflow === "sell" && owned.isFetching ? "Loading your NFTs…" : "Your art goes here"}</span></div>}
                 </div>
-                <div className={styles.previewCaption}><span className={styles.eyebrow}>{workflow === "sell" ? "From your wallet" : "From the marketplace"}</span><strong title={tradeAsset?.name}>{tradeAsset?.name || (tradeAsset ? `0xPixel #${tradeAsset.tokenId}` : "Choose an artwork")}</strong><p>{tradeAsset ? shortenAddress(tradeAsset.collection) : workflow === "sell" ? "Select an NFT to see it here." : "Select a listed NFT to make an offer."}</p></div>
+                <div className={styles.previewCaption}><span className={styles.eyebrow}>{workflow === "sell" ? "From your wallet" : "From the marketplace"}</span><strong title={tradeAsset?.name}>{tradeAsset?.name || (tradeAsset ? `0xPixel #${tradeAsset.tokenId}` : "Choose an artwork")}</strong><p>{tradeAsset ? shortenAddress(tradeAsset.collection) : workflow === "sell" ? "Select an NFT to see it here." : "Select an NFT to make an offer."}</p></div>
                 <div className={styles.previewPrice}><span>{workflow === "sell" ? selectedToken?.listing ? "Current listing" : "Your asking price" : "Current listing"}</span><strong>{workflow === "sell" ? selectedToken?.listing ? amount(BigInt(selectedToken.listing.price)) : listedPrice ? amount(listedPrice) : "—" : selectedListing ? amount(selectedListing.price) : "—"}<small>NUSD</small></strong></div>
                 <p className={styles.previewFootnote}><ShieldCheck size={16} aria-hidden="true" />Your NFT stays in your wallet until sold.</p>
               </aside>
@@ -373,22 +384,36 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
             </form>
             <form id="offer-nusd" hidden={workflow !== "offer"} className={styles.form} onSubmit={(event) => {
               event.preventDefault();
-              if (!selectedListing || !offeredPrice) return;
+              if (!offerAsset || !offeredPrice) return;
               void act(async (current) => {
-                const selected = await readNusdListing(client!, NUSD_MARKETPLACE_ADDRESS!, selectedListing.id, current.blockNumber);
-                if (!selected.active || selected.seller.toLowerCase() === address?.toLowerCase()) throw new Error("Listing unavailable or owned by your wallet");
+                let target: { collection: Address; tokenId: bigint };
+                if (selectedListing) {
+                  const selected = await readNusdListing(client!, NUSD_MARKETPLACE_ADDRESS!, selectedListing.id, current.blockNumber);
+                  if (!selected.active || selected.seller.toLowerCase() === address?.toLowerCase()) throw new Error("Listing unavailable or owned by your wallet");
+                  target = selected;
+                } else {
+                  target = manualTarget!;
+                  const [allowed, owner] = await Promise.all([
+                    client!.readContract({ address: NUSD_MARKETPLACE_ADDRESS!, abi: NusdMarketplaceAbi, functionName: "collectionAllowed", args: [target.collection], blockNumber: current.blockNumber }),
+                    client!.readContract({ address: target.collection, abi: nftApprovalAbi, functionName: "ownerOf", args: [target.tokenId], blockNumber: current.blockNumber }).catch(() => undefined),
+                  ]);
+                  if (!allowed) throw new Error("Collection is not enabled for this NUSD market");
+                  if (!owner) throw new Error("This NFT does not exist yet. Check the collection and token ID.");
+                  if (owner.toLowerCase() === address?.toLowerCase()) throw new Error("This NFT is already in your wallet");
+                }
                 const funding = nusdFunding(offeredPrice, current.credit);
-                return { call: call("makeOffer", [selected.collection, selected.tokenId, offeredPrice, offerExpiry(current.timestamp, duration), funding.walletPayment]), payment: offeredPrice };
+                return { call: call("makeOffer", [target.collection, target.tokenId, offeredPrice, offerExpiry(current.timestamp, duration), funding.walletPayment]), payment: offeredPrice };
               });
             }}>
               <div className={styles.formHeading}><h3>Name your offer</h3><span>Escrowed in NUSD</span></div>
-              <label className={styles.artworkSelect}>NFT to offer on<select value={offerListing} onChange={(event) => setOfferListing(event.target.value)} disabled={!ready || paused}><option value="">Choose the artwork you want</option>{state.listings.filter((listing) => listing.seller.toLowerCase() !== address?.toLowerCase()).map((listing) => <option key={listing.id.toString()} value={listing.id.toString()}>{nftName(listing.collection, listing.tokenId)} · {shortenAddress(listing.collection)}</option>)}</select></label>
+              <label className={styles.artworkSelect}>NFT to offer on<select value={offerListing} onChange={(event) => { setOfferListing(event.target.value); if (event.target.value) setOfferTokenId(""); }} disabled={!ready || paused}><option value="">Choose the artwork you want</option>{state.listings.filter((listing) => listing.seller.toLowerCase() !== address?.toLowerCase()).map((listing) => <option key={listing.id.toString()} value={listing.id.toString()}>{nftName(listing.collection, listing.tokenId)} · {shortenAddress(listing.collection)}</option>)}</select></label>
+              <div className={styles.formRow}><label className={styles.artworkSelect}>Or any 0xPixel NFT<select value={offerCollection} onChange={(event) => setOfferCollection(event.target.value)} disabled={!ready || paused}>{PIXEL_COLLECTIONS.map((entry) => <option key={entry.address} value={entry.address}>0xPixel V{entry.version} · {shortenAddress(entry.address)}</option>)}</select></label><label className={styles.durationField}>Token ID<input inputMode="numeric" value={offerTokenId} onChange={(event) => { setOfferTokenId(event.target.value); if (event.target.value) setOfferListing(""); }} placeholder="#" maxLength={78} disabled={!ready || paused} /></label></div>
               <div className={styles.formRow}><label className={styles.priceField}>Offer price<div className={styles.amountInput}><input inputMode="decimal" value={offerPrice} onChange={(event) => setOfferPrice(event.target.value)} placeholder="0.00" disabled={busy} aria-describedby="nusd-offer-help" /><span aria-hidden="true"><Coins size={18} />NUSD</span></div></label><label className={styles.durationField}>Duration (hours)<input inputMode="numeric" value={duration} onChange={(event) => setDuration(event.target.value)} disabled={busy} aria-describedby="nusd-offer-help" /></label></div>
               <div className={styles.durationPresets} role="group" aria-label="Offer duration presets">{[{ hours: "24", label: "24 hours" }, { hours: "72", label: "3 days" }, { hours: "168", label: "7 days" }].map((preset) => <button type="button" key={preset.hours} aria-pressed={duration === preset.hours} disabled={busy} onClick={() => setDuration(preset.hours)}><Clock size={13} aria-hidden="true" />{preset.label}</button>)}</div>
               <p id="nusd-offer-help" className={styles.small}>Valid for 1–720 hours · Funds stay in escrow until settled or refunded.</p>
               {offerFunding && <dl className={styles.offerFunding}><div><dt>Use marketplace credits</dt><dd>{amount(offerFunding.creditUsed)} NUSD</dd></div><div><dt>Wallet approval needed</dt><dd>{amount(offerFunding.walletPayment)} NUSD</dd></div></dl>}
-              <button className={`${styles.primaryButton} ${styles.tradeSubmit}`} disabled={!ready || paused || !selectedListing || !offeredPrice}>Approve NUSD and make offer<ArrowRight size={19} aria-hidden="true" /></button>
-              <p className={styles.actionHint}>{!address ? "Connect your wallet above to begin." : !selectedListing ? "Choose an artwork to prepare your offer." : !offeredPrice ? "Enter an offer amount to review your funding." : "Only the wallet shortfall requires NUSD approval."}</p>
+              <button className={`${styles.primaryButton} ${styles.tradeSubmit}`} disabled={!ready || paused || !offerAsset || !offeredPrice}>Approve NUSD and make offer<ArrowRight size={19} aria-hidden="true" /></button>
+              <p className={styles.actionHint}>{!address ? "Connect your wallet above to begin." : !offerAsset ? "Choose an artwork to prepare your offer." : !offeredPrice ? "Enter an offer amount to review your funding." : "Only the wallet shortfall requires NUSD approval."}</p>
               <details className={styles.tradeDisclosure}><summary>How escrow & refunds work<Plus size={14} aria-hidden="true" /></summary><p className={styles.formFootnote}>Cancelled or refunded expired offers return NUSD to your marketplace credits, ready to reuse or withdraw. Escrowed funds do not earn interest.</p></details>
               {!address && <p className={styles.small}>Connect your wallet to make an offer.</p>}
             </form>

@@ -31,7 +31,7 @@ function content(root: unknown): string {
   return "";
 }
 
-function harness(options: { configured?: boolean; credit?: bigint; balance?: bigint; paused?: boolean; seller?: boolean; changeAt?: "refresh" | "approval" | "quote" | "listing"; changeKind?: "address" | "chain" | "connector"; readFailure?: boolean; error?: boolean; listingForm?: boolean; existingListing?: boolean; loading?: boolean; empty?: boolean; disconnected?: boolean; chainId?: number; metadataFailure?: boolean; rejected?: boolean } = {}) {
+function harness(options: { configured?: boolean; credit?: bigint; balance?: bigint; paused?: boolean; seller?: boolean; changeAt?: "refresh" | "approval" | "quote" | "listing"; changeKind?: "address" | "chain" | "connector"; readFailure?: boolean; error?: boolean; listingForm?: boolean; existingListing?: boolean; loading?: boolean; empty?: boolean; disconnected?: boolean; chainId?: number; metadataFailure?: boolean; rejected?: boolean; missingToken?: boolean } = {}) {
   const account = { isConnected: !options.disconnected, address: options.disconnected ? undefined : options.seller ? SELLER as viem.Address : BUYER as viem.Address, chainId: options.chainId ?? 4441, connector: { uid: "wallet-a" } };
   const timestamp = BigInt(Math.floor(Date.now() / 1000));
   const state = {
@@ -71,7 +71,7 @@ function harness(options: { configured?: boolean; credit?: bigint; balance?: big
       reads.push(call);
       if (call.functionName in header) return header[call.functionName]();
       if (call.functionName === "offers") { const offer = state.offers[0]; return [offer.collection, offer.tokenId, offer.offerer, offer.price, offer.expiresAt, offer.active]; }
-      if (call.functionName === "ownerOf") return state.offers[0].owner;
+      if (call.functionName === "ownerOf") { if (options.missingToken) throw new Error("ERC721NonexistentToken"); return state.offers[0]?.owner ?? SELLER; }
       if ((options.changeAt === "approval" && call.functionName === "getApproved") || (options.changeAt === "quote" && call.functionName === "quoteSale") || (options.changeAt === "listing" && call.functionName === "listings")) changeWallet();
       if (call.functionName === "listings") return [NFT, 3n, 100n * UNIT, SELLER, true];
       if (call.functionName === "quoteSale") return [UNIT * 4n / 10n, OTHER, 5n * UNIT, 946n * UNIT / 10n];
@@ -101,7 +101,7 @@ function harness(options: { configured?: boolean; credit?: bigint; balance?: big
     viem, "@fi/lib/hooks/useProtocolTransaction": { useProtocolTransaction: () => transaction },
     "@/lib/contract": { getAddressExplorerUrl: (address: string) => `/address/${address}`, getMarketplaceTxUrl: () => "", getTokenExplorerUrl: () => "", shortenAddress: (address: string) => address },
     "@/lib/nusdMarketplaceConfig": { NFT_NUSD_ADDRESS: NUSD, NUSD_MARKETPLACE_ADDRESS: options.configured === false ? undefined : MARKET },
-    "@/lib/nusdMarketplace": marketplace, "@/lib/nusdMarketplaceView": marketplaceView, "@/lib/pixelImage": { getPixelImageUrl }, "@/lib/http": {}, "@/lib/walletSession": { createWalletSessionGuard }, "./NusdMarketplaceDashboard.module.css": { default: {} }, "./NusdMarketplaceActivity": { NusdMarketplaceActivity: "activity" },
+    "@/lib/nusdMarketplace": marketplace, "@/lib/nusdMarketplaceView": marketplaceView, "@/lib/pixelImage": { getPixelImageUrl }, "@/lib/pixelCollections": { PIXEL_COLLECTIONS: [{ address: OTHER, version: 1 }, { address: NFT, version: 2 }] }, "@/lib/http": {}, "@/lib/walletSession": { createWalletSessionGuard }, "./NusdMarketplaceDashboard.module.css": { default: {} }, "./NusdMarketplaceActivity": { NusdMarketplaceActivity: "activity" },
   }, { Error });
   function render() { stateIndex = 0; refIndex = 0; return NusdMarketplaceDashboard({ initialTokenKey: options.listingForm ? `${NFT.toLowerCase()}:3` : "" }); }
   function button(label: string) {
@@ -521,4 +521,48 @@ test("offers are paged by their own query while the catalogue stays keyed to the
   const later = market.queryOptions.slice(-6).map((query) => (query as unknown as { queryKey: readonly unknown[] }).queryKey);
   assert.deepEqual(Array.from(later.find((key) => key[0] === "pixel-nusd-market")!.slice(2)), [BUYER, 0]);
   assert.deepEqual(Array.from(later.find((key) => key[0] === "pixel-nusd-offers")!.slice(2)), [1]);
+});
+
+test("offers can target any existing NFT of an allowed collection, not only listed ones", async () => {
+  const market = harness({ empty: true });
+  market.render();
+  market.states[12] = "offer";
+  market.states[14] = NFT;
+  market.states[15] = "7";
+  market.states[6] = "5";
+  const preview = find(market.render(), (element) => element.props["aria-label"] === "Selected artwork preview");
+  assert.match(content(preview), /#7/);
+  assert.equal(market.button("Approve NUSD and make offer").props.disabled, false);
+  const form = find(market.render(), (element) => element.props.id === "offer-nusd")!;
+  (form.props.onSubmit as (event: { preventDefault: () => void }) => void)({ preventDefault() {} });
+  await market.settle();
+  assert.equal(market.calls.length, 1);
+  assert.deepEqual(Array.from(market.calls[0].call?.args ?? []).slice(0, 3), [NFT, 7n, 5n * UNIT]);
+  assert.equal(market.calls[0].approval?.amount, 0n);
+  const checks = market.reads.filter((read) => read.functionName === "collectionAllowed" || read.functionName === "ownerOf");
+  assert.equal(checks.length, 2);
+});
+
+test("direct offers refuse unknown collections, missing tokens and the caller's own NFT", async () => {
+  const typed = (options: Parameters<typeof harness>[0], collection: string, tokenId: string) => {
+    const market = harness({ empty: true, ...options });
+    market.render();
+    market.states[12] = "offer";
+    market.states[14] = collection;
+    market.states[15] = tokenId;
+    market.states[6] = "5";
+    return market;
+  };
+  const unknown = typed({}, SELLER, "7");
+  assert.equal(unknown.button("Approve NUSD and make offer").props.disabled, true);
+  const invalid = typed({}, NFT, "7.5");
+  assert.equal(invalid.button("Approve NUSD and make offer").props.disabled, true);
+  for (const [options, pattern] of [[{ missingToken: true }, /does not exist/], [{ seller: true }, /already in your wallet/]] as const) {
+    const market = typed(options, NFT, "7");
+    const form = find(market.render(), (element) => element.props.id === "offer-nusd")!;
+    (form.props.onSubmit as (event: { preventDefault: () => void }) => void)({ preventDefault() {} });
+    await market.settle();
+    assert.equal(market.calls.length, 0);
+    assert.match(String(market.states[1]), pattern);
+  }
 });
