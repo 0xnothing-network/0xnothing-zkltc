@@ -5,6 +5,7 @@ import { QueryClient, QueryObserver, type QueryObserverOptions } from "@tanstack
 import * as viem from "viem";
 import { evaluateModule } from "../helpers/evaluateModule.ts";
 import { waitForProtocolReceipt } from "../../lib/transactionReceipt.ts";
+import * as priceImpact from "../../lib/ui/priceImpact.ts";
 
 const ACCOUNT = `0x${"1".repeat(40)}` as const;
 const OTHER = `0x${"2".repeat(40)}` as const;
@@ -228,6 +229,7 @@ function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect",
       // harness answers positionally (mode, amount, slippage, pending, nowSec),
       // so the hook would read `undefined` and report itself forever pending,
       // gating the quote off and stalling the trade these tests exist to follow.
+      "@/lib/ui/priceImpact": priceImpact,
       "@/lib/useDebouncedValue": { useDebouncedValue: (value: unknown) => ({ value, pending: options.quoteSettling ?? false }) },
     },
   );
@@ -381,7 +383,7 @@ test("Pump shows a READY exit countdown while sells are frozen", () => {
     readyExitDelay: 90n,
     graduationPossible: true,
   });
-  const hint = descendants(harness.render()).find((node) => node.type === "p" && String(node.props.className).includes("pump-form-hint"));
+  const hint = descendants(harness.render()).find((node) => node.type === "p" && String(node.props.className).includes("pump-trade-hint"));
   assert.match(JSON.stringify(hint?.props.children), /1m|2m/);
 });
 
@@ -473,6 +475,7 @@ function componentHarness(name: PumpComponent, changeAt?: "simulation" | "upload
       "@/features/pump/components/PumpStates": {},
       "@/features/pump/components/LazyPumpChart": {}, "@/features/pump/components/PumpTokenLogo": {},
       "@/features/pump/components/TradePanel": {}, "@/features/pump/components/TradeHistory": {}, "@/features/pump/components/TokenHolders": {},
+      "@/components/ui/Badge": {}, "@/components/ui/PixelProgress": {}, "@/components/ui/Tabs": {},
       "@/lib/explorer": { getAddressExplorerUrl: String },
       "@/components/ExternalLink": { ExternalLink: (props: { href: string; children: unknown }) => ({ type: "a", props }) },
       "@/lib/contract": { publicClient, getTransactionExplorerUrl: String },
@@ -564,4 +567,16 @@ test("TokenDetail keeps valid metadata text and links", async () => {
   assert.equal(metadata.external_url, source.external_url);
   assert.equal(metadata.properties?.website, source.properties.website);
   assert.equal(metadata.properties?.twitter, source.properties.twitter);
+});
+
+test("Pump approves exactly the trade amount instead of an unlimited allowance", async () => {
+  for (const mode of ["buy", "sell"] as const) {
+    const harness = tradeHarness(undefined, mode);
+    await harness.run();
+    const [approve, trade] = harness.writes as unknown as Array<{ functionName: string; args: readonly unknown[] }>;
+    assert.equal(approve.functionName, "approve");
+    assert.equal(approve.args[1], 10n ** 18n, `${mode} approval equals the entered amount`);
+    assert.notEqual(approve.args[1], viem.maxUint256);
+    assert.equal(trade.args[1], approve.args[1], `${mode} never pulls more than it approved`);
+  }
 });

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { formatUnits, maxUint256, parseUnits } from "viem";
+import { formatUnits, parseUnits } from "viem";
 import {
   useAccount,
   useConfig,
@@ -29,6 +29,7 @@ import { invalidateAfterPumpTrade } from "@/lib/liveData";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { LITVM_ADD_CHAIN_PARAMETER } from "@/config/network";
+import { curvePriceImpact, impactTone, type ImpactTone } from "@/lib/ui/priceImpact";
 
 type TradeMode = "buy" | "sell";
 
@@ -272,9 +273,12 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
       const assertWalletUnchanged = createPumpWalletGuard(walletConfig, address);
       assertWalletUnchanged();
       if (needsApproval) {
+        // Exact approval (spec §6.3): the curve pulls at most `amountWei`
+        // (buy max spend / sell amount), so nothing is left approved beyond it.
+        const approvalAmount = amountWei;
         const hash = mode === "buy"
-          ? await writeContractAsync({ account: address, chainId: PUMP_CHAIN_ID, address: PUMP_NUSD_ADDRESS, abi: nusdAbi, functionName: "approve", args: [PUMP_FACTORY_ADDRESS, maxUint256] })
-          : await writeContractAsync({ account: address, chainId: PUMP_CHAIN_ID, address: market.tokenAddress, abi: pumpTokenAbi, functionName: "approve", args: [PUMP_FACTORY_ADDRESS, maxUint256] });
+          ? await writeContractAsync({ account: address, chainId: PUMP_CHAIN_ID, address: PUMP_NUSD_ADDRESS, abi: nusdAbi, functionName: "approve", args: [PUMP_FACTORY_ADDRESS, approvalAmount] })
+          : await writeContractAsync({ account: address, chainId: PUMP_CHAIN_ID, address: market.tokenAddress, abi: pumpTokenAbi, functionName: "approve", args: [PUMP_FACTORY_ADDRESS, approvalAmount] });
         await waitForProtocolReceipt(publicClient, hash);
         toast.info("Approval confirmed", "Confirm the trade transaction in your wallet.");
       }
@@ -313,44 +317,78 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
     : pumpPaused.isLoading && mode === "buy" ? "Checking pause"
     : pumpPaused.data !== false && mode === "buy" ? "Buys paused"
     : pending ? "Confirming transaction"
-    : needsApproval ? `Approve once and ${mode === "buy" ? "buy" : "sell"}`
+    : needsApproval ? `Approve ${mode === "buy" ? "NUSD" : market.symbol} & ${mode === "buy" ? "buy" : "sell"}`
     : mode === "buy" ? `Buy ${market.symbol}` : `Sell ${market.symbol}`;
 
+  const impact = curvePriceImpact(mode, Number(market.priceNusd), mode === "buy" ? actualInput : amountWei, quoteOutput);
+  const impactLevel = impact === null ? null : impactTone(impact);
+  const presets = mode === "buy"
+    ? BUY_PRESETS.map((value) => ({ label: `$${value}`, value: String(value) }))
+    : SELL_PRESETS.map((pct) => ({ label: `${pct}%`, value: formatUnits((sourceBalance * BigInt(pct)) / 100n, 18) }));
+
   return (
-    <aside className="pump-panel pump-trade-panel">
-      <div className="pump-segmented pump-trade-tabs" role="group" aria-label="Trade side">
-        <button type="button" disabled={pending || !buyAllowed} className={mode === "buy" ? "active buy" : ""} aria-pressed={mode === "buy"} onClick={() => { setMode("buy"); setAmount(""); }}>Buy</button>
-        <button type="button" disabled={pending || !sellAllowed} className={mode === "sell" ? "active sell" : ""} aria-pressed={mode === "sell"} onClick={() => { setMode("sell"); setAmount(""); }}>Sell</button>
+    <section className="pump-trade-card ui rounded-ui-lg border border-line bg-surface-1 p-4 font-ui text-fg shadow-e1 sm:p-5" aria-label="Trade">
+      <div className="grid grid-cols-2 gap-1 rounded-ui-md border border-line bg-surface-2 p-1" role="group" aria-label="Trade side">
+        <button type="button" disabled={pending || !buyAllowed} className={`h-9 rounded-ui-sm text-sm font-medium focus-ring disabled:cursor-not-allowed disabled:text-fg-disabled ${mode === "buy" ? "bg-positive text-[#04130B]" : "text-fg-2 hover:text-fg"}`} aria-pressed={mode === "buy"} onClick={() => { setMode("buy"); setAmount(""); }}>Buy</button>
+        <button type="button" disabled={pending || !sellAllowed} className={`h-9 rounded-ui-sm text-sm font-medium focus-ring disabled:cursor-not-allowed disabled:text-fg-disabled ${mode === "sell" ? "bg-negative text-[#1F0308]" : "text-fg-2 hover:text-fg"}`} aria-pressed={mode === "sell"} onClick={() => { setMode("sell"); setAmount(""); }}>Sell</button>
       </div>
 
-      <label className="pump-amount-field">
-        <span><span>{mode === "buy" ? "Maximum spend" : "You pay"}</span><button type="button" disabled={pending} onClick={() => setAmount(formatUnits(sourceBalance, 18))}>Max {displayAmount(sourceBalance)}</button></span>
-        <span><input inputMode="decimal" disabled={pending} value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.0" /><strong>{mode === "buy" ? "NUSD" : market.symbol}</strong></span>
-      </label>
-
-      <div className="pump-quote-arrow" aria-hidden="true">&darr;</div>
-
-      <div className="pump-amount-field pump-amount-output">
-        <span><span>You receive</span><small>{quotePending ? "Quoting" : "Estimated"}</small></span>
-        <span><strong>{displayAmount(quoteOutput)}</strong><b>{mode === "buy" ? market.symbol : "NUSD"}</b></span>
+      <div className="mt-3 rounded-ui-lg border border-line bg-surface-2 p-3.5 focus-within:border-accent">
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <label htmlFor="pump-trade-amount" className="font-medium text-fg-3">{mode === "buy" ? "You pay (max)" : "You sell"}</label>
+          <span className="flex items-center gap-2 text-fg-3">
+            <span className="font-num tnum">Balance {displayAmount(sourceBalance)}</span>
+            <button type="button" disabled={pending} className="h-6 rounded-ui-xs bg-accent-soft px-1.5 text-[11px] font-semibold text-accent-text focus-ring disabled:opacity-50" onClick={() => setAmount(formatUnits(sourceBalance, 18))}>MAX</button>
+          </span>
+        </div>
+        <div className="mt-1.5 flex items-center gap-3">
+          <input id="pump-trade-amount" inputMode="decimal" autoComplete="off" disabled={pending} value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.0" className="min-w-0 flex-1 bg-transparent font-num tnum text-[28px] leading-none text-fg outline-none placeholder:text-fg-disabled" />
+          <span className="shrink-0 rounded-full border border-line bg-surface-3 px-3 py-1.5 text-sm font-medium">{mode === "buy" ? "NUSD" : market.symbol}</span>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {presets.map((preset) => (
+            <button key={preset.label} type="button" disabled={pending} className="h-7 flex-1 rounded-ui-sm border border-line bg-surface-1 px-2 font-num text-xs text-fg-2 hover:border-line-strong hover:text-fg focus-ring disabled:opacity-50" onClick={() => setAmount(preset.value)}>{preset.label}</button>
+          ))}
+        </div>
       </div>
 
-      <div className="pump-trade-details">
-        {mode === "buy" ? <div><span>Actual spend</span><strong>${displayAmount(actualInput)}</strong></div> : null}
-        <div><span>Protocol fee</span><strong>${displayAmount(quoteFee)} (0.1%)</strong></div>
-        <div><span>Slippage</span><span className="pump-inline-options">{[50n, 100n, 200n].map((value) => <button key={value.toString()} type="button" disabled={pending} className={slippageBps === value ? "active" : ""} aria-pressed={slippageBps === value} onClick={() => setSlippageBps(value)}>{Number(value) / 100}%</button>)}</span></div>
-        {mode === "buy" && buyQuote.data?.[4] ? <p>This buy reaches the $6,000 READY target.</p> : null}
+      <div className="mt-2 rounded-ui-lg border border-line bg-surface-2 p-3.5" aria-live="polite">
+        <div className="flex items-center justify-between text-xs text-fg-3"><span className="font-medium">You receive (est.)</span><span>{quotePending ? "Quoting…" : "Estimated"}</span></div>
+        <div className="mt-1.5 flex items-center gap-3">
+          <strong className={`min-w-0 flex-1 truncate font-num tnum text-[28px] font-normal leading-none ${quotePending ? "text-fg-3" : "text-fg"}`}>{displayAmount(quoteOutput)}</strong>
+          <span className="shrink-0 rounded-full border border-line bg-surface-3 px-3 py-1.5 text-sm font-medium">{mode === "buy" ? market.symbol : "NUSD"}</span>
+        </div>
       </div>
 
-      {quoteError ? <p className="pump-inline-error">Quote unavailable. <button type="button" onClick={() => void activeQuote.refetch()}>Retry</button></p> : null}
+      <dl className="mt-3 grid gap-0.5 text-[13px]">
+        <div className="flex justify-between py-1"><dt className="text-fg-3">Price impact</dt><dd className={`font-num tnum ${IMPACT_CLASS[impactLevel ?? "none"]}`}>{impact === null ? "—" : `${impact.toFixed(2)}%`}</dd></div>
+        {mode === "buy" ? <div className="flex justify-between py-1"><dt className="text-fg-3">Actual spend</dt><dd className="font-num tnum">${displayAmount(actualInput)}</dd></div> : null}
+        <div className="flex justify-between py-1"><dt className="text-fg-3">Protocol fee (0.1%)</dt><dd className="font-num tnum">${displayAmount(quoteFee)}</dd></div>
+        <div className="flex items-center justify-between py-1"><dt className="text-fg-3">Slippage</dt><dd className="flex gap-1">{[50n, 100n, 200n].map((value) => <button key={value.toString()} type="button" disabled={pending} className={`h-7 rounded-ui-sm px-2 font-num text-xs focus-ring ${slippageBps === value ? "bg-fg text-bg" : "bg-surface-2 text-fg-2 hover:text-fg"}`} aria-pressed={slippageBps === value} onClick={() => setSlippageBps(value)}>{Number(value) / 100}%</button>)}</dd></div>
+      </dl>
+      {mode === "buy" && buyQuote.data?.[4] ? <p className="mt-2 rounded-ui-md bg-warning-bg px-3 py-2 text-xs text-warning">This buy reaches the $6,000 READY target. Any amount past it is refunded.</p> : null}
+      {impactLevel === "severe" ? <p role="alert" className="mt-2 rounded-ui-md bg-negative-bg px-3 py-2 text-xs text-negative">High price impact: you'd receive about {impact?.toFixed(1)}% less than the spot price. Try a smaller amount.</p> : null}
+      {needsApproval && amountWei > 0n ? <p className="mt-2 rounded-ui-md bg-surface-2 px-3 py-2 text-xs text-fg-2">First, approve exactly this amount of {mode === "buy" ? "NUSD" : market.symbol}. You'll sign <strong className="text-fg">2 transactions</strong>.</p> : null}
 
-      {market.status === "READY" && !exitOpen ? <p className="pump-form-hint">Trading is frozen at the $6,000 target so this market can graduate. Sells reopen after the exit delay{exitOpensAt !== undefined ? ` (${formatRemaining(exitOpensAt, nowSec)})` : ""} if graduation never happens.</p> : null}
-      {market.status === "READY" && exitOpen && graduationPossible.data !== false ? <p className="pump-form-hint">Graduation did not happen in time. Selling reopens the bonding curve.</p> : null}
-      {market.status === "READY" && exitOpen && graduationPossible.data === false ? <p className="pump-form-hint">Graduation is not available yet, so selling remains open and reopens the bonding curve.</p> : null}
-      {market.status === "TRADING" && pumpPaused.data === true ? <p className="pump-form-hint">The launchpad is paused. Buys and new tokens are blocked; selling remains available.</p> : null}
-      {pumpSellsPaused.data === true ? <p className="pump-form-hint">Emergency sell pause is active. Sells reopen automatically within 24 hours.</p> : null}
-      <button type="button" className="pump-button pump-button-primary pump-button-large pump-button-full" disabled={pending || !configured || quotePending || Boolean(quoteError) || !tradeAllowed} onClick={() => void submit()}>{buttonLabel}</button>
-      {!configured ? <p className="pump-form-hint">Trading activates after deployment addresses are configured.</p> : null}
-    </aside>
+      {quoteError ? <p className="mt-2 text-xs text-negative">Quote unavailable. <button type="button" className="underline focus-ring" onClick={() => void activeQuote.refetch()}>Retry</button></p> : null}
+
+      {market.status === "READY" && !exitOpen ? <p className="pump-trade-hint mt-2 text-xs text-fg-3">Trading is frozen at the $6,000 target so this market can graduate. Sells reopen after the exit delay{exitOpensAt !== undefined ? ` (${formatRemaining(exitOpensAt, nowSec)})` : ""} if graduation never happens.</p> : null}
+      {market.status === "READY" && exitOpen && graduationPossible.data !== false ? <p className="pump-trade-hint mt-2 text-xs text-fg-3">Graduation did not happen in time. Selling reopens the bonding curve.</p> : null}
+      {market.status === "READY" && exitOpen && graduationPossible.data === false ? <p className="pump-trade-hint mt-2 text-xs text-fg-3">Graduation is not available yet, so selling remains open and reopens the bonding curve.</p> : null}
+      {market.status === "TRADING" && pumpPaused.data === true ? <p className="pump-trade-hint mt-2 text-xs text-fg-3">The launchpad is paused. Buys and new tokens are blocked; selling remains available.</p> : null}
+      {pumpSellsPaused.data === true ? <p className="pump-trade-hint mt-2 text-xs text-fg-3">Emergency sell pause is active. Sells reopen automatically within 24 hours.</p> : null}
+      <button type="button" className={`pump-button-large mt-4 flex h-[52px] min-h-[52px] w-full items-center justify-center rounded-ui-md text-base font-medium focus-ring disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-fg-disabled ${mode === "buy" ? "bg-positive text-[#04130B] hover:brightness-110" : "bg-negative text-[#1F0308] hover:brightness-110"}`} disabled={pending || !configured || quotePending || Boolean(quoteError) || !tradeAllowed} aria-busy={pending || undefined} onClick={() => void submit()}>{buttonLabel}</button>
+      {!configured ? <p className="pump-trade-hint mt-2 text-xs text-fg-3">Trading activates after deployment addresses are configured.</p> : null}
+    </section>
   );
 }
+
+const BUY_PRESETS = [10, 50, 100, 500] as const;
+const SELL_PRESETS = [25, 50, 75, 100] as const;
+const IMPACT_CLASS: Record<ImpactTone | "none", string> = {
+  none: "text-fg-3",
+  low: "text-positive",
+  medium: "text-warning",
+  high: "text-hf-risk",
+  severe: "text-negative",
+};

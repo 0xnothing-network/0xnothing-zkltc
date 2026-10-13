@@ -23,7 +23,9 @@ test("Fi Swap covers /0xFi and /0xFi/swap; Pools covers detail pages; Earn cover
   assert.equal(isNavItemActive("/0xFi/pools", item("fi", "Swap")), false);
   assert.equal(isNavItemActive("/0xFi/pools/0xa-0xb", item("fi", "Pools")), true);
   assert.equal(isNavItemActive("/0xFi/farm", item("fi", "Earn")), true);
-  assert.equal(isNavItemActive("/0xFi/lending", item("fi", "Lend")), false);
+  assert.equal(isNavItemActive("/0xFi/lending", item("fi", "Lend & Borrow")), false);
+  assert.equal(isNavItemActive("/0xFi/lend", item("fi", "Lend & Borrow")), true);
+  assert.equal(isNavItemActive("/0xFi/borrow", item("fi", "Lend & Borrow")), true);
 });
 
 test("Pixel Draw is exact; gallery and marketplace match their subtrees", () => {

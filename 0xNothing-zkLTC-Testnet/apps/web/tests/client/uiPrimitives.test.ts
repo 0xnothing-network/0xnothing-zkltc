@@ -73,3 +73,30 @@ test("price impact ladder uses 1 / 3 / 5 percent breakpoints", () => {
   assert.equal(impactNeedsConfirmation(4.99), false);
   assert.equal(impactNeedsConfirmation(5), true);
 });
+
+test("curvePriceImpact compares execution price with spot for both sides", async () => {
+  const { curvePriceImpact } = await import("../../lib/ui/priceImpact.ts");
+  const wad = 10n ** 18n;
+  // spot 1 NUSD/token; buy 102 NUSD for 100 tokens → 2% worse
+  assert.equal(Number(curvePriceImpact("buy", 1, 102n * wad, 100n * wad)?.toFixed(6)), 2);
+  // sell 100 tokens for 97 NUSD → 3% worse
+  assert.equal(Number(curvePriceImpact("sell", 1, 100n * wad, 97n * wad)?.toFixed(6)), 3);
+  // better-than-spot rounds to 0, never negative
+  assert.equal(curvePriceImpact("buy", 1, 99n * wad, 100n * wad), 0);
+  assert.equal(curvePriceImpact("buy", 0, wad, wad), null);
+  assert.equal(curvePriceImpact("sell", 1, 0n, wad), null);
+});
+
+test("capacity-based HF and safe borrow use the pool's aggregated risk values", async () => {
+  const { healthFactorFromCapacity, safeBorrowFromCapacity } = await import("../../lib/risk.ts");
+  const wad = 10n ** 18n;
+  assert.equal(healthFactorFromCapacity(900n * wad, 0n), null);
+  assert.equal(healthFactorFromCapacity(900n * wad, undefined), null);
+  assert.equal(healthFactorFromCapacity(900n * wad, 450n * wad), 2);
+  assert.equal(healthFactorFromCapacity(900n * wad, 1_000n * wad), 0.9);
+  // liquidation capacity 900 → HF 1.5 at debt 600; already 100 owed → 500 headroom, capped by maxBorrow
+  assert.equal(safeBorrowFromCapacity(900n * wad, 100n * wad, 10_000n * wad), 500n * wad);
+  assert.equal(safeBorrowFromCapacity(900n * wad, 100n * wad, 200n * wad), 200n * wad);
+  assert.equal(safeBorrowFromCapacity(900n * wad, 700n * wad, 10_000n * wad), 0n);
+  assert.equal(safeBorrowFromCapacity(undefined, 0n, 1n), undefined);
+});
