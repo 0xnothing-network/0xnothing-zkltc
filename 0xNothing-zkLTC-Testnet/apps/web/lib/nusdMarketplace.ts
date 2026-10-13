@@ -150,3 +150,25 @@ async function mapNusdReads<Item, Result>(items: readonly Item[], read: (item: I
   }));
   return values;
 }
+
+/**
+ * Decide which NFT-side transactions must precede `list` / `acceptOffer`.
+ * - `list` (and `buy`) accept only a per-token `approve` (contract `_isListable`, operator ignored),
+ *   so `setApprovalForAll` must not skip the approval there. `acceptOffer` also accepts the operator.
+ * - Approving a token revives an older listing by the same seller at its old price (review L-3), so
+ *   when an approval is about to be granted the stale listing is cancelled first.
+ */
+export function planNftApproval(input: {
+  market: Address;
+  owner: Address;
+  approved: Address;
+  approvedForAll: boolean;
+  allowOperator: boolean;
+  existingListing?: { id: bigint; seller: Address; active: boolean };
+}): { approve: boolean; cancelListingId?: bigint } {
+  const tokenApproved = input.approved.toLowerCase() === input.market.toLowerCase();
+  const approve = !tokenApproved && !(input.allowOperator && input.approvedForAll);
+  const stale = input.existingListing;
+  const cancelListingId = approve && stale && stale.id !== 0n && stale.active && stale.seller.toLowerCase() === input.owner.toLowerCase() ? stale.id : undefined;
+  return cancelListingId === undefined ? { approve } : { approve, cancelListingId };
+}

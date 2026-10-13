@@ -31,7 +31,7 @@ function content(root: unknown): string {
   return "";
 }
 
-function harness(options: { configured?: boolean; credit?: bigint; balance?: bigint; paused?: boolean; seller?: boolean; changeAt?: "refresh" | "approval" | "quote" | "listing"; changeKind?: "address" | "chain" | "connector"; stale?: boolean; error?: boolean; listingForm?: boolean; existingListing?: boolean; loading?: boolean; empty?: boolean; disconnected?: boolean; chainId?: number; metadataFailure?: boolean; rejected?: boolean } = {}) {
+function harness(options: { configured?: boolean; credit?: bigint; balance?: bigint; paused?: boolean; seller?: boolean; changeAt?: "refresh" | "approval" | "quote" | "listing"; changeKind?: "address" | "chain" | "connector"; stale?: boolean; error?: boolean; listingForm?: boolean; existingListing?: boolean; loading?: boolean; empty?: boolean; disconnected?: boolean; chainId?: number; metadataFailure?: boolean; rejected?: boolean; approvedForAll?: boolean; staleListingId?: bigint } = {}) {
   const account = { isConnected: !options.disconnected, address: options.disconnected ? undefined : options.seller ? SELLER as viem.Address : BUYER as viem.Address, chainId: options.chainId ?? 4441, connector: { uid: "wallet-a" } };
   const timestamp = BigInt(Math.floor(Date.now() / 1000));
   const state = {
@@ -61,7 +61,8 @@ function harness(options: { configured?: boolean; credit?: bigint; balance?: big
       if (call.functionName === "listings") return [NFT, 3n, 100n * UNIT, SELLER, true];
       if (call.functionName === "quoteSale") return [UNIT * 4n / 10n, OTHER, 5n * UNIT, 946n * UNIT / 10n];
       if (call.functionName === "getApproved") return viem.zeroAddress;
-      if (call.functionName === "isApprovedForAll") return false;
+      if (call.functionName === "isApprovedForAll") return options.approvedForAll ?? false;
+      if (call.functionName === "tokenToListingId") return options.staleListingId ?? 0n;
       if (call.functionName === "collectionAllowed") return true;
       throw new Error(`Unexpected read: ${call.functionName}`);
     },
@@ -397,6 +398,20 @@ test("Gallery deep link preselects the NFT and listing uses NUSD without sending
   assert.deepEqual(Array.from(listing.args ?? []), [NFT, 3n, 100n * UNIT]);
   assert.equal(listing.value, undefined);
   assert.equal(market.calls[0].approval, undefined);
+});
+
+test("listing still approves the token when setApprovalForAll is set, and cancels a stale own listing first", async () => {
+  const market = harness({ listingForm: true, seller: true, approvedForAll: true, staleListingId: 5n });
+  market.render();
+  market.states[4] = "100";
+  const form = find(market.render(), (element) => element.type === "form" && element.props.id === "sell-nusd");
+  assert.ok(form);
+  (form.props.onSubmit as (event: { preventDefault: () => void }) => void)({ preventDefault() {} });
+  await market.settle();
+  assert.equal(market.calls.length, 1);
+  const names = Array.from(market.calls[0].stages ?? []).map((stage) => (stage.call as { functionName: string }).functionName);
+  assert.deepEqual([...names], ["cancelListing", "approve", "list"]);
+  assert.deepEqual(Array.from((market.calls[0].stages?.[0].call as { args: readonly unknown[] }).args), [5n]);
 });
 
 test("listing preparation cannot continue after changing the connected wallet", async () => {

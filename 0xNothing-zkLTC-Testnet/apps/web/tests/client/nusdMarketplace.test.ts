@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { formatUnits, getAddress, zeroAddress, type Address } from "viem";
-import { NUSD_MARKET_IMPLEMENTATION, NUSD_MARKET_PAGE_SIZE, NUSD_MAX_PRICE, NusdMarketplaceAbi, nusdMarketplaceAddress, nusdFunding, offerExpiry, parseNusdPrice, readNusdMarket, requireFreshNusdMarket } from "../../lib/nusdMarketplace.ts";
+import { NUSD_MARKET_IMPLEMENTATION, NUSD_MARKET_PAGE_SIZE, NUSD_MAX_PRICE, NusdMarketplaceAbi, nusdMarketplaceAddress, nusdFunding, offerExpiry, parseNusdPrice, planNftApproval, readNusdMarket, requireFreshNusdMarket } from "../../lib/nusdMarketplace.ts";
 
 const MARKET = getAddress("0x0000000000000000000000000000000000000011");
 const NUSD = getAddress("0x0000000000000000000000000000000000000022");
@@ -142,4 +142,19 @@ test("NUSD trade ABI cannot send native zkLTC and signs price, shortfall and sel
   for (const [name, inputs] of [["buy", ["listingId", "expectedPrice", "maxWalletPayment"]], ["makeOffer", ["collection", "tokenId", "price", "expiresAt", "maxWalletPayment"]], ["acceptOffer", ["offerId", "minimumSellerProceeds"]]] as const) {
     assert.deepEqual(functions.find((entry) => entry.name === name)?.inputs.map((input) => input.name), inputs);
   }
+});
+
+test("listing never relies on setApprovalForAll; acceptOffer may", () => {
+  const base = { market: MARKET, owner: ACCOUNT, approved: zeroAddress as Address, approvedForAll: true };
+  assert.deepEqual(planNftApproval({ ...base, allowOperator: false }), { approve: true });
+  assert.deepEqual(planNftApproval({ ...base, allowOperator: true }), { approve: false });
+  assert.deepEqual(planNftApproval({ ...base, approved: MARKET.toLowerCase() as Address, allowOperator: false }), { approve: false });
+});
+
+test("a stale own listing is cancelled before the token is re-approved", () => {
+  const base = { market: MARKET, owner: ACCOUNT, approved: zeroAddress as Address, approvedForAll: false, allowOperator: false };
+  assert.deepEqual(planNftApproval({ ...base, existingListing: { id: 7n, seller: ACCOUNT, active: true } }), { approve: true, cancelListingId: 7n });
+  assert.deepEqual(planNftApproval({ ...base, existingListing: { id: 7n, seller: SELLER, active: true } }), { approve: true });
+  assert.deepEqual(planNftApproval({ ...base, existingListing: { id: 7n, seller: ACCOUNT, active: false } }), { approve: true });
+  assert.deepEqual(planNftApproval({ ...base, approved: MARKET, existingListing: { id: 7n, seller: ACCOUNT, active: true } }), { approve: false });
 });

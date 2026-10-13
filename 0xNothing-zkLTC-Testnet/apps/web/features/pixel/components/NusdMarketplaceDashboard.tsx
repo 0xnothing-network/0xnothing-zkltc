@@ -10,7 +10,7 @@ import { useAccount, useConfig, useConnect, usePublicClient, useSwitchChain } fr
 import { useProtocolTransaction, type ProtocolCall, type ProtocolStage } from "@fi/lib/hooks/useProtocolTransaction";
 import { getAddressExplorerUrl, getMarketplaceTxUrl, getTokenExplorerUrl, shortenAddress } from "@/lib/contract";
 import { NFT_NUSD_ADDRESS, NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
-import { NUSD_CATALOGUE_LIMIT, NUSD_MARKET_PAGE_SIZE, NusdMarketplaceAbi, nusdFunding, offerExpiry, parseNusdPrice, readNusdMarket, requireFreshNusdMarket } from "@/lib/nusdMarketplace";
+import { NUSD_CATALOGUE_LIMIT, NUSD_MARKET_PAGE_SIZE, NusdMarketplaceAbi, nusdFunding, offerExpiry, parseNusdPrice, planNftApproval, readNusdMarket, requireFreshNusdMarket } from "@/lib/nusdMarketplace";
 import { fetchJson } from "@/lib/http";
 import { createWalletSessionGuard } from "@/lib/walletSession";
 import { getPixelImageUrl } from "@/lib/pixelImage";
@@ -25,7 +25,7 @@ const nftApprovalAbi = parseAbi([
 ]);
 type OwnedToken = { collection: Address; tokenId: string; name: string; listing: { listingId: string; price: string } | null };
 type MarketState = Awaited<ReturnType<typeof readNusdMarket>>;
-type Action = { call: ProtocolCall; payment?: bigint; nftApproval?: { collection: Address; tokenId: bigint }; settlement?: boolean };
+type Action = { call: ProtocolCall; payment?: bigint; nftApproval?: { collection: Address; tokenId: bigint; allowOperator: boolean }; settlement?: boolean };
 
 function amount(value: bigint) { return formatUnits(value, 18); }
 
@@ -127,13 +127,24 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
       if (funding && refreshed.data.balance < funding.walletPayment) throw new Error("Not enough NUSD. Marketplace credits are used first; zkLTC is only for gas.");
       let stages: ProtocolStage[] | undefined;
       if (action.nftApproval) {
-        const { collection, tokenId } = action.nftApproval;
-        const [approved, approvedForAll] = await Promise.all([
+        const { collection, tokenId, allowOperator } = action.nftApproval;
+        const [approved, approvedForAll, existingId] = await Promise.all([
           client.readContract({ address: collection, abi: nftApprovalAbi, functionName: "getApproved", args: [tokenId] }),
           client.readContract({ address: collection, abi: nftApprovalAbi, functionName: "isApprovedForAll", args: [address, NUSD_MARKETPLACE_ADDRESS] }),
+          client.readContract({ address: NUSD_MARKETPLACE_ADDRESS, abi: NusdMarketplaceAbi, functionName: "tokenToListingId", args: [collection, tokenId] }),
         ]);
-        if (!approvedForAll && approved.toLowerCase() !== NUSD_MARKETPLACE_ADDRESS.toLowerCase()) {
-          stages = [{ call: { address: collection, abi: nftApprovalAbi, functionName: "approve", args: [NUSD_MARKETPLACE_ADDRESS, tokenId] } }, { call: action.call }];
+        let existingListing: { id: bigint; seller: Address; active: boolean } | undefined;
+        if (existingId !== 0n) {
+          const [, , , seller, active] = await client.readContract({ address: NUSD_MARKETPLACE_ADDRESS, abi: NusdMarketplaceAbi, functionName: "listings", args: [existingId] });
+          existingListing = { id: existingId, seller, active };
+        }
+        const plan = planNftApproval({ market: NUSD_MARKETPLACE_ADDRESS, owner: address, approved, approvedForAll, allowOperator, existingListing });
+        if (plan.approve) {
+          stages = [
+            ...(plan.cancelListingId !== undefined ? [{ call: call("cancelListing", [plan.cancelListingId]) }] : []),
+            { call: { address: collection, abi: nftApprovalAbi, functionName: "approve", args: [NUSD_MARKETPLACE_ADDRESS, tokenId] } },
+            { call: action.call },
+          ];
         }
       }
       assertWalletUnchanged();
@@ -272,7 +283,7 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
                         const fresh = current.offers.find((item) => item.id === offer.id && item.active);
                         if (!fresh || fresh.expiresAt <= current.timestamp) throw new Error("The offer has changed or expired");
                         const quote = await client!.readContract({ address: NUSD_MARKETPLACE_ADDRESS!, abi: NusdMarketplaceAbi, functionName: "quoteSale", args: [fresh.collection, fresh.tokenId, fresh.price] });
-                        return { call: call("acceptOffer", [fresh.id, quote[3]]), nftApproval: { collection: fresh.collection, tokenId: fresh.tokenId } };
+                        return { call: call("acceptOffer", [fresh.id, quote[3]]), nftApproval: { collection: fresh.collection, tokenId: fresh.tokenId, allowOperator: true } };
                       })}>Accept offer</button>
                     : <span className={styles.small}>Awaiting NFT owner</span>}</td>
             </tr>)}</tbody></table></div>}
@@ -318,7 +329,7 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
                   if (!active || collection.toLowerCase() !== selectedToken.collection.toLowerCase() || tokenId !== BigInt(selectedToken.tokenId) || seller.toLowerCase() !== address?.toLowerCase()) throw new Error("Your listing has changed. Refresh your NFTs before updating the price.");
                   return { call: call("updateListingPrice", [id, listedPrice]) };
                 }
-                return { call: call("list", [selectedToken.collection, BigInt(selectedToken.tokenId), listedPrice]), nftApproval: { collection: selectedToken.collection, tokenId: BigInt(selectedToken.tokenId) } };
+                return { call: call("list", [selectedToken.collection, BigInt(selectedToken.tokenId), listedPrice]), nftApproval: { collection: selectedToken.collection, tokenId: BigInt(selectedToken.tokenId), allowOperator: false } };
               });
             }}>
               <div className={styles.formHeading}><h3>{selectedToken?.listing ? "Edit your listing" : "Set your asking price"}</h3><Link href="/0xpixel/gallery">My NFTs<ArrowUpRight size={14} aria-hidden="true" /></Link></div>
