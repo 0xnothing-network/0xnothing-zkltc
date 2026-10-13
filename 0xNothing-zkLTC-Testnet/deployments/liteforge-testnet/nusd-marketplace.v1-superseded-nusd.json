@@ -14,5 +14,6 @@
   "deploymentHash": "0x91cc4213eac712015ff6f1410c944ca7aa0b22c2e2170f8d312db3a02911e4e1",
   "gasUsed": "3205283",
   "effectiveGasPrice": "42901000",
-  "gasCostZkLtc": "0.000137509845983"
+  "gasCostZkLtc": "0.000137509845983",
+  "superseded": "v1 market settled the pre-PR#6 NUSD 0x5317…04d1. Redeploy v2 against 0x677D…631e; do not treat this address as the live NUSD marketplace."
 }

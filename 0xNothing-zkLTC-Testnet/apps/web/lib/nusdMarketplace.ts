@@ -1,6 +1,6 @@
 import { getAddress, isAddress, keccak256, parseAbi, parseUnits, toBytes, zeroAddress, type Address, type PublicClient } from "viem";
 
-export const NUSD_MARKET_IMPLEMENTATION = keccak256(toBytes("0xpixel.nusd.marketplace.v1"));
+export const NUSD_MARKET_IMPLEMENTATION = keccak256(toBytes("0xpixel.nusd.marketplace.v2"));
 export const NUSD_MARKET_PAGE_SIZE = 24;
 export const NUSD_CATALOGUE_LIMIT = 1000;
 export const NUSD_MAX_PRICE = (1n << 128n) - 1n;
@@ -44,7 +44,7 @@ export const NusdMarketplaceAbi = parseAbi([
 const walletTokenAbi = parseAbi(["function balanceOf(address account) view returns (uint256)"]);
 const ownerAbi = parseAbi(["function ownerOf(uint256 tokenId) view returns (address)"]);
 
-export function nusdMarketplaceAddress(value: string | undefined): Address | undefined {
+export function nusdMarketplaceAddress(value: string | null | undefined): Address | undefined {
   const candidate = value?.trim();
   return candidate && isAddress(candidate) && candidate.toLowerCase() !== zeroAddress ? getAddress(candidate) : undefined;
 }

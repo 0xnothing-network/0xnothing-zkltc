@@ -28,7 +28,7 @@ test("marketplace credits fund purchases first and approval is only the exact sh
 
 test("only explicit valid nonzero deployment addresses activate the NUSD market", () => {
   assert.equal(nusdMarketplaceAddress(` ${MARKET} `), MARKET);
-  for (const value of [undefined, "", "not-a-contract", "0x11", zeroAddress]) assert.equal(nusdMarketplaceAddress(value), undefined);
+  for (const value of [undefined, null, "", "not-a-contract", "0x11", zeroAddress]) assert.equal(nusdMarketplaceAddress(value), undefined);
 });
 
 test("offer deadlines use the chain clock and reject fractional or excessive duration", () => {

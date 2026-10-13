@@ -8,9 +8,9 @@ import { privateKeyToAccount } from "viem/accounts";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const output = path.join(root, "deployments/liteforge-testnet/nusd-marketplace.json");
 const pendingOutput = path.join(root, "deployments/liteforge-testnet/nusd-marketplace.pending.json");
-const token = getAddress("0x5317e21aba902c6c7087a84457bc02fFe99604d1");
+const token = getAddress("0x677D63c78E77E0b1971530e1494Caee4Bd7d631e");
 const collections = [getAddress("0x33A32b9b2BEe864f9e42BFa39cA7BDC72f655988"), getAddress("0xd83cb7acef921f98b6b983cbb712a583869da9eb")];
-const implementation = keccak256(toBytes("0xpixel.nusd.marketplace.v1"));
+const implementation = keccak256(toBytes("0xpixel.nusd.marketplace.v2"));
 let phase = "configuration";
 
 function save(file, value) {

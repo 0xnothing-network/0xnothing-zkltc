@@ -58,6 +58,23 @@ test("activity API shares bounded cache, forces fresh reads and never leaks RPC 
   assert.equal(disabled.calls.length, 0);
 });
 
+test("activity without a recorded marketplace address starts from block 0", async () => {
+  const calls: { deploymentBlock: bigint }[] = [];
+  const route = evaluateModule<{ GET: (request: Request) => Promise<Response> }>(new URL("../../app/api/marketplace/activity/route.ts", import.meta.url), {
+    "next/server": { NextResponse: Response }, "@/lib/contract": { publicClient: {} },
+    "@/lib/boundedCache": { createBoundedCache }, "@/lib/server/cdnCache": { publicCdnCacheHeaders },
+    "@/lib/nusdMarketplaceConfig": { NUSD_MARKETPLACE_ADDRESS: MARKET, NFT_NUSD_ADDRESS: NUSD },
+    "@/lib/pixelCollections": { PIXEL_COLLECTIONS: [{ address: NFT }] },
+    "@/lib/nusdMarketplace.generated.json": { default: { address: null, deploymentBlock: null } },
+    "@/lib/nusdMarketplaceActivity": { parseNusdActivityCursor: history.parseNusdActivityCursor, readNusdMarketActivity: async (_client: unknown, params: { deploymentBlock: bigint }) => {
+      calls.push(params);
+      return { events: [], nextCursor: null, fromBlock: "0", throughBlock: "0" };
+    } },
+  }, { URL });
+  assert.equal((await route.GET(new Request("https://app.test/api/marketplace/activity"))).status, 200);
+  assert.equal(calls[0].deploymentBlock, 0n);
+});
+
 function listingHarness(options: { configured?: boolean; fail?: boolean } = {}) {
   let reads = 0;
   const route = evaluateModule<{ GET: (request: Request) => Promise<Response> }>(new URL("../../app/api/marketplace/listings/route.ts", import.meta.url), {
