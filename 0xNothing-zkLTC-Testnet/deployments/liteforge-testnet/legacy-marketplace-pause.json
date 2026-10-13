@@ -1,0 +1,9 @@
+{
+  "chainId": 4441,
+  "market": "0x13337cadA78d53C90E3c0EcE44C17c467C1a86F4",
+  "owner": "0x58633401dCc383F010688e950878000000000000",
+  "transactionHash": "0x5cdff3347dc3a4dcd33203a3870a12ffed17a8cf41961e3d5bdb654a9a57a65d",
+  "blockNumber": "60606711",
+  "status": "success",
+  "paused": true
+}
