@@ -6,9 +6,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useAccount, useReadContract } from "wagmi";
 import { OwnedNftCard, type OwnedNft } from "@/features/pixel/components/OwnedNftCard";
 import { GridSkeleton } from "@/features/pixel/components/Skeleton";
-import { PIXEL_MARKETPLACE_ADDRESS } from "@/lib/contract";
 import { fetchJson } from "@/lib/http";
-import { MarketplaceAbi } from "@/lib/marketplaceAbi";
+import { NusdMarketplaceAbi } from "@/lib/nusdMarketplace";
+import { NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
 
 type SortKey = "newest" | "oldest" | "name";
 
@@ -21,10 +21,13 @@ export default function GalleryPage() {
   const refresh = useCallback(() => {
     void forceRefresh();
   }, [forceRefresh]);
+  // Listing now happens on the NUSD marketplace, so its pause state drives the banner.
   const { data: paused } = useReadContract({
-    address: PIXEL_MARKETPLACE_ADDRESS,
-    abi: MarketplaceAbi,
+    address: NUSD_MARKETPLACE_ADDRESS,
+    abi: NusdMarketplaceAbi,
     functionName: "paused",
+    chainId: 4441,
+    query: { enabled: Boolean(NUSD_MARKETPLACE_ADDRESS) },
   });
 
   const sorted = useMemo<OwnedNft[]>(() => {
@@ -136,8 +139,6 @@ export default function GalleryPage() {
               <div key={`${nft.collection}:${nft.tokenId}`}>
                 <OwnedNftCard
                   nft={nft}
-                  isPaused={paused === true}
-                  onChanged={refresh}
                   priority={index < 4}
                 />
               </div>
