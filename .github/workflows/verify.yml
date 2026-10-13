@@ -1,0 +1,61 @@
+name: verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            0xNothing-zkLTC-Testnet/apps/web/package-lock.json
+            0xNothing-zkLTC-Testnet/apps/wallet/package-lock.json
+            0xNothing-zkLTC-Testnet/0xFi/package-lock.json
+            0xNothing-zkLTC-Testnet/subgraphs/0xpixel-marketplace/package-lock.json
+            0xNothing-zkLTC-Testnet/subgraphs/0xpump/package-lock.json
+            0xNothing-zkLTC-Mainnet/subgraphs/0xpump/package-lock.json
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.5
+
+      - name: Cache Forge and solc
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.svm
+            ~/.foundry/cache
+            0xNothing-zkLTC-Testnet/contracts/cache
+            0xNothing-zkLTC-Testnet/contracts/out
+            0xNothing-zkLTC-Mainnet/contracts/cache
+            0xNothing-zkLTC-Mainnet/contracts/out
+            0xNothing-zkLTC-Testnet/0xFi/contracts/cache
+            0xNothing-zkLTC-Testnet/0xFi/contracts/out
+          key: foundry-${{ runner.os }}-1.8.5-${{ hashFiles('**/foundry.toml', '0xNothing-zkLTC-Testnet/contracts/src/**/*.sol', '0xNothing-zkLTC-Testnet/contracts/test/**/*.sol', '0xNothing-zkLTC-Testnet/contracts/script/**/*.sol', '0xNothing-zkLTC-Mainnet/contracts/src/**/*.sol', '0xNothing-zkLTC-Mainnet/contracts/test/**/*.sol', '0xNothing-zkLTC-Mainnet/contracts/script/**/*.sol', '0xNothing-zkLTC-Testnet/0xFi/contracts/src/**/*.sol', '0xNothing-zkLTC-Testnet/0xFi/contracts/test/**/*.sol', '0xNothing-zkLTC-Testnet/0xFi/contracts/script/**/*.sol') }}
+          restore-keys: |
+            foundry-${{ runner.os }}-1.8.5-
+
+      - name: Install npm dependencies
+        run: node scripts/ci-install.mjs
+
+      - name: Verify
+        run: npm run verify

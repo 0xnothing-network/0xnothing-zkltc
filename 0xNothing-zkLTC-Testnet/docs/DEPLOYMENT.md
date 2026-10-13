@@ -46,9 +46,12 @@ prediction-only and must not be used as a subgraph start block. Copy
 | `NUSD_DEBT_CEILING` | no | `1_000_000e18` | Passed to `OracleNUSD.supplyCeilingNusd`. |
 | `LAUNCH_PROTECTION_WINDOW` | no | `900` (15 min) | Per-market anti-snipe window. `0` disables. On-chain cap is 1 hour. |
 | `LAUNCH_MAX_BUY_NUSD` | no | `50e18` | Cumulative gross NUSD each buyer may spend during that window. Required non-zero when the window is non-zero. |
+| `PUMP_INITIAL_VIRTUAL_NUSD` | no | `1_500e18` | Initial virtual NUSD reserve. Testnet-only override; mainnet stays at 1,500. Minimum `1e18`, maximum `100_000e18`. |
+| `PUMP_GRADUATION_MARKET_CAP_NUSD` | no | `6_000e18` | READY fully-diluted market-cap target. Testnet-only override; mainnet stays at 6,000. Must exceed the virtual reserve and stay at or below `1_000_000e18`. A 50 / 200 pair is the reviewed usability example. |
+| `PUMP_GRADUATION_RESERVE_NUSD` | no | derived | If set, must equal `sqrtUp(virtual * marketCap) - virtual`. Used as a deploy-time assertion, not an independent input. |
 
-Not env-overridable: chain ID `4441`, initial virtual reserve `1,500 NUSD`, READY
-market-cap target `6,000 NUSD`, create fee `1 NUSD`, trade fee `10` bps.
+Not env-overridable: chain ID `4441`, create fee `1 NUSD`, trade fee `10` bps.
+The default curve is still `1,500 NUSD` virtual / `6,000 NUSD` READY.
 Graduation delays default to `permissionlessGraduationDelay = 1 hour` and
 `readyExitDelay = 24 hours` (admin-settable up to 3 days). `graduate` uses the
 admin-set `graduationAdapter` (unset at deploy) and an on-chain UniV2 minLP; the
@@ -67,6 +70,14 @@ feed and no mint/redeem has run yet:
 ```bash
 cast send "$DIA_ORACLE_ADAPTER" "syncPrice()" --rpc-url "$LITVM_RPC_URL" --private-key "$PRIVATE_KEY"
 ```
+
+The `sync-price` keeper in `0xFi` (`npm run sync-price:check`) is the repeatable
+form of that fallback. Runbook: `docs/operations/sync-price-keeper.md`.
+
+`script/DeployFaucet.s.sol` deploys the LiteForge-only faucet against the current
+OracleNUSD. It is not part of this script. Dry-run it separately and see
+`docs/operations/faucet.md`. Liquidity for the current 0xFi pairs is seeded with
+`0xFi` `npm run liquidity:seed:check` (`docs/operations/liquidity-seeding.md`).
 
 OracleNUSD mints and redeems at the DIA price with no protocol fee and a 3600s
 default `maxPriceAge`. That is an owner decision: a stale or manipulated feed

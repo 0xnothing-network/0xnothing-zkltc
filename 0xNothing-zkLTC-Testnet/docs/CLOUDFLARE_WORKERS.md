@@ -3,6 +3,11 @@
 This is an additional deployment target. It does not replace the existing
 Vercel project or the Cloudflare-to-Railway standalone deployment.
 
+A separate cron Worker for `DIAOracleAdapter.syncPrice()` lives at
+`0xFi/keepers/sync-price/` and is documented in
+`docs/operations/sync-price-keeper.md`. Do not fold that keeper into this
+OpenNext web Worker.
+
 ```text
 visitor -> Cloudflare Worker (OpenNext) -> LitVM RPC, subgraphs, and Pinata
 ```

@@ -7,6 +7,10 @@
   },
   "description": "0xPixel, 0xPump, and 0xFi workspace for LitVM testnet and future zkLTC mainnet",
   "scripts": {
+    "ci:install": "node scripts/ci-install.mjs",
+    "sync-price:check": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi run sync-price:check",
+    "sync-price:once": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi run sync-price:once",
+    "sync-price": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi run sync-price",
     "clean:generated": "node scripts/clean-generated.mjs",
     "clean:generated:dry": "node scripts/clean-generated.mjs --dry-run",
     "test:tooling": "node --test scripts/test/*.test.mjs",
