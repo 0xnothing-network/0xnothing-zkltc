@@ -382,7 +382,7 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
 
     <footer className={styles.footer}>
       <div><span className={styles.footerBrand}>0xPixel / NUSD</span><p>Prices, fees, royalties and offer refunds are all in NUSD. Your credits are never automatically staked or used for borrowing.</p></div>
-      <div className={styles.footerLinks}><a href={getTokenExplorerUrl(NFT_NUSD_ADDRESS)} target="_blank" rel="noopener noreferrer">NUSD token<ArrowUpRight size={14} aria-hidden="true" /></a>{NUSD_MARKETPLACE_ADDRESS && <a href={getAddressExplorerUrl(NUSD_MARKETPLACE_ADDRESS)} target="_blank" rel="noopener noreferrer">Market contract<ArrowUpRight size={14} aria-hidden="true" /></a>}</div>
+      <div className={styles.footerLinks}><a href={getTokenExplorerUrl(NFT_NUSD_ADDRESS)} target="_blank" rel="noopener noreferrer">NUSD token<ArrowUpRight size={14} aria-hidden="true" /></a>{NUSD_MARKETPLACE_ADDRESS && <a href={getAddressExplorerUrl(NUSD_MARKETPLACE_ADDRESS)} target="_blank" rel="noopener noreferrer">Market contract<ArrowUpRight size={14} aria-hidden="true" /></a>}<Link href="/0xpixel/marketplace/legacy">Old zkLTC listings &amp; offers</Link></div>
       {state && <p className={styles.syncInfo}>Block {state.blockNumber.toString()} · Auto-refreshes every 30 seconds</p>}
     </footer>
   </section>;

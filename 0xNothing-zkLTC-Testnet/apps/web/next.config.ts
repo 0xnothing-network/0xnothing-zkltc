@@ -132,11 +132,6 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: "/0xpixel/marketplace/legacy",
-        destination: "/0xpixel/marketplace",
-        permanent: true,
-      },
-      {
         source: "/0xPump/faq",
         destination: "/0xPump/stats",
         permanent: true,

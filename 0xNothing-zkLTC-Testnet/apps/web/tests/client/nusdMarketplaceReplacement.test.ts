@@ -94,8 +94,12 @@ test("Gallery has only NUSD selling and management, without native signer contro
   assert.doesNotMatch(source, /marketplaceAbi|formatEther|writeContract|legacyMarketplace/);
 });
 
-test("old marketplace bookmarks redirect to the only NUSD marketplace", async () => {
+test("the legacy exit page is served instead of redirecting to the NUSD marketplace (review M-1)", async () => {
   const { default: config } = evaluateModule<{ default: { redirects: () => Promise<{ source: string; destination: string }[]> } }>(new URL("../../next.config.ts", import.meta.url), { "./lib/publicConfig": { LITVM_RPC_URL: "https://rpc.example" } }, { process: { env: {} }, __dirname: ".", URL });
   const redirect = (await config.redirects()).find((item) => item.source === "/0xpixel/marketplace/legacy");
-  assert.equal(redirect?.destination, "/0xpixel/marketplace");
+  assert.equal(redirect, undefined);
+  const panel = readFileSync(new URL("../../features/pixel/components/LegacyMarketplacePanel.tsx", import.meta.url), "utf8");
+  assert.match(panel, /"cancelListing"/);
+  assert.match(panel, /"cancelOffer"/);
+  assert.doesNotMatch(panel, /functionName: "(buy|list|makeOffer|acceptOffer)"/);
 });
