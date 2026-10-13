@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { logsClient, publicClient } from "@/lib/contract";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
-import { NFT_NUSD_ADDRESS, NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
+import { NFT_NUSD_ADDRESS, NUSD_MARKETPLACE_ADDRESS, NUSD_SUBGRAPH_URL } from "@/lib/nusdMarketplaceConfig";
 import { PIXEL_COLLECTIONS } from "@/lib/pixelCollections";
 import deployment from "@/lib/nusdMarketplace.generated.json";
 import { parseNusdActivityCursor, readNusdMarketActivity, type NusdActivityFilter, type NusdActivityPage } from "@/lib/nusdMarketplaceActivity";
@@ -28,9 +28,9 @@ export async function GET(request: Request) {
   catch { return NextResponse.json({ error: "Invalid activity cursor" }, { status: 400 }); }
   const force = params.get("force") === "1";
   const key = `${NUSD_MARKETPLACE_ADDRESS}:${filter}:${cursor ?? "latest"}:${rawLimit}`;
-  // The NUSD subgraph (server-only PIXEL_NUSD_SUBGRAPH_URL) serves complete history
-  // cheaply; the verified RPC scan remains the fallback when it is unset, lagging or failing.
-  const subgraphUrl = process.env.PIXEL_NUSD_SUBGRAPH_URL?.trim();
+  // The NUSD subgraph serves complete history cheaply; the verified RPC scan remains
+  // the fallback while it is syncing, lagging or failing.
+  const subgraphUrl = process.env.PIXEL_NUSD_SUBGRAPH_URL?.trim() || NUSD_SUBGRAPH_URL;
   const load = async () => {
     if (subgraphUrl) {
       try {

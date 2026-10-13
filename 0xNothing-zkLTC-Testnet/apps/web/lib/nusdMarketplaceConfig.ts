@@ -9,3 +9,6 @@ const verifiedDefault = deployment.chainId === 4441
   && deployment.implementation === NUSD_MARKET_IMPLEMENTATION
   ? deployment.address : undefined;
 export const NUSD_MARKETPLACE_ADDRESS = nusdMarketplaceAddress(override || verifiedDefault);
+/** Deployed subgraphs/0xpixel-nusd-market; the server env PIXEL_NUSD_SUBGRAPH_URL overrides it. */
+export const NUSD_SUBGRAPH_URL =
+  "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/pixel-nusd-market/1.0.0/gn" as const;
