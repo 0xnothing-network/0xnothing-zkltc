@@ -11,21 +11,27 @@ const MARKET = "0x0000000000000000000000000000000000000011";
 const NUSD = "0x0000000000000000000000000000000000000022";
 const NFT = "0x0000000000000000000000000000000000000033";
 const history = evaluateModule<{ parseNusdActivityCursor: (cursor: string | null) => unknown }>(new URL("../../lib/nusdMarketplaceActivity.ts", import.meta.url), { viem, "./nusdMarketplace": marketplace }, { Error });
-function activityHarness(options: { configured?: boolean; fail?: boolean } = {}) {
+function activityHarness(options: { configured?: boolean; fail?: boolean; subgraph?: "ok" | "fail" } = {}) {
   const calls: Parameters<typeof readNusdMarketActivity>[1][] = [];
+  const subgraphCalls: { url: string; options: { cursor?: string | null; latestBlock?: bigint } }[] = [];
   const route = evaluateModule<{ GET: (request: Request) => Promise<Response> }>(new URL("../../app/api/marketplace/activity/route.ts", import.meta.url), {
-    "next/server": { NextResponse: Response }, "@/lib/contract": { publicClient: {}, logsClient: {} },
+    "next/server": { NextResponse: Response }, "@/lib/contract": { publicClient: { getBlockNumber: async () => 5000n }, logsClient: {} },
     "@/lib/boundedCache": { createBoundedCache }, "@/lib/server/cdnCache": { publicCdnCacheHeaders },
     "@/lib/nusdMarketplaceConfig": { NUSD_MARKETPLACE_ADDRESS: options.configured === false ? undefined : MARKET, NFT_NUSD_ADDRESS: NUSD },
     "@/lib/pixelCollections": { PIXEL_COLLECTIONS: [{ address: NFT }] },
+    "@/lib/nusdMarketplaceSubgraph": { readNusdActivityFromSubgraph: async (url: string, params: typeof subgraphCalls[number]["options"]): Promise<NusdActivityPage> => {
+      subgraphCalls.push({ url, options: params });
+      if (options.subgraph === "fail") throw new Error("subgraph lagging");
+      return { events: [], nextCursor: null, fromBlock: "0", throughBlock: "5000" };
+    } },
     "@/lib/nusdMarketplace.generated.json": { default: { address: MARKET, deploymentBlock: "900" } },
     "@/lib/nusdMarketplaceActivity": { parseNusdActivityCursor: history.parseNusdActivityCursor, readNusdMarketActivity: async (_client: unknown, params: typeof calls[number]): Promise<NusdActivityPage> => {
       calls.push(params);
       if (options.fail) throw new Error("secret RPC diagnostic");
       return { events: [], nextCursor: "900:0", fromBlock: "900", throughBlock: "1000" };
     } },
-  }, { URL });
-  return { calls, get: (search = "") => route.GET(new Request(`https://app.test/api/marketplace/activity${search}`)) };
+  }, { URL, console: { warn() {} }, process: { env: options.subgraph ? { PIXEL_NUSD_SUBGRAPH_URL: " https://graph.test " } : {} } });
+  return { calls, subgraphCalls, get: (search = "") => route.GET(new Request(`https://app.test/api/marketplace/activity${search}`)) };
 }
 
 test("activity API validates filters, cursors and limits before RPC, with NUSD deployment bounds", async () => {
@@ -61,7 +67,7 @@ test("activity API shares bounded cache, forces fresh reads and never leaks RPC 
 function listingHarness(options: { configured?: boolean; fail?: boolean } = {}) {
   let reads = 0;
   const route = evaluateModule<{ GET: (request: Request) => Promise<Response> }>(new URL("../../app/api/marketplace/listings/route.ts", import.meta.url), {
-    "next/server": { NextResponse: Response }, "@/lib/contract": { publicClient: {}, logsClient: {} },
+    "next/server": { NextResponse: Response }, "@/lib/contract": { publicClient: {} },
     "@/lib/nusdMarketplaceConfig": { NUSD_MARKETPLACE_ADDRESS: options.configured === false ? undefined : MARKET, NFT_NUSD_ADDRESS: NUSD },
     "@/lib/nusdMarketplace": { readNusdMarket: async (_client: unknown, market: string, token: string, account: unknown, page: number) => {
       reads += 1;
@@ -97,4 +103,22 @@ test("canonical listings API serves exact NUSD amounts with bounded validated pa
   const disabled = listingHarness({ configured: false });
   assert.equal((await disabled.get()).status, 503);
   assert.equal(disabled.reads(), 0);
+});
+
+test("activity API prefers the NUSD subgraph and falls back to the verified RPC scan", async () => {
+  const indexed = activityHarness({ subgraph: "ok" });
+  assert.equal((await indexed.get("?type=bought")).status, 200);
+  assert.equal(indexed.subgraphCalls.length, 1);
+  assert.equal(indexed.subgraphCalls[0].url, "https://graph.test");
+  assert.equal(indexed.subgraphCalls[0].options.latestBlock, 5000n);
+  assert.equal(indexed.calls.length, 0);
+  assert.equal((await indexed.get("?cursor=4000:1")).status, 200);
+  assert.equal(indexed.subgraphCalls[1].options.latestBlock, undefined);
+  const fallback = activityHarness({ subgraph: "fail" });
+  assert.equal((await fallback.get()).status, 200);
+  assert.equal(fallback.subgraphCalls.length, 1);
+  assert.equal(fallback.calls.length, 1);
+  const unconfigured = activityHarness();
+  await unconfigured.get();
+  assert.equal(unconfigured.subgraphCalls.length, 0);
 });

@@ -1,0 +1,75 @@
+enum NusdListingStatus {
+  ACTIVE
+  SOLD
+  CANCELLED
+  INVALIDATED
+}
+
+enum NusdOfferStatus {
+  ACTIVE
+  ACCEPTED
+  REFUNDED
+}
+
+# Mirrors the activity types served by /api/marketplace/activity.
+enum NusdActivityType {
+  MINTED
+  LISTED
+  UPDATED
+  BOUGHT
+  CANCELLED
+  OFFER_CREATED
+  OFFER_REFUNDED
+}
+
+type NusdListing @entity(immutable: false) {
+  "Listing ID"
+  id: ID!
+  collection: Bytes! @index
+  tokenId: BigInt! @index
+  seller: Bytes! @index
+  price: BigInt!
+  status: NusdListingStatus! @index
+  buyer: Bytes
+  listedAt: BigInt!
+  updatedAt: BigInt!
+}
+
+type NusdOffer @entity(immutable: false) {
+  "Offer ID"
+  id: ID!
+  collection: Bytes! @index
+  tokenId: BigInt! @index
+  offerer: Bytes! @index
+  price: BigInt!
+  expiresAt: BigInt!
+  status: NusdOfferStatus! @index
+  createdAt: BigInt!
+  updatedAt: BigInt!
+}
+
+type NusdActivity @entity(immutable: true) {
+  "transactionHash-logIndex"
+  id: ID!
+  type: NusdActivityType! @index
+  collection: Bytes! @index
+  tokenId: BigInt!
+  actor: Bytes! @index
+  other: Bytes
+  price: BigInt
+  blockNumber: BigInt!
+  logIndex: BigInt!
+  "blockNumber * 2^32 + logIndex: a single descending sort and cursor key"
+  sortKey: BigInt! @index
+  timestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type NusdMarketStats @entity(immutable: false) {
+  id: ID!
+  listings: BigInt!
+  sales: BigInt!
+  volume: BigInt!
+  offers: BigInt!
+  updatedAt: BigInt!
+}
