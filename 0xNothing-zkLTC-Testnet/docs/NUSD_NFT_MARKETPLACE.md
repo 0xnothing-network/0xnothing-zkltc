@@ -65,3 +65,16 @@ After a separately authorized, confirmed deployment:
 The contract suite covers NUSD accounting, 512-run price/refund/royalty-cap/fee-split fuzz tests, 24-step randomized refund/reuse sequences, real 0xPixel V2 royalties and inventory, stale listings, token-level listing approval (including NFT leave-and-return), exact transfer enforcement, credit races, cancel/relist/buy and offer/listing races, minimum proceeds, pause, pagination and callback reentrancy/atomic failure. Frontend tests cover strict amounts, bounded pinned reads, pending vs confirmed deployment gating, funding shortfalls, wallet changes, NFT approvals, offer acceptance, paused withdrawals/refunds and duplicate-click locking. These tests are not a third-party audit or live deployment validation.
 
 This version does not add ERC-1155, auctions, lending against NFTs, bridging, automatic staking, speculative volume rewards, off-chain credit or automatic cross-market listing migration.
+
+## Known limitations (security review of PR #9)
+
+The NUSD marketplace review found no fund-loss issues. These low-severity points stay as documented trade-offs:
+
+- **L-1, collection allowlist trust.** `setCollectionAllowed` is `onlyOwner` with no timelock. An allowlisted collection whose `safeTransferFrom` does not really transfer, or whose `royaltyInfo` reverts, could take NUSD without delivering the NFT, or block sales. Only PIXEL V1/V2 are allowed today. The owner should be a multisig, and new collections need a source review (standard OZ ERC-721 transfer, bounded ERC-2981) before they are allowed.
+- **L-2, royalty is read at settlement.** Royalty is capped at 10% and the platform fee at 5%. A collection can still raise `royaltyInfo` after a listing, which lowers the seller's proceeds on `buy`. `acceptOffer` stays protected by `minimumSellerProceeds`. A possible follow-up is to store a per-listing minimum proceeds.
+- **L-3, stale listing revival.** A listing whose token approval was cleared (for example the NFT left and came back) becomes buyable at its old price again if the seller re-approves the same token. The web app now cancels the seller's own stale listing in the same flow, before it asks for the approval. Contract-level protection (a listing epoch/nonce) is deferred because it would change the reviewed contract and need a fresh review. The contract is not deployed yet, so this can still be done before the first broadcast. Sellers using other tools should call `cancelListing` or `invalidateListing` before re-approving.
+- **L-4, operator approvals (fixed in the UI).** `list`, `updateListingPrice` and `buy` accept only a per-token `approve`, not `setApprovalForAll`. The web app now always requests the per-token approval for listing. `acceptOffer` accepts either.
+
+### Legacy zkLTC marketplace
+
+The retired `PixelMarket` (`0x1333…86F4`) pays sellers directly and holds no credits. On 2026-10-13 its zkLTC balance was 0 and it had never issued an offer, but about 566 listings were still active. `/0xpixel/marketplace/legacy` lets a wallet cancel its own legacy listings, and cancel or refund any legacy offers. Listing cancellation on that contract needs it to be unpaused.
