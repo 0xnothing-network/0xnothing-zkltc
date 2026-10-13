@@ -23,6 +23,11 @@ const connectSrc = [
   ...(isDevelopment ? ["http:", "ws:", "http://localhost:*", "ws://localhost:*"] : []),
 ].join(" ");
 
+// Per-request script nonces would let us drop 'unsafe-inline', but Next.js
+// only wires them through `headers()` / middleware, which force-dynamic the
+// whole App Router tree. These pages are statically generated and cached;
+// a nonce would trade CDN HTML for a one-time XSS reduction. Keep a static
+// CSP with 'unsafe-inline' for scripts and styles.
 const contentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'self'",

@@ -28,6 +28,24 @@ test("next.config fails closed on secret-like NEXT_PUBLIC names and ships a stri
   assert.match(source, /Strict-Transport-Security/);
   assert.match(source, /Permissions-Policy/);
   assert.match(source, /Cross-Origin-Resource-Policy/);
+  assert.match(source, /unsafe-inline/);
+  assert.match(source, /force-dynamic/);
+  assert.match(source, /nonce/);
+  assert.doesNotMatch(source, /export const dynamic/);
+});
+
+test("dev governance writes pin LitVM and recheck the wallet session", () => {
+  const source = readFileSync(new URL("../../app/dev/page.tsx", import.meta.url), "utf8");
+  assert.match(source, /requireLitvmChainId/);
+  assert.match(source, /createWalletSessionGuard/);
+  assert.match(source, /writeContractAsync\([\s\S]*chainId:\s*litvm\.id/);
+});
+
+test("edge public API quotas honor the Cloudflare Worker client IP", () => {
+  const source = readFileSync(new URL("../../lib/server/edgePublicRateLimit.ts", import.meta.url), "utf8");
+  assert.match(source, /CLOUDFLARE_WORKERS === "true"/);
+  assert.match(source, /cf-connecting-ip/);
+  assert.match(source, /Unidentified visitors are not collapsed/);
 });
 
 test("middleware rate-limits public API traffic after proxy auth", () => {

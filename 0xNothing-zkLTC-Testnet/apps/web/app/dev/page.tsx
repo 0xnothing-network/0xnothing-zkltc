@@ -21,6 +21,7 @@ import {
   useAccount,
   useBalance,
   useChainId,
+  useConfig,
   useReadContract,
   useReadContracts,
   useSimulateContract,
@@ -37,9 +38,11 @@ import { litvm } from "@/config/wagmi";
 import { PIXEL_MARKETPLACE_ADDRESS, PIXEL_NFT_ADDRESS, PUMP_GRADUATION_CONTROLLER_ADDRESS } from "@/lib/publicConfig";
 import { PixelNFTABI } from "@/lib/abi";
 import { publicClient } from "@/lib/contract";
+import { requireLitvmChainId } from "@/lib/chainSwitch";
 import { STEADY_LIVE_MS } from "@/lib/liveData";
 import { jitteredPollInterval } from "@/lib/pollJitter";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
+import { createWalletSessionGuard } from "@/lib/walletSession";
 import { ConnectWalletButton } from "@fi/components/ConnectWalletButton";
 import { ExternalLink } from "@/components/ExternalLink";
 import { RwaDashboard } from "@fi/components/RwaDashboard";
@@ -94,6 +97,8 @@ function batchNeedsRetry(value: unknown, expectedLength: number) {
 function friendlyActionError(error: unknown) {
   const message = error instanceof Error ? error.message.toLowerCase() : "";
   if (message.includes("user rejected") || message.includes("user denied") || message.includes("4001")) return "Signing was cancelled in the wallet.";
+  if (message.includes("wrong network")) return "Wrong network. Switch to LitVM LiteForge and try again.";
+  if (message.includes("wallet changed")) return "Wallet changed. Review the transaction with your current account and try again.";
   if (message.includes("insufficient funds")) return "The connected wallet does not have enough native gas or token balance.";
   if (message.includes("unauthorized") || message.includes("onlyadmin") || message.includes("only owner")) return "The connected wallet is not authorized for this contract action.";
   if (message.includes("simulation") || message.includes("revert")) return "The contract simulation rejected this action. Verify the amount, role, destination and current pool state.";
@@ -127,6 +132,7 @@ function Metric({
 export default function DevPage() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
+  const walletConfig = useConfig();
   const switchChain = useSwitchChain();
   const { writeContractAsync, isPending: isWriting } = useWriteContract();
   const writeLockRef = useRef(false);
@@ -302,8 +308,16 @@ export default function DevPage() {
     setActionSuccess(undefined);
     try {
       if (!address) throw new Error("Connect the governance wallet before signing.");
+      requireLitvmChainId(chainId);
+      const assertWalletUnchanged = createWalletSessionGuard(walletConfig, address, litvm.id);
+      assertWalletUnchanged();
       const simulation = await publicClient.simulateContract({ ...request, account: address, chainId: litvm.id } as never);
-      const hash = await writeContractAsync(simulation.request as unknown as Parameters<typeof writeContractAsync>[0]);
+      assertWalletUnchanged();
+      const hash = await writeContractAsync({
+        ...simulation.request,
+        account: address,
+        chainId: litvm.id,
+      } as unknown as Parameters<typeof writeContractAsync>[0]);
       setTxDomain(domain);
       setTxHash(hash);
     } catch (error) {

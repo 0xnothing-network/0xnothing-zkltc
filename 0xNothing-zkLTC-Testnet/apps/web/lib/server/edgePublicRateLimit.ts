@@ -70,11 +70,21 @@ function rightmostForwardedIp(value: string | null): string | undefined {
 /**
  * Edge-safe client identity for public API quotas. Spoofable forwarding
  * headers are ignored unless the trusted proxy secret is present, matching
- * the Node `trustedProxyClientKey` policy. Unidentified visitors are not
- * collapsed into one shared bucket.
+ * the Node `trustedProxyClientKey` policy. On the Cloudflare Worker runtime
+ * (`CLOUDFLARE_WORKERS === "true"`), `cf-connecting-ip` is trusted the same
+ * way Node upload/voucher routes trust it. Railway still requires the
+ * proxy secret before any Cloudflare or forwarded IP is accepted.
+ * Unidentified visitors are not collapsed into one shared bucket.
  */
 export function edgeTrustedClientKey(request: Request): string | null {
   const proxySecret = process.env.TRUSTED_PROXY_SHARED_SECRET;
+  const trustCloudflareWorker = process.env.CLOUDFLARE_WORKERS === "true";
+
+  if (trustCloudflareWorker) {
+    const cfIp = normalizeIpToken(request.headers.get(CLOUDFLARE_IP_HEADER));
+    if (cfIp) return `cf:${cfIp}`;
+  }
+
   if (trustedProxyRequest(request, proxySecret) && proxySecret?.trim()) {
     const cfIp = normalizeIpToken(request.headers.get(CLOUDFLARE_IP_HEADER));
     if (cfIp) return `cf:${cfIp}`;
