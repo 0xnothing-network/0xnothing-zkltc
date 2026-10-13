@@ -44,6 +44,16 @@ export const publicClient = createPublicClient({
   batch: { multicall: { batchSize: 16_384 } },
 });
 
+/**
+ * Unbatched client for eth_getLogs. The LiteForge RPC answers a JSON-RPC batch
+ * of getLogs one request after another, so parallel log scans must travel as
+ * separate HTTP requests (measured: 4×2,000 blocks took 24s batched, 8s not).
+ */
+export const logsClient = createPublicClient({
+  chain: litvm,
+  transport: http(LITVM_RPC_URL, { retryCount: 2, retryDelay: 300, timeout: 15_000 }),
+});
+
 async function withRetry<T>(
   fn: () => Promise<T>,
   attempts = 5,

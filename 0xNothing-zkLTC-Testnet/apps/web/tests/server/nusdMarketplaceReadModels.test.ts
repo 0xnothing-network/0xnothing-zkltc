@@ -93,8 +93,12 @@ test("NUSD history preserves price edits, cancellations and escrow refunds with 
 test("sparse history reads at most four bounded windows and returns a resumable cursor", async () => {
   const history = reader({ latest: 20000n });
   const page = await history.read(undefined, "ALL", 24, 1n);
-  assert.equal(history.windows.length, 8);
-  assert.ok(history.windows.every((window) => window.toBlock - window.fromBlock <= 1999n));
+  // Four 2,000-block windows, each read as four parallel 500-block slices for market and mint logs.
+  assert.equal(history.windows.length, 32);
+  assert.ok(history.windows.every((window) => window.toBlock - window.fromBlock <= 499n));
+  const covered = new Set(history.windows.flatMap((window) => Array.from({ length: Number(window.toBlock - window.fromBlock + 1n) }, (_, index) => window.fromBlock + BigInt(index))));
+  assert.equal(covered.size, 8000);
+  assert.ok(covered.has(20000n) && covered.has(12001n) && !covered.has(12000n));
   assert.equal(page.nextCursor, "12000:2147483647");
   assert.equal(page.events.length, 0);
   const overflow = reader({ logs: Array.from({ length: 4001 }, (_, index) => log("Listed", index, { collection: NFT, tokenId: 3n, seller: SELLER, price: 100n })) });

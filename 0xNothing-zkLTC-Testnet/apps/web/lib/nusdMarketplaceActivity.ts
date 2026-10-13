@@ -28,6 +28,20 @@ const activityEvents = parseAbi([
   "event OfferCancelled(uint256 indexed offerId, address indexed offerer, uint256 refund)",
 ]);
 const mintEvent = parseAbi(["event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"])[0];
+const ACTIVITY_SLICE_BLOCKS = 500n;
+const ACTIVITY_LOG_CONCURRENCY = 8;
+
+async function mapActivityReads<Item, Result>(items: readonly Item[], read: (item: Item) => Promise<Result>): Promise<Result[]> {
+  const values: Result[] = new Array(items.length);
+  let nextIndex = 0;
+  await Promise.all(Array.from({ length: Math.min(ACTIVITY_LOG_CONCURRENCY, items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex++;
+      values[index] = await read(items[index]);
+    }
+  }));
+  return values;
+}
 
 export function parseNusdActivityCursor(value: string | null): { block: bigint; index: number } | undefined {
   if (value === null || value === "") return undefined;
@@ -110,19 +124,39 @@ export async function readNusdMarketActivity(
     client.readContract({ ...identity, functionName: "IMPLEMENTATION_ID" }),
   ]);
   if (token.toLowerCase() !== options.nusd.toLowerCase() || implementation.toLowerCase() !== NUSD_MARKET_IMPLEMENTATION.toLowerCase()) throw new Error("Invalid NUSD marketplace identity");
+  // Up to four 2,000-block windows, newest first. LiteForge getLogs latency grows
+  // with block span (~0.26s blocks), so every window is split into 500-block
+  // slices and all slices are fetched up front with bounded concurrency: in a
+  // sparse market nearly every request needs all four windows anyway. The
+  // client must not JSON-RPC-batch getLogs, or the node serialises them.
+  const windows: { from: bigint; through: bigint }[] = [];
+  for (let top = cursor?.block ?? latest.number; windows.length < 4 && top >= options.deploymentBlock;) {
+    const bottom = top > options.deploymentBlock + 1999n ? top - 1999n : options.deploymentBlock;
+    windows.push({ from: bottom, through: top });
+    if (bottom === options.deploymentBlock) break;
+    top = bottom - 1n;
+  }
+  const slices = windows.flatMap((window, index) => {
+    const parts: { window: number; fromBlock: bigint; toBlock: bigint }[] = [];
+    for (let top = window.through; top >= window.from; top -= ACTIVITY_SLICE_BLOCKS) {
+      parts.push({ window: index, fromBlock: top - ACTIVITY_SLICE_BLOCKS + 1n > window.from ? top - ACTIVITY_SLICE_BLOCKS + 1n : window.from, toBlock: top });
+      if (top - ACTIVITY_SLICE_BLOCKS < window.from) break;
+    }
+    return parts;
+  });
+  const sliceLogs = await mapActivityReads(slices, ({ fromBlock, toBlock }) => Promise.all([
+    client.getLogs({ address: options.market, events: activityEvents, fromBlock, toBlock, strict: true }),
+    options.collections.length ? client.getLogs({ address: [...options.collections], event: mintEvent, args: { from: zeroAddress }, fromBlock, toBlock, strict: true }) : Promise.resolve([]),
+  ]));
   let through = cursor?.block ?? latest.number;
   let from = through;
   let nextCursor: string | null = null;
   const found: Omit<NusdActivityEvent, "timestamp">[] = [];
   const seen = new Set<string>();
-  for (let window = 0; window < 4 && through >= options.deploymentBlock; window++) {
-    from = through > options.deploymentBlock + 1999n ? through - 1999n : options.deploymentBlock;
-    const [marketLogs, mintLogs] = await Promise.all([
-      client.getLogs({ address: options.market, events: activityEvents, fromBlock: from, toBlock: through, strict: true }),
-      options.collections.length ? client.getLogs({ address: [...options.collections], event: mintEvent, args: { from: zeroAddress }, fromBlock: from, toBlock: through, strict: true }) : Promise.resolve([]),
-    ]);
-    if (marketLogs.length + mintLogs.length > 4000) throw new Error("Activity window exceeds the safe log limit");
-    const logs = [...marketLogs, ...mintLogs] as unknown as ActivityLog[];
+  for (let window = 0; window < windows.length; window++) {
+    ({ from, through } = windows[window]);
+    const logs = slices.flatMap((slice, index) => slice.window === window ? sliceLogs[index].flat() : []) as unknown as ActivityLog[];
+    if (logs.length > 4000) throw new Error("Activity window exceeds the safe log limit");
     logs.sort((first, second) => first.blockNumber === second.blockNumber ? (second.logIndex ?? 0) - (first.logIndex ?? 0) : (first.blockNumber ?? 0n) > (second.blockNumber ?? 0n) ? -1 : 1);
     const selected: Parameters<typeof activityFromLog>[3][] = [];
     for (const log of logs) {
@@ -144,8 +178,7 @@ export async function readNusdMarketActivity(
       break;
     }
     if (from === options.deploymentBlock) break;
-    through = from - 1n;
-    nextCursor = `${through}:2147483647`;
+    nextCursor = `${from - 1n}:2147483647`;
   }
   if (found.length < options.limit && from === options.deploymentBlock) nextCursor = null;
   const timestamps = new Map<string, string>([[latest.number.toString(), latest.timestamp.toString()]]);

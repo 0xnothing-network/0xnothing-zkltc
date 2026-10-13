@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { publicClient } from "@/lib/contract";
+import { logsClient, publicClient } from "@/lib/contract";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 import { NFT_NUSD_ADDRESS, NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
@@ -11,6 +11,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+// Contract and block reads keep the batching client; parallel getLogs slices use the unbatched one.
+const activityClient = { getChainId: publicClient.getChainId, getBlock: publicClient.getBlock, readContract: publicClient.readContract, getLogs: logsClient.getLogs };
 const activityCache = createBoundedCache<NusdActivityPage>({ maxEntries: 256, ttlMs: 5_000, maxInFlight: 32 });
 const filters = new Set<NusdActivityFilter>(["ALL", "BOUGHT", "MINTED", "LISTED", "CANCELLED", "OFFERS"]);
 
@@ -25,7 +27,7 @@ export async function GET(request: Request) {
   catch { return NextResponse.json({ error: "Invalid activity cursor" }, { status: 400 }); }
   const force = params.get("force") === "1";
   const key = `${NUSD_MARKETPLACE_ADDRESS}:${filter}:${cursor ?? "latest"}:${rawLimit}`;
-  const load = () => readNusdMarketActivity(publicClient, {
+  const load = () => readNusdMarketActivity(activityClient, {
     market: NUSD_MARKETPLACE_ADDRESS!,
     nusd: NFT_NUSD_ADDRESS,
     collections: PIXEL_COLLECTIONS.map((entry) => entry.address),

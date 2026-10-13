@@ -14,7 +14,7 @@ const history = evaluateModule<{ parseNusdActivityCursor: (cursor: string | null
 function activityHarness(options: { configured?: boolean; fail?: boolean } = {}) {
   const calls: Parameters<typeof readNusdMarketActivity>[1][] = [];
   const route = evaluateModule<{ GET: (request: Request) => Promise<Response> }>(new URL("../../app/api/marketplace/activity/route.ts", import.meta.url), {
-    "next/server": { NextResponse: Response }, "@/lib/contract": { publicClient: {} },
+    "next/server": { NextResponse: Response }, "@/lib/contract": { publicClient: {}, logsClient: {} },
     "@/lib/boundedCache": { createBoundedCache }, "@/lib/server/cdnCache": { publicCdnCacheHeaders },
     "@/lib/nusdMarketplaceConfig": { NUSD_MARKETPLACE_ADDRESS: options.configured === false ? undefined : MARKET, NFT_NUSD_ADDRESS: NUSD },
     "@/lib/pixelCollections": { PIXEL_COLLECTIONS: [{ address: NFT }] },
@@ -61,7 +61,7 @@ test("activity API shares bounded cache, forces fresh reads and never leaks RPC 
 function listingHarness(options: { configured?: boolean; fail?: boolean } = {}) {
   let reads = 0;
   const route = evaluateModule<{ GET: (request: Request) => Promise<Response> }>(new URL("../../app/api/marketplace/listings/route.ts", import.meta.url), {
-    "next/server": { NextResponse: Response }, "@/lib/contract": { publicClient: {} },
+    "next/server": { NextResponse: Response }, "@/lib/contract": { publicClient: {}, logsClient: {} },
     "@/lib/nusdMarketplaceConfig": { NUSD_MARKETPLACE_ADDRESS: options.configured === false ? undefined : MARKET, NFT_NUSD_ADDRESS: NUSD },
     "@/lib/nusdMarketplace": { readNusdMarket: async (_client: unknown, market: string, token: string, account: unknown, page: number) => {
       reads += 1;
