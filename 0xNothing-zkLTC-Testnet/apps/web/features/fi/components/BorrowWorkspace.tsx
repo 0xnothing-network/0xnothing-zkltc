@@ -21,6 +21,7 @@ import {
 } from "@fi/lib/hooks/useLendingPoolStatus";
 import { useProtocolTransaction } from "@fi/lib/hooks/useProtocolTransaction";
 import { useTokenBalance } from "@fi/lib/hooks/useTokenBalance";
+import { dropToLiquidation, healthBand, healthFactorFromCapacity, safeBorrowFromCapacity } from "@/lib/risk";
 
 type BorrowMode = "wrap" | "unwrap" | "deposit" | "withdrawCollateral" | "borrow" | "repay";
 type RiskTone = "default" | "positive" | "warning" | "danger";
@@ -60,17 +61,28 @@ function ltvBpsForDebt(debt: bigint | undefined, collateralValue: bigint | undef
   return (debt * BPS_DENOMINATOR + collateralValue - 1n) / collateralValue;
 }
 
-function riskState(debt: bigint | undefined, currentLtvBps: bigint | undefined): {
+type AccountRisk = readonly [bigint, bigint, bigint, bigint, bigint, bigint];
+
+/**
+ * Position state from the pool's own aggregated capacities (accountRisk[2] =
+ * margin-call capacity, [3] = liquidation capacity), so thresholds always
+ * follow each collateral's on-chain config instead of fixed 85% / 90% LTVs.
+ */
+function riskState(debt: bigint | undefined, accountRisk: AccountRisk | undefined): {
   label: string;
   tone: RiskTone;
   state?: "warning" | "danger";
 } {
   if (debt === undefined) return { label: "--", tone: "default" };
   if (debt === 0n) return { label: "No debt", tone: "positive" };
-  if (currentLtvBps === undefined) return { label: "Price unavailable", tone: "warning", state: "warning" };
-  if (currentLtvBps >= 9000n) return { label: "Liquidation", tone: "danger", state: "danger" };
-  if (currentLtvBps >= 8500n) return { label: "Margin call", tone: "warning", state: "warning" };
+  if (accountRisk === undefined || accountRisk[0] === 0n) return { label: "Price unavailable", tone: "warning", state: "warning" };
+  if (debt >= accountRisk[3]) return { label: "Liquidation", tone: "danger", state: "danger" };
+  if (debt >= accountRisk[2]) return { label: "Margin call", tone: "warning", state: "warning" };
   return { label: "Safe", tone: "positive" };
+}
+
+function formatHf(value: number | null): string {
+  return value === null ? "--" : value >= 100 ? "99+" : value.toFixed(2);
 }
 
 export function BorrowWorkspace() {
@@ -113,7 +125,7 @@ export function BorrowWorkspace() {
   const available = reads.data?.[0]?.result as bigint | undefined;
   const availableIsDust = available !== undefined && available <= NUSD_USABLE_LIQUIDITY_FLOOR;
   const debt = walletReads.data?.[0]?.result as bigint | undefined;
-  const accountRisk = walletReads.data?.[1]?.result as readonly [bigint, bigint, bigint, bigint, bigint, bigint] | undefined;
+  const accountRisk = walletReads.data?.[1]?.result as AccountRisk | undefined;
   const maxBorrow = walletReads.data?.[2]?.result as bigint | undefined;
   const collateralBalance = collateralReads.data?.[0]?.result as bigint | undefined;
   const maxWithdrawCollateral = collateralReads.data?.[1]?.result as bigint | undefined;
@@ -145,7 +157,7 @@ export function BorrowWorkspace() {
     : mode === "repay"
       ? Boolean(pool && assets.NUSD.address)
       : Boolean(pool && assets.NUSD.address && collateralAddress);
-  const risk = riskState(debt, currentLtvBps);
+  const risk = riskState(debt, accountRisk);
   const error = useMemo(() => {
     if (!amountText) return undefined;
     if (!amount) return "Enter a valid positive amount.";
@@ -160,7 +172,12 @@ export function BorrowWorkspace() {
     ? mode === "borrow" ? debt + amount : amount >= debt ? 0n : debt - amount
     : undefined;
   const projectedLtvBps = ltvBpsForDebt(projectedDebt, accountRisk?.[0]);
-  const projectedRisk = riskState(projectedDebt, projectedLtvBps);
+  const projectedRisk = riskState(projectedDebt, accountRisk);
+  const currentHf = healthFactorFromCapacity(accountRisk?.[3], debt);
+  const projectedHf = healthFactorFromCapacity(accountRisk?.[3], projectedDebt);
+  const projectedBand = healthBand(projectedHf);
+  const projectedDrop = dropToLiquidation(projectedHf);
+  const safeMax = safeBorrowFromCapacity(accountRisk?.[3], debt, maxBorrow);
 
   function changeMode(nextMode: BorrowMode) {
     setMode(nextMode);
@@ -226,7 +243,7 @@ export function BorrowWorkspace() {
         { label: "Available NUSD", value: availableIsDust ? "Unavailable" : formatAmount(available), tone: availableIsDust ? "warning" : "positive" },
         { label: "Borrow APR", value: formatPercentWad(lending.borrowRate) },
         { label: "Max borrow", value: `${formatAmount(maxBorrow)} NUSD` },
-        { label: "Current LTV", value: debt === 0n ? "No debt" : formatBps(currentLtvBps), tone: risk.tone },
+        { label: "Health factor", value: debt === 0n ? "No debt" : `${formatHf(currentHf)} · LTV ${formatBps(currentLtvBps)}`, tone: risk.tone },
       ]} />
       <div className="fi-workspace-grid fi-workspace-balance">
         <section className="fi-panel">
@@ -322,8 +339,21 @@ export function BorrowWorkspace() {
             {projectedDebt !== undefined && projectedLtvBps !== undefined ? (
               <dl className="fi-form-details" aria-label="Projected borrowing risk">
                 <div><dt>LTV</dt><dd><strong>{formatBps(currentLtvBps)} → {formatBps(projectedLtvBps)}</strong></dd></div>
+                <div><dt>Health factor</dt><dd><strong data-band={projectedBand}>{formatHf(currentHf)} → {formatHf(projectedHf)}</strong></dd></div>
                 <div><dt>Position</dt><dd><strong>{risk.label} → {projectedRisk.label}</strong></dd></div>
               </dl>
+            ) : null}
+            {mode === "borrow" && projectedHf !== null && projectedHf < 1.25 ? (
+              <div className="fi-inline-state fi-inline-warning" role="alert">
+                <div><strong>High liquidation risk</strong><span>After this borrow, a {projectedDrop === null ? "small" : `${(projectedDrop * 100).toFixed(0)}%`} drop in collateral value would make the position liquidatable.</span></div>
+              </div>
+            ) : mode === "borrow" && projectedDrop !== null && projectedDrop > 0 ? (
+              <p className="mt-2 text-xs text-fg-3">A {(projectedDrop * 100).toFixed(0)}% drop in collateral value would liquidate this position.</p>
+            ) : null}
+            {mode === "borrow" && safeMax !== undefined && safeMax > 0n ? (
+              <button type="button" className="fi-inline-retry" onClick={() => changeAmount(formatUnits(safeMax, 18))}>
+                Use safe max ({formatAmount(safeMax)} NUSD, keeps health factor ≥ 1.5)
+              </button>
             ) : null}
             {priceUnavailable ? <div className="fi-inline-state fi-inline-warning"><div><strong>Oracle price unavailable</strong></div></div> : null}
             {!isConnected ? <ConnectWalletButton /> : (

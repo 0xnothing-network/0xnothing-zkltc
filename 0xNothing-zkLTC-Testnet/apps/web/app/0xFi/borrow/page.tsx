@@ -1,13 +1,6 @@
-import { BorrowWorkspace } from "@fi/components/BorrowWorkspace";
-import { OracleFeedTable } from "@fi/components/OracleFeedTable";
-import { PageHeading } from "@fi/components/UiStates";
+import { redirect } from "next/navigation";
 
+/** Lend and Borrow are one page now (ui-redesign-spec §5). */
 export default function BorrowPage() {
-  return (
-    <div className="fi-page">
-      <PageHeading title="Borrow" />
-      <BorrowWorkspace />
-      <OracleFeedTable />
-    </div>
-  );
+  redirect("/0xFi/lend?tab=borrow");
 }
