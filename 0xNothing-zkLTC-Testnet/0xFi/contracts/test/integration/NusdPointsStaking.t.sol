@@ -27,6 +27,7 @@ contract NusdPointsStakingTest is TestBase {
         vm.prank(ALICE);
         nusd.approve(address(staking), type(uint256).max);
         nusd.approve(address(staking), type(uint256).max);
+        staking.setMinStake(1);
     }
 
     function testLockMultipliersAndXPointDisplayUnits() public {
@@ -36,9 +37,12 @@ contract NusdPointsStakingTest is TestBase {
         for (uint256 i; i < durations.length; ++i) {
             vm.prank(ALICE);
             staking.stake(1 ether, uint32(durations[i]));
+            assertEq(staking.getPosition(i).pointCredits, 0, "nothing paid at stake");
         }
 
-        assertEq(staking.earnedPointCredits(ALICE), 6.7 ether, "all fixed multipliers are exact");
+        assertEq(staking.earnedPointCredits(ALICE), 0, "accrual starts at zero");
+        vm.warp(block.timestamp + 365 days);
+        assertEq(staking.earnedPointCredits(ALICE), 6.7 ether, "full lock totals accrue by maturity");
         assertEq(staking.xPointsWad(ALICE), 0.067 ether, "100 credits display as one xPoint");
         for (uint256 i; i < durations.length; ++i) {
             NusdPointsStaking.Position memory position = staking.getPosition(i);
@@ -50,6 +54,7 @@ contract NusdPointsStakingTest is TestBase {
         uint256 amount = 0.123_456_789 ether;
         vm.prank(ALICE);
         staking.stake(amount, uint32(90 days));
+        vm.warp(block.timestamp + 90 days);
 
         assertEq(
             staking.earnedPointCredits(ALICE), amount * 12_000 / 10_000, "fractional amount is not rounded to NUSD"
@@ -91,7 +96,7 @@ contract NusdPointsStakingTest is TestBase {
 
         assertEq(nusd.balanceOf(ALICE), startingBalance, "all principal returns at unlock");
         assertEq(staking.totalLockedByUser(ALICE), 0, "principal aggregate clears");
-        assertEq(staking.availablePointCredits(ALICE), 20 ether, "earned credits remain after honoring lock");
+        assertEq(staking.availablePointCredits(ALICE), 20 ether, "matured credits remain after honoring lock");
 
         vm.prank(ALICE);
         vm.expectRevert(NusdPointsStaking.PositionAlreadyWithdrawn.selector);
@@ -122,6 +127,7 @@ contract NusdPointsStakingTest is TestBase {
     function testFeeOnTransferNusdIsRejectedAtomically() public {
         MockFeeOnTransferToken feeToken = new MockFeeOnTransferToken();
         NusdPointsStaking feeStaking = new NusdPointsStaking(address(feeToken), address(this), GUARDIAN, signer);
+        feeStaking.setMinStake(1);
         feeToken.mint(ALICE, 1 ether);
         vm.startPrank(ALICE);
         feeToken.approve(address(feeStaking), type(uint256).max);
@@ -135,6 +141,7 @@ contract NusdPointsStakingTest is TestBase {
 
     function testDirectRedeemConsumesAvailableCreditsAndPaysFromReserve() public {
         _stakeAlice(100 ether, uint32(30 days));
+        vm.warp(block.timestamp + 30 days);
         staking.configureRedemption(10 ether, true);
         staking.fundRedemptionReserve(20 ether);
 
@@ -155,6 +162,7 @@ contract NusdPointsStakingTest is TestBase {
 
     function testDirectRedeemFailsClosedUntilPublicPoolIsUsable() public {
         _stakeAlice(10 ether, uint32(30 days));
+        vm.warp(block.timestamp + 30 days);
 
         vm.prank(ALICE);
         vm.expectRevert(NusdPointsStaking.RedemptionDisabled.selector);
@@ -192,6 +200,7 @@ contract NusdPointsStakingTest is TestBase {
 
     function testVoucherRedeemIsAccountBoundRelayerSafeAndReplayProtected() public {
         _stakeAlice(100 ether, uint32(30 days));
+        vm.warp(block.timestamp + 30 days);
         staking.configureRedemption(10 ether, true);
         staking.fundRedemptionReserve(20 ether);
 
@@ -213,6 +222,7 @@ contract NusdPointsStakingTest is TestBase {
 
     function testVoucherExpirySignerRateAndCreditChecksFailClosed() public {
         _stakeAlice(10 ether, uint32(30 days));
+        vm.warp(block.timestamp + 30 days);
         staking.configureRedemption(1 ether, true);
         staking.fundRedemptionReserve(10 ether);
 
@@ -248,6 +258,7 @@ contract NusdPointsStakingTest is TestBase {
     function testReserveAccountingCanNeverConsumeLockedPrincipal() public {
         uint256 aliceBefore = nusd.balanceOf(ALICE);
         _stakeAlice(100 ether, uint32(30 days));
+        vm.warp(block.timestamp + 30 days);
         staking.configureRedemption(100 ether, true);
         staking.fundRedemptionReserve(1 ether);
 
@@ -270,6 +281,7 @@ contract NusdPointsStakingTest is TestBase {
 
     function testRedemptionPauseAndSignerRotationAreSeparated() public {
         _stakeAlice(10 ether, uint32(30 days));
+        vm.warp(block.timestamp + 30 days);
         staking.configureRedemption(1 ether, true);
         staking.fundRedemptionReserve(1 ether);
         NusdPointsStaking.RedeemVoucher memory voucher = _voucher(ALICE, ALICE, 1 ether, block.timestamp + 1 hours);
@@ -303,6 +315,85 @@ contract NusdPointsStakingTest is TestBase {
             amount * multipliers[index] / 10_000,
             "quote is exact fixed-point multiplier"
         );
+    }
+
+    function testDefaultMinStakeIsFiftyNusd() public {
+        NusdPointsStaking fresh = new NusdPointsStaking(address(nusd), address(this), GUARDIAN, signer);
+        assertEq(fresh.minStakeNusd(), 50 ether, "default min stake");
+        vm.prank(ALICE);
+        nusd.approve(address(fresh), type(uint256).max);
+        vm.prank(ALICE);
+        vm.expectRevert(NusdPointsStaking.StakeBelowMinimum.selector);
+        fresh.stake(50 ether - 1, uint32(30 days));
+        vm.prank(ALICE);
+        fresh.stake(50 ether, uint32(30 days));
+        assertEq(fresh.totalLocked(), 50 ether, "min stake accepted");
+    }
+
+    function testCreditsAccruePerSecondNotUpfront() public {
+        vm.prank(ALICE);
+        staking.stake(100 ether, uint32(30 days));
+        assertEq(staking.availablePointCredits(ALICE), 0, "zero at stake");
+        vm.warp(block.timestamp + 15 days);
+        assertEq(staking.availablePointCredits(ALICE), 50 ether, "half the 30-day lock");
+        vm.warp(block.timestamp + 15 days);
+        assertEq(staking.availablePointCredits(ALICE), 100 ether, "full at maturity");
+    }
+
+    function testEarlyExitForfeitsThatPositionsPoints() public {
+        vm.startPrank(ALICE);
+        uint256 first = staking.stake(80 ether, uint32(30 days));
+        uint256 second = staking.stake(20 ether, uint32(90 days));
+        vm.stopPrank();
+        vm.warp(block.timestamp + 15 days);
+
+        uint256 before = nusd.balanceOf(ALICE);
+        uint256 earnedBefore = staking.earnedPointCredits(ALICE);
+        assertEq(earnedBefore, 40 ether + 20 ether * 12_000 / 10_000 * 15 days / 90 days, "both accruing");
+
+        vm.prank(ALICE);
+        staking.exitEarly(first);
+        assertEq(nusd.balanceOf(ALICE), before + 80 ether, "principal returned");
+        assertTrue(staking.getPosition(first).forfeited, "forfeited");
+        assertEq(staking.getPosition(first).pointCredits, 0, "credits cleared");
+        assertEq(staking.earnedPointCredits(ALICE), 20 ether * 12_000 / 10_000 * 15 days / 90 days, "only other position");
+
+        vm.warp(block.timestamp + 75 days);
+        vm.prank(ALICE);
+        vm.expectRevert(NusdPointsStaking.PositionMatured.selector);
+        staking.exitEarly(second);
+        vm.prank(ALICE);
+        staking.withdraw(second);
+        assertEq(staking.availablePointCredits(ALICE), 24 ether, "matured second lock settled");
+    }
+
+    function testEarlyExitRevertsIfThoseCreditsWereRedeemed() public {
+        vm.prank(ALICE);
+        uint256 positionId = staking.stake(100 ether, uint32(30 days));
+        vm.warp(block.timestamp + 15 days);
+        staking.configureRedemption(10 ether, true);
+        staking.fundRedemptionReserve(20 ether);
+        vm.prank(ALICE);
+        staking.redeemPoints(50 ether);
+
+        vm.prank(ALICE);
+        vm.expectRevert(NusdPointsStaking.PointsAlreadyRedeemed.selector);
+        staking.exitEarly(positionId);
+    }
+
+    function testRedemptionStaysDisabledUntilAdminEnablesIt() public {
+        vm.prank(ALICE);
+        staking.stake(100 ether, uint32(30 days));
+        vm.warp(block.timestamp + 30 days);
+        assertFalse(staking.redemptionEnabled(), "default off");
+        vm.prank(ALICE);
+        vm.expectRevert(NusdPointsStaking.RedemptionDisabled.selector);
+        staking.redeemPoints(1 ether);
+        staking.configureRedemption(1 ether, true);
+        staking.fundRedemptionReserve(1 ether);
+        vm.prank(ALICE);
+        staking.redeemPoints(1 ether);
+        assertEq(staking.spentPointCredits(ALICE), 1 ether, "enabled path works");
     }
 
     function _stakeAlice(uint256 amount, uint32 duration) private returns (uint256 positionId) {

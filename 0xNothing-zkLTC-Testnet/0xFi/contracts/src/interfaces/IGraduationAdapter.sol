@@ -25,5 +25,10 @@ interface IGraduationAdapter {
 
     function lpTokenFor(address token, address nusd) external view returns (address lpToken);
 
+    function quoteMinimumLp(address token, address nusd, uint256 tokenAmount, uint256 nusdAmount)
+        external
+        view
+        returns (uint256 minimumLp);
+
     function graduate(GraduationParams calldata params) external returns (GraduationResult memory result);
 }

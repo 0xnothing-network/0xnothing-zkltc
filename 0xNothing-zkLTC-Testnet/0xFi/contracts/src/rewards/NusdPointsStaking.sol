@@ -11,9 +11,11 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title NusdPointsStaking
-/// @notice Escrows NUSD for fixed periods and awards non-transferable point credits up front.
-/// @dev Point credits use 18 decimals. One NUSD at the base multiplier earns 1e18 credits,
-///      while 100e18 credits are displayed as 1.00 0xPoint by clients.
+/// @notice Escrows NUSD for fixed periods and accrues non-transferable point credits per second.
+/// @dev Point credits use 18 decimals. One NUSD at the base multiplier earns 1e18 credits over
+///      the selected lock if held to maturity; 100e18 credits display as 1.00 0xPoint.
+///      Early exit returns principal and forfeits that position's accrued and remaining credits.
+///      Direct NUSD redemption stays behind `redemptionEnabled`, which defaults to false.
 contract NusdPointsStaking is Ownable2Step, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -36,6 +38,9 @@ contract NusdPointsStaking is Ownable2Step, ReentrancyGuard {
     error PositionAlreadyWithdrawn();
     error PositionNotFound();
     error PositionStillLocked();
+    error PositionMatured();
+    error PointsAlreadyRedeemed();
+    error StakeBelowMinimum();
     error RedemptionDisabled();
     error RedemptionPaused();
     error RedemptionTooSmall();
@@ -48,6 +53,7 @@ contract NusdPointsStaking is Ownable2Step, ReentrancyGuard {
     uint256 public constant BPS = 10_000;
     uint256 public constant POINT_CREDITS_PER_XPOINT = 100e18;
     uint256 public constant MAX_PAGE_SIZE = 100;
+    uint256 public constant DEFAULT_MIN_STAKE_NUSD = 50 ether;
 
     uint32 public constant LOCK_30_DAYS = 30 days;
     uint32 public constant LOCK_90_DAYS = 90 days;
@@ -69,6 +75,8 @@ contract NusdPointsStaking is Ownable2Step, ReentrancyGuard {
         uint64 unlockTime;
         uint32 lockDuration;
         bool withdrawn;
+        uint64 startTime;
+        bool forfeited;
     }
 
     struct RedeemVoucher {
@@ -87,6 +95,7 @@ contract NusdPointsStaking is Ownable2Step, ReentrancyGuard {
     bool public stakingPaused;
     bool public redemptionsPaused;
     bool public redemptionEnabled;
+    uint256 public minStakeNusd = DEFAULT_MIN_STAKE_NUSD;
 
     /// @notice NUSD wei paid for one whole 0xPoint, expressed as a wad.
     uint256 public nusdPerXPointWad;
@@ -99,7 +108,7 @@ contract NusdPointsStaking is Ownable2Step, ReentrancyGuard {
     uint256 public totalSpentPointCredits;
 
     mapping(address => uint256) public totalLockedByUser;
-    mapping(address => uint256) public earnedPointCredits;
+    mapping(address => uint256) private _settledEarnedPointCredits;
     mapping(address => uint256) public spentPointCredits;
     mapping(address => uint256) public redemptionNonces;
 
@@ -115,6 +124,8 @@ contract NusdPointsStaking is Ownable2Step, ReentrancyGuard {
         uint64 unlockTime
     );
     event Withdrawn(uint256 indexed positionId, address indexed account, uint256 amount);
+    event EarlyExited(uint256 indexed positionId, address indexed account, uint256 amount, uint256 forfeitedCredits);
+    event MinStakeUpdated(uint256 minStakeNusd);
     event RedemptionExecuted(
         address indexed account,
         address indexed recipient,
@@ -168,18 +179,19 @@ contract NusdPointsStaking is Ownable2Step, ReentrancyGuard {
         _;
     }
 
-    /// @notice Locks NUSD and immediately credits the position's fixed-duration points.
+    /// @notice Locks NUSD. Credits accrue per second and vest only while the position stays open.
     function stake(uint256 amount, uint32 lockDuration) external nonReentrant returns (uint256 positionId) {
         if (stakingPaused) revert StakingPaused();
         if (amount == 0) revert InvalidAmount();
+        if (amount < minStakeNusd) revert StakeBelowMinimum();
 
-        uint256 multiplierBps = lockMultiplierBps(lockDuration);
-        uint256 pointCredits = Math.mulDiv(amount, multiplierBps, BPS);
+        uint256 pointCredits = quotePointCredits(amount, lockDuration);
         uint256 unlockTimestamp = block.timestamp + lockDuration;
         if (unlockTimestamp > type(uint64).max) revert TimestampOverflow();
         // The explicit bound above makes this narrowing conversion safe.
         // forge-lint: disable-next-line(unsafe-typecast)
         uint64 unlockTime = uint64(unlockTimestamp);
+        uint64 startTime = uint64(block.timestamp);
 
         positionId = nextPositionId++;
         _positions[positionId] = Position({
@@ -188,14 +200,14 @@ contract NusdPointsStaking is Ownable2Step, ReentrancyGuard {
             pointCredits: pointCredits,
             unlockTime: unlockTime,
             lockDuration: lockDuration,
-            withdrawn: false
+            withdrawn: false,
+            startTime: startTime,
+            forfeited: false
         });
         _userPositionIds[msg.sender].push(positionId);
 
         totalLocked += amount;
         totalLockedByUser[msg.sender] += amount;
-        totalEarnedPointCredits += pointCredits;
-        earnedPointCredits[msg.sender] += pointCredits;
 
         _pullExact(msg.sender, amount);
         _assertSolvent();
@@ -213,6 +225,33 @@ contract NusdPointsStaking is Ownable2Step, ReentrancyGuard {
         if (block.timestamp < position.unlockTime) revert PositionStillLocked();
 
         uint256 amount = position.amount;
+        uint256 credits = position.pointCredits;
+        position.withdrawn = true;
+        totalLocked -= amount;
+        totalLockedByUser[msg.sender] -= amount;
+        _settledEarnedPointCredits[msg.sender] += credits;
+        totalEarnedPointCredits += credits;
+
+        _pushExact(msg.sender, amount);
+        _assertSolvent();
+
+        emit Withdrawn(positionId, msg.sender, amount);
+    }
+
+    /// @notice Returns principal before maturity and forfeits this position's accrued and remaining credits.
+    function exitEarly(uint256 positionId) external nonReentrant {
+        Position storage position = _positionAt(positionId);
+        if (position.account != msg.sender) revert UnauthorizedPositionOwner();
+        if (position.withdrawn || position.forfeited) revert PositionAlreadyWithdrawn();
+        // forge-lint: disable-next-line(block-timestamp)
+        if (block.timestamp >= position.unlockTime) revert PositionMatured();
+
+        uint256 forfeited = _accruedCredits(position);
+        uint256 remainingEarned = earnedPointCredits(msg.sender) - forfeited;
+        if (spentPointCredits[msg.sender] > remainingEarned) revert PointsAlreadyRedeemed();
+
+        uint256 amount = position.amount;
+        position.forfeited = true;
         position.withdrawn = true;
         totalLocked -= amount;
         totalLockedByUser[msg.sender] -= amount;
@@ -220,7 +259,13 @@ contract NusdPointsStaking is Ownable2Step, ReentrancyGuard {
         _pushExact(msg.sender, amount);
         _assertSolvent();
 
-        emit Withdrawn(positionId, msg.sender, amount);
+        emit EarlyExited(positionId, msg.sender, amount, forfeited);
+    }
+
+    function setMinStake(uint256 newMinStakeNusd) external onlyOwner {
+        if (newMinStakeNusd == minStakeNusd) revert ConfigUnchanged();
+        minStakeNusd = newMinStakeNusd;
+        emit MinStakeUpdated(newMinStakeNusd);
     }
 
     /// @notice Funds the isolated NUSD reserve used only for point redemptions.
@@ -346,12 +391,26 @@ contract NusdPointsStaking is Ownable2Step, ReentrancyGuard {
         return Math.mulDiv(amount, lockMultiplierBps(lockDuration), BPS);
     }
 
+    function quoteAccruedPointCredits(uint256 amount, uint32 lockDuration, uint256 elapsedSeconds)
+        public
+        pure
+        returns (uint256)
+    {
+        uint256 maximum = quotePointCredits(amount, lockDuration);
+        if (elapsedSeconds >= lockDuration) return maximum;
+        return Math.mulDiv(maximum, elapsedSeconds, lockDuration);
+    }
+
     function quoteRedemption(uint256 pointCredits) public view returns (uint256) {
         return Math.mulDiv(pointCredits, nusdPerXPointWad, POINT_CREDITS_PER_XPOINT);
     }
 
+    function earnedPointCredits(address account) public view returns (uint256) {
+        return _settledEarnedPointCredits[account] + _pendingAccrued(account);
+    }
+
     function availablePointCredits(address account) public view returns (uint256) {
-        return earnedPointCredits[account] - spentPointCredits[account];
+        return earnedPointCredits(account) - spentPointCredits[account];
     }
 
     function xPointsWad(address account) external view returns (uint256) {
@@ -383,8 +442,14 @@ contract NusdPointsStaking is Ownable2Step, ReentrancyGuard {
         }
     }
 
-    function getPosition(uint256 positionId) external view returns (Position memory) {
-        return _positionAt(positionId);
+    function getPosition(uint256 positionId) external view returns (Position memory position) {
+        Position storage stored = _positionAt(positionId);
+        position = stored;
+        if (stored.forfeited) {
+            position.pointCredits = 0;
+        } else if (!stored.withdrawn) {
+            position.pointCredits = _accruedCredits(stored);
+        }
     }
 
     function accountSummary(address account)
@@ -394,7 +459,7 @@ contract NusdPointsStaking is Ownable2Step, ReentrancyGuard {
     {
         return (
             totalLockedByUser[account],
-            earnedPointCredits[account],
+            earnedPointCredits(account),
             spentPointCredits[account],
             availablePointCredits(account),
             _userPositionIds[account].length
@@ -436,6 +501,21 @@ contract NusdPointsStaking is Ownable2Step, ReentrancyGuard {
     function _positionAt(uint256 positionId) private view returns (Position storage position) {
         if (positionId >= nextPositionId) revert PositionNotFound();
         return _positions[positionId];
+    }
+
+    function _pendingAccrued(address account) private view returns (uint256 pending) {
+        uint256[] storage ids = _userPositionIds[account];
+        for (uint256 i; i < ids.length; ++i) {
+            Position storage position = _positions[ids[i]];
+            if (!position.withdrawn && !position.forfeited) pending += _accruedCredits(position);
+        }
+    }
+
+    function _accruedCredits(Position storage position) private view returns (uint256) {
+        if (position.forfeited) return 0;
+        uint256 elapsed = block.timestamp > position.startTime ? block.timestamp - position.startTime : 0;
+        if (elapsed >= position.lockDuration) return position.pointCredits;
+        return Math.mulDiv(position.pointCredits, elapsed, position.lockDuration);
     }
 
     function _redeemPoints(address account, address recipient, uint256 pointCredits) private returns (uint256 nusdOut) {

@@ -34,6 +34,14 @@ contract MisreportingAdapter is IGraduationAdapter {
         return mode == Mode.NoLpToken ? address(0) : address(lpToken);
     }
 
+    function preparePool(address) external view returns (address) {
+        return mode == Mode.NoLpToken ? address(0) : address(lpToken);
+    }
+
+    function quoteMinimumLp(address, address, uint256, uint256) external pure returns (uint256) {
+        return 1;
+    }
+
     function graduate(GraduationParams calldata params) external returns (GraduationResult memory result) {
         if (mode != Mode.KeepsNothing) {
             SafeTransferLib.safeTransferFrom(params.token, msg.sender, address(this), params.tokenAmount);
