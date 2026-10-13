@@ -1,0 +1,117 @@
+/*
+ * 0xNothing design tokens for the wallet — a copy of apps/web/app/tokens.css,
+ * value for value, scoped to .w-root (the wallet sets data-theme on .w-root, not
+ * <html>). tests/ui/tokens.test.ts pins every token against the site.
+ * The wallet is a brand-level app, so its accent is the hub silver.
+ * Fonts are system stacks: the extension bundle does not ship next/font.
+ */
+.w-root {
+  color-scheme: dark;
+
+  /* Graphite core */
+  --bg: #0b0c0e;
+  --surface-1: #111316;
+  --surface-2: #16191d;
+  --surface-3: #1c2025;
+  --line: #23272d;
+  --line-strong: #2f353c;
+  --text-1: #f2f4f6;
+  --text-2: #a9b0b9;
+  --text-3: #7d8590;
+
+  /* Shared status */
+  --positive: #3dd68c;
+  --negative: #ff5c70;
+  --warning: #f5b544;
+  --info: #7aa2ff;
+
+  /* Litecoin silver */
+  --silver-1: #eef1f4;
+  --silver-2: #c9cdd2;
+  --silver-3: #a6a9aa;
+  /* Hero wordmark gradient (silver on graphite, ink on light). */
+  --hero-from: var(--silver-1);
+  --hero-to: var(--silver-3);
+  /* The 1px "silver edge" along the top of raised surfaces. */
+  --edge-highlight: inset 0 1px 0 rgba(238, 241, 244, .06);
+
+  /* Product accents (dark) */
+  --accent-hub: #eef1f4;
+  --accent-pump: #b6f09c;
+  --accent-fi: #7aa2ff;
+  --accent-pixel: #e3a6ff;
+
+  /* Default accent = hub silver; product roots override below. */
+  --accent: var(--accent-hub);
+  --accent-ink: #0b0c0e;
+  --accent-text: var(--accent);
+
+  /* Typography */
+  --font-ui: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-num: "Geist Mono", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  --font-brand: "Departure Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Radius */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+
+  /* Elevation */
+  --e-0: none;
+  --e-1: var(--edge-highlight), 0 1px 2px rgba(0, 0, 0, .3);
+  --e-2: var(--edge-highlight), 0 12px 32px -12px rgba(0, 0, 0, .65), 0 0 0 1px var(--line);
+  --e-3: var(--edge-highlight), 0 24px 64px -16px rgba(0, 0, 0, .8), 0 0 0 1px var(--line-strong);
+
+  /* Spacing (4pt) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+
+  /* Focus ring and overlays */
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
+  --hover: rgba(242, 244, 246, .05);
+  --pressed: rgba(242, 244, 246, .08);
+  --scrim: rgba(5, 6, 8, .72);
+  --header-bg: rgba(11, 12, 14, .78);
+  --ease: cubic-bezier(.22, .7, .2, 1);
+}
+
+.w-root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f5f6f8;
+  --surface-1: #ffffff;
+  --surface-2: #f1f3f6;
+  --surface-3: #e8ebef;
+  --line: #dde1e6;
+  --line-strong: #cdd2d8;
+  --text-1: #0e1116;
+  --text-2: #48505a;
+  --text-3: #69717b;
+  --positive: #0f8a55;
+  --negative: #d6334a;
+  --warning: #b7791f;
+  --info: #3e6fe0;
+  --edge-highlight: inset 0 1px 0 rgba(255, 255, 255, .9);
+  --accent-hub: #0e1116;
+  --accent-pump: #9be27a;
+  --accent-fi: #3e6fe0;
+  --accent-pixel: #8a35b5;
+  --accent-ink: #ffffff;
+  --hero-from: #0e1116;
+  --hero-to: #69717b;
+  --e-1: var(--edge-highlight), 0 1px 2px rgba(14, 17, 22, .06);
+  --e-2: var(--edge-highlight), 0 12px 32px -14px rgba(14, 17, 22, .18), 0 0 0 1px var(--line);
+  --e-3: var(--edge-highlight), 0 24px 64px -16px rgba(14, 17, 22, .25), 0 0 0 1px var(--line-strong);
+  --hover: rgba(14, 17, 22, .04);
+  --pressed: rgba(14, 17, 22, .07);
+  --scrim: rgba(14, 17, 22, .4);
+  --header-bg: rgba(245, 246, 248, .82);
+}

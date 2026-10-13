@@ -45,6 +45,40 @@ test("wallet design tokens match the site's, value for value", () => {
   }
 });
 
+const WALLET_TOKENS = new URL("../../src/styles/tokens.css", import.meta.url);
+const SITE_TOKENS = new URL("../../../web/app/tokens.css", import.meta.url);
+
+function declarations(path: URL, selector: string): Map<string, string> {
+  const css = readFileSync(path, "utf8");
+  const start = css.indexOf(selector);
+  assert.notEqual(start, -1, `${selector} is missing from ${path.pathname}`);
+  const block = css.slice(css.indexOf("{", start) + 1, css.indexOf("\n}", start));
+  const found = new Map<string, string>();
+  for (const line of block.replace(/\/\*[\s\S]*?\*\//g, "").split(";")) {
+    const [name = "", ...rest] = line.split(":");
+    if (name.trim().startsWith("--")) found.set(name.trim(), rest.join(":").trim());
+  }
+  return found;
+}
+
+// next/font hashes the site's font families; the wallet ships system stacks instead.
+const FONT_TOKENS = new Set(["--font-ui", "--font-num"]);
+
+for (const [theme, site, wallet] of [
+  ["dark", ":root {\n  color-scheme: dark;", ".w-root {"],
+  ["light", ':root[data-theme="light"] {', '.w-root[data-theme="light"] {'],
+] as const) {
+  test(`wallet ${theme} design-system tokens match the site, value for value`, () => {
+    const siteTokens = declarations(SITE_TOKENS, site);
+    const walletTokens = declarations(WALLET_TOKENS, wallet);
+    assert.ok(siteTokens.size >= 20, `the site only declares ${siteTokens.size} ${theme} tokens`);
+    for (const [key, value] of siteTokens) {
+      if (FONT_TOKENS.has(key)) continue;
+      assert.equal(walletTokens.get(key), value, `${key} (${theme}) drifted between the wallet and the site`);
+    }
+  });
+}
+
 test("the wallet's own tokens stay out of the --fi- namespace", () => {
   const css = readFileSync(WALLET_CSS, "utf8");
   const open = css.indexOf("{", css.indexOf(".w-root {"));

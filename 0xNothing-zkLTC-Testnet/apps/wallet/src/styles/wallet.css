@@ -1,12 +1,16 @@
+@import "./tokens.css";
+
 /*
  * 0xNothing Wallet — the only stylesheet, shared by the extension popup, the
  * approval window and the Android app.
  *
- * The token set is the one from apps/web/app/0xFi/globals.css, value for value,
- * so the wallet reads as the same product as the site: same palette, Departure
- * Mono, square 1px borders, 10px uppercase labels, stepped transitions. It is
- * duplicated rather than imported — an extension ships as a fixed bundle — and
- * tests/tokens.test.ts pins the duplicate against the site's own declaration.
+ * The token set is the 0xNothing design system (./tokens.css, a copy of
+ * apps/web/app/tokens.css) plus the --fi-* aliases from apps/web/app/0xFi/
+ * globals.css, value for value, so the wallet reads as the same product as the
+ * site: graphite surfaces, Litecoin silver accent, Geist text with Geist Mono
+ * figures, 10–14px radii and 12px sentence-case labels. It is duplicated rather
+ * than imported — an extension ships as a fixed bundle — and
+ * tests/ui/tokens.test.ts pins the duplicate against the site's own declarations.
  *
  * Nine languages share this file, so nothing in it is sized to a string: a label
  * wraps rather than overflowing its border, every 1fr track is minmax(0, 1fr) so
@@ -15,22 +19,22 @@
  * "Заблокировать сейчас" and "今すぐロック" without a per-locale rule.
  */
 .w-root {
-  --fi-bg: #101113;
-  --fi-panel: #181a1d;
-  --fi-panel-2: #202328;
-  --fi-input: #141619;
-  --fi-line: rgba(207, 218, 231, 0.09);
-  --fi-line-strong: rgba(207, 218, 231, 0.17);
-  --fi-text: #f1f2f3;
-  --fi-muted: #a6adb7;
-  --fi-dim: #848d99;
-  --fi-green: #a0dbb8;
-  --fi-green-hover: #b8e8cb;
-  --fi-red: #ff8f9f;
-  --fi-yellow: #d8c98d;
-  --fi-blue: #c6ccd5;
+  --fi-bg: var(--bg);
+  --fi-panel: var(--surface-1);
+  --fi-panel-2: var(--surface-2);
+  --fi-input: var(--surface-2);
+  --fi-line: var(--line);
+  --fi-line-strong: var(--line-strong);
+  --fi-text: var(--text-1);
+  --fi-muted: var(--text-2);
+  --fi-dim: var(--text-3);
+  --fi-green: var(--accent);
+  --fi-green-hover: color-mix(in srgb, var(--accent) 85%, var(--text-1));
+  --fi-red: var(--negative);
+  --fi-yellow: var(--warning);
+  --fi-blue: var(--text-2);
   --fi-control-height: 44px;
-  --fi-text-label: 11px;
+  --fi-text-label: 12px;
   --fi-text-body: 13px;
   --fi-text-data: 13px;
   --w-gutter: 14px;
@@ -44,8 +48,7 @@
   overflow: hidden;
   background-color: var(--fi-bg);
   color: var(--fi-text);
-  color-scheme: dark;
-  font-family: "Departure Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: var(--font-ui);
   font-size: var(--fi-text-data);
   font-synthesis: none;
   font-variant-numeric: tabular-nums;
@@ -54,89 +57,8 @@
   -webkit-font-smoothing: antialiased;
 }
 
-/* Opt-in light surface. The dark palette above remains the default. */
-.w-root[data-theme="light"] {
-  --fi-bg: #ffffff;
-  --fi-panel: #ffffff;
-  --fi-panel-2: #f3f3f3;
-  --fi-input: #fafafa;
-  --fi-line: rgba(0, 0, 0, 0.14);
-  --fi-line-strong: rgba(0, 0, 0, 0.3);
-  --fi-text: #111111;
-  --fi-muted: #505050;
-  --fi-dim: #737373;
-  --fi-green: #0b6b3f;
-  --fi-green-hover: #07532f;
-  --fi-red: #b4233b;
-  --fi-yellow: #765c00;
-  --fi-blue: #414141;
-  color-scheme: light;
-}
+/* Light surface: tokens.css switches every semantic token under data-theme="light". */
 
-.w-root[data-theme="light"] ::selection {
-  color: #ffffff;
-}
-
-.w-root[data-theme="light"] .w-head,
-.w-root[data-theme="light"] .w-nav {
-  background: var(--fi-bg);
-}
-
-.w-root[data-theme="light"] .w-btn:hover:not(:disabled) {
-  border-color: rgba(0, 0, 0, 0.72);
-  background: #f0f0f0;
-}
-
-.w-root[data-theme="light"] .w-btn[data-variant="primary"] {
-  color: #ffffff;
-}
-
-.w-root[data-theme="light"] .w-btn[data-variant="danger"]:hover:not(:disabled) {
-  background: rgba(180, 35, 59, 0.12);
-}
-
-.w-root[data-theme="light"] .w-action:hover,
-.w-root[data-theme="light"] .w-action:focus-visible,
-.w-root[data-theme="light"] .w-asset:hover,
-.w-root[data-theme="light"] .w-tx:hover,
-.w-root[data-theme="light"] .w-dapp:hover {
-  background: rgba(11, 107, 63, 0.06);
-}
-
-.w-root[data-theme="light"] .w-max:hover,
-.w-root[data-theme="light"] .w-max:focus-visible {
-  background: rgba(11, 107, 63, 0.1);
-}
-
-.w-root[data-theme="light"] .w-pill[data-tone="ok"] {
-  border-color: rgba(11, 107, 63, 0.5);
-}
-
-.w-root[data-theme="light"] .w-pill[data-tone="warn"] {
-  border-color: rgba(118, 92, 0, 0.5);
-}
-
-.w-root[data-theme="light"] .w-pill[data-tone="bad"],
-.w-root[data-theme="light"] .w-toast[data-tone="error"] {
-  border-color: rgba(180, 35, 59, 0.55);
-}
-
-.w-root[data-theme="light"] .w-toast[data-tone="ok"] {
-  border-color: rgba(11, 107, 63, 0.55);
-}
-
-.w-root[data-theme="light"] .w-sheet {
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.w-root[data-theme="light"] .w-account[aria-current="true"] {
-  background: rgba(11, 107, 63, 0.07);
-}
-
-.w-root[data-theme="light"] .w-token-option:hover,
-.w-root[data-theme="light"] .w-token-option[aria-selected="true"] {
-  background: rgba(11, 107, 63, 0.07);
-}
 /*
  * The popup is a fixed 360×600 surface. The approval window and Android get the
  * viewport, so the same tree has to work at both sizes without a second layout.
@@ -145,7 +67,7 @@ html,
 body {
   margin: 0;
   height: 100%;
-  background: var(--fi-bg, #050806);
+  background: var(--fi-bg, var(--bg));
 }
 
 body {
@@ -207,7 +129,7 @@ body {
 
 .w-root ::selection {
   background: var(--fi-green);
-  color: #051009;
+  color: var(--accent-ink);
 }
 
 .w-root :where(a, button, input, select, textarea, [tabindex]):focus-visible {
@@ -223,7 +145,7 @@ body {
   flex: 1;
   flex-direction: column;
   min-height: 0;
-  animation: w-screen-in 100ms steps(2, end);
+  animation: w-screen-in 100ms var(--ease);
 }
 
 @keyframes w-screen-in {
@@ -318,8 +240,7 @@ body {
   gap: 10px;
   color: var(--fi-muted);
   font-size: var(--fi-text-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .w-summary {
@@ -334,8 +255,7 @@ body {
 .w-summary-label {
   color: var(--fi-muted);
   font-size: var(--fi-text-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .w-summary-value {
@@ -374,8 +294,7 @@ body {
   padding: 10px 12px;
   color: var(--fi-muted);
   font-size: var(--fi-text-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .w-disclosure > summary::-webkit-details-marker {
@@ -408,7 +327,7 @@ body {
 }
 
 .w-q-icons {
-  font-family: var(--w-mono, ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace);
+  font-family: var(--font-num);
   font-size: 1.05rem;
   line-height: 1.7;
   letter-spacing: 0.04em;
@@ -429,7 +348,7 @@ body {
   gap: 10px;
   border-bottom: 1px solid var(--fi-line-strong);
   padding: 10px var(--w-gutter);
-  background: rgba(5, 8, 6, 0.985);
+  background: var(--surface-1);
 }
 
 .w-head-main {
@@ -450,15 +369,14 @@ body {
   background: transparent;
   color: var(--fi-text);
   font-size: var(--fi-text-body);
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   text-overflow: ellipsis;
-  text-transform: uppercase;
   white-space: nowrap;
 }
 
 .w-head-caret {
   color: var(--fi-dim);
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .w-address {
@@ -471,7 +389,7 @@ body {
   color: var(--fi-muted);
   font-size: var(--fi-text-label);
   letter-spacing: 0.04em;
-  transition: color 100ms steps(2, end);
+  transition: color 100ms var(--ease);
 }
 .w-address:hover,
 .w-address:focus-visible {
@@ -493,7 +411,7 @@ body {
   background: transparent;
   color: var(--fi-muted);
   font-size: var(--fi-text-body);
-  transition: border-color 100ms steps(2, end), color 100ms steps(2, end);
+  transition: border-color 100ms var(--ease), color 100ms var(--ease);
 }
 
 .w-back:hover {
@@ -555,8 +473,7 @@ body {
   flex: 1 1 auto;
   color: var(--fi-dim);
   font-size: var(--fi-text-label);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 /* --------------------------------------------------------------- buttons */
@@ -575,23 +492,22 @@ body {
   justify-content: center;
   gap: 8px;
   border: 1px solid var(--fi-line-strong);
-  border-radius: 0;
+  border-radius: var(--r-md);
   padding: 5px 14px;
   background: transparent;
   color: var(--fi-text);
   font-size: var(--fi-text-label);
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   line-height: 1.3;
   overflow-wrap: break-word;
   text-align: center;
-  text-transform: uppercase;
   text-wrap: balance;
-  transition: border-color 120ms steps(2, end), background-color 120ms steps(2, end),
-    color 120ms steps(2, end), transform 80ms steps(2, end);
+  transition: border-color 120ms var(--ease), background-color 120ms var(--ease),
+    color 120ms var(--ease), transform 80ms var(--ease);
 }
 .w-btn:hover:not(:disabled) {
-  border-color: rgba(237, 245, 240, 0.72);
-  background: #141d17;
+  border-color: color-mix(in srgb, var(--text-1) 72%, transparent);
+  background: var(--surface-2);
 }
 
 .w-btn:active:not(:disabled) {
@@ -601,7 +517,7 @@ body {
 .w-btn[data-variant="primary"] {
   border-color: var(--fi-green);
   background: var(--fi-green);
-  color: #051009;
+  color: var(--accent-ink);
 }
 
 .w-btn[data-variant="primary"]:hover:not(:disabled) {
@@ -616,7 +532,7 @@ body {
 
 .w-btn[data-variant="danger"]:hover:not(:disabled) {
   border-color: var(--fi-red);
-  background: rgba(255, 143, 159, 0.12);
+  background: color-mix(in srgb, var(--negative) 12%, transparent);
   color: var(--fi-red);
 }
 
@@ -680,12 +596,11 @@ body {
   background: transparent;
   color: var(--fi-muted);
   font-size: var(--fi-text-label);
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   line-height: 1.3;
   overflow-wrap: break-word;
   text-align: center;
-  text-transform: uppercase;
-  transition: background-color 120ms steps(2, end), color 120ms steps(2, end);
+  transition: background-color 120ms var(--ease), color 120ms var(--ease);
 }
 
 .w-action:last-child {
@@ -694,7 +609,7 @@ body {
 
 .w-action:hover,
 .w-action:focus-visible {
-  background: rgba(155, 231, 189, 0.06);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
   color: var(--fi-text);
 }
 
@@ -720,11 +635,10 @@ body {
   background: transparent;
   color: var(--fi-dim);
   font-size: var(--fi-text-label);
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   line-height: 1.3;
   overflow-wrap: break-word;
-  text-transform: uppercase;
-  transition: color 120ms steps(2, end), border-color 120ms steps(2, end);
+  transition: color 120ms var(--ease), border-color 120ms var(--ease);
 }
 
 .w-tab:hover {
@@ -764,8 +678,7 @@ body {
   font: inherit;
   line-height: 1;
   text-align: center;
-  text-transform: uppercase;
-  transition: background 120ms steps(2, end), color 120ms steps(2, end), border-color 120ms steps(2, end);
+  transition: background 120ms var(--ease), color 120ms var(--ease), border-color 120ms var(--ease);
 }
 
 .w-earn-lock-option:last-child {
@@ -783,13 +696,13 @@ body {
 
 .w-earn-lock-option:hover:not(:disabled),
 .w-earn-lock-option:focus-visible {
-  background: rgba(155, 231, 189, 0.06);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
   color: var(--fi-muted);
 }
 
 .w-earn-lock-option[aria-pressed="true"] {
   border-bottom-color: var(--fi-green);
-  background: rgba(155, 231, 189, 0.08);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
   color: var(--fi-text);
 }
 
@@ -816,8 +729,7 @@ body {
 .w-earn-estimate dt {
   color: var(--fi-muted);
   font-size: var(--fi-text-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .w-earn-estimate dd {
@@ -851,11 +763,11 @@ body {
   padding: 0 var(--w-gutter);
   background: transparent;
   text-align: left;
-  transition: background-color 120ms steps(2, end);
+  transition: background-color 120ms var(--ease);
 }
 
 .w-asset:hover {
-  background: rgba(155, 231, 189, 0.05);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
 }
 .w-logo {
   width: 28px;
@@ -873,7 +785,7 @@ body {
   align-items: center;
   justify-content: center;
   color: var(--fi-muted);
-  font-size: 9px;
+  font-size: 12px;
   letter-spacing: 0.04em;
 }
 
@@ -945,7 +857,7 @@ body {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   flex: 0 0 auto;
   border-top: 1px solid var(--fi-line-strong);
-  background: rgba(5, 8, 6, 0.985);
+  background: var(--surface-1);
 }
 
 .w-nav-item {
@@ -960,12 +872,11 @@ body {
   background: transparent;
   color: var(--fi-dim);
   font-size: var(--fi-text-label);
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   line-height: 1.3;
   overflow-wrap: break-word;
   text-align: center;
-  text-transform: uppercase;
-  transition: color 120ms steps(2, end), background-color 120ms steps(2, end);
+  transition: color 120ms var(--ease), background-color 120ms var(--ease);
 }
 
 .w-nav-item[aria-current="page"] {
@@ -996,8 +907,7 @@ body {
   padding: 9px 12px;
   color: var(--fi-muted);
   font-size: var(--fi-text-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .w-panel-body {
@@ -1034,9 +944,8 @@ body {
 .w-row dt {
   color: var(--fi-muted);
   font-size: var(--fi-text-label);
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   overflow-wrap: break-word;
-  text-transform: uppercase;
 }
 .w-row dd {
   min-width: 0;
@@ -1071,19 +980,18 @@ body {
 .w-label {
   color: var(--fi-muted);
   font-size: var(--fi-text-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .w-input {
   min-height: var(--fi-control-height);
   border: 1px solid var(--fi-line-strong);
-  border-radius: 0;
+  border-radius: var(--r-md);
   padding: 0 12px;
   background: var(--fi-input);
   color: var(--fi-text);
   font-size: var(--fi-text-data);
-  transition: border-color 100ms steps(2, end);
+  transition: border-color 100ms var(--ease);
 }
 
 .w-input:focus {
@@ -1108,7 +1016,7 @@ textarea.w-input {
 .w-select {
   min-height: var(--fi-control-height);
   border: 1px solid var(--fi-line-strong);
-  border-radius: 0;
+  border-radius: var(--r-md);
   padding: 0 10px;
   background: var(--fi-input);
   color: var(--fi-text);
@@ -1148,7 +1056,7 @@ textarea.w-input {
   align-items: stretch;
   border: 1px solid var(--fi-line-strong);
   background: var(--fi-input);
-  transition: border-color 100ms steps(2, end);
+  transition: border-color 100ms var(--ease);
 }
 .w-amount:focus-within {
   border-color: var(--fi-green);
@@ -1193,12 +1101,12 @@ textarea.w-input {
   font-size: var(--fi-text-label);
   letter-spacing: 0.08em;
   white-space: nowrap;
-  transition: background-color 100ms steps(2, end), color 100ms steps(2, end);
+  transition: background-color 100ms var(--ease), color 100ms var(--ease);
 }
 
 .w-max:hover,
 .w-max:focus-visible {
-  background: rgba(155, 231, 189, 0.1);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: var(--fi-green-hover);
 }
 /* ------------------------------------------------------------------- pills */
@@ -1210,24 +1118,23 @@ textarea.w-input {
   border: 1px solid var(--fi-line-strong);
   padding: 2px 7px;
   color: var(--fi-muted);
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0;
   white-space: nowrap;
 }
 
 .w-pill[data-tone="ok"] {
-  border-color: rgba(142, 233, 184, 0.5);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
   color: var(--fi-green);
 }
 
 .w-pill[data-tone="warn"] {
-  border-color: rgba(216, 201, 141, 0.5);
+  border-color: color-mix(in srgb, var(--warning) 50%, transparent);
   color: var(--fi-yellow);
 }
 
 .w-pill[data-tone="bad"] {
-  border-color: rgba(255, 143, 159, 0.5);
+  border-color: color-mix(in srgb, var(--negative) 50%, transparent);
   color: var(--fi-red);
 }
 
@@ -1267,12 +1174,12 @@ textarea.w-input {
 }
 
 .w-toast[data-tone="error"] {
-  border-color: rgba(255, 143, 159, 0.55);
+  border-color: color-mix(in srgb, var(--negative) 55%, transparent);
   color: var(--fi-red);
 }
 
 .w-toast[data-tone="ok"] {
-  border-color: rgba(142, 233, 184, 0.55);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   color: var(--fi-green);
 }
 
@@ -1304,7 +1211,7 @@ textarea.w-input {
   border: 1px solid var(--fi-line);
   background: var(--fi-panel);
   text-align: left;
-  transition: border-color 120ms steps(2, end);
+  transition: border-color 120ms var(--ease);
 }
 
 .w-nft:hover {
@@ -1336,7 +1243,7 @@ textarea.w-input {
 
 .w-nft-id {
   color: var(--fi-dim);
-  font-size: 9px;
+  font-size: 12px;
   letter-spacing: 0.06em;
 }
 
@@ -1352,11 +1259,11 @@ textarea.w-input {
   padding: 10px var(--w-gutter);
   background: transparent;
   text-align: left;
-  transition: background-color 120ms steps(2, end);
+  transition: background-color 120ms var(--ease);
 }
 
 .w-tx:hover {
-  background: rgba(155, 231, 189, 0.05);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
 }
 .w-tx-main {
   display: flex;
@@ -1411,7 +1318,7 @@ textarea.w-input {
 }
 .w-word span {
   color: var(--fi-dim);
-  font-size: 9px;
+  font-size: 12px;
 }
 
 /* ------------------------------------------------------------------ approve */
@@ -1458,8 +1365,7 @@ textarea.w-input {
 .w-queue {
   color: var(--fi-yellow);
   font-size: var(--fi-text-label);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 /* ------------------------------------------------------------------ dapps */
@@ -1474,10 +1380,10 @@ textarea.w-input {
   padding: 11px var(--w-gutter);
   background: transparent;
   text-align: left;
-  transition: background-color 120ms steps(2, end);
+  transition: background-color 120ms var(--ease);
 }
 .w-dapp:hover {
-  background: rgba(155, 231, 189, 0.05);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
 }
 
 .w-mark {
@@ -1508,11 +1414,11 @@ textarea.w-input {
   align-items: center;
   gap: 10px;
   border: 1px solid var(--fi-line-strong);
-  border-radius: 0;
+  border-radius: var(--r-md);
   padding: 8px 11px;
   background: var(--fi-input);
   text-align: left;
-  transition: border-color 100ms steps(2, end), background-color 100ms steps(2, end);
+  transition: border-color 100ms var(--ease), background-color 100ms var(--ease);
 }
 
 .w-token-trigger:hover:not(:disabled),
@@ -1567,7 +1473,7 @@ textarea.w-input {
   border-radius: 50%;
   background: var(--fi-green);
   color: var(--fi-bg);
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0;
   line-height: 1;
@@ -1610,12 +1516,12 @@ textarea.w-input {
   padding: 8px 12px;
   background: transparent;
   text-align: left;
-  transition: background-color 100ms steps(2, end);
+  transition: background-color 100ms var(--ease);
 }
 
 .w-token-option:hover,
 .w-token-option[aria-selected="true"] {
-  background: rgba(155, 231, 189, 0.07);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
 }
 
 .w-token-source {
@@ -1624,16 +1530,15 @@ textarea.w-input {
   border: 1px solid var(--fi-line-strong);
   padding: 2px 5px;
   color: var(--fi-green);
-  font-size: 8px;
-  letter-spacing: 0.05em;
+  font-size: 12px;
+  letter-spacing: 0;
   text-overflow: ellipsis;
-  text-transform: uppercase;
   white-space: nowrap;
 }
 
 .w-token-source[data-core="true"] {
   border-color: var(--fi-green);
-  background: rgba(142, 233, 184, 0.08);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 .w-token-ca {
@@ -1645,7 +1550,7 @@ textarea.w-input {
   border: 1px solid var(--fi-line-strong);
   border-radius: 50%;
   color: var(--fi-green);
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .w-swap-flip {
@@ -1664,9 +1569,8 @@ textarea.w-input {
   border-bottom: 1px solid var(--fi-line);
   padding: 7px 0;
   color: var(--fi-dim);
-  font-size: 9px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0;
 }
 
 .w-swap-route span:first-child {
@@ -1733,7 +1637,7 @@ textarea.w-input {
   align-items: center;
   justify-content: center;
   padding: 8px;
-  background: #ffffff;
+  background: var(--text-1);
 }
 
 .w-receive-loading {
@@ -1751,10 +1655,9 @@ textarea.w-input {
   border-bottom: 1px solid var(--fi-line);
   padding: 7px 10px;
   color: var(--fi-green);
-  font-size: 9px;
-  letter-spacing: 0.08em;
+  font-size: 12px;
+  letter-spacing: 0;
   text-align: center;
-  text-transform: uppercase;
 }
 
 /* --------------------------------------------------------------- utilities */
@@ -1808,7 +1711,7 @@ textarea.w-input {
   justify-content: flex-end;
   border: 0;
   padding: 0;
-  background: rgba(3, 5, 4, 0.72);
+  background: var(--scrim);
 }
 
 .w-sheet-body {
@@ -1828,8 +1731,7 @@ textarea.w-input {
   padding: 10px 12px;
   color: var(--fi-muted);
   font-size: var(--fi-text-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .w-account {
@@ -1845,7 +1747,7 @@ textarea.w-input {
 }
 
 .w-account[aria-current="true"] {
-  background: rgba(155, 231, 189, 0.07);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
 }
 
 /* The tappable part of an account row; the rename button sits beside it. */
@@ -1909,3 +1811,43 @@ textarea.w-input {
     transition-duration: 0ms !important;
   }
 }
+
+/* Design-system shape: raised surfaces get the 14px radius and silver top edge,
+   controls the 10px radius; status pills are fully rounded. */
+.w-panel,
+.w-sheet,
+.w-receive-card,
+.w-summary,
+.w-total-block,
+.w-swap-review,
+.w-seed,
+.w-disclosure,
+.w-nft,
+.w-toast {
+  border-radius: var(--r-lg);
+  box-shadow: var(--e-1);
+}
+.w-input,
+.w-field,
+.w-select,
+.w-token-trigger,
+.w-token-search,
+.w-amount,
+.w-code,
+.w-word,
+.w-asset,
+.w-tx,
+.w-dapp,
+.w-account,
+.w-action,
+.w-tab,
+.w-max,
+.w-nav-item {
+  border-radius: var(--r-md);
+}
+.w-pill { border-radius: var(--r-pill); }
+.w-btn[data-variant="primary"] { border-color: transparent; background: var(--accent); color: var(--accent-ink); }
+.w-btn[data-variant="primary"]:hover:not(:disabled) { background: var(--accent); filter: brightness(1.06); }
+.w-root :is(.w-amount, .w-input):focus-within { border-color: var(--accent); box-shadow: var(--ring); }
+.w-root :is(.w-asset-amount, .w-asset-usd, .w-total, .w-summary-value, .w-address, .w-code) { font-family: var(--font-num); }
+.w-head-title { font-family: var(--font-brand); font-weight: 400; letter-spacing: .02em; }
