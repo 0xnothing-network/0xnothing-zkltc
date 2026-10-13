@@ -1,15 +1,15 @@
 {
   "chainId": 4441,
-  "address": null,
+  "address": "",
   "nusd": "0x677D63c78E77E0b1971530e1494Caee4Bd7d631e",
-  "owner": null,
-  "feeRecipient": null,
+  "owner": "",
+  "feeRecipient": "",
   "platformFeeBps": 40,
   "collections": [
     "0x33A32b9b2BEe864f9e42BFa39cA7BDC72f655988",
     "0xd83cb7aCEF921f98b6B983cBB712a583869Da9eB"
   ],
   "implementation": "0xcacabae418335c9bc3d401a0085ac7f27c4ec267a89868777e5712e9d9653739",
-  "deploymentBlock": null,
-  "deploymentHash": null
+  "deploymentBlock": "",
+  "deploymentHash": ""
 }

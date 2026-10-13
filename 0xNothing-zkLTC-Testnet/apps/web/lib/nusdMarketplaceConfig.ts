@@ -5,9 +5,6 @@ import deployment from "./nusdMarketplace.generated.json";
 export const NFT_NUSD_ADDRESS = PIXEL_MARKET_NUSD_ADDRESS;
 const override = process.env.NEXT_PUBLIC_PIXEL_NUSD_MARKETPLACE_ADDRESS?.trim();
 const verifiedDefault = deployment.chainId === 4441
-  && typeof deployment.address === "string"
-  && typeof deployment.nusd === "string"
-  && typeof deployment.implementation === "string"
   && deployment.nusd.toLowerCase() === NFT_NUSD_ADDRESS.toLowerCase()
   && deployment.implementation === NUSD_MARKET_IMPLEMENTATION
   ? deployment.address : undefined;

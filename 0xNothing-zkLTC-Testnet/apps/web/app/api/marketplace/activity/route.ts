@@ -29,8 +29,8 @@ export async function GET(request: Request) {
     market: NUSD_MARKETPLACE_ADDRESS!,
     nusd: NFT_NUSD_ADDRESS,
     collections: PIXEL_COLLECTIONS.map((entry) => entry.address),
-    deploymentBlock: typeof deployment.address === "string"
-      && typeof deployment.deploymentBlock === "string"
+    deploymentBlock: deployment.address
+      && /^\d{1,78}$/.test(deployment.deploymentBlock)
       && deployment.address.toLowerCase() === NUSD_MARKETPLACE_ADDRESS!.toLowerCase()
       ? BigInt(deployment.deploymentBlock)
       : 0n,

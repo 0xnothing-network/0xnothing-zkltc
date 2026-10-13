@@ -43,10 +43,10 @@ test("pending generated config leaves trading off; a confirmed v2 record or over
   assert.equal(configuration(DEPLOYED).NUSD_MARKETPLACE_ADDRESS, DEPLOYED);
   assert.equal(configuration("invalid").NUSD_MARKETPLACE_ADDRESS, undefined);
   assert.equal(configuration("0x0000000000000000000000000000000000000000").NUSD_MARKETPLACE_ADDRESS, undefined);
-  for (const manifest of [{ ...confirmed, chainId: 1 }, { ...confirmed, nusd: NFT }, { ...confirmed, implementation: "0x00" }, { ...confirmed, address: null }]) {
+  for (const manifest of [{ ...confirmed, chainId: 1 }, { ...confirmed, nusd: NFT }, { ...confirmed, implementation: "0x00" }, { ...confirmed, address: "" }]) {
     assert.equal(configuration(undefined, manifest).NUSD_MARKETPLACE_ADDRESS, undefined);
   }
-  assert.equal(generated.address, null);
+  assert.equal(generated.address, "");
   assert.equal(generated.nusd.toLowerCase(), NUSD.toLowerCase());
   assert.equal(generated.implementation, marketplace.NUSD_MARKET_IMPLEMENTATION);
   assert.equal(generated.platformFeeBps, 40);
