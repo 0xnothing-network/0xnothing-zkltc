@@ -27,6 +27,7 @@ test("post-transaction enumeration bypasses a cached inventory and never masks r
     {
       viem: { createPublicClient: () => client, http: () => ({}) },
       "./abi": { PixelNFTABI: [] },
+      "./rpcTransport": { litvmTransport: () => ({}) },
       "@/config/wagmi": { litvm: {}, LITVM_RPC_URL: "https://rpc.invalid" },
       "@/lib/boundedCache": { createBoundedCache },
       "@/lib/publicConfig": { PIXEL_NFT_ADDRESS: legacy, PIXEL_MARKETPLACE_ADDRESS: marketplace },
@@ -72,6 +73,8 @@ test("an older wallet enumeration cannot overwrite a completed forced refresh", 
       {
         viem: { createPublicClient: () => client, http: () => ({}) },
         "./abi": { PixelNFTABI: [] },
+        "./rpcTransport": { litvmTransport: () => ({}) },
+      "./rpcTransport": { litvmTransport: () => ({}) },
         "@/config/wagmi": { litvm: {}, LITVM_RPC_URL: "https://rpc.invalid" },
         "@/lib/boundedCache": { createBoundedCache },
         "@/lib/publicConfig": { PIXEL_NFT_ADDRESS: legacy, PIXEL_MARKETPLACE_ADDRESS: marketplace },

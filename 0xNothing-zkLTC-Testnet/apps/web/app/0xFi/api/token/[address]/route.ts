@@ -4,12 +4,12 @@ import {
   decodeFunctionResult,
   encodeFunctionData,
   getAddress,
-  http,
   isAddress,
   zeroAddress,
   type Address,
   type Hex,
 } from "viem";
+import { litvmTransport } from "@/lib/rpcTransport";
 import { deployment } from "@fi/config/deployment";
 import { erc20Abi } from "@fi/lib/abis/erc20";
 import { createBoundedCache } from "@/lib/boundedCache";
@@ -63,12 +63,12 @@ const rateLimitBuckets = new Map<string, RateLimitBucket>();
 let lastRateLimitSweep = 0;
 
 const client = createPublicClient({
-  transport: http(deployment.chain.rpcUrl, {
+  transport: litvmTransport({
     batch: { batchSize: 100, wait: 10 },
     retryCount: 1,
     retryDelay: 250,
     timeout: RPC_TIMEOUT_MS,
-  }),
+  }, deployment.chain.rpcUrl),
 });
 
 interface ExplorerLookup {

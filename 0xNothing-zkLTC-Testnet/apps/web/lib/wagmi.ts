@@ -1,6 +1,7 @@
-import { createConfig, http } from "wagmi";
+import { createConfig } from "wagmi";
+import { litvmTransport } from "@/lib/rpcTransport";
 import { injected } from "wagmi/connectors/injected";
-import { litvm, LITVM_RPC_URL } from "@/config/wagmi";
+import { litvm } from "@/config/wagmi";
 
 const connectors = [injected()];
 
@@ -10,7 +11,7 @@ export const wagmiConfig = createConfig({
   connectors,
   pollingInterval: 4_000,
   transports: {
-    [litvm.id]: http(LITVM_RPC_URL, {
+    [litvm.id]: litvmTransport({
       batch: { batchSize: 100, wait: 10 },
       retryCount: 2,
       retryDelay: 300,

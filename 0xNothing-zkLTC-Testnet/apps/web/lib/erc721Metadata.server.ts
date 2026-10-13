@@ -1,7 +1,8 @@
 import "server-only";
 
-import { createPublicClient, getAddress, http, type Address } from "viem";
-import { litvm, LITVM_RPC_URL } from "@/config/wagmi";
+import { createPublicClient, getAddress, type Address } from "viem";
+import { litvmTransport } from "@/lib/rpcTransport";
+import { litvm } from "@/config/wagmi";
 import { marketplaceNftKey } from "@/lib/marketplaceAbi";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { isUnsafeRemoteHostname } from "@/lib/server/networkAddress";
@@ -25,7 +26,7 @@ const MAX_CACHE_ENTRIES = 2_048;
 
 const directPublicClient = createPublicClient({
   chain: litvm,
-  transport: http(LITVM_RPC_URL, {
+  transport: litvmTransport({
     batch: { batchSize: 100, wait: 10 },
     retryCount: 2,
     retryDelay: 300,

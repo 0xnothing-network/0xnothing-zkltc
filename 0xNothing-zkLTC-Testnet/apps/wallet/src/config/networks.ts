@@ -2,6 +2,7 @@ import { defineChain, type Chain } from "viem";
 import {
   LITVM_CHAIN_ID,
   LITVM_EXPLORER_URL,
+  LITVM_RPC_FALLBACK_URL,
   LITVM_RPC_URL,
   litvm,
 } from "./chain.ts";
@@ -25,6 +26,8 @@ export interface WalletNetwork {
   name: string;
   chainId: number;
   rpcUrl: string;
+  /** Built-in profiles only: endpoints tried in order when `rpcUrl` fails. */
+  fallbackRpcUrls?: readonly string[];
   explorerUrl: string;
   nativeCurrency: NetworkCurrency;
   builtin: boolean;
@@ -35,6 +38,7 @@ export const LITVM_NETWORK: WalletNetwork = {
   name: "LitVM LiteForge",
   chainId: LITVM_CHAIN_ID,
   rpcUrl: LITVM_RPC_URL,
+  fallbackRpcUrls: [LITVM_RPC_FALLBACK_URL],
   explorerUrl: LITVM_EXPLORER_URL,
   nativeCurrency: { name: "zkLTC", symbol: "zkLTC", decimals: 18 },
   builtin: true,

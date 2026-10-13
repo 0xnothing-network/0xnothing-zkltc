@@ -1,6 +1,7 @@
 import { defineChain } from "viem";
 import {
   LITVM_EXPLORER_URL,
+  LITVM_RPC_FALLBACK_URL,
   LITVM_RPC_URL,
   MULTICALL3_ADDRESS,
 } from "@/lib/publicConfig";
@@ -13,7 +14,7 @@ export const litvm = defineChain({
   nativeCurrency: { name: "zkLTC", symbol: "zkLTC", decimals: 18 },
   rpcUrls: {
     default: {
-      http: [LITVM_RPC_URL],
+      http: [LITVM_RPC_URL, LITVM_RPC_FALLBACK_URL],
     },
   },
   blockExplorers: {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createPublicClient, formatUnits, getAddress, http, isAddress, type Address } from "viem";
+import { createPublicClient, formatUnits, getAddress, isAddress, type Address } from "viem";
+import { litvmTransport } from "@/lib/rpcTransport";
 import { assetForPool, canonicalPairs, deployedPairForSlug, pairSlug, parsePairSlug } from "@fi/config/assets";
 import type { CandlePoint, DataEnvelope } from "@fi/lib/data";
 import { queryGoldsky, unconfiguredEnvelope } from "@fi/lib/server/goldsky";
@@ -18,7 +19,7 @@ const CANDLES_STALE_TTL_MS = 5 * 60_000;
 const MAX_CANDLES_CACHE_ENTRIES = 256;
 const CANDLES_CACHE_CONTROL = "public, s-maxage=10, stale-while-revalidate=30";
 const client = createPublicClient({
-  transport: http(deployment.chain.rpcUrl, { batch: { batchSize: 100, wait: 10 } }),
+  transport: litvmTransport({ batch: { batchSize: 100, wait: 10 } }, deployment.chain.rpcUrl),
 });
 const QUERY = `
   query Candles($pool: Bytes!, $period: Int!, $first: Int!) {

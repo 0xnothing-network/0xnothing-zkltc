@@ -1,4 +1,4 @@
-import { type Address, createPublicClient, createWalletClient, http } from "viem";
+import { type Address, createPublicClient, createWalletClient, fallback, http, type HttpTransportConfig } from "viem";
 import { toAccount } from "viem/accounts";
 import {
   LITVM_NETWORK,
@@ -15,8 +15,19 @@ import { isUnlocked, readAccounts, readSettings, signerFor, WalletLockedError } 
  * below: block polling retries them, so a stalled endpoint must not keep the
  * wallet's single-flight read queue occupied for three 15-second attempts.
  */
+/**
+ * The built-in LiteForge profile fails over to Caldera's public endpoint on the same
+ * origin, so the wallet keeps working if the partner endpoint changes. User-added
+ * networks use exactly the RPC the user entered.
+ */
+function rpcTransport(network: WalletNetwork, options: HttpTransportConfig) {
+  const backups = network.builtin ? network.fallbackRpcUrls ?? [] : [];
+  if (!backups.length) return http(network.rpcUrl, options);
+  return fallback([network.rpcUrl, ...backups].map((url) => http(url, options)), { retryCount: 1 });
+}
+
 function transportFor(network: WalletNetwork) {
-  return http(network.rpcUrl, {
+  return rpcTransport(network, {
     batch: { batchSize: 100, wait: 10 },
     retryCount: 2,
     retryDelay: 300,
@@ -27,7 +38,7 @@ function transportFor(network: WalletNetwork) {
 function clientFor(network: WalletNetwork) {
   return createPublicClient({
     chain: viemChainFor(network),
-    transport: http(network.rpcUrl, {
+    transport: rpcTransport(network, {
       batch: { batchSize: 100, wait: 10 },
       retryCount: 0,
       timeout: 5_000,

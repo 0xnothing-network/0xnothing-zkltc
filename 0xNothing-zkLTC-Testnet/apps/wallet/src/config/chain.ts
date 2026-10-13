@@ -11,6 +11,8 @@ import { defineChain } from "viem";
 export const LITVM_CHAIN_ID = 4441;
 
 export const LITVM_RPC_URL = "https://liteforge.rpc.caldera.xyz/infra-partner-http";
+/** Public endpoint on the same origin; the built-in profile fails over to it. */
+export const LITVM_RPC_FALLBACK_URL = "https://liteforge.rpc.caldera.xyz/http";
 export const LITVM_EXPLORER_URL = "https://liteforge.explorer.caldera.xyz";
 export const MULTICALL3_ADDRESS = "0xca11bde05977b3631167028862be2a173976ca11" as const;
 

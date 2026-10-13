@@ -16,6 +16,7 @@ function candleHarness() {
     {
       "next/server": { NextResponse: Response },
       viem: { createPublicClient: () => ({}), http: () => ({}), isAddress: () => false },
+      "@/lib/rpcTransport": { litvmTransport: () => ({}) },
       "@fi/config/assets": {
         canonicalPairs: [["TOKEN", "NUSD"]],
         pairSlug: () => "token-nusd",

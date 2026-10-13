@@ -1,6 +1,7 @@
-import { createPublicClient, http } from "viem";
+import { createPublicClient } from "viem";
+import { litvmTransport } from "./rpcTransport";
 import { PixelNFTABI } from "./abi";
-import { litvm, LITVM_RPC_URL } from "@/config/wagmi";
+import { litvm } from "@/config/wagmi";
 import { createBoundedCache } from "@/lib/boundedCache";
 import {
   PIXEL_MARKETPLACE_ADDRESS as PUBLIC_PIXEL_MARKETPLACE_ADDRESS,
@@ -31,7 +32,7 @@ export function shortenAddress(addr: string, head = 6, tail = 4): string {
 
 export const publicClient = createPublicClient({
   chain: litvm,
-  transport: http(LITVM_RPC_URL, {
+  transport: litvmTransport({
     // The browser transport in lib/wagmi.ts already relies on JSON-RPC batching
     // against this endpoint. Server routes fan out far wider (per-block
     // timestamps, per-holder balances), so collapsing those into batched
@@ -51,7 +52,7 @@ export const publicClient = createPublicClient({
  */
 export const logsClient = createPublicClient({
   chain: litvm,
-  transport: http(LITVM_RPC_URL, { retryCount: 2, retryDelay: 300, timeout: 15_000 }),
+  transport: litvmTransport({ retryCount: 2, retryDelay: 300, timeout: 15_000 }),
 });
 
 async function withRetry<T>(

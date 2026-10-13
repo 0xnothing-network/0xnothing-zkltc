@@ -1,6 +1,7 @@
 import "server-only";
 
-import { createPublicClient, formatUnits, http, parseAbiItem, type Address, type Hex } from "viem";
+import { createPublicClient, formatUnits, parseAbiItem, type Address, type Hex } from "viem";
+import { litvmTransport } from "@/lib/rpcTransport";
 import { deployment } from "@fi/config/deployment";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { liveLogClient } from "./liveLogClient";
@@ -34,11 +35,11 @@ const tokenDecimalsAbi = [
 ] as const;
 
 const client = createPublicClient({
-  transport: http(deployment.chain.rpcUrl, {
+  transport: litvmTransport({
     batch: { batchSize: 100, wait: 10 },
     retryCount: 0,
     timeout: 5_000,
-  }),
+  }, deployment.chain.rpcUrl),
 });
 
 const pairTailCache = createBoundedCache<PairTail>({

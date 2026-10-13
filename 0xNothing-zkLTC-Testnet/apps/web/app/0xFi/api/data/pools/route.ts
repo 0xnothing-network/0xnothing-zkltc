@@ -3,10 +3,10 @@ import {
   createPublicClient,
   formatUnits,
   getAddress,
-  http,
   parseAbiItem,
   type Address,
 } from "viem";
+import { litvmTransport } from "@/lib/rpcTransport";
 import { deployment } from "@fi/config/deployment";
 import { communityLiquidityLockerAbi } from "@fi/lib/abis/locker";
 import { tokenMetadataRegistryAbi } from "@fi/lib/abis/metadata";
@@ -54,13 +54,13 @@ const pairCreatedEvent = parseAbiItem(
   "event PairCreated(address indexed token0, address indexed token1, address pair, bytes32 indexed pairId, bool protectedBootstrap, uint256 pairCount)",
 );
 const client = createPublicClient({
-  transport: http(deployment.chain.rpcUrl, {
+  transport: litvmTransport({
     batch: { batchSize: 100, wait: 10 },
     // Indexed values and existing warnings are the fallback for display reads.
     // A refresh must not stall through multiple long RPC retry windows.
     retryCount: 0,
     timeout: 5_000,
-  }),
+  }, deployment.chain.rpcUrl),
 });
 
 async function mapWithConcurrency<T, R>(
