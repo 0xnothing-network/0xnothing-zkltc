@@ -32,6 +32,15 @@ import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { createPumpWalletGuard } from "@/features/pump/walletSession";
 import { waitForProtocolReceipt } from "@/lib/transactionReceipt";
 import { LITVM_ADD_CHAIN_PARAMETER } from "@/config/network";
+import { Badge, type BadgeTone } from "@/components/ui/Badge";
+import { PixelProgress } from "@/components/ui/PixelProgress";
+import { Tabs } from "@/components/ui/Tabs";
+
+/** Market cap at which a curve becomes READY (matches the on-chain $6,000 target copy). */
+const READY_TARGET_NUSD = 6_000;
+const STATUS_TONE: Record<string, BadgeTone> = { TRADING: "trading", READY: "ready", GRADUATED: "graduated" };
+const STATUS_LABEL: Record<string, string> = { TRADING: "Trading", READY: "Ready", GRADUATED: "Graduated" };
+const CHIP = "inline-flex h-8 items-center gap-1 rounded-ui-sm border border-line bg-surface-2 px-2.5 font-num text-xs text-fg-2 hover:border-line-strong hover:text-fg focus-ring";
 
 interface TokenMetadata {
   description?: string;
@@ -141,7 +150,7 @@ function GraduationAction({ market, onComplete }: { market: PumpMarket; onComple
     && adapterAllowed.data === true;
 
   if (market.status === "GRADUATED" && market.pool !== ZERO_ADDRESS) {
-    return <a href={`/0xFi/pools/${market.pool}`} className="pump-button pump-button-primary">0xFi pool</a>;
+    return <Link href={`/0xFi/pools/${market.pool}`} className="pump-button pump-button-primary">Trade on 0xFi →</Link>;
   }
   if (market.status !== "READY") return null;
 
@@ -251,59 +260,136 @@ export function TokenDetail({ token }: { token: Address }) {
       items.findIndex((candidate) => candidate.href === item.href) === index,
   );
 
+  const progress = Math.min(100, Math.max(0, (market.progressBps ?? 0) / 100));
+  const remainingToReady = Math.max(0, READY_TARGET_NUSD * (1 - progress / 100));
+  const graduated = market.status === "GRADUATED";
+
   return (
-    <main className="pump-page">
+    <main className="pump-page ui pump-token-page font-ui text-fg max-lg:pb-24">
       {query.data?.configured === false ? <PumpConfigNotice /> : null}
       {query.data?.warning ? <p className="pump-source-note">{query.data.warning}</p> : null}
-      <Link href="/0xPump" className="pump-back-link">&larr; All markets</Link>
+      <Link href="/0xPump" className="inline-flex items-center gap-1 text-sm text-fg-3 hover:text-fg focus-ring">&larr; Markets</Link>
 
-      <section className="pump-token-identity">
-        <div className="pump-detail-logo">
-          <PumpTokenLogo
-            imageUri={market.imageURI}
-            name={market.name}
-            symbol={market.symbol}
-            size={96}
-            priority
-          />
-        </div>
-        <div className="pump-token-identity-copy">
-          <div className="pump-token-heading-line"><h1>{market.name}</h1><span className={`pump-status pump-status-${market.status.toLowerCase()}`}>{market.status}</span></div>
-          <p>${market.symbol}</p>
-          <div className="pump-token-links">
-            <button type="button" title="Copy token address" onClick={() => { void navigator.clipboard.writeText(market.tokenAddress); toast.success("Address copied", shortAddress(market.tokenAddress)); }}>{shortAddress(market.tokenAddress, 7, 6)}</button>
-            <ExternalLink href={getAddressExplorerUrl(market.tokenAddress)}>Explorer</ExternalLink>
-            {links.map((item) => <ExternalLink href={item.href} key={item.href} userGenerated>{item.label}</ExternalLink>)}
+      <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start">
+        <div className="grid min-w-0 gap-4">
+          <section className="flex flex-wrap items-start gap-4" aria-label="Token">
+            <div className="shrink-0 overflow-hidden rounded-ui-lg">
+              <PumpTokenLogo
+                imageUri={market.imageURI}
+                name={market.name}
+                symbol={market.symbol}
+                size={64}
+                priority
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-[30px]">{market.name}</h1>
+                <Badge tone={STATUS_TONE[market.status] ?? "neutral"}>{STATUS_LABEL[market.status] ?? market.status}</Badge>
+              </div>
+              <p className="mt-1 font-num text-sm text-fg-3">${market.symbol} · created by {shortAddress(market.creator, 6, 4)}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" className={CHIP} title="Copy token address" onClick={() => { void navigator.clipboard.writeText(market.tokenAddress); toast.success("Address copied", shortAddress(market.tokenAddress)); }}>{shortAddress(market.tokenAddress, 6, 4)} <span aria-hidden="true">⧉</span></button>
+                <ExternalLink className={CHIP} href={getAddressExplorerUrl(market.tokenAddress)}>Explorer ↗</ExternalLink>
+                {links.map((item) => <ExternalLink className={CHIP} href={item.href} key={item.href} userGenerated>{item.label} ↗</ExternalLink>)}
+              </div>
+            </div>
+            <div className="text-right max-sm:w-full max-sm:text-left">
+              <p className="text-xs text-fg-3">Curve price · NUSD</p>
+              <p className="font-num tnum text-[30px] font-semibold leading-tight">${formatDecimal(market.priceNusd)}</p>
+              <p className="text-xs text-fg-3">{market.tradeCount > 0 && market.lastTradeAt ? `Last trade ${formatRelativeTime(market.lastTradeAt)}` : "No trades yet"}</p>
+            </div>
+          </section>
+
+          <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {[
+              ["Market cap", `$${formatWad(market.marketCapNusd)}`],
+              ["Total volume", `$${formatWad(market.volumeNusd)}`],
+              ["Curve reserve", `$${formatWad(market.reserveNusd)}`],
+              ["Trades", String(market.tradeCount ?? 0)],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-ui-lg border border-line bg-surface-1 p-4 shadow-e1">
+                <dt className="text-xs text-fg-3">{label}</dt>
+                <dd className="mt-1 font-num tnum text-lg">{value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <div className="pump-token-chart min-w-0">
+            <LazyPumpChart token={market.tokenAddress} tokenName={market.name} />
           </div>
-        </div>
-        <div className="pump-token-price"><span>Curve price</span><strong>${formatDecimal(market.priceNusd)}</strong><small>{market.tradeCount > 0 && market.lastTradeAt ? formatRelativeTime(market.lastTradeAt) : "No trades yet"}</small></div>
-      </section>
 
-      <section className="pump-detail-stats">
-        <div><span>Market cap</span><strong>${formatWad(market.marketCapNusd)}</strong></div>
-        <div><span>Total volume</span><strong>${formatWad(market.volumeNusd)}</strong></div>
-        <div><span>Curve reserve</span><strong>${formatWad(market.reserveNusd)}</strong></div>
-        <div><span>Trades</span><strong>{market.tradeCount}</strong></div>
-        <div><span>Curve progress</span><strong>{(market.progressBps / 100).toFixed(2)}%</strong></div>
-      </section>
-
-      <div className="pump-detail-grid">
-        <div className="pump-detail-main">
-          <LazyPumpChart token={market.tokenAddress} tokenName={market.name} />
-          {metadata.data?.description ? <section className="pump-panel pump-about"><span className="pump-eyebrow">About</span><h2>{market.name}</h2><p>{metadata.data.description}</p><small>Created by {shortAddress(market.creator, 7, 6)}</small></section> : null}
+          <TokenDetailTabs market={market} description={metadata.data?.description} />
         </div>
-        <TradePanel market={market} onComplete={() => void query.refetch()} />
+
+        <aside id="trade" className="grid gap-4 scroll-mt-24 lg:sticky lg:top-[88px]" aria-label="Trade">
+          {graduated ? (
+            <section className="rounded-ui-lg border border-line bg-surface-1 p-5 shadow-e1">
+              <p className="eyebrow">Graduated</p>
+              <h2 className="mt-2 text-xl font-semibold">Trading moved to 0xFi</h2>
+              <p className="mt-1 text-sm text-fg-2">This market reached READY and its liquidity migrated to an 0xFi pool. The bonding curve is closed.</p>
+            </section>
+          ) : (
+            <TradePanel market={market} onComplete={() => void query.refetch()} />
+          )}
+
+          <section className="rounded-ui-lg border border-line bg-surface-1 p-5 shadow-e1" aria-label="Bonding curve">
+            <div className="flex items-center justify-between gap-2">
+              <p className="eyebrow">Bonding curve</p>
+              <Badge tone={market.status === "TRADING" ? "trading" : market.status === "READY" ? "ready" : "graduated"}>{`${progress.toFixed(1)}%`}</Badge>
+            </div>
+            <p className="mt-3 flex items-baseline gap-2">
+              <span className="font-num tnum text-2xl font-semibold">${formatWad(market.marketCapNusd)}</span>
+              <span className="font-num text-sm text-fg-3">/ $6,000 READY</span>
+            </p>
+            <PixelProgress className="mt-3" value={progress} size="lg" />
+            <p className="mt-3 text-sm text-fg-2">
+              {market.status === "TRADING"
+                ? <>${remainingToReady.toLocaleString("en-US", { maximumFractionDigits: 0 })} more market cap until <strong className="text-fg">READY</strong>. At READY buys pause and the market can graduate to an 0xFi pool.</>
+                : market.status === "READY" ? "Market-cap target reached." : "Liquidity migrated to 0xFi."}
+            </p>
+            {market.status === "READY" ? <p className="mt-2 text-xs text-fg-3">Buys are frozen at the $6,000 target. Graduate through the pinned 0xFi controller — the same <code>graduateReady</code> call the keeper uses. Sells freeze only while that path is live, and reopen after the exit delay if graduation never happens.</p> : null}
+            <div className="pump-graduation-action mt-4 grid">
+              <GraduationAction market={market} onComplete={() => void query.refetch()} />
+            </div>
+          </section>
+        </aside>
       </div>
 
-      <section className="pump-graduation-line">
-        <div><span>$6,000 READY target</span><strong>{market.status === "TRADING" ? `${(market.progressBps / 100).toFixed(1)}% funded` : market.status === "READY" ? "Market-cap target reached" : "Liquidity migrated"}</strong></div>
-        <div className="pump-progress" role="progressbar" aria-label="Progress to READY" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, market.progressBps / 100)}><span style={{ width: `${Math.min(100, market.progressBps / 100)}%` }} /></div>
-        {market.status === "READY" ? <p className="pump-form-hint">Buys are frozen at the $6,000 target. Graduate through the pinned 0xFi controller — the same <code>graduateReady</code> call the keeper uses. Sells freeze only while that path is live, and reopen after the exit delay if graduation never happens.</p> : null}
-        <GraduationAction market={market} onComplete={() => void query.refetch()} />
-      </section>
-
-      <TokenHolders token={market.tokenAddress} symbol={market.symbol} />
-      <TradeHistory token={market.tokenAddress} />
+      {graduated ? null : (
+        <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-[55] border-t border-line bg-bg/95 p-3 backdrop-blur lg:hidden">
+          <a href="#trade" className="flex h-11 items-center justify-center rounded-ui-md bg-accent font-medium text-accent-ink focus-ring">
+            Trade {market.symbol}
+          </a>
+        </div>
+      )}
     </main>
+  );
+}
+
+type DetailTab = "trades" | "holders" | "about";
+
+/** Trades | Holders | About (spec §5 Pump Token). Own component so tab state stays local. */
+function TokenDetailTabs({ market, description }: { market: PumpMarket; description?: string }) {
+  const [tab, setTab] = useState<DetailTab>("trades");
+  const items: ReadonlyArray<{ value: DetailTab; label: string }> = [
+    { value: "trades", label: "Trades" },
+    { value: "holders", label: "Holders" },
+    { value: "about", label: "About" },
+  ];
+  return (
+    <section className="rounded-ui-lg border border-line bg-surface-1 px-4 pb-4 shadow-e1">
+      <Tabs label="Token activity" idBase="pump-token" value={tab} items={items} onChange={setTab} />
+      <div role="tabpanel" id={`pump-token-panel-${tab}`} aria-labelledby={`pump-token-tab-${tab}`} className="pump-token-tabpanel pt-4">
+        {tab === "trades" ? <TradeHistory token={market.tokenAddress} /> : null}
+        {tab === "holders" ? <TokenHolders token={market.tokenAddress} symbol={market.symbol} /> : null}
+        {tab === "about" ? (
+          <div className="grid gap-2 text-sm text-fg-2">
+            <p>{description || "The creator didn't add a description."}</p>
+            <p className="text-xs text-fg-3">Created by <span className="font-num">{shortAddress(market.creator, 7, 6)}</span></p>
+          </div>
+        ) : null}
+      </div>
+    </section>
   );
 }

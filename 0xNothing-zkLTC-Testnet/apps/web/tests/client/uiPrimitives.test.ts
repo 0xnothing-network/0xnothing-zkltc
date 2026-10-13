@@ -73,3 +73,16 @@ test("price impact ladder uses 1 / 3 / 5 percent breakpoints", () => {
   assert.equal(impactNeedsConfirmation(4.99), false);
   assert.equal(impactNeedsConfirmation(5), true);
 });
+
+test("curvePriceImpact compares execution price with spot for both sides", async () => {
+  const { curvePriceImpact } = await import("../../lib/ui/priceImpact.ts");
+  const wad = 10n ** 18n;
+  // spot 1 NUSD/token; buy 102 NUSD for 100 tokens → 2% worse
+  assert.equal(Number(curvePriceImpact("buy", 1, 102n * wad, 100n * wad)?.toFixed(6)), 2);
+  // sell 100 tokens for 97 NUSD → 3% worse
+  assert.equal(Number(curvePriceImpact("sell", 1, 100n * wad, 97n * wad)?.toFixed(6)), 3);
+  // better-than-spot rounds to 0, never negative
+  assert.equal(curvePriceImpact("buy", 1, 99n * wad, 100n * wad), 0);
+  assert.equal(curvePriceImpact("buy", 0, wad, wad), null);
+  assert.equal(curvePriceImpact("sell", 1, 0n, wad), null);
+});
