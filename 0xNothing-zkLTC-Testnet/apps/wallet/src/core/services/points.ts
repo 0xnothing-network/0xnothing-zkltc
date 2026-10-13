@@ -28,6 +28,8 @@ export interface PointsPosition {
   unlockTime: bigint;
   lockDuration: number;
   withdrawn: boolean;
+  startTime: bigint;
+  forfeited: boolean;
 }
 
 export interface PointsState {
@@ -127,6 +129,8 @@ function normalizePosition(
   const unlockTime = tuple?.[3] ?? named.unlockTime;
   const rawLockDuration = tuple?.[4] ?? named.lockDuration;
   const withdrawn = tuple?.[5] ?? named.withdrawn;
+  const startTime = tuple?.[6] ?? named.startTime;
+  const forfeited = tuple?.[7] ?? named.forfeited;
 
   if (
     typeof account !== "string"
@@ -136,6 +140,8 @@ function normalizePosition(
     || typeof unlockTime !== "bigint"
     || (typeof rawLockDuration !== "number" && typeof rawLockDuration !== "bigint")
     || typeof withdrawn !== "boolean"
+    || typeof startTime !== "bigint"
+    || typeof forfeited !== "boolean"
   ) return undefined;
 
   const lockDuration = Number(rawLockDuration);
@@ -149,6 +155,8 @@ function normalizePosition(
     unlockTime,
     lockDuration,
     withdrawn,
+    startTime,
+    forfeited,
   };
 }
 

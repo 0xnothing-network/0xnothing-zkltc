@@ -66,6 +66,21 @@ contract MockGraduationAdapter is IGraduationAdapter {
         return address(lpToken);
     }
 
+    function preparePool(address) external view returns (address) {
+        return address(lpToken);
+    }
+
+    function quoteMinimumLp(address, address, uint256 tokenAmount, uint256 nusdAmount)
+        external
+        pure
+        returns (uint256 minimumLp)
+    {
+        uint256 expected = MathX.sqrt(tokenAmount * nusdAmount);
+        if (expected <= 1000) revert("MIN_LP");
+        minimumLp = MathX.mulDiv(expected - 1000, 9_900, 10_000);
+        if (minimumLp == 0) revert("MIN_LP");
+    }
+
     function graduate(GraduationParams calldata params) external returns (GraduationResult memory result) {
         require(!shouldRevert, "MOCK_REVERT");
         require(block.timestamp <= params.deadline, "EXPIRED");
