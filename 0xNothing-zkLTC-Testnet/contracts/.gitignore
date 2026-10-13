@@ -2,4 +2,5 @@
 /cache/
 /out/
 /deployments/latest.json
+/deployments/faucet.json
 .env

@@ -47,4 +47,25 @@ contract DeployParametersTest is TestBase {
         vm.expectRevert(DeployTestnet.InvalidLaunchProtection.selector);
         script.validateLaunchProtection(15 minutes, 0);
     }
+
+    function testGraduationDefaultsDeriveTheReviewedReserveTarget() public view {
+        uint256 reserve = script.validateGraduationThresholds(1_500 ether, 6_000 ether);
+        assertEq(reserve, 1_500 ether, "default derived reserve");
+        assertEq(
+            script.validateGraduationThresholds(50 ether, 200 ether),
+            50 ether,
+            "testnet 50/200 reserve"
+        );
+    }
+
+    function testGraduationThresholdsRejectOutOfRangeValues() public {
+        vm.expectRevert(DeployTestnet.InvalidGraduationThresholds.selector);
+        script.validateGraduationThresholds(1 ether - 1, 6_000 ether);
+        vm.expectRevert(DeployTestnet.InvalidGraduationThresholds.selector);
+        script.validateGraduationThresholds(100_000 ether + 1, 200_000 ether);
+        vm.expectRevert(DeployTestnet.InvalidGraduationThresholds.selector);
+        script.validateGraduationThresholds(1_500 ether, 1_500 ether);
+        vm.expectRevert(DeployTestnet.InvalidGraduationThresholds.selector);
+        script.validateGraduationThresholds(1_500 ether, 1_000_000 ether + 1);
+    }
 }
