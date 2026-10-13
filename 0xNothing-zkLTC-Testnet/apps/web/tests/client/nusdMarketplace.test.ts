@@ -45,7 +45,9 @@ test("fresh-state gate rejects stale blocks but allows withdrawals and refunds d
   requireFreshNusdMarket(state, true, now);
   requireFreshNusdMarket({ ...state, paused: true }, false, now);
   assert.throws(() => requireFreshNusdMarket({ ...state, paused: true }, true, now), /paused/);
-  for (const bad of [{ ...state, readAt: now - 60001 }, { ...state, readAt: now + 1 }, { ...state, timestamp: 879n }, { ...state, timestamp: 1121n }, { ...state, readAt: NaN }]) assert.throws(() => requireFreshNusdMarket(bad, false, now), /stale/);
+  for (const bad of [{ ...state, readAt: now - 60001 }, { ...state, readAt: now + 1 }, { ...state, timestamp: -1n }, { ...state, readAt: NaN }]) assert.throws(() => requireFreshNusdMarket(bad, false, now), /stale/);
+  // A wallet whose system clock drifts from chain time must still be able to sign fresh reads.
+  for (const skewed of [{ ...state, timestamp: 879n }, { ...state, timestamp: 1121n }, { ...state, timestamp: 1_000_000_000n }]) requireFreshNusdMarket(skewed, true, now);
   assert.throws(() => requireFreshNusdMarket(state, true, NaN), /stale/);
 });
 

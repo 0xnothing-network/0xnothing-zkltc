@@ -31,11 +31,11 @@ function content(root: unknown): string {
   return "";
 }
 
-function harness(options: { configured?: boolean; credit?: bigint; balance?: bigint; paused?: boolean; seller?: boolean; changeAt?: "refresh" | "approval" | "quote" | "listing"; changeKind?: "address" | "chain" | "connector"; stale?: boolean; error?: boolean; listingForm?: boolean; existingListing?: boolean; loading?: boolean; empty?: boolean; disconnected?: boolean; chainId?: number; metadataFailure?: boolean; rejected?: boolean } = {}) {
+function harness(options: { configured?: boolean; credit?: bigint; balance?: bigint; paused?: boolean; seller?: boolean; changeAt?: "refresh" | "approval" | "quote" | "listing"; changeKind?: "address" | "chain" | "connector"; readFailure?: boolean; error?: boolean; listingForm?: boolean; existingListing?: boolean; loading?: boolean; empty?: boolean; disconnected?: boolean; chainId?: number; metadataFailure?: boolean; rejected?: boolean } = {}) {
   const account = { isConnected: !options.disconnected, address: options.disconnected ? undefined : options.seller ? SELLER as viem.Address : BUYER as viem.Address, chainId: options.chainId ?? 4441, connector: { uid: "wallet-a" } };
   const timestamp = BigInt(Math.floor(Date.now() / 1000));
   const state = {
-    blockNumber: 900n, timestamp, readAt: Date.now() - (options.stale ? 61000 : 0), paused: options.paused ?? false,
+    blockNumber: 900n, timestamp, readAt: Date.now(), paused: options.paused ?? false,
     feeBps: 40, listingCount: 1n, offerCount: 1n, volume: 0n, escrow: 100n * UNIT, catalogueComplete: true,
     credit: options.credit ?? 40n * UNIT, balance: options.balance ?? 60n * UNIT,
     listings: options.empty ? [] : [{ id: 1n, collection: NFT, tokenId: 3n, price: 100n * UNIT, seller: SELLER, active: true }],
@@ -54,9 +54,24 @@ function harness(options: { configured?: boolean; credit?: bigint; balance?: big
   const { createWalletSessionGuard } = evaluateModule<{ createWalletSessionGuard: (config: unknown, address: viem.Address, chainId: number) => () => void }>(
     new URL("../../lib/walletSession.ts", import.meta.url), { "wagmi/actions": { getAccount: () => account } }, { Error },
   );
+  const header: Record<string, () => unknown> = {
+    nusd: () => NUSD, IMPLEMENTATION_ID: () => marketplace.NUSD_MARKET_IMPLEMENTATION, paused: () => state.paused, platformFeeBps: () => state.feeBps,
+    activeListingCount: () => state.listingCount, activeOfferCount: () => state.offerCount, totalVolumeNusd: () => state.volume, escrowedNusd: () => state.escrow,
+    credits: () => state.credit, balanceOf: () => state.balance,
+  };
   const client = {
+    getChainId: async () => 4441,
+    getBlock: async () => {
+      refreshes += 1;
+      if (options.readFailure) throw new Error("RPC unavailable");
+      if (options.changeAt === "refresh") changeWallet();
+      return { number: state.blockNumber, timestamp: state.timestamp };
+    },
     readContract: async (call: typeof reads[number]) => {
       reads.push(call);
+      if (call.functionName in header) return header[call.functionName]();
+      if (call.functionName === "offers") { const offer = state.offers[0]; return [offer.collection, offer.tokenId, offer.offerer, offer.price, offer.expiresAt, offer.active]; }
+      if (call.functionName === "ownerOf") return state.offers[0].owner;
       if ((options.changeAt === "approval" && call.functionName === "getApproved") || (options.changeAt === "quote" && call.functionName === "quoteSale") || (options.changeAt === "listing" && call.functionName === "listings")) changeWallet();
       if (call.functionName === "listings") return [NFT, 3n, 100n * UNIT, SELLER, true];
       if (call.functionName === "quoteSale") return [UNIT * 4n / 10n, OTHER, 5n * UNIT, 946n * UNIT / 10n];
@@ -77,10 +92,10 @@ function harness(options: { configured?: boolean; credit?: bigint; balance?: big
     },
     "@tanstack/react-query": { useQueryClient: () => ({ invalidateQueries: async () => { invalidations += 1; } }), useQuery: (query: { enabled: boolean; queryKey: readonly unknown[] }) => {
       queryOptions.push(query);
-      const marketQuery = query.queryKey[0] === "pixel-nusd-market";
+      const marketQuery = query.queryKey[0] === "pixel-nusd-market" || query.queryKey[0] === "pixel-nusd-offers";
       if (query.queryKey[0] === "pixel-nusd-artwork") return { data: { tokens: { [`${NFT}:3`]: { name: "NUSD artwork" } }, failed: options.metadataFailure ? 1 : 0 }, isError: false };
       const owned = options.listingForm ? [{ collection: NFT, tokenId: "3", name: "NUSD artwork", listing: options.existingListing ? { listingId: "1", price: (100n * UNIT).toString() } : null }] : [];
-      return { data: marketQuery ? options.loading ? undefined : state : owned, isError: marketQuery && options.error, isFetching: marketQuery && options.loading, refetch: async () => { if (marketQuery) { refreshes += 1; if (options.changeAt === "refresh") changeWallet(); } return { data: marketQuery ? state : owned, isError: options.error }; } };
+      return { data: marketQuery ? options.loading ? undefined : state : owned, isError: marketQuery && options.error, isFetching: marketQuery && options.loading, refetch: async () => { if (query.queryKey[0] === "pixel-nusd-market") refreshes += 1; return { data: marketQuery ? state : owned, isError: options.error }; } };
     } },
     wagmi: { useAccount: () => ({ ...account }), useConfig: () => ({}), usePublicClient: () => client, useConnect: () => ({}), useSwitchChain: () => ({}) },
     viem, "@fi/lib/hooks/useProtocolTransaction": { useProtocolTransaction: () => transaction },
@@ -359,11 +374,11 @@ test("paused marketplace disables trading but keeps NUSD withdrawal and refunds 
   assert.ok(market.calls.every((call) => !call.approval && !call.stages));
 });
 
-test("stale state and failed reads cannot proceed to approval or settlement", async () => {
-  const stale = harness({ stale: true });
-  await stale.click("Buy with NUSD");
-  assert.equal(stale.calls.length, 0);
-  assert.match(String(stale.states[1]), /stale/);
+test("failed fresh reads and failed cached reads cannot proceed to approval or settlement", async () => {
+  const unreadable = harness({ readFailure: true });
+  await unreadable.click("Buy with NUSD");
+  assert.equal(unreadable.calls.length, 0);
+  assert.match(String(unreadable.states[1]), /Cannot read fresh marketplace state/);
   const failed = harness({ error: true });
   assert.equal(failed.button("Buy with NUSD").props.disabled, true);
 });
@@ -473,4 +488,37 @@ test("rejected transactions never retry automatically and refresh includes histo
   (refresh.props.onClick as () => void)();
   assert.equal(market.invalidations(), 1);
   assert.equal(market.render().props.lang, "en");
+});
+
+test("pre-signing reads the header and the settled listing only, never the catalogue", async () => {
+  const market = harness();
+  await market.click("Buy with NUSD");
+  assert.equal(market.calls.length, 1);
+  const names = market.reads.map((read) => read.functionName);
+  assert.ok(!names.includes("getActiveListings") && !names.includes("getActiveOffers"));
+  assert.deepEqual(names.filter((name) => name === "listings"), ["listings"]);
+  assert.ok(market.reads.filter((read) => read.functionName === "listings").every((read) => (read as { blockNumber?: bigint }).blockNumber === 900n));
+});
+
+test("a listing whose price changed after display is refused before signing", async () => {
+  const market = harness();
+  market.state.listings = [{ ...market.state.listings[0], price: 99n * UNIT }];
+  await market.click("Buy with NUSD");
+  assert.equal(market.calls.length, 0);
+  assert.match(String(market.states[1]), /price or listing has changed/);
+});
+
+test("offers are paged by their own query while the catalogue stays keyed to the wallet", () => {
+  const market = harness();
+  market.render();
+  const keys = market.queryOptions.map((query) => (query as unknown as { queryKey: readonly unknown[] }).queryKey);
+  const catalogue = keys.find((key) => key[0] === "pixel-nusd-market")!;
+  const offers = keys.find((key) => key[0] === "pixel-nusd-offers")!;
+  assert.deepEqual(Array.from(catalogue.slice(2)), [BUYER, 0]);
+  assert.deepEqual(Array.from(offers.slice(2)), [0]);
+  market.states[2] = 1;
+  market.render();
+  const later = market.queryOptions.slice(-6).map((query) => (query as unknown as { queryKey: readonly unknown[] }).queryKey);
+  assert.deepEqual(Array.from(later.find((key) => key[0] === "pixel-nusd-market")!.slice(2)), [BUYER, 0]);
+  assert.deepEqual(Array.from(later.find((key) => key[0] === "pixel-nusd-offers")!.slice(2)), [1]);
 });

@@ -10,7 +10,7 @@ import { useAccount, useConfig, useConnect, usePublicClient, useSwitchChain } fr
 import { useProtocolTransaction, type ProtocolCall, type ProtocolStage } from "@fi/lib/hooks/useProtocolTransaction";
 import { getAddressExplorerUrl, getMarketplaceTxUrl, getTokenExplorerUrl, shortenAddress } from "@/lib/contract";
 import { NFT_NUSD_ADDRESS, NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
-import { NUSD_CATALOGUE_LIMIT, NUSD_MARKET_PAGE_SIZE, NusdMarketplaceAbi, nusdFunding, offerExpiry, parseNusdPrice, readNusdMarket, requireFreshNusdMarket } from "@/lib/nusdMarketplace";
+import { NUSD_CATALOGUE_LIMIT, NUSD_MARKET_PAGE_SIZE, NusdMarketplaceAbi, nusdFunding, offerExpiry, parseNusdPrice, readNusdListing, readNusdMarket, readNusdOffer, requireFreshNusdMarket } from "@/lib/nusdMarketplace";
 import { fetchJson } from "@/lib/http";
 import { createWalletSessionGuard } from "@/lib/walletSession";
 import { getPixelImageUrl } from "@/lib/pixelImage";
@@ -25,7 +25,11 @@ const nftApprovalAbi = parseAbi([
 ]);
 type OwnedToken = { collection: Address; tokenId: string; name: string; listing: { listingId: string; price: string } | null };
 type MarketState = Awaited<ReturnType<typeof readNusdMarket>>;
+type MarketHeader = Omit<MarketState, "listings" | "offers" | "catalogueComplete">;
 type Action = { call: ProtocolCall; payment?: bigint; nftApproval?: { collection: Address; tokenId: bigint }; settlement?: boolean };
+const NO_OFFERS = { offers: false } as const;
+const NO_LISTINGS = { listings: false } as const;
+const HEADER_ONLY = { listings: false, offers: false } as const;
 
 function amount(value: bigint) { return formatUnits(value, 18); }
 
@@ -59,16 +63,29 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
   const [ownOnly, setOwnOnly] = useState(false);
   const [sort, setSort] = useState<NusdListingSort>("newest");
   const [workflow, setWorkflow] = useState<"sell" | "offer">("sell");
+  // A complete catalogue (up to 1,000 listings) is paged locally, so only a larger
+  // market needs a new listing read per page; offers are always paged onchain.
+  const [pagedCatalogue, setPagedCatalogue] = useState(false);
+  const listingPage = pagedCatalogue ? page : 0;
   const market = useQuery({
-    queryKey: ["pixel-nusd-market", NUSD_MARKETPLACE_ADDRESS, address, page],
+    queryKey: ["pixel-nusd-market", NUSD_MARKETPLACE_ADDRESS, address, listingPage],
     queryFn: () => {
       if (!client || !NUSD_MARKETPLACE_ADDRESS) throw new Error("NUSD marketplace not configured");
-      return readNusdMarket(client, NUSD_MARKETPLACE_ADDRESS, NFT_NUSD_ADDRESS, address, page, true);
+      return readNusdMarket(client, NUSD_MARKETPLACE_ADDRESS, NFT_NUSD_ADDRESS, address, listingPage, true, NO_OFFERS);
     },
     enabled: Boolean(client && NUSD_MARKETPLACE_ADDRESS), staleTime: 10_000, refetchInterval: 30_000, retry: 1,
     // Keep the current wallet's market visible while another page loads so the
     // offers, activity and trading desk stay mounted; never carry over another wallet's balances.
     placeholderData: (previous, previousQuery) => previousQuery?.queryKey[2] === address ? previous : undefined,
+  });
+  const offerPage = useQuery({
+    queryKey: ["pixel-nusd-offers", NUSD_MARKETPLACE_ADDRESS, page],
+    queryFn: () => {
+      if (!client || !NUSD_MARKETPLACE_ADDRESS) throw new Error("NUSD marketplace not configured");
+      return readNusdMarket(client, NUSD_MARKETPLACE_ADDRESS, NFT_NUSD_ADDRESS, undefined, page, false, NO_LISTINGS);
+    },
+    enabled: Boolean(client && NUSD_MARKETPLACE_ADDRESS), staleTime: 10_000, refetchInterval: 30_000, retry: 1,
+    placeholderData: (previous) => previous,
   });
   const owned = useQuery({
     queryKey: ["pixel-nusd-owned", address],
@@ -76,7 +93,13 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
     enabled: Boolean(address && NUSD_MARKETPLACE_ADDRESS), staleTime: 15_000, retry: 1,
   });
   const state = market.data;
-  const artworkRequests = nusdArtworkRequests([...(state?.listings ?? []), ...(state?.offers ?? [])], NUSD_CATALOGUE_LIMIT + NUSD_MARKET_PAGE_SIZE);
+  const offers = offerPage.data?.offers ?? [];
+  const offerClock = offerPage.data?.timestamp ?? state?.timestamp ?? 0n;
+  const readFailed = market.isError || offerPage.isError;
+  useEffect(() => {
+    if (state && !market.isPlaceholderData) setPagedCatalogue(!state.catalogueComplete);
+  }, [state, market.isPlaceholderData]);
+  const artworkRequests = nusdArtworkRequests([...(state?.listings ?? []), ...offers], NUSD_CATALOGUE_LIMIT + NUSD_MARKET_PAGE_SIZE);
   const artwork = useQuery({
     queryKey: ["pixel-nusd-artwork", artworkRequests.map((request) => request.url)],
     queryFn: ({ signal }) => readNusdArtwork(artworkRequests, (url) => fetchJson(url, { signal })),
@@ -84,7 +107,7 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
     placeholderData: (previous) => previous,
   });
   const busy = preparing || transaction.pending;
-  const ready = Boolean(state && !market.isError && !market.isPlaceholderData && !busy && address && chainId === 4441);
+  const ready = Boolean(state && !readFailed && !market.isPlaceholderData && !offerPage.isPlaceholderData && !busy && address && chainId === 4441);
   const paused = state?.paused ?? true;
   const selectedToken = owned.data?.find((token) => `${token.collection.toLowerCase()}:${token.tokenId}` === tokenKey);
   const selectedListing = state?.listings.find((listing) => listing.id.toString() === offerListing);
@@ -92,7 +115,8 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
   const offeredPrice = parseNusdPrice(offerPrice);
   const filteredListings = filterNusdListings(state?.listings ?? [], artwork.data?.tokens ?? {}, { search, collection, ownOnly, address, sort });
   const listingCount = state?.catalogueComplete ? BigInt(filteredListings.length) : state?.listingCount ?? 0n;
-  const maxCount = listingCount > (state?.offerCount ?? 0n) ? listingCount : state?.offerCount ?? 0n;
+  const offerCount = offerPage.data?.offerCount ?? state?.offerCount ?? 0n;
+  const maxCount = listingCount > offerCount ? listingCount : offerCount;
   const pages = (maxCount + BigInt(NUSD_MARKET_PAGE_SIZE) - 1n) / BigInt(NUSD_MARKET_PAGE_SIZE);
   const totalPages = Math.max(1, Number(pages > BigInt(Number.MAX_SAFE_INTEGER) ? BigInt(Number.MAX_SAFE_INTEGER) : pages));
   const safePage = Math.min(page, totalPages - 1);
@@ -113,7 +137,7 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
     return artwork.data?.tokens[nusdArtworkKey(collection, tokenId)]?.name || `0xPixel #${tokenId}`;
   }
 
-  async function act(build: (current: MarketState) => Promise<Action> | Action) {
+  async function act(build: (current: MarketHeader) => Promise<Action> | Action) {
     if (!address || chainId === undefined || !client || !NUSD_MARKETPLACE_ADDRESS || lock.current || transaction.pending) return;
     lock.current = true;
     setPreparing(true);
@@ -122,13 +146,16 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
     try {
       const assertWalletUnchanged = createWalletSessionGuard(config, address, chainId);
       assertWalletUnchanged();
-      const refreshed = await market.refetch();
+      // Pre-signing reads only the verified header (paused, credit, balance, block);
+      // each action then re-reads exactly the listing or offer it settles.
+      const current = await readNusdMarket(client, NUSD_MARKETPLACE_ADDRESS, NFT_NUSD_ADDRESS, address, 0, false, HEADER_ONLY).catch(() => {
+        throw new Error("Cannot read fresh marketplace state");
+      });
       assertWalletUnchanged();
-      if (refreshed.isError || !refreshed.data) throw new Error("Cannot read fresh marketplace state");
-      const action = await build(refreshed.data);
-      requireFreshNusdMarket(refreshed.data, action.settlement ?? true);
-      const funding = action.payment ? nusdFunding(action.payment, refreshed.data.credit) : undefined;
-      if (funding && refreshed.data.balance < funding.walletPayment) throw new Error("Not enough NUSD. Marketplace credits are used first; zkLTC is only for gas.");
+      const action = await build(current);
+      requireFreshNusdMarket(current, action.settlement ?? true);
+      const funding = action.payment ? nusdFunding(action.payment, current.credit) : undefined;
+      if (funding && current.balance < funding.walletPayment) throw new Error("Not enough NUSD. Marketplace credits are used first; zkLTC is only for gas.");
       let stages: ProtocolStage[] | undefined;
       if (action.nftApproval) {
         const { collection, tokenId } = action.nftApproval;
@@ -141,11 +168,11 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
         }
       }
       assertWalletUnchanged();
-      requireFreshNusdMarket(refreshed.data, action.settlement ?? true);
+      requireFreshNusdMarket(current, action.settlement ?? true);
       const hash = stages
         ? await transaction.execute({ stages })
         : await transaction.execute({ call: action.call, approval: funding ? { token: NFT_NUSD_ADDRESS, spender: NUSD_MARKETPLACE_ADDRESS, amount: funding.walletPayment } : undefined });
-      if (hash) { await Promise.all([market.refetch(), owned.refetch(), queryClient.invalidateQueries({ queryKey: ["pixel-nusd-activity"] })]); }
+      if (hash) { await Promise.all([market.refetch(), offerPage.refetch(), owned.refetch(), queryClient.invalidateQueries({ queryKey: ["pixel-nusd-activity"] })]); }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Marketplace request failed. No automatic retry.");
     } finally { setPreparing(false); lock.current = false; }
@@ -156,7 +183,7 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
   }
 
   function refresh() {
-    void Promise.all([market.refetch(), queryClient.invalidateQueries({ queryKey: ["pixel-nusd-activity"] })]);
+    void Promise.all([market.refetch(), offerPage.refetch(), queryClient.invalidateQueries({ queryKey: ["pixel-nusd-activity"] })]);
   }
 
   return <section className={styles.page} aria-labelledby="nusd-market-title" lang="en">
@@ -196,7 +223,7 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
     </header>
 
     {!NUSD_MARKETPLACE_ADDRESS ? <div className={styles.notice} role="status"><h2>NUSD marketplace not deployed / configured</h2><p>Transactions are disabled until a valid NUSD marketplace is configured.</p></div> : <>
-      {market.isError && <div role="alert" className={styles.error}><strong>Unable to read the marketplace.</strong><p>Transactions are disabled. Check your connection and the contract address, token and implementation.</p><button className={styles.secondaryButton} disabled={busy || market.isFetching} onClick={() => void market.refetch()}>Retry</button></div>}
+      {readFailed && <div role="alert" className={styles.error}><strong>Unable to read the marketplace.</strong><p>Transactions are disabled. Check your connection and the contract address, token and implementation.</p><button className={styles.secondaryButton} disabled={busy || market.isFetching || offerPage.isFetching} onClick={() => void Promise.all([market.refetch(), offerPage.refetch()])}>Retry</button></div>}
       {paused && state && <div className={styles.notice} role="status"><strong>The marketplace is paused.</strong> You can still cancel listings, refund offers and withdraw credits.</div>}
       {(busy || message || transaction.message) && <div className={styles.transactionNotice} role={message || transaction.phase === "error" ? "alert" : "status"} aria-live="polite">
         <span className={styles.eyebrow}>NUSD transaction</span>
@@ -248,9 +275,9 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
                   <div className={styles.priceRow}><span>Listing price</span><strong>{amount(listing.price)}<small>NUSD</small></strong></div>
                   {!isSeller && address && funding && <details className={styles.fundingDetails}><summary>Payment breakdown</summary><dl><div><dt>From marketplace credits</dt><dd>{amount(funding.creditUsed)} NUSD</dd></div><div><dt>From your wallet</dt><dd>{amount(funding.walletPayment)} NUSD</dd></div></dl><p>Approve only the NUSD needed from your wallet. zkLTC pays for gas.</p></details>}
                   {isSeller ? <button className={styles.secondaryButton} disabled={!ready} onClick={() => void act(() => ({ call: call("cancelListing", [listing.id]), settlement: false }))}>Cancel listing</button>
-                    : <div className={styles.cardActions}><button className={styles.primaryButton} disabled={!ready || paused} onClick={() => void act((current) => {
-                        const fresh = current.listings.find((item) => item.id === listing.id && item.active);
-                        if (!fresh || fresh.price !== listing.price) throw new Error("The price or listing has changed. Refresh and review it before buying.");
+                    : <div className={styles.cardActions}><button className={styles.primaryButton} disabled={!ready || paused} onClick={() => void act(async (current) => {
+                        const fresh = await readNusdListing(client!, NUSD_MARKETPLACE_ADDRESS!, listing.id, current.blockNumber);
+                        if (!fresh.active || fresh.price !== listing.price) throw new Error("The price or listing has changed. Refresh and review it before buying.");
                         const funding = nusdFunding(fresh.price, current.credit);
                         return { call: call("buy", [fresh.id, fresh.price, funding.walletPayment]), payment: fresh.price };
                       })}>Buy with NUSD<ArrowRight size={16} aria-hidden="true" /></button><a className={styles.offerLink} href="#offer-nusd" onClick={() => { setOfferListing(listing.id.toString()); setWorkflow("offer"); }}>Make offer</a></div>}
@@ -261,21 +288,21 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
 
       {state && <>
         <section id="market-offers" className={styles.offersSection} aria-labelledby="nusd-offers-title">
-          <div className={styles.sectionHeading}><div><span className={styles.eyebrow}>Market / 02</span><h2 id="nusd-offers-title">Escrowed offers<span className={styles.count}>{state.offers.length}</span></h2></div><span className={styles.escrowLabel}><Coins size={17} aria-hidden="true" />{amount(state.escrow)} NUSD escrowed across the market</span></div>
-          {state.offers.length === 0 ? <div className={styles.emptyOffers}><Stack size={28} aria-hidden="true" /><div><h3>No offers on this page yet.</h3><p>Choose an NFT for sale and offer your price. NUSD stays in escrow until the offer is settled or refunded.</p></div><a href="#offer-nusd" className={styles.textLink} onClick={() => setWorkflow("offer")}>Make offer<ArrowUpRight size={16} aria-hidden="true" /></a></div>
-            : <div className={styles.table}><table><caption className={styles.srOnly}>NUSD offers on page {page + 1}</caption><thead><tr><th scope="col">Artwork / offerer</th><th scope="col">Offer price</th><th scope="col">Expires</th><th scope="col">Actions</th></tr></thead><tbody>{state.offers.map((offer) => <tr key={offer.id.toString()}>
+          <div className={styles.sectionHeading}><div><span className={styles.eyebrow}>Market / 02</span><h2 id="nusd-offers-title">Escrowed offers<span className={styles.count}>{offers.length}</span></h2></div><span className={styles.escrowLabel}><Coins size={17} aria-hidden="true" />{amount(state.escrow)} NUSD escrowed across the market</span></div>
+          {offers.length === 0 ? <div className={styles.emptyOffers}><Stack size={28} aria-hidden="true" /><div><h3>No offers on this page yet.</h3><p>Choose an NFT for sale and offer your price. NUSD stays in escrow until the offer is settled or refunded.</p></div><a href="#offer-nusd" className={styles.textLink} onClick={() => setWorkflow("offer")}>Make offer<ArrowUpRight size={16} aria-hidden="true" /></a></div>
+            : <div className={styles.table}><table><caption className={styles.srOnly}>NUSD offers on page {page + 1}</caption><thead><tr><th scope="col">Artwork / offerer</th><th scope="col">Offer price</th><th scope="col">Expires</th><th scope="col">Actions</th></tr></thead><tbody>{offers.map((offer) => <tr key={offer.id.toString()}>
               <td><div className={styles.offerArtwork}><ArtworkPreview key={nusdArtworkKey(offer.collection, offer.tokenId)} compact collection={offer.collection} tokenId={offer.tokenId} name={nftName(offer.collection, offer.tokenId)} /><div><a href={getTokenExplorerUrl(offer.collection, offer.tokenId)} target="_blank" rel="noopener noreferrer">{nftName(offer.collection, offer.tokenId)}</a><small>#{offer.tokenId.toString()} · {shortenAddress(offer.collection)}</small><small>{shortenAddress(offer.offerer)}</small></div></div></td>
               <td className={styles.offerPrice}>{amount(offer.price)}<small>NUSD</small></td>
-              <td><span className={styles.expiry}><Clock size={14} aria-hidden="true" />{offer.expiresAt <= state.timestamp ? "Expired" : "Active"}</span><small>{new Date(Number(offer.expiresAt) * 1000).toLocaleString("en-US")}</small></td>
+              <td><span className={styles.expiry}><Clock size={14} aria-hidden="true" />{offer.expiresAt <= offerClock ? "Expired" : "Active"}</span><small>{new Date(Number(offer.expiresAt) * 1000).toLocaleString("en-US")}</small></td>
               <td>{offer.offerer.toLowerCase() === address?.toLowerCase()
                 ? <button className={styles.secondaryButton} disabled={!ready} onClick={() => void act(() => ({ call: call("cancelOffer", [offer.id]), settlement: false }))}>Cancel and refund credits</button>
-                : offer.expiresAt <= state.timestamp
+                : offer.expiresAt <= offerClock
                   ? <button className={styles.secondaryButton} disabled={!ready} onClick={() => void act(() => ({ call: call("expireOffer", [offer.id]), settlement: false }))}>Refund offerer</button>
                   : offer.owner?.toLowerCase() === address?.toLowerCase()
                     ? <button className={styles.primaryButton} disabled={!ready || paused} onClick={() => void act(async (current) => {
-                        const fresh = current.offers.find((item) => item.id === offer.id && item.active);
-                        if (!fresh || fresh.expiresAt <= current.timestamp) throw new Error("The offer has changed or expired");
-                        const quote = await client!.readContract({ address: NUSD_MARKETPLACE_ADDRESS!, abi: NusdMarketplaceAbi, functionName: "quoteSale", args: [fresh.collection, fresh.tokenId, fresh.price] });
+                        const fresh = await readNusdOffer(client!, NUSD_MARKETPLACE_ADDRESS!, offer.id, current.blockNumber);
+                        if (!fresh.active || fresh.expiresAt <= current.timestamp) throw new Error("The offer has changed or expired");
+                        const quote = await client!.readContract({ address: NUSD_MARKETPLACE_ADDRESS!, abi: NusdMarketplaceAbi, functionName: "quoteSale", args: [fresh.collection, fresh.tokenId, fresh.price], blockNumber: current.blockNumber });
                         return { call: call("acceptOffer", [fresh.id, quote[3]]), nftApproval: { collection: fresh.collection, tokenId: fresh.tokenId } };
                       })}>Accept offer</button>
                     : <span className={styles.small}>Awaiting NFT owner</span>}</td>
@@ -347,9 +374,9 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
             <form id="offer-nusd" hidden={workflow !== "offer"} className={styles.form} onSubmit={(event) => {
               event.preventDefault();
               if (!selectedListing || !offeredPrice) return;
-              void act((current) => {
-                const selected = current.listings.find((listing) => listing.id === selectedListing.id && listing.active);
-                if (!selected || selected.seller.toLowerCase() === address?.toLowerCase()) throw new Error("Listing unavailable or owned by your wallet");
+              void act(async (current) => {
+                const selected = await readNusdListing(client!, NUSD_MARKETPLACE_ADDRESS!, selectedListing.id, current.blockNumber);
+                if (!selected.active || selected.seller.toLowerCase() === address?.toLowerCase()) throw new Error("Listing unavailable or owned by your wallet");
                 const funding = nusdFunding(offeredPrice, current.credit);
                 return { call: call("makeOffer", [selected.collection, selected.tokenId, offeredPrice, offerExpiry(current.timestamp, duration), funding.walletPayment]), payment: offeredPrice };
               });
