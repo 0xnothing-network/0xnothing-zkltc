@@ -27,7 +27,7 @@
   --fi-line-strong: var(--pixel-ui-border-strong);
 }
 
-:is(.fi-root, .pump-shell, .pixel-product) :is(h1, h2, h3, button, input, select, textarea) {
+:is(.fi-root, .pump-shell, .pixel-product) :is(h1, h2, h3, button, input, select, textarea):not(:where(.ui, .ui *)) {
   font-family: var(--pixel-ui-font);
   font-synthesis: none;
 }
@@ -51,7 +51,7 @@
 :is(.fi-root, .pump-shell, .pixel-product) :is(.fi-button, .pump-button, .pixel-btn, .pixel-btn-soft):active:not(:disabled) {
   transform: translate(1px, 1px);
 }
-:is(.fi-root, .pump-shell, .pixel-product) :is(button, input, select, textarea, a, summary):focus-visible {
+:is(.fi-root, .pump-shell, .pixel-product) :is(button, input, select, textarea, a, summary):not(:where(.ui, .ui *)):focus-visible {
   outline: 2px solid var(--pixel-ui-action);
   outline-offset: 3px;
 }

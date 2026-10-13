@@ -1984,7 +1984,7 @@
 .pump-shell :is(.pump-button,.pump-menu-button,.pump-panel,.pump-token-card,.pump-stats-section,.pump-portfolio-list) {
   box-shadow: 3px 3px 0 #050607;
 }
-.pump-shell :is(button,a,input,select,textarea) { transition-timing-function: steps(2, end); }
+.pump-shell :is(button,a,input,select,textarea):not(:where(.ui, .ui *)) { transition-timing-function: steps(2, end); }
 .pump-shell .pump-button:active:not(:disabled),
 .pump-shell .pump-menu-button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #050607; }
 .pump-shell :is(.pump-button,.pump-menu-button,.pump-nav-link,.pump-segmented button,.pump-inline-options button):focus-visible {

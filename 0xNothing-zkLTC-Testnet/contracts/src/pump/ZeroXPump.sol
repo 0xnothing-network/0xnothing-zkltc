@@ -380,9 +380,8 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
     /// @notice Graduates a READY market through the configured adapter. Reverts `GraduationDisabled` until the
     ///         admin sets `graduationAdapter`. Caller `adapter` and `minimumLp` are ignored. Pause blocks every
     ///         caller, including the admin. Non-admin callers still wait for `permissionlessGraduationDelay`.
-    /// @dev The on-chain UniV2 minLP (`sqrt(token*nusd) - MINIMUM_LIQUIDITY` with `GRADUATION_SLIPPAGE_BPS` slack)
-    ///      assumes a fresh empty pair. A pre-created or skewed pool can DoS graduation or allow ~1% extraction
-    ///      (known issue R-1). Leave `graduationAdapter` unset until a reserve-aware adapter is reviewed.
+    /// @dev `minimumLp` comes from the adapter's reserve-aware quote after `preparePool`. The local
+    ///      `graduationMinimumLp` helper remains the fresh-pair estimate used when no pair exists yet.
     function graduate(address token, address adapter, uint256 minimumLp, uint256 deadline)
         external
         nonReentrant
@@ -403,7 +402,8 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
         uint256 priceWad = _spotPrice(market);
         uint256 tokenLiquidity = MathX.mulDiv(nusdLiquidity, WAD, priceWad);
         if (tokenLiquidity == 0 || tokenLiquidity > market.tokenReserve) revert InvalidConfiguration();
-        minimumLp = graduationMinimumLp(tokenLiquidity, nusdLiquidity);
+        IGraduationAdapter(adapter).preparePool(token);
+        minimumLp = IGraduationAdapter(adapter).quoteMinimumLp(token, NUSD, tokenLiquidity, nusdLiquidity);
 
         uint256 tokensToBurn = market.tokenReserve - tokenLiquidity;
         if (tokensToBurn > 0) PumpToken(token).burn(tokensToBurn);
@@ -575,8 +575,8 @@ contract ZeroXPump is TwoStepAdmin, ReentrancyGuard {
         return _graduationPossible();
     }
 
-    /// @notice UniV2-style LP the Pump will require, after `GRADUATION_SLIPPAGE_BPS`.
-    /// @dev Assumes a fresh pair (R-1). Do not treat this as safe against a pre-existing or skewed pool.
+    /// @notice Fresh-pair UniV2 LP floor after `GRADUATION_SLIPPAGE_BPS`.
+    /// @dev Live graduation uses the adapter's reserve-aware `quoteMinimumLp` instead of this helper.
     function graduationMinimumLp(uint256 tokenLiquidity, uint256 nusdLiquidity)
         public
         pure

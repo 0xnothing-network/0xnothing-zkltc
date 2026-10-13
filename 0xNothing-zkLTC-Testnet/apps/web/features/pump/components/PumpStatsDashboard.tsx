@@ -28,6 +28,7 @@ import { getTransactionExplorerUrl, publicClient } from "@/lib/contract";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { createPumpWalletGuard } from "@/features/pump/walletSession";
 import { waitForProtocolReceipt } from "@/lib/transactionReceipt";
+import { LITVM_ADD_CHAIN_PARAMETER } from "@/config/network";
 
 function usd(value: string, fractionDigits = 2): string {
   return `$${formatWad(value, fractionDigits)}`;
@@ -272,7 +273,7 @@ function DeveloperFeePanel({
   const handleClaim = async () => {
     if (wrongChain) {
       try {
-        await switchChainAsync({ chainId: PUMP_CHAIN_ID });
+        await switchChainAsync({ chainId: PUMP_CHAIN_ID, addEthereumChainParameter: LITVM_ADD_CHAIN_PARAMETER });
       } catch (error) {
         toast.handleError(error, "Network switch failed");
       }
