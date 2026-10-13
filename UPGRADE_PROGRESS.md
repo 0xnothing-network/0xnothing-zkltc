@@ -94,8 +94,9 @@
 | Graft | Refresh đạt: **1.419** files/cards, **16.044** edges |
 
 Các thành phần của verification gate được chạy riêng để thu kết quả từng lớp,
-không chạy lại lệnh tổng `npm run verify` sau khi từng check đã đạt. Foundry được
-gọi từ `C:/Users/tdat/.foundry/bin/forge.exe` vì executable chưa có trên PATH.
+không chạy lại lệnh tổng `npm run verify` sau khi từng check đã đạt. Lúc đó Foundry
+được gọi từ `C:/Users/tdat/.foundry/bin/forge.exe`; từ 2026-10-13 `forge` đã có trên
+PATH của cmd/PowerShell nên các script `test:contracts*` chạy trực tiếp.
 Fork tests có điều kiện môi trường không đồng nghĩa đã chạy giao dịch thật trên mạng.
 
 ### Bundle và giới hạn xác minh

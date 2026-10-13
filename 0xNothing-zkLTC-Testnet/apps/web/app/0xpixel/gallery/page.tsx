@@ -91,7 +91,7 @@ export default function GalleryPage() {
           className="mb-4 px-4 py-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-sm"
           style={{ fontFamily: "var(--font-departure)" }}
         >
-          Marketplace is paused. Listing and delisting are temporarily disabled.
+          Marketplace is paused. New listings and purchases are temporarily disabled; you can still cancel listings and withdraw credits.
         </div>
       ) : null}
 
