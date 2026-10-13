@@ -243,7 +243,7 @@ export function BorrowWorkspace() {
         { label: "Available NUSD", value: availableIsDust ? "Unavailable" : formatAmount(available), tone: availableIsDust ? "warning" : "positive" },
         { label: "Borrow APR", value: formatPercentWad(lending.borrowRate) },
         { label: "Max borrow", value: `${formatAmount(maxBorrow)} NUSD` },
-        { label: "Health factor", value: debt === 0n ? "No debt" : `${formatHf(currentHf)} · LTV ${formatBps(currentLtvBps)}`, tone: risk.tone },
+        { label: "Health factor", value: debt === undefined ? "--" : debt === 0n ? "No debt" : `${formatHf(currentHf)} · LTV ${formatBps(currentLtvBps)}`, tone: risk.tone },
       ]} />
       <div className="fi-workspace-grid fi-workspace-balance">
         <section className="fi-panel">

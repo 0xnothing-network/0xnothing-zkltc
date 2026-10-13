@@ -261,7 +261,8 @@ export function TokenDetail({ token }: { token: Address }) {
   );
 
   const progress = Math.min(100, Math.max(0, (market.progressBps ?? 0) / 100));
-  const remainingToReady = Math.max(0, READY_TARGET_NUSD * (1 - progress / 100));
+  const marketCap = Number(market.marketCapNusd) / 1e18;
+  const remainingToReady = Number.isFinite(marketCap) ? Math.max(0, READY_TARGET_NUSD - marketCap) : null;
   const graduated = market.status === "GRADUATED";
 
   return (
@@ -270,8 +271,8 @@ export function TokenDetail({ token }: { token: Address }) {
       {query.data?.warning ? <p className="pump-source-note">{query.data.warning}</p> : null}
       <Link href="/0xPump" className="inline-flex items-center gap-1 text-sm text-fg-3 hover:text-fg focus-ring">&larr; Markets</Link>
 
-      <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start">
-        <div className="grid min-w-0 gap-4">
+      <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4">
           <section className="flex flex-wrap items-start gap-4" aria-label="Token">
             <div className="shrink-0 overflow-hidden rounded-ui-lg">
               <PumpTokenLogo
@@ -322,7 +323,7 @@ export function TokenDetail({ token }: { token: Address }) {
           <TokenDetailTabs market={market} description={metadata.data?.description} />
         </div>
 
-        <aside id="trade" className="grid gap-4 scroll-mt-24 lg:sticky lg:top-[88px]" aria-label="Trade">
+        <aside id="trade" className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 scroll-mt-24 lg:sticky lg:top-[88px]" aria-label="Trade">
           {graduated ? (
             <section className="rounded-ui-lg border border-line bg-surface-1 p-5 shadow-e1">
               <p className="eyebrow">Graduated</p>
@@ -344,8 +345,9 @@ export function TokenDetail({ token }: { token: Address }) {
             </p>
             <PixelProgress className="mt-3" value={progress} size="lg" />
             <p className="mt-3 text-sm text-fg-2">
-              {market.status === "TRADING"
+              {market.status === "TRADING" && remainingToReady !== null
                 ? <>${remainingToReady.toLocaleString("en-US", { maximumFractionDigits: 0 })} more market cap until <strong className="text-fg">READY</strong>. At READY buys pause and the market can graduate to an 0xFi pool.</>
+                : market.status === "TRADING" ? "Buys continue until the market cap reaches $6,000 READY."
                 : market.status === "READY" ? "Market-cap target reached." : "Liquidity migrated to 0xFi."}
             </p>
             {market.status === "READY" ? <p className="mt-2 text-xs text-fg-3">Buys are frozen at the $6,000 target. Graduate through the pinned 0xFi controller — the same <code>graduateReady</code> call the keeper uses. Sells freeze only while that path is live, and reopen after the exit delay if graduation never happens.</p> : null}
