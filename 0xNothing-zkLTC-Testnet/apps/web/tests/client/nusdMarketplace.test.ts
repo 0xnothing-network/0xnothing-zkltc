@@ -55,7 +55,7 @@ function reader(options: { chainId?: number; token?: Address; implementation?: s
   const calls: { address: Address; functionName: string; args?: readonly unknown[]; blockNumber?: bigint }[] = [];
   const values: Record<string, unknown> = {
     nusd: options.token ?? NUSD, IMPLEMENTATION_ID: options.implementation ?? NUSD_MARKET_IMPLEMENTATION,
-    paused: false, platformFeeBps: options.feeBps ?? 40, activeListingCount: BigInt(options.catalogueCount ?? 30), activeOfferCount: 25n,
+    paused: false, BURN_BPS: 10, CREATOR_BPS: (options.feeBps ?? 50) - 10, activeListingCount: BigInt(options.catalogueCount ?? 30), activeOfferCount: 25n,
     totalVolumeNusd: 500n * UNIT, escrowedNusd: 20n * UNIT, credits: 10n * UNIT, balanceOf: 90n * UNIT,
     getActiveListings: options.oversized ? Array.from({ length: NUSD_MARKET_PAGE_SIZE + 1 }, (_, index) => BigInt(index + 1)) : [1n],
     getActiveOffers: [2n], listings: [NFT, 3n, 100n * UNIT, SELLER, true],

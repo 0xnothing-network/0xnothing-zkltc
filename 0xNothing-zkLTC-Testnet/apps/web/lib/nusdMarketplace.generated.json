@@ -1,15 +1,14 @@
 {
   "chainId": 4441,
-  "address": "0x188eACB8e05691aD5Ca6b31703DA97B13b2cf377",
-  "nusd": "0x5317e21aba902c6c7087a84457bc02fFe99604d1",
+  "address": "0xA5e3EDfcba3b6fc40f3e41557f8a303a2AAC7e09",
+  "nusd": "0x1d041A8e575006D46Ae0Aa2E4869C5be0327874E",
   "owner": "0x58633401dCc383F010688e950878000000000000",
-  "feeRecipient": "0x58633401dCc383F010688e950878000000000000",
-  "platformFeeBps": 40,
+  "burnBps": 10,
+  "creatorBps": 40,
   "collections": [
     "0x33A32b9b2BEe864f9e42BFa39cA7BDC72f655988",
     "0xd83cb7aCEF921f98b6B983cBB712a583869Da9eB"
   ],
-  "implementation": "0xee719314740fdb35e1eb121f66da79862505c4c2bcda00e9eada64ec39034032",
-  "deploymentBlock": "57196199",
-  "deploymentHash": "0x91cc4213eac712015ff6f1410c944ca7aa0b22c2e2170f8d312db3a02911e4e1"
+  "implementation": "0xcacabae418335c9bc3d401a0085ac7f27c4ec267a89868777e5712e9d9653739",
+  "deploymentBlock": "60811596"
 }

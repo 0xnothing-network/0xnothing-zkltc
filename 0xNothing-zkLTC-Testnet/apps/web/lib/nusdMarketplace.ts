@@ -1,6 +1,7 @@
 import { getAddress, isAddress, keccak256, parseAbi, parseUnits, toBytes, zeroAddress, type Address, type PublicClient } from "viem";
 
-export const NUSD_MARKET_IMPLEMENTATION = keccak256(toBytes("0xpixel.nusd.marketplace.v1"));
+/** v2: 0.1% of every sale is burned and 0.4% goes to the creator; there is no platform fee. */
+export const NUSD_MARKET_IMPLEMENTATION = keccak256(toBytes("0xpixel.nusd.marketplace.v2"));
 export const NUSD_MARKET_PAGE_SIZE = 24;
 export const NUSD_CATALOGUE_LIMIT = 1000;
 export const NUSD_MAX_PRICE = (1n << 128n) - 1n;
@@ -8,7 +9,8 @@ export const NUSD_MAX_PRICE = (1n << 128n) - 1n;
 export const NusdMarketplaceAbi = parseAbi([
   "function IMPLEMENTATION_ID() view returns (bytes32)",
   "function nusd() view returns (address)",
-  "function platformFeeBps() view returns (uint16)",
+  "function BURN_BPS() view returns (uint16)",
+  "function CREATOR_BPS() view returns (uint16)",
   "function paused() view returns (bool)",
   "function activeListingCount() view returns (uint256)",
   "function activeOfferCount() view returns (uint256)",
@@ -21,7 +23,7 @@ export const NusdMarketplaceAbi = parseAbi([
   "function getActiveOffers(uint256 offset, uint256 limit) view returns (uint256[])",
   "function listings(uint256 id) view returns (address collection, uint256 tokenId, uint256 price, address seller, bool active)",
   "function offers(uint256 id) view returns (address collection, uint256 tokenId, address offerer, uint256 price, uint64 expiresAt, bool active)",
-  "function quoteSale(address collection, uint256 tokenId, uint256 price) view returns (uint256 fee, address royaltyReceiver, uint256 royalty, uint256 sellerProceeds)",
+  "function quoteSale(address collection, uint256 tokenId, uint256 price) view returns (uint256 burnAmount, address creator, uint256 creatorFee, uint256 sellerProceeds)",
   "function list(address collection, uint256 tokenId, uint256 price) returns (uint256 listingId)",
   "function updateListingPrice(uint256 listingId, uint256 price)",
   "function buy(uint256 listingId, uint256 expectedPrice, uint256 maxWalletPayment)",
@@ -33,7 +35,6 @@ export const NusdMarketplaceAbi = parseAbi([
   "function withdrawNusd(address recipient)",
   "error PriceChanged()",
   "error WalletPaymentExceeded()",
-  "error InvalidRoyalty()",
   "error InsufficientProceeds()",
   "error Inactive()",
   "error InvalidExpiry()",
@@ -130,9 +131,12 @@ export async function readNusdMarket(
   if (token.toLowerCase() !== expectedNusd.toLowerCase() || implementation.toLowerCase() !== NUSD_MARKET_IMPLEMENTATION.toLowerCase()) throw new Error("NUSD marketplace token or implementation does not match configuration");
   const offset = BigInt(page) * BigInt(NUSD_MARKET_PAGE_SIZE);
   const none = Promise.resolve([] as readonly bigint[]);
-  const [paused, feeBps, listingCount, offerCount, volume, escrow, credit, balance, listingIds, offerIds] = await Promise.all([
+  const [paused, [burnBps, creatorBps], listingCount, offerCount, volume, escrow, credit, balance, listingIds, offerIds] = await Promise.all([
     client.readContract({ ...contract, functionName: "paused" }),
-    client.readContract({ ...contract, functionName: "platformFeeBps" }),
+    Promise.all([
+      client.readContract({ ...contract, functionName: "BURN_BPS" }),
+      client.readContract({ ...contract, functionName: "CREATOR_BPS" }),
+    ]),
     client.readContract({ ...contract, functionName: "activeListingCount" }),
     client.readContract({ ...contract, functionName: "activeOfferCount" }),
     client.readContract({ ...contract, functionName: "totalVolumeNusd" }),
@@ -142,6 +146,7 @@ export async function readNusdMarket(
     withListings ? client.readContract({ ...contract, functionName: "getActiveListings", args: [catalogue ? 0n : offset, BigInt(NUSD_MARKET_PAGE_SIZE)] }) : none,
     withOffers ? client.readContract({ ...contract, functionName: "getActiveOffers", args: [offset, BigInt(NUSD_MARKET_PAGE_SIZE)] }) : none,
   ]);
+  const feeBps = burnBps + creatorBps;
   if (feeBps > 500 || listingIds.length > NUSD_MARKET_PAGE_SIZE || offerIds.length > NUSD_MARKET_PAGE_SIZE) throw new Error("Invalid marketplace fee or page size");
   const catalogueComplete = withListings && catalogue && listingCount <= BigInt(NUSD_CATALOGUE_LIMIT);
   let ids = listingIds;
@@ -159,7 +164,7 @@ export async function readNusdMarket(
     mapNusdReads(ids, (id) => readNusdListing(client, market, id, blockNumber)),
     mapNusdReads(offerIds, (id) => readNusdOffer(client, market, id, blockNumber)),
   ]);
-  return { blockNumber, timestamp: block.timestamp, readAt: Date.now(), paused, feeBps, listingCount, offerCount, volume, escrow, credit, balance, listings, offers, catalogueComplete };
+  return { blockNumber, timestamp: block.timestamp, readAt: Date.now(), paused, feeBps, burnBps, creatorBps, listingCount, offerCount, volume, escrow, credit, balance, listings, offers, catalogueComplete };
 }
 
 // Reads issued in the same tick are folded into one multicall by the batching

@@ -55,11 +55,11 @@ const removeLiquidityNativeComponents = [
 
 export const dexRouterAbi = [
   { type: "function", name: "LP_FEE_BPS", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
-  { type: "function", name: "PROTOCOL_FEE_BPS", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
-  { type: "function", name: "ROUTE_SURCHARGE_BPS", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "DIRECT_FEE_BPS", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "CROSS_FEE_BPS", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "factory", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "address" }] },
   { type: "function", name: "accruedRouterFees", stateMutability: "view", inputs: [{ name: "token", type: "address" }], outputs: [{ name: "", type: "uint256" }] },
-  { type: "function", name: "withdrawRouterFees", stateMutability: "nonpayable", inputs: [{ name: "token", type: "address" }, { name: "recipient", type: "address" }, { name: "amount", type: "uint256" }], outputs: [] },
+  { type: "function", name: "distributeFees", stateMutability: "nonpayable", inputs: [{ name: "token", type: "address" }], outputs: [{ name: "amount", type: "uint256" }] },
   {
     type: "function", name: "getAmountsOut", stateMutability: "view",
     inputs: [{ name: "amountIn", type: "uint256" }, { name: "path", type: "address[]" }],

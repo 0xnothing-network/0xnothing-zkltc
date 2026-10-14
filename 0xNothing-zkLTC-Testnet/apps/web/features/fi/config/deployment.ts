@@ -50,9 +50,11 @@ export const deployment = {
       process.env.NEXT_PUBLIC_LITVM_EXPLORER_URL?.trim() ||
       "https://liteforge.explorer.caldera.xyz",
   },
+  // Indexer coordinates follow the generated deployment unless overrides are enabled, so a stale
+  // environment variable cannot point the app at another contract set's subgraph.
   indexer: {
-    endpoint: process.env.NEXT_PUBLIC_GOLDSKY_ENDPOINT?.trim() || TESTNET.goldskyEndpoint,
-    deploymentBlock: positiveInteger(process.env.NEXT_PUBLIC_DEPLOYMENT_BLOCK, TESTNET.deploymentBlock),
+    endpoint: deploymentOverride(process.env.NEXT_PUBLIC_GOLDSKY_ENDPOINT)?.trim() || TESTNET.goldskyEndpoint,
+    deploymentBlock: positiveInteger(deploymentOverride(process.env.NEXT_PUBLIC_DEPLOYMENT_BLOCK), TESTNET.deploymentBlock),
   },
   contracts: {
     nusd: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_NUSD_ADDRESS), TESTNET.nusd),
@@ -120,6 +122,12 @@ export const deployment = {
     pump: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_PUMP_ADDRESS), TESTNET.pump),
     lpLocker: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_LP_LOCKER_ADDRESS), TESTNET.lpLocker || undefined),
     tokenMetadataRegistry: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_TOKEN_METADATA_REGISTRY_ADDRESS), TESTNET.tokenMetadataRegistry || undefined),
+    // v2 tokenomics: fees split 50/50 between the 0xPoints reward pool and the owner treasury.
+    treasury: configuredAddress(undefined, TESTNET.treasury),
+    feeSplitter: configuredAddress(undefined, TESTNET.feeSplitter),
+    rewardStaking: configuredAddress(undefined, TESTNET.rewardStaking),
+    surplusMintGovernor: configuredAddress(undefined, TESTNET.surplusMintGovernor),
+    nusdMarketplace: configuredAddress(undefined, TESTNET.nusdMarketplace),
   },
 } as const;
 

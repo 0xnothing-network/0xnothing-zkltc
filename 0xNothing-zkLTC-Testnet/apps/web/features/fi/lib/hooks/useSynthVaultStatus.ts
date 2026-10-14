@@ -16,9 +16,10 @@ export type SynthVaultStatus =
 export function useSynthVaultStatus(vault: Address | undefined) {
   // `activated()` was introduced with the shared safety-reserve deployment.
   // Legacy vaults do not expose it, so only reserve-aware deployments read it.
+  // v1 routed mint fees through a fee-gauge factory, v2 through the fee splitter.
   const reserveAware = Boolean(
     deployment.contracts.synthSafetyReserve
-    && deployment.contracts.synthFeeGaugeFactory,
+    && (deployment.contracts.synthFeeGaugeFactory || deployment.contracts.feeSplitter),
   );
   const activation = useReadContract({
     address: vault,

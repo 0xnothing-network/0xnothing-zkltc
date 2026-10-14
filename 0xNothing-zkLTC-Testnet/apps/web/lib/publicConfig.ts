@@ -1,4 +1,5 @@
 import type { Address } from "viem";
+import testnet from "@fi/config/testnet.generated.json";
 
 /** Public LitVM testnet configuration. Nothing in this file is secret. */
 export const PUBLIC_APP_URL = "https://0xnothing.xyz" as const;
@@ -18,12 +19,12 @@ export const PIXEL_START_BLOCK = 24_867_130n;
 export const MARKETPLACE_SUBGRAPH_URL =
   "https://api.goldsky.com/api/public/project_cmr0mev6548fr01xtd92rc135/subgraphs/marketplace/1.0.1/gn" as const;
 
-export const PUMP_FACTORY_ADDRESS: Address = "0x4a0eaf310e3659aa9b360fd44e90208c31dbe0e2";
-export const PUMP_NUSD_ADDRESS: Address = "0x5317e21aba902c6c7087a84457bc02ffe99604d1";
-export const PUMP_GRADUATION_ROUTER_ADDRESS: Address = "0xdcf571c4b03a86c5e15b48864c1acbb6a8085904";
-export const PUMP_GRADUATION_ADAPTER_ADDRESS: Address = "0x935e05f60a05110c29eFA7e3a632dfe38123963e";
-export const PUMP_GRADUATION_CONTROLLER_ADDRESS: Address = "0x2112Cea76b76817626cA58B205b3dC5560F05857";
-export const PUMP_START_BLOCK = 32_907_625n;
-export const PUMP_SUBGRAPH_URL =
-  "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxpump-testnet/staging/gn" as const;
+// 0xPump and NUSD come from the active testnet set written by `0xFi/scripts/deploy-v2.mjs --publish`.
+export const PUMP_FACTORY_ADDRESS = testnet.pump as Address;
+export const PUMP_NUSD_ADDRESS = testnet.nusd as Address;
+export const PUMP_GRADUATION_ROUTER_ADDRESS = testnet.pumpGraduationRouter as Address;
+export const PUMP_GRADUATION_ADAPTER_ADDRESS = testnet.pumpGraduationAdapter as Address;
+export const PUMP_GRADUATION_CONTROLLER_ADDRESS = testnet.pumpGraduationController as Address;
+export const PUMP_START_BLOCK = BigInt(testnet.deploymentBlock);
+export const PUMP_SUBGRAPH_URL = testnet.pumpGoldskyEndpoint;
 export const IPFS_GATEWAY_URL = "https://dweb.link/ipfs/" as const;

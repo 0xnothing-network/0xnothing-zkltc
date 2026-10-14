@@ -9,12 +9,11 @@ import {
   useSwitchChain,
   useWriteContract,
 } from "wagmi";
-import { pumpGraduationControllerAbi, zeroXPumpAbi } from "@/features/pump/abis";
+import { zeroXPumpAbi } from "@/features/pump/abis";
 import {
   PUMP_CHAIN_ID,
   PUMP_CONFIGURED,
   PUMP_FACTORY_ADDRESS,
-  PUMP_GRADUATION_CONTROLLER_ADDRESS,
 } from "@/features/pump/config";
 import {
   formatRelativeTime,
@@ -37,39 +36,6 @@ export function PumpStatsDashboard() {
   const statsQuery = usePumpStats();
   const marketsQuery = usePumpMarkets({ limit: 5, sort: "VOLUME" });
   const { address } = useAccount();
-  const adminQuery = useReadContract({
-    address: PUMP_FACTORY_ADDRESS,
-    abi: zeroXPumpAbi,
-    functionName: "admin",
-    chainId: PUMP_CHAIN_ID,
-    query: { enabled: PUMP_CONFIGURED },
-  });
-  const controllerOwnsFactory = Boolean(
-    adminQuery.data
-    && adminQuery.data.toLowerCase() === PUMP_GRADUATION_CONTROLLER_ADDRESS.toLowerCase(),
-  );
-  const governanceQuery = useReadContract({
-    address: PUMP_GRADUATION_CONTROLLER_ADDRESS,
-    abi: pumpGraduationControllerAbi,
-    functionName: "governance",
-    chainId: PUMP_CHAIN_ID,
-    query: { enabled: PUMP_CONFIGURED && controllerOwnsFactory },
-  });
-  const isDirectAdmin = Boolean(
-    address
-    && adminQuery.data
-    && address.toLowerCase() === adminQuery.data.toLowerCase(),
-  );
-  const isControllerGovernance = Boolean(
-    address
-    && controllerOwnsFactory
-    && governanceQuery.data
-    && address.toLowerCase() === governanceQuery.data.toLowerCase(),
-  );
-  const canClaimFees = isDirectAdmin || isControllerGovernance;
-  const authorizationError = adminQuery.error
-    ?? (controllerOwnsFactory ? governanceQuery.error : null);
-
   const payload = statsQuery.data;
   const stats = payload?.stats;
   const hasIndexedTotals = payload?.source === "subgraph";
@@ -199,77 +165,61 @@ export function PumpStatsDashboard() {
         </>
       )}
 
-      {canClaimFees && address && adminQuery.data ? (
-        <DeveloperFeePanel
+      {PUMP_CONFIGURED ? (
+        <ProtocolFeePanel
           address={address}
-          authority={isControllerGovernance ? PUMP_GRADUATION_CONTROLLER_ADDRESS : PUMP_FACTORY_ADDRESS}
-          governance={isControllerGovernance ? governanceQuery.data : undefined}
-          withdrawnFeesNusd={stats?.withdrawnFeesNusd}
+          distributedFeesNusd={stats?.withdrawnFeesNusd}
           indexedTotalsAvailable={Boolean(stats && hasIndexedTotals)}
-          onClaimed={() => void statsQuery.refetch()}
+          onDistributed={() => void statsQuery.refetch()}
         />
-      ) : address && authorizationError ? (
-        <div className="pump-admin-check-error" role="alert">
-          <span>Fee authorization could not be checked.</span>
-          <button
-            type="button"
-            onClick={() => {
-              void adminQuery.refetch();
-              if (controllerOwnsFactory) void governanceQuery.refetch();
-            }}
-          >
-            Retry
-          </button>
-        </div>
       ) : null}
     </main>
   );
 }
 
-function DeveloperFeePanel({
+/**
+ * v2: protocol fees no longer belong to an admin. Anyone can send them to the fee splitter,
+ * which forwards 50% to the 0xPoints reward pool and 50% to the treasury in the same call.
+ */
+function ProtocolFeePanel({
   address,
-  authority,
-  governance,
-  withdrawnFeesNusd,
+  distributedFeesNusd,
   indexedTotalsAvailable,
-  onClaimed,
+  onDistributed,
 }: {
-  address: `0x${string}`;
-  authority: `0x${string}`;
-  governance?: `0x${string}`;
-  withdrawnFeesNusd?: string;
+  address?: `0x${string}`;
+  distributedFeesNusd?: string;
   indexedTotalsAvailable: boolean;
-  onClaimed: () => void;
+  onDistributed: () => void;
 }) {
   const toast = useToast();
   const { chainId } = useAccount();
   const walletConfig = useConfig();
   const { switchChainAsync, isPending: isSwitching } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
-  const claimLockRef = useRef(false);
-  const [isClaiming, setIsClaiming] = useState(false);
-  const wrongChain = chainId !== PUMP_CHAIN_ID;
-  const claimableQuery = useReadContract({
+  const actionLockRef = useRef(false);
+  const [isSending, setIsSending] = useState(false);
+  const wrongChain = Boolean(address) && chainId !== PUMP_CHAIN_ID;
+  const pendingQuery = useReadContract({
     address: PUMP_FACTORY_ADDRESS,
     abi: zeroXPumpAbi,
     functionName: "accruedProtocolFeesNusd",
     chainId: PUMP_CHAIN_ID,
   });
-  const claimable = claimableQuery.data ?? 0n;
-  const actionPending = isClaiming || isSwitching;
-  // Only the first read blocks the button. `accruedProtocolFeesNusd` is in the
-  // block-sync allowlist, so `isFetching` went true every ten seconds and the
-  // claim button disabled itself — and relabelled — on every new block. The
-  // amount is re-simulated against the chain before the write anyway, so a
-  // background refresh does not need to gate the action.
-  const feeReadPending = claimableQuery.isLoading;
-  const usesController = authority.toLowerCase() === PUMP_GRADUATION_CONTROLLER_ADDRESS.toLowerCase();
-  const withdrawTarget = {
-    address: authority,
-    abi: usesController ? pumpGraduationControllerAbi : zeroXPumpAbi,
-  } as const;
+  const recipientQuery = useReadContract({
+    address: PUMP_FACTORY_ADDRESS,
+    abi: zeroXPumpAbi,
+    functionName: "feeRecipient",
+    chainId: PUMP_CHAIN_ID,
+    query: { staleTime: Infinity },
+  });
+  const pending = pendingQuery.data ?? 0n;
+  const actionPending = isSending || isSwitching;
+  // Only the first read gates the button; the amount is re-simulated before the write.
+  const feeReadPending = pendingQuery.isLoading;
 
-  const handleClaim = async () => {
+  const handleDistribute = async () => {
+    if (!address) return;
     if (wrongChain) {
       try {
         await switchChainAsync({ chainId: PUMP_CHAIN_ID });
@@ -278,100 +228,94 @@ function DeveloperFeePanel({
       }
       return;
     }
-    if (claimableQuery.error || claimableQuery.data === undefined) {
-      await claimableQuery.refetch();
+    if (pendingQuery.error || pendingQuery.data === undefined) {
+      await pendingQuery.refetch();
       return;
     }
-    if (claimable <= 0n || !tryAcquireAction(claimLockRef)) return;
+    if (pending <= 0n || !tryAcquireAction(actionLockRef)) return;
 
-    setIsClaiming(true);
+    setIsSending(true);
     try {
       const assertWalletUnchanged = createPumpWalletGuard(walletConfig, address);
       assertWalletUnchanged();
       await publicClient.simulateContract({
         account: address,
-        address: withdrawTarget.address,
-        abi: withdrawTarget.abi,
-        functionName: "withdrawProtocolFees",
-        args: [address, claimable],
+        address: PUMP_FACTORY_ADDRESS,
+        abi: zeroXPumpAbi,
+        functionName: "distributeFees",
       });
       assertWalletUnchanged();
       const hash = await writeContractAsync({
         account: address,
-        address: withdrawTarget.address,
-        abi: withdrawTarget.abi,
-        functionName: "withdrawProtocolFees",
-        args: [address, claimable],
+        address: PUMP_FACTORY_ADDRESS,
+        abi: zeroXPumpAbi,
+        functionName: "distributeFees",
         chainId: PUMP_CHAIN_ID,
       });
       const receipt = await waitForProtocolReceipt(publicClient, hash);
-
       toast.show({
-        title: "Fees claimed",
-        description: `${formatWad(claimable, 6)} NUSD was sent to ${shortAddress(address)}.`,
+        title: "Fees distributed",
+        description: `${formatWad(pending, 6)} NUSD went 50% to the reward pool and 50% to the treasury.`,
         kind: "success",
         href: getTransactionExplorerUrl(receipt.transactionHash),
         hrefLabel: "View transaction",
       });
-      await claimableQuery.refetch();
-      onClaimed();
+      await pendingQuery.refetch();
+      onDistributed();
     } catch (error) {
-      toast.handleError(error, "Fee claim failed");
+      toast.handleError(error, "Fee distribution failed");
     } finally {
-      releaseAction(claimLockRef);
-      setIsClaiming(false);
+      releaseAction(actionLockRef);
+      setIsSending(false);
     }
   };
 
-  let buttonLabel = "Nothing to claim";
-  if (actionPending) buttonLabel = isSwitching ? "Switching" : "Claiming";
+  let buttonLabel = "Nothing to distribute";
+  if (!address) buttonLabel = "Connect a wallet to distribute";
+  else if (actionPending) buttonLabel = isSwitching ? "Switching" : "Distributing";
   else if (wrongChain) buttonLabel = "Switch network";
-  else if (claimableQuery.error) buttonLabel = "Retry fee read";
+  else if (pendingQuery.error) buttonLabel = "Retry fee read";
   else if (feeReadPending) buttonLabel = "Reading fees";
-  else if (claimable > 0n) buttonLabel = "Claim all fees";
+  else if (pending > 0n) buttonLabel = "Distribute fees";
 
   return (
-    <section className="pump-dev-fees" aria-labelledby="pump-dev-fees-title">
+    <section className="pump-dev-fees" aria-labelledby="pump-fees-title">
       <div className="pump-dev-fees-heading">
         <div>
-          <span className="pump-eyebrow">Admin only</span>
-          <h2 id="pump-dev-fees-title">Developer fees</h2>
-          <p>Withdraws accrued creation and trading fees. Curve reserves remain locked to their markets.</p>
+          <span className="pump-eyebrow">Open to anyone</span>
+          <h2 id="pump-fees-title">Protocol fees</h2>
+          <p>
+            Creation and trading fees go 50% to the 0xPoints reward pool and 50% to the treasury.
+            Anyone can send them; curve reserves never move.
+          </p>
         </div>
-        <span className="pump-dev-badge">Authorized wallet</span>
       </div>
 
       <div className="pump-dev-fees-grid">
         <div className="pump-dev-claimable">
-          <span>Available to claim</span>
-          <strong>{claimableQuery.error || claimableQuery.data === undefined ? "--" : `${formatWad(claimable, 6)} NUSD`}</strong>
-          {claimableQuery.error ? <small>Could not read live protocol fees.</small> : <small>Live contract balance reserved for protocol fees</small>}
+          <span>Waiting to distribute</span>
+          <strong>{pendingQuery.error || pendingQuery.data === undefined ? "--" : `${formatWad(pending, 6)} NUSD`}</strong>
+          {pendingQuery.error ? <small>Could not read live protocol fees.</small> : <small>Held by the Pump contract until someone sends it</small>}
         </div>
         <dl className="pump-stats-list">
           <div>
-            <dt>Authority</dt>
-            <dd title={authority}>{shortAddress(authority)}</dd>
-          </div>
-          {governance ? (
-            <div>
-              <dt>Governance</dt>
-              <dd title={governance}>{shortAddress(governance)}</dd>
-            </div>
-          ) : null}
-          <div>
-            <dt>Claimed lifetime</dt>
-            <dd>{indexedTotalsAvailable && withdrawnFeesNusd ? `${formatWad(withdrawnFeesNusd, 6)} NUSD` : "--"}</dd>
+            <dt>Fee splitter</dt>
+            <dd title={recipientQuery.data}>{recipientQuery.data ? shortAddress(recipientQuery.data) : "--"}</dd>
           </div>
           <div>
-            <dt>Recipient</dt>
-            <dd title={address}>{shortAddress(address)}</dd>
+            <dt>Split</dt>
+            <dd>50% pool / 50% treasury</dd>
+          </div>
+          <div>
+            <dt>Distributed lifetime</dt>
+            <dd>{indexedTotalsAvailable && distributedFeesNusd ? `${formatWad(distributedFeesNusd, 6)} NUSD` : "--"}</dd>
           </div>
         </dl>
         <button
           className="pump-button pump-button-primary pump-button-large pump-button-full"
           type="button"
-          disabled={actionPending || feeReadPending || (!wrongChain && !claimableQuery.error && claimable <= 0n)}
-          onClick={() => void handleClaim()}
+          disabled={!address || actionPending || feeReadPending || (!wrongChain && !pendingQuery.error && pending <= 0n)}
+          onClick={() => void handleDistribute()}
         >
           {buttonLabel}
         </button>

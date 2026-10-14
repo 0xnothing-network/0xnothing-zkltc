@@ -143,7 +143,8 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
     : undefined;
   const tradeAmount = workflow === "sell" ? listedPrice : offeredPrice;
   const tradeStep = !tradeAsset ? 0 : !tradeAmount ? 1 : 2;
-  const listingFee = state && listedPrice ? listedPrice * BigInt(state.feeBps) / 10_000n : undefined;
+  const listingBurn = state && listedPrice ? listedPrice * BigInt(state.burnBps) / 10_000n : undefined;
+  const listingCreatorFee = state && listedPrice ? listedPrice * BigInt(state.creatorBps) / 10_000n : undefined;
   function nftName(collection: Address, tokenId: bigint) {
     return artwork.data?.tokens[nusdArtworkKey(collection, tokenId)]?.name || `0xPixel #${tokenId}`;
   }
@@ -246,7 +247,7 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
         <div><dt>Active listings</dt><dd>{state ? state.listingCount.toString() : "—"}</dd></div>
         <div><dt>Active offers</dt><dd>{state ? state.offerCount.toString() : "—"}</dd></div>
         <div><dt>Trading volume</dt><dd>{state ? amount(state.volume) : "—"}<span>NUSD</span></dd></div>
-        <div><dt>Platform fee</dt><dd>{state ? `${state.feeBps / 100}%` : "—"}<span>+ royalty</span></dd></div>
+        <div><dt>Sale fee</dt><dd>{state ? `${state.feeBps / 100}%` : "—"}<span>{state ? `${state.burnBps / 100}% burned · ${state.creatorBps / 100}% creator` : ""}</span></dd></div>
       </dl>
 
       <section id="market-explore" className={styles.browse} aria-labelledby="nusd-listings-title" aria-busy={market.isFetching}>
@@ -369,7 +370,7 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
               {address && !owned.isFetching && !owned.isError && owned.data?.length === 0 && <p className={styles.small}>Your wallet has no NFTs to sell yet. <Link href="/0xpixel">Create your first artwork<ArrowUpRight size={13} aria-hidden="true" /></Link></p>}
               <label className={styles.priceField}>Listing price<div className={styles.amountInput}><input inputMode="decimal" value={listPrice} onChange={(event) => setListPrice(event.target.value)} placeholder="0.00" disabled={busy} aria-describedby="nusd-list-price-help" /><span aria-hidden="true"><Coins size={18} />NUSD</span></div></label>
               <p id="nusd-list-price-help" className={styles.small}>Exact NUSD amount · Up to 18 decimal places</p>
-              <dl className={styles.tradeBreakdown}><div><dt>Platform fee ({state.feeBps / 100}%)</dt><dd>{listingFee === undefined ? "—" : `${amount(listingFee)} NUSD`}</dd></div><div><dt>Creator royalty</dt><dd>Calculated at sale</dd></div></dl>
+              <dl className={styles.tradeBreakdown}><div><dt>NUSD burned ({state.burnBps / 100}%)</dt><dd>{listingBurn === undefined ? "—" : `${amount(listingBurn)} NUSD`}</dd></div><div><dt>To the creator ({state.creatorBps / 100}%)</dt><dd>{listingCreatorFee === undefined ? "—" : `${amount(listingCreatorFee)} NUSD`}</dd></div></dl>
               <button className={`${styles.primaryButton} ${styles.tradeSubmit}`} disabled={!ready || paused || !selectedToken || !listedPrice}>{selectedToken?.listing ? "Update NUSD price" : "Approve NFT and list"}<ArrowRight size={19} aria-hidden="true" /></button>
               {selectedToken?.listing && <button type="button" className={styles.secondaryButton} disabled={!ready} onClick={() => void act(async (current) => {
                 const id = BigInt(selectedToken.listing!.listingId);
@@ -378,7 +379,7 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
                 return { call: call("cancelListing", [id]), settlement: false };
               })}>Cancel this NUSD listing</button>}
               <p className={styles.actionHint}>{busy ? "Review the current request in your wallet." : !address ? "Connect your wallet above to begin." : chainId !== 4441 ? "Switch to LiteForge before continuing." : paused ? "Trading is paused. Existing listings can still be cancelled." : !selectedToken ? "Choose your artwork to prepare a listing." : !listedPrice ? "Enter a positive NUSD price to continue." : selectedToken.listing ? "Review your new price in your wallet." : "You will review the approval and listing in your wallet."}</p>
-              <details className={styles.tradeDisclosure}><summary>Fees & NFT approval<Plus size={14} aria-hidden="true" /></summary><p className={styles.formFootnote}>Fees and royalties are deducted from the sale price. Approve only this NFT if needed, never setApprovalForAll. Update or cancel your NUSD listing here.</p></details>
+              <details className={styles.tradeDisclosure}><summary>Fees & NFT approval<Plus size={14} aria-hidden="true" /></summary><p className={styles.formFootnote}>The sale fee is deducted from the price: 0.1% is burned and 0.4% goes to the artwork&apos;s creator (you keep it when you are the creator). Approve only this NFT if needed, never setApprovalForAll. Update or cancel your NUSD listing here.</p></details>
               {!address && <p className={styles.small}>Connect your wallet to choose an NFT and list it.</p>}
               {owned.isError && <p className={styles.error} role="alert">Unable to load your wallet's NFTs. <button type="button" className={styles.textButton} disabled={owned.isFetching} onClick={() => void owned.refetch()}>Retry</button></p>}
             </form>
@@ -419,14 +420,14 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
             </form>
               </div>
             </div>
-            <div className={styles.deskFooter}><span><ShieldCheck size={15} aria-hidden="true" />Single-NFT approval</span><span><Wallet size={15} aria-hidden="true" />Credits first, wallet second</span><span><Coins size={15} aria-hidden="true" />{state.feeBps / 100}% fee + collection royalty</span></div>
+            <div className={styles.deskFooter}><span><ShieldCheck size={15} aria-hidden="true" />Single-NFT approval</span><span><Wallet size={15} aria-hidden="true" />Credits first, wallet second</span><span><Coins size={15} aria-hidden="true" />{state.burnBps / 100}% burned + {state.creatorBps / 100}% to creator</span></div>
           </div>
         </section>
       </>}
     </>}
 
     <footer className={styles.footer}>
-      <div><span className={styles.footerBrand}>0xPixel / NUSD</span><p>Prices, fees, royalties and offer refunds are all in NUSD. Your credits are never automatically staked or used for borrowing.</p></div>
+      <div><span className={styles.footerBrand}>0xPixel / NUSD</span><p>Prices, creator fees, burns and offer refunds are all in NUSD. Your credits are never automatically staked or used for borrowing.</p></div>
       <div className={styles.footerLinks}><a href={getTokenExplorerUrl(NFT_NUSD_ADDRESS)} target="_blank" rel="noopener noreferrer">NUSD token<ArrowUpRight size={14} aria-hidden="true" /></a>{NUSD_MARKETPLACE_ADDRESS && <a href={getAddressExplorerUrl(NUSD_MARKETPLACE_ADDRESS)} target="_blank" rel="noopener noreferrer">Market contract<ArrowUpRight size={14} aria-hidden="true" /></a>}</div>
       {state && <p className={styles.syncInfo}>Block {state.blockNumber.toString()} · Auto-refreshes every 30 seconds</p>}
     </footer>

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   ArrowsLeftRight,
   ChartLineUp,
+  Scales,
   Coins,
   HandCoins,
   PiggyBank,
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { href: "/", label: "Swap", icon: ArrowsLeftRight },
   { href: "/pools", label: "Pools", icon: Coins },
   { href: "/earn", label: "Earn", icon: ChartLineUp },
+  { href: "/vote", label: "Vote", icon: Scales },
   { href: "/lend", label: "Lend", icon: PiggyBank },
   { href: "/borrow", label: "Borrow", icon: HandCoins },
   { href: "/synth", label: "Synth", icon: Vault },

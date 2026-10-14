@@ -8,15 +8,16 @@ import { evaluateModule } from "../helpers/evaluateModule.ts";
 
 type Element = { type: unknown; props: Record<string, unknown> };
 const jsx = (type: unknown, props: Record<string, unknown>): Element => ({ type, props });
-const NUSD = "0x5317e21aba902c6c7087a84457bc02fFe99604d1";
+const NUSD = "0x1d041A8e575006D46Ae0Aa2E4869C5be0327874E";
 const NFT = "0xd83cb7aCEF921f98b6B983cBB712a583869Da9eB";
-const DEPLOYED = "0x188eACB8e05691aD5Ca6b31703DA97B13b2cf377";
+const DEPLOYED = "0xA5e3EDfcba3b6fc40f3e41557f8a303a2AAC7e09";
 const generated = JSON.parse(readFileSync(new URL("../../lib/nusdMarketplace.generated.json", import.meta.url), "utf8"));
 
 function configuration(override?: string, manifest = generated) {
   return evaluateModule<{ NUSD_MARKETPLACE_ADDRESS?: string }>(new URL("../../lib/nusdMarketplaceConfig.ts", import.meta.url), {
     "./publicConfig": { PUMP_NUSD_ADDRESS: NUSD }, "./nusdMarketplace": marketplace,
     "./nusdMarketplace.generated.json": { default: manifest },
+    "@fi/config/testnet.generated.json": { default: { nusdMarketGoldskyEndpoint: "https://example.invalid/gn" } },
   }, { process: { env: { NEXT_PUBLIC_PIXEL_NUSD_MARKETPLACE_ADDRESS: override } } });
 }
 
@@ -33,8 +34,9 @@ test("confirmed NUSD deployment is the default, with strict identity checks and 
   assert.equal(configuration("invalid").NUSD_MARKETPLACE_ADDRESS, undefined);
   assert.equal(configuration("0x0000000000000000000000000000000000000000").NUSD_MARKETPLACE_ADDRESS, undefined);
   for (const manifest of [{ ...generated, chainId: 1 }, { ...generated, nusd: NFT }, { ...generated, implementation: "0x00" }, { ...generated, address: null }]) assert.equal(configuration(undefined, manifest).NUSD_MARKETPLACE_ADDRESS, undefined);
-  assert.equal(generated.platformFeeBps, 40);
-  assert.ok(/^0x[0-9a-fA-F]{64}$/.test(generated.deploymentHash));
+  assert.equal(generated.burnBps, 10);
+  assert.equal(generated.creatorBps, 40);
+  assert.equal(generated.implementation, marketplace.NUSD_MARKET_IMPLEMENTATION);
   assert.ok(!Object.keys(generated).some((key) => /private|secret/i.test(key)));
 });
 

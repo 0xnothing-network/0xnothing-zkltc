@@ -35,7 +35,7 @@ import {
   ORACLE_QUOTE_REFRESH_MS,
 } from "@fi/lib/swap";
 import { useActiveDexRouter } from "@fi/lib/hooks/useActiveDexRouter";
-import { formatFeeBps, useDexFeeSchedule } from "@fi/lib/hooks/useDexFeeSchedule";
+import { formatFeeBps, routerFeeBpsForPath, totalSwapFeeBps, useDexFeeSchedule } from "@fi/lib/hooks/useDexFeeSchedule";
 
 import { useImportedSwapAsset } from "@fi/lib/hooks/useImportedSwapAsset";
 import {
@@ -279,11 +279,9 @@ export function SwapWorkspace() {
       : [],
     query: { enabled: Boolean(!isOracleNusdRoute && activeDexRouter && path) },
   });
-  const totalFeeBps = path && feeSchedule
-    ? (path.length - 1) * feeSchedule.lpFeeBps
-      + feeSchedule.protocolFeeBps
-      + (path.length > 2 ? feeSchedule.routeSurchargeBps : 0)
-    : undefined;
+  const feeBases = [deployment.contracts.nusd, deployment.contracts.wzkltc] as const;
+  const totalFeeBps = path && feeSchedule ? totalSwapFeeBps(feeSchedule, path, feeBases) : undefined;
+  const protocolFeeBps = path && feeSchedule ? routerFeeBpsForPath(feeSchedule, path, feeBases) : undefined;
   const routeConfigured = isOracleNusdRoute
     ? Boolean(deployment.contracts.nusd)
     : swapRoute.kind === "direct" || swapRoute.kind === "via-nusd"
@@ -673,7 +671,15 @@ export function SwapWorkspace() {
               </div>
             ) : null}
             <div><dt>Rate</dt><dd>{rate ? `${rate} ${assetOut?.symbol ?? ""} / ${assetIn?.symbol ?? ""}` : "--"}</dd></div>
-            <div><dt>Route fee</dt><dd>{feeLabel}</dd></div>
+            <div>
+              <dt>Route fee</dt>
+              <dd>
+                {feeLabel}
+                {!isOracleNusdRoute && protocolFeeBps !== undefined && totalFeeBps !== undefined
+                  ? ` (protocol ${formatFeeBps(protocolFeeBps)} + LP ${formatFeeBps(totalFeeBps - protocolFeeBps)})`
+                  : null}
+              </dd>
+            </div>
             <div><dt>Execution impact</dt><dd data-tone={executionImpactTone}>{executionImpactLabel}</dd></div>
             <div><dt>Minimum received</dt><dd>{minimumReceived ? `${formatTokenAmount(minimumReceived, assetOut?.decimals ?? 18)} ${assetOut?.symbol ?? ""}` : "--"}</dd></div>
           </dl>

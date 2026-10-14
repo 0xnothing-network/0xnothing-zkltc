@@ -36,7 +36,7 @@ function harness(options: { configured?: boolean; credit?: bigint; balance?: big
   const timestamp = BigInt(Math.floor(Date.now() / 1000));
   const state = {
     blockNumber: 900n, timestamp, readAt: Date.now(), paused: options.paused ?? false,
-    feeBps: 40, listingCount: 1n, offerCount: 1n, volume: 0n, escrow: 100n * UNIT, catalogueComplete: true,
+    feeBps: 50, burnBps: 10, creatorBps: 40, listingCount: 1n, offerCount: 1n, volume: 0n, escrow: 100n * UNIT, catalogueComplete: true,
     credit: options.credit ?? 40n * UNIT, balance: options.balance ?? 60n * UNIT,
     listings: options.empty ? [] : [{ id: 1n, collection: NFT, tokenId: 3n, price: 100n * UNIT, seller: SELLER, active: true }],
     offers: options.empty ? [] : [{ id: 2n, collection: NFT, tokenId: 3n, offerer: BUYER, price: 100n * UNIT, expiresAt: timestamp + 3600n, active: true, owner: SELLER }],
@@ -55,7 +55,7 @@ function harness(options: { configured?: boolean; credit?: bigint; balance?: big
     new URL("../../lib/walletSession.ts", import.meta.url), { "wagmi/actions": { getAccount: () => account } }, { Error },
   );
   const header: Record<string, () => unknown> = {
-    nusd: () => NUSD, IMPLEMENTATION_ID: () => marketplace.NUSD_MARKET_IMPLEMENTATION, paused: () => state.paused, platformFeeBps: () => state.feeBps,
+    nusd: () => NUSD, IMPLEMENTATION_ID: () => marketplace.NUSD_MARKET_IMPLEMENTATION, paused: () => state.paused, BURN_BPS: () => state.burnBps, CREATOR_BPS: () => state.creatorBps,
     activeListingCount: () => state.listingCount, activeOfferCount: () => state.offerCount, totalVolumeNusd: () => state.volume, escrowedNusd: () => state.escrow,
     credits: () => state.credit, balanceOf: () => state.balance,
   };
@@ -74,7 +74,7 @@ function harness(options: { configured?: boolean; credit?: bigint; balance?: big
       if (call.functionName === "ownerOf") { if (options.missingToken) throw new Error("ERC721NonexistentToken"); return state.offers[0]?.owner ?? SELLER; }
       if ((options.changeAt === "approval" && call.functionName === "getApproved") || (options.changeAt === "quote" && call.functionName === "quoteSale") || (options.changeAt === "listing" && call.functionName === "listings")) changeWallet();
       if (call.functionName === "listings") return [NFT, 3n, 100n * UNIT, SELLER, true];
-      if (call.functionName === "quoteSale") return [UNIT * 4n / 10n, OTHER, 5n * UNIT, 946n * UNIT / 10n];
+      if (call.functionName === "quoteSale") return [UNIT / 10n, OTHER, UNIT * 4n / 10n, 995n * UNIT / 10n];
       if (call.functionName === "getApproved") return viem.zeroAddress;
       if (call.functionName === "isApprovedForAll") return false;
       if (call.functionName === "collectionAllowed") return true;
@@ -175,13 +175,13 @@ test("wallet thumbnails select real artwork without signing and drive the large 
   assert.equal(market.calls.length, 0);
 });
 
-test("listing review retains wei precision and does not invent a royalty or net sale estimate", () => {
+test("listing review retains wei precision and shows the fixed burn and creator fee", () => {
   const market = harness({ listingForm: true, seller: true });
   market.render();
   market.states[4] = "100.000000000000000001";
   const form = find(market.render(), (element) => element.props.id === "sell-nusd");
-  assert.match(content(form), /Platform fee \(0\.4%\)0\.4 NUSD/);
-  assert.match(content(form), /Creator royaltyCalculated at sale/);
+  assert.match(content(form), /NUSD burned \(0\.1%\)0\.1 NUSD/);
+  assert.match(content(form), /To the creator \(0\.4%\)0\.4 NUSD/);
   assert.doesNotMatch(content(form), /Net proceeds|Guaranteed/);
   const preview = find(market.render(), (element) => element.props["aria-label"] === "Selected artwork preview");
   assert.match(content(preview), /100\.000000000000000001NUSD/);
@@ -359,7 +359,7 @@ test("accept offer signs minimum seller proceeds and approves one NFT, never the
   assert.equal(approval.functionName, "approve");
   assert.deepEqual(Array.from(approval.args ?? []), [MARKET, 3n]);
   assert.equal(acceptance.functionName, "acceptOffer");
-  assert.deepEqual(Array.from(acceptance.args ?? []), [2n, 946n * UNIT / 10n]);
+  assert.deepEqual(Array.from(acceptance.args ?? []), [2n, 995n * UNIT / 10n]);
   assert.equal(market.calls[0].approval, undefined);
 });
 

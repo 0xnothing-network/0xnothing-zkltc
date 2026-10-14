@@ -334,7 +334,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   // Direct-path depth impact is determined only by post-fee input versus input reserve.
   const reserveIn = swapInputIndex === 0 ? reserveA : reserveB;
   const swapFeeBps = feeSchedule
-    ? BigInt(feeSchedule.lpFeeBps + feeSchedule.protocolFeeBps)
+    ? BigInt(feeSchedule.lpFeeBps + feeSchedule.directFeeBps)
     : undefined;
   const impactBps = swapFeeBps === undefined
     ? undefined
@@ -726,7 +726,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
               <dl className="fi-form-details">
                 <div><dt>Price impact</dt><dd data-tone={impactBps === undefined ? undefined : impactBps >= 500n ? "danger" : impactBps >= 100n ? "warning" : "positive"}>{displayPriceImpact(impactBps)}</dd></div>
                 <div><dt>Min received</dt><dd>{formatAmount(swapAmountOut ? minimumAfterSlippage(swapAmountOut, slippageBps) : undefined, swapDecimalsOut)} {swapSymbolOut}</dd></div>
-                <div><dt>Fee</dt><dd>{formatFeeBps(feeSchedule ? feeSchedule.lpFeeBps + feeSchedule.protocolFeeBps : undefined)}</dd></div>
+                <div><dt>Fee</dt><dd>{formatFeeBps(feeSchedule ? feeSchedule.lpFeeBps + feeSchedule.directFeeBps : undefined)}</dd></div>
               </dl>
             </> : mode === "add" ? <>
               <AmountField id="dynamic-pool-amount-a" label={symbolA} asset={symbolA} imageUrl={imageA} value={amountAText} balance={formatAmount(balanceA, decimalsA)} onChange={updateAmountA} onMax={balanceA && balanceA > 0n ? () => updateAmountA(formatUnits(balanceA, decimalsA)) : undefined} error={error?.startsWith(symbolA) ? error : undefined} />

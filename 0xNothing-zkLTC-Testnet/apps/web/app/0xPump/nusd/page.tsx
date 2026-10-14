@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { NusdEmergencyPanel } from "@/features/pump/components/NusdEmergencyPanel";
 import { NusdOraclePanel } from "@/features/pump/components/NusdOraclePanel";
 
 export const metadata: Metadata = {
@@ -10,6 +11,7 @@ export default function NusdPage() {
   return (
     <main className="pump-page pump-nusd-page">
       <NusdOraclePanel />
+      <NusdEmergencyPanel />
     </main>
   );
 }

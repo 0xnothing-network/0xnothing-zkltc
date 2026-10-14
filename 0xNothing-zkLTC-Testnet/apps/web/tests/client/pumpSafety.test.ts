@@ -387,7 +387,7 @@ function componentHarness(name: PumpComponent, changeAt?: "simulation" | "upload
     run: async () => {
       let tree = render();
       if (name === "TokenDetail" || name === "PumpStatsDashboard") {
-        const nested = descendants(tree).find((node) => typeof node.type === "function" && node.type.name === (name === "TokenDetail" ? "GraduationAction" : "DeveloperFeePanel"));
+        const nested = descendants(tree).find((node) => typeof node.type === "function" && node.type.name === (name === "TokenDetail" ? "GraduationAction" : "ProtocolFeePanel"));
         assert.ok(nested);
         tree = (nested.type as (props: unknown) => ElementNode)(nested.props);
       }

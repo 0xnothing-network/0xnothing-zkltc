@@ -23,7 +23,6 @@ import {
   useChainId,
   useReadContract,
   useReadContracts,
-  useSimulateContract,
   useSwitchChain,
   useWriteContract,
 } from "wagmi";
@@ -43,8 +42,6 @@ import { jitteredPollInterval } from "@/lib/pollJitter";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { ConnectWalletButton } from "@fi/components/ConnectWalletButton";
 import { RwaDashboard } from "@fi/components/RwaDashboard";
-import { parseAmount } from "@fi/lib/format";
-import { PointsAdminPanel } from "./PointsAdminPanel";
 import styles from "./dev.module.css";
 
 const WAD = 18;
@@ -58,7 +55,6 @@ const WAD = 18;
  */
 const DEV_POLL_MS = jitteredPollInterval("dev-diagnostics", STEADY_LIVE_MS);
 const TOKEN_METADATA_STALE_MS = 60 * 60 * 1000;
-const ZERO = "0x0000000000000000000000000000000000000000" as Address;
 const CANONICAL_FI_ASSET_ADDRESSES = new Set(
   [deployment.contracts.nusd, deployment.contracts.wzkltc, deployment.contracts.nbtc, deployment.contracts.neth]
     .filter((asset): asset is Address => Boolean(asset))
@@ -130,13 +126,6 @@ export default function DevPage() {
   const switchChain = useSwitchChain();
   const { writeContractAsync, isPending: isWriting } = useWriteContract();
   const writeLockRef = useRef(false);
-  const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [fiWithdrawAmount, setFiWithdrawAmount] = useState("");
-  const [fiWithdrawToken, setFiWithdrawToken] = useState("nusd");
-  const [lendingWithdrawAmount, setLendingWithdrawAmount] = useState("");
-  const [confirmPumpWithdrawal, setConfirmPumpWithdrawal] = useState(false);
-  const [confirmFiWithdrawal, setConfirmFiWithdrawal] = useState(false);
-  const [confirmLendingWithdrawal, setConfirmLendingWithdrawal] = useState(false);
   const [actionError, setActionError] = useState<string | undefined>();
   const [actionSuccess, setActionSuccess] = useState<string | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -161,8 +150,8 @@ export default function DevPage() {
   const pumpNusdBalance = useReadContract({ chainId: litvm.id, address: nusd, abi: nusdAbi, functionName: "balanceOf", args: pump ? [pump] : undefined, query: { enabled: Boolean(nusd && pump), refetchInterval: DEV_POLL_MS } });
 
   const fiLpFee = useReadContract({ chainId: litvm.id, address: dexRouter, abi: dexRouterAbi, functionName: "LP_FEE_BPS", query: { enabled: Boolean(dexRouter), refetchInterval: DEV_POLL_MS } });
-  const fiRouteFee = useReadContract({ chainId: litvm.id, address: dexRouter, abi: dexRouterAbi, functionName: "ROUTE_SURCHARGE_BPS", query: { enabled: Boolean(dexRouter), refetchInterval: DEV_POLL_MS } });
-  const fiFactoryOwner = useReadContract({ chainId: litvm.id, address: dexFactory, abi: dexFactoryAbi, functionName: "owner", query: { enabled: Boolean(dexFactory), refetchInterval: DEV_POLL_MS } });
+  const fiDirectFee = useReadContract({ chainId: litvm.id, address: dexRouter, abi: dexRouterAbi, functionName: "DIRECT_FEE_BPS", query: { enabled: Boolean(dexRouter), refetchInterval: DEV_POLL_MS } });
+  const fiRouteFee = useReadContract({ chainId: litvm.id, address: dexRouter, abi: dexRouterAbi, functionName: "CROSS_FEE_BPS", query: { enabled: Boolean(dexRouter), refetchInterval: DEV_POLL_MS } });
   const fiRouterFactory = useReadContract({ chainId: litvm.id, address: dexRouter, abi: dexRouterAbi, functionName: "factory", query: { enabled: Boolean(dexRouter), refetchInterval: DEV_POLL_MS } });
   const fiPairCount = useReadContract({ chainId: litvm.id, address: dexFactory, abi: dexFactoryAbi, functionName: "allPairsLength", query: { enabled: Boolean(dexFactory), refetchInterval: 15000 } });
   const fiPairIndexes = useMemo(() => {
@@ -241,7 +230,6 @@ export default function DevPage() {
   const controllerOwnsPump = Boolean(pumpAdmin.data && sameAddress(pumpAdmin.data, pumpController));
   const controllerMatchesPump = Boolean(pump && controllerOwnsPump && controllerPump.data && sameAddress(controllerPump.data, pump));
   const pumpAuthority = controllerOwnsPump && controllerMatchesPump ? controllerGovernance.data : pumpAdmin.data;
-  const pumpAdminMismatch = Boolean(pumpAuthority && address && !sameAddress(address, pumpAuthority));
   const onExpectedChain = chainId === litvm.id;
   const pumpReady = Boolean(pump && nusd);
   const fiReady = Boolean(dexRouter && nusd && dexFactory && fiRouterFactory.data && sameAddress(fiRouterFactory.data, dexFactory));
@@ -281,16 +269,10 @@ export default function DevPage() {
     }
     setActionError(undefined);
     setActionSuccess("Transaction confirmed on LitVM testnet.");
-    setConfirmPumpWithdrawal(false);
-    setConfirmFiWithdrawal(false);
-    setConfirmLendingWithdrawal(false);
     refreshTransactionDomain(txDomain);
   }, [refreshTransactionDomain, txDomain, txHash, txReceipt.data, txReceipt.isError]);
 
   useEffect(() => {
-    setConfirmPumpWithdrawal(false);
-    setConfirmFiWithdrawal(false);
-    setConfirmLendingWithdrawal(false);
     setActionError(undefined);
     setActionSuccess(undefined);
   }, [address, chainId]);
@@ -314,11 +296,6 @@ export default function DevPage() {
     }
   }
 
-  const validWithdrawAmount = useMemo(() => parseAmount(withdrawAmount, WAD) ?? 0n, [withdrawAmount]);
-  const validLendingWithdrawAmount = useMemo(() => parseAmount(lendingWithdrawAmount, WAD) ?? 0n, [lendingWithdrawAmount]);
-  const isPumpAdmin = Boolean(address && pumpAuthority && sameAddress(address, pumpAuthority));
-  const isFiOwner = Boolean(address && fiFactoryOwner.data && sameAddress(address, fiFactoryOwner.data));
-  const isLendingOwner = Boolean(address && lendingOwner.data && sameAddress(address, lendingOwner.data));
   const isPixelDev = Boolean(address && pixelDevWallet.data && sameAddress(address, pixelDevWallet.data));
   const disableControls = !isConnected || !onExpectedChain || isSubmitting || isWriting || Boolean(txHash);
   const canonicalFiFeeOptions = useMemo(() => [
@@ -346,25 +323,9 @@ export default function DevPage() {
     return options;
   }, [fiDynamicAssets, fiDiscoveredAssetMetadata.data, fiDiscoveredAssetLiveReads.data]);
   const fiFeeOptions = useMemo(() => [...canonicalFiFeeOptions, ...discoveredFiFeeOptions], [canonicalFiFeeOptions, discoveredFiFeeOptions]);
-  const selectedFiFee = useMemo(() => fiFeeOptions.find((item) => item.key === fiWithdrawToken), [fiFeeOptions, fiWithdrawToken]);
-  const selectedFiMax = selectedFiFee?.data !== undefined && selectedFiFee.balance !== undefined
-    ? (selectedFiFee.data < selectedFiFee.balance ? selectedFiFee.data : selectedFiFee.balance)
-    : 0n;
-  const selectedFiDecimals = selectedFiFee?.decimals ?? WAD;
-  const validFiWithdrawAmount = useMemo(() => parseAmount(fiWithdrawAmount, selectedFiDecimals) ?? 0n, [fiWithdrawAmount, selectedFiDecimals]);
   const lendingMax = lendingInterest.data !== undefined && lendingNusdBalance.data !== undefined
     ? (lendingInterest.data < lendingNusdBalance.data ? lendingInterest.data : lendingNusdBalance.data)
     : 0n;
-  const lendingSimulation = useSimulateContract({
-    chainId: litvm.id,
-    address: lendingPool,
-    abi: lendingPoolAbi,
-    functionName: "withdrawProtocolInterest",
-    args: [validLendingWithdrawAmount, address || ZERO],
-    query: { enabled: Boolean(onExpectedChain && lendingPool && address && isLendingOwner && validLendingWithdrawAmount > 0n && validLendingWithdrawAmount <= lendingMax) },
-  });
-  const pumpWithdrawTarget = controllerOwnsPump ? pumpController : pump;
-  const pumpWithdrawAbi = controllerOwnsPump ? pumpGraduationControllerAbi : zeroXPumpAbi;
 
   return (
     <div className={styles.shell}>
@@ -405,29 +366,27 @@ export default function DevPage() {
         {actionSuccess ? <div className={styles.banner} role="status" aria-live="polite"><CheckCircle size={17} weight="bold" /><span>{actionSuccess}</span></div> : null}
         {txHash ? <div className={styles.banner} role="status" aria-live="polite"><CircleNotch size={17} weight="bold" className="animate-spin" /><span>Transaction pending. <a className={styles.monoLink} href={`${deployment.chain.explorerUrl}/tx/${txHash}`} target="_blank" rel="noreferrer">View on explorer <ArrowSquareOut size={12} /></a></span></div> : null}
 
-        <PointsAdminPanel />
-
         <section className={styles.section}>
           <div className={styles.sectionHeader}><div><span className={styles.eyebrow}>Protocol revenue</span><h2>Where fees sit</h2></div><p className={styles.sectionNote}>Only balances and withdrawal methods exposed by the published ABIs appear here.</p></div>
           <div className={`${styles.grid} ${styles.gridThree}`}>
             <div className={styles.card + " " + styles.formCard}>
               <div className={styles.cardTop}><span>0xPump</span><Coin size={16} /></div>
-              {!pumpReady ? <div className={styles.empty}><strong>Not published</strong><p>0xPump address is absent from the testnet manifest.</p></div> : <><strong className={styles.value}>{amount(pumpFees.data as bigint | undefined)}</strong><span className={styles.subvalue}>Accrued protocol fees</span><span className={styles.address}>NUSD held: {amount(pumpNusdBalance.data as bigint | undefined)}<br />Trade fee: {basisPoints(pumpTradeFee.data as bigint | undefined)} · Create fee: {amount(pumpCreateFee.data as bigint | undefined)}<br />Markets: {pumpMarkets.data === undefined ? "Loading" : String(pumpMarkets.data)}<br />Authority: {shortAddress(pumpAuthority as string | undefined)}{controllerOwnsPump ? " via graduation controller" : " direct"}</span><div className={styles.field}><label htmlFor="withdraw-amount">Admin withdrawal amount</label><input id="withdraw-amount" inputMode="decimal" value={withdrawAmount} onChange={(event) => { setWithdrawAmount(event.target.value); setConfirmPumpWithdrawal(false); }} placeholder="0" /></div><label className={styles.checkbox}><input type="checkbox" checked={confirmPumpWithdrawal} onChange={(event) => setConfirmPumpWithdrawal(event.target.checked)} />I verified the recipient is this connected authority wallet.</label><button className={`${styles.button} ${styles.buttonDanger}`} disabled={disableControls || !isPumpAdmin || !pumpWithdrawTarget || validWithdrawAmount === 0n || !confirmPumpWithdrawal || (pumpFees.data as bigint | undefined ?? 0n) < validWithdrawAmount} onClick={() => submitContractWrite({ address: pumpWithdrawTarget || ZERO, abi: pumpWithdrawAbi, functionName: "withdrawProtocolFees", args: [address || ZERO, validWithdrawAmount] }, "pump")}>Withdraw Pump fees</button>{pumpAdminMismatch ? <span className={styles.subvalue}>Authority required: {shortAddress(pumpAuthority as string | undefined)}</span> : null}</>}
+              {!pumpReady ? <div className={styles.empty}><strong>Not published</strong><p>0xPump address is absent from the testnet manifest.</p></div> : <><strong className={styles.value}>{amount(pumpFees.data as bigint | undefined)}</strong><span className={styles.subvalue}>Accrued protocol fees</span><span className={styles.address}>NUSD held: {amount(pumpNusdBalance.data as bigint | undefined)}<br />Trade fee: {basisPoints(pumpTradeFee.data as bigint | undefined)} · Create fee: {amount(pumpCreateFee.data as bigint | undefined)}<br />Markets: {pumpMarkets.data === undefined ? "Loading" : String(pumpMarkets.data)}<br />Authority: {shortAddress(pumpAuthority as string | undefined)}{controllerOwnsPump ? " via graduation controller" : " direct"}</span><span className={styles.subvalue}>v2: anyone sends these fees to the fee splitter (50% reward pool / 50% treasury).</span><a className={styles.button} href="/0xFi/earn">Open the public revenue panel</a></>}
             </div>
             <div className={styles.card + " " + styles.formCard}>
               <div className={styles.cardTop}><span>0xFi router</span><Gauge size={16} /></div>
-              {!fiReady ? <div className={styles.empty}><strong>Router address missing</strong><p>Fee reads stay unavailable until the testnet manifest publishes the DEX router.</p></div> : <><strong className={styles.value}>{amount(fiNusdRouterBalance.data as bigint | undefined)}</strong><span className={styles.subvalue}>NUSD currently held by router</span><span className={styles.address}>LP fee: {basisPoints(fiLpFee.data as bigint | undefined)}<br />Router fee: 0.1% direct · 0.2% multihop<br />Multihop surcharge: {basisPoints(fiRouteFee.data as bigint | undefined)} once per routed path</span><div className={styles.address}>Accrued fee ledger<br />{fiFeeOptions.map((item) => <span key={item.key}>{item.label} ({shortAddress(item.address)}): {amount(item.data as bigint | undefined, item.label, item.decimals)} · balance {amount(item.balance as bigint | undefined, item.label, item.decimals)}<br /></span>)}</div><div className={styles.field}><label htmlFor="fi-token">Fee token</label><select id="fi-token" value={fiWithdrawToken} onChange={(event) => { setFiWithdrawToken(event.target.value); setConfirmFiWithdrawal(false); }}>{fiFeeOptions.map((item) => <option key={item.key} value={item.key}>{item.label} · {shortAddress(item.address)}</option>)}</select></div><div className={styles.field}><label htmlFor="fi-withdraw-amount">Withdrawal amount</label><input id="fi-withdraw-amount" inputMode="decimal" value={fiWithdrawAmount} onChange={(event) => { setFiWithdrawAmount(event.target.value); setConfirmFiWithdrawal(false); }} placeholder="0" /></div><label className={styles.checkbox}><input type="checkbox" checked={confirmFiWithdrawal} onChange={(event) => setConfirmFiWithdrawal(event.target.checked)} />I verified the token, recipient and factory owner authority before signing.</label><button className={`${styles.button} ${styles.buttonDanger}`} disabled={disableControls || !isFiOwner || !selectedFiFee?.address || validFiWithdrawAmount === 0n || !confirmFiWithdrawal || selectedFiMax < validFiWithdrawAmount} onClick={() => submitContractWrite({ address: dexRouter || ZERO, abi: dexRouterAbi, functionName: "withdrawRouterFees", args: [selectedFiFee?.address || ZERO, address || ZERO, validFiWithdrawAmount] }, "fi")}>Withdraw 0xFi fees</button>{!isFiOwner ? <span className={styles.subvalue}>Factory owner required: {shortAddress(fiFactoryOwner.data as string)}</span> : null}</>}
+              {!fiReady ? <div className={styles.empty}><strong>Router address missing</strong><p>Fee reads stay unavailable until the testnet manifest publishes the DEX router.</p></div> : <><strong className={styles.value}>{amount(fiNusdRouterBalance.data as bigint | undefined)}</strong><span className={styles.subvalue}>NUSD currently held by router</span><span className={styles.address}>LP fee: {basisPoints(fiLpFee.data as bigint | undefined)}<br />Router fee: {basisPoints(fiDirectFee.data as bigint | undefined)} when either end is NUSD or zkLTC · {basisPoints(fiRouteFee.data as bigint | undefined)} for a cross swap</span><div className={styles.address}>Accrued fee ledger<br />{fiFeeOptions.map((item) => <span key={item.key}>{item.label} ({shortAddress(item.address)}): {amount(item.data as bigint | undefined, item.label, item.decimals)} · balance {amount(item.balance as bigint | undefined, item.label, item.decimals)}<br /></span>)}</div><span className={styles.subvalue}>v2: NUSD fees go to the fee splitter, zkLTC fees to the treasury, by a permissionless call.</span><a className={styles.button} href="/0xFi/earn">Open the public revenue panel</a></>}
             </div>
             <div className={styles.card + " " + styles.formCard}>
               <div className={styles.cardTop}><span>Safe withdrawal policy</span><ShieldCheck size={16} /></div>
               <strong className={styles.value}>ABI-first</strong>
               <span className={styles.subvalue}>Available actions are restricted to real contract methods.</span>
-              <p>0xPump withdrawal follows its deployed authority path. 0xFi withdrawal requires the factory owner and uses the router fee ledger per token. Every write remains subject to onchain authorization.</p>
-              <div className={styles.status + " " + styles.statusGood}><span className={styles.statusDot} />No invented custody path</div>
+              <p>v2 has no admin fee withdrawal. Pump fees, router fees and lending interest are pushed by anyone to the fee splitter or treasury; only the treasury itself is spent by the owner.</p>
+              <div className={styles.status + " " + styles.statusGood}><span className={styles.statusDot} />No admin custody of fees</div>
             </div>
             <div className={styles.card + " " + styles.formCard}>
               <div className={styles.cardTop}><span>Lending interest</span><Coin size={16} /></div>
-              {!lendingPool ? <div className={styles.empty}><strong>Pool not published</strong><p>Lending revenue reads stay unavailable until the testnet manifest publishes the pool.</p></div> : <><strong className={styles.value}>{amount(lendingInterest.data as bigint | undefined)}</strong><span className={styles.subvalue}>Protocol interest ledger</span><span className={styles.address}>NUSD held: {amount(lendingNusdBalance.data as bigint | undefined)}<br />Safe maximum: {amount(lendingMax)}<br />Owner: {shortAddress(lendingOwner.data as string | undefined)}</span><div className={styles.field}><label htmlFor="lending-withdraw-amount">Withdrawal amount</label><input id="lending-withdraw-amount" inputMode="decimal" value={lendingWithdrawAmount} onChange={(event) => { setLendingWithdrawAmount(event.target.value); setConfirmLendingWithdrawal(false); }} placeholder="0" /></div><label className={styles.checkbox}><input type="checkbox" checked={confirmLendingWithdrawal} onChange={(event) => setConfirmLendingWithdrawal(event.target.checked)} />I verified the NUSD recipient and lending owner authority.</label><button className={`${styles.button} ${styles.buttonDanger}`} disabled={disableControls || !isLendingOwner || validLendingWithdrawAmount === 0n || validLendingWithdrawAmount > lendingMax || !confirmLendingWithdrawal || !lendingSimulation.data} onClick={() => submitContractWrite({ address: lendingPool || ZERO, abi: lendingPoolAbi, functionName: "withdrawProtocolInterest", args: [validLendingWithdrawAmount, address || ZERO] }, "lending")}>Withdraw lending interest</button>{lendingSimulation.error ? <span className={styles.subvalue}>Simulation rejected this amount. Adjust to the safe maximum.</span> : null}{!isLendingOwner ? <span className={styles.subvalue}>Owner required: {shortAddress(lendingOwner.data as string)}</span> : null}</>}
+              {!lendingPool ? <div className={styles.empty}><strong>Pool not published</strong><p>Lending revenue reads stay unavailable until the testnet manifest publishes the pool.</p></div> : <><strong className={styles.value}>{amount(lendingInterest.data as bigint | undefined)}</strong><span className={styles.subvalue}>Protocol interest ledger</span><span className={styles.address}>NUSD held: {amount(lendingNusdBalance.data as bigint | undefined)}<br />Safe maximum: {amount(lendingMax)}<br />Owner: {shortAddress(lendingOwner.data as string | undefined)}</span><span className={styles.subvalue}>v2: anyone sweeps protocol interest to the fee splitter.</span><a className={styles.button} href="/0xFi/earn">Open the public revenue panel</a></>}
             </div>
           </div>
         </section>

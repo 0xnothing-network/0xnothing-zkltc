@@ -23,7 +23,8 @@ export const zeroXPumpAbi = parseAbi([
   "function admin() view returns (address)",
   "function graduationRouter() view returns (address)",
   "function accruedProtocolFeesNusd() view returns (uint256)",
-  "function withdrawProtocolFees(address recipient,uint256 amountNusd)",
+  "function feeRecipient() view returns (address)",
+  "function distributeFees() returns (uint256 amountNusd)",
   "function totalMarkets() view returns (uint256)",
   "function getAllTokens() view returns (address[])",
   "function getTokensByCreator(address creator) view returns (address[])",
@@ -56,7 +57,6 @@ export const pumpGraduationControllerAbi = parseAbi([
   "function pump() view returns (address)",
   "function router() view returns (address)",
   "function graduateReady(address token) returns (address dex,bytes32 pairId,address pool,address lpToken,uint256 lpAmount)",
-  "function withdrawProtocolFees(address recipient,uint256 amountNusd)",
 ]);
 
 export const pumpGraduationRouterAbi = parseAbi([
