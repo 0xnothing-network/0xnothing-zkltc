@@ -25,7 +25,7 @@ Toàn bộ contract đã deploy là bất biến, không có proxy. Chúng khôn
 | Phụ thuộc | Nếu ngừng hoạt động | Mức độ |
 | --- | --- | --- |
 | **Oracle DIA trên LiteForge** (LTC, BTC, ETH; giới hạn tuổi giá 90 phút) | Mint/redeem NUSD, vay, mint synth, thanh lý, vote mint đều dừng (fail-closed). **Testnet v2:** NUSD v2 có `emergencyRedeem`: ai cũng báo lỗi oracle, sau 7 ngày người giữ NUSD rút zkLTC theo tỷ lệ, không cần giá, không ai chặn được (trang NUSD → Mint, `/nusd`, có panel "Emergency exit"). NUSD v1 vẫn không có lối thoát này | Cao, ngoài tầm kiểm soát |
-| RPC Caldera | Web và ví tự chuyển từ `infra-partner-http` sang `/http` công khai (cùng origin). Nếu cả hai đổi, cập nhật `LITVM_RPC_URL` / `LITVM_RPC_FALLBACK_URL` trong `apps/web/lib/publicConfig.ts` và `apps/wallet/src/config/chain.ts` | Thấp |
+| RPC Caldera | Web và ví tự chuyển từ `infra-partner-http` sang `/http` công khai (cùng origin); dữ liệu realtime của web đi qua WebSocket `infra-partner-ws` → `/ws`, mất socket thì web tự quay về polling. Nếu đổi host RPC, cập nhật `LITVM_RPC_URL` / `LITVM_RPC_FALLBACK_URL` / `LITVM_WS_URLS` trong `apps/web/lib/publicConfig.ts`, `apps/wallet/src/config/chain.ts`, **và `connect-src` của CSP trong `apps/web/next.config.ts`** (CSP chỉ cho trình duyệt gọi đúng host RPC; quên sửa thì web mất kết nối chain) | Thấp |
 | Goldsky (subgraph 0xPump, 0xFi, marketplace NUSD) | Mọi trang có đường dự phòng đọc RPC: Pump đọc markets/trades/holders, 0xFi có RPC tail, NUSD activity quét log. Chậm hơn nhưng không hỏng | Thấp |
 | Hosting (Railway, 1 replica, có healthcheck `/api/health`) | Web ngừng hiển thị; contract vẫn chạy và dùng được qua explorer | Trung bình: cần trả tiền đủ 2 năm |
 | Tên miền `0xnothing.xyz` | Web mất địa chỉ | Trung bình: gia hạn trước |
