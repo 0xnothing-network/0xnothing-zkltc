@@ -133,9 +133,10 @@ export function RewardsDashboard() {
     return undefined;
   }, [amount, amountText, walletNusd]);
 
-  let triggerHint = "Anyone can close the round once the pool holds 10,000 NUSD and a day has passed.";
-  if (canTrigger) triggerHint = "Ready: closing the round splits 10,000 NUSD by 0xPoints.";
-  else if (poolReady && !timeReady) triggerHint = `Pool is full. The round can close after ${formatDate(nextTrigger)}.`;
+  let closeHint = `Closes from ${formatDate(nextTrigger)} once the pool holds 10,000 NUSD`;
+  if (canTrigger) closeHint = "Ready: anyone can close the round now";
+  else if (poolReady && !timeReady) closeHint = `Pool full · closes from ${formatDate(nextTrigger)}`;
+  else if (timeReady && !poolReady) closeHint = "Waiting for the pool to reach 10,000 NUSD";
 
   function refresh() {
     void pool.refetch();
@@ -187,114 +188,108 @@ export function RewardsDashboard() {
   if (!staking || !nusd) return <NotDeployed feature="0xPoints staking is not deployed on this network yet." />;
 
   return (
-    <section className="fi-points-dashboard" aria-label="NUSD staking and 0xPoints rewards">
-      <article className="fi-panel fi-points-overview" aria-labelledby="rewards-overview-title">
-        <header className="fi-points-overview-copy">
-          <div className="fi-points-kicker-row">
-            <span className="fi-label">0xPoints · round {currentRound === undefined ? "--" : currentRound + 1}</span>
-            <span className="fi-status" data-state={canTrigger ? "live" : "warning"}>{canTrigger ? "Ready to close" : "Filling"}</span>
-          </div>
-          <h2 id="rewards-overview-title">Stake NUSD, share 10,000 NUSD rounds</h2>
-          <p>
-            Half of the NUSD fees from 0xPump and 0xFi fill the reward pool. Each 10,000 NUSD round is split by the
-            0xPoints stakers earned during it; points reset for the next round.
-          </p>
-          <div className="fi-pixel-progress" role="progressbar" aria-label="Reward pool toward 10,000 NUSD" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
-            <span style={{ width: `${progress * 100}%` }} />
-          </div>
-          <p className="fi-points-pool-caption">
-            <strong>{formatAmount(available, 18, 2)}</strong> / {formatAmount(roundReward, 18, 0)} NUSD in the pool. {triggerHint}
-          </p>
-          <button type="button" className="fi-button fi-button-muted" disabled={!isConnected || !canTrigger || tx.pending} onClick={() => void trigger()}>
-            {tx.pending ? "Processing" : "Close round and allocate"}
-          </button>
-        </header>
-        <dl className="fi-points-metrics" aria-label="Your 0xPoints overview">
-          <div><dt>Your 0xPoints this round</dt><dd>{formatPoints(openPoints)} <small>{formatShare(openPoints, openRoundPoints)}</small></dd></div>
-          <div><dt>Claimable</dt><dd data-tone="positive">{formatAmount(claimable)} <small>NUSD</small></dd></div>
-        </dl>
-        <details className="fi-points-program-details">
-          <summary>Round details</summary>
+    <section className="fi-earn" aria-label="NUSD staking and 0xPoints rewards">
+      <article className="fi-panel fi-round" aria-labelledby="rewards-round-title">
+        <header className="fi-round-head">
           <div>
-            <dl aria-label="Reward round details">
-              <div><dt>Round opened</dt><dd>{formatDate(roundStart.data)}</dd></div>
-              <div><dt>Earliest close</dt><dd>{formatDate(nextTrigger)}</dd></div>
-              <div><dt>If closed now, you get</dt><dd>{formatAmount(estimatedReward)} NUSD</dd></div>
-              <div><dt>Total NUSD staked</dt><dd>{formatAmount(totalPrincipal)} NUSD</dd></div>
-            </dl>
-            <p>
-              0xPoints accrue every second: staked NUSD × lock multiplier. A stake made just before a round closes earns
-              almost nothing for it. Principal stays in its own ledger and always unlocks at maturity; rewards never expire.
-            </p>
+            <span className="fi-label">0xPoints rewards</span>
+            <h2 id="rewards-round-title">Round {currentRound === undefined ? "--" : currentRound + 1}</h2>
           </div>
+          <span className="fi-status" data-state={canTrigger ? "live" : "warning"}>{canTrigger ? "Ready to close" : "Filling"}</span>
+          {canTrigger ? (
+            <button type="button" className="fi-button fi-button-primary" disabled={!isConnected || tx.pending} onClick={() => void trigger()}>
+              Close round
+            </button>
+          ) : null}
+        </header>
+        <div className="fi-pixel-progress" role="progressbar" aria-label="Reward pool toward 10,000 NUSD" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
+          <span style={{ width: `${progress * 100}%` }} />
+        </div>
+        <p className="fi-round-caption">
+          <strong>{formatAmount(available, 18, 2)}</strong> / {formatAmount(roundReward, 18, 0)} NUSD · {closeHint}
+        </p>
+        <dl className="fi-round-stats" aria-label="Your 0xPoints overview">
+          <div>
+            <dt>Your 0xPoints</dt>
+            <dd>{formatPoints(openPoints)}<small>{formatShare(openPoints, openRoundPoints)} of round</small></dd>
+          </div>
+          <div>
+            <dt>If closed now</dt>
+            <dd>{formatAmount(estimatedReward, 18, 2)}<small>NUSD</small></dd>
+          </div>
+          <div>
+            <dt>Claimable</dt>
+            <dd data-tone="positive">{formatAmount(claimable, 18, 4)}<small>NUSD</small></dd>
+            {claimable ? (
+              <button type="button" className="fi-round-claim" disabled={tx.pending} onClick={() => void claim()}>Claim</button>
+            ) : null}
+          </div>
+          <div>
+            <dt>Total staked</dt>
+            <dd>{formatAmount(totalPrincipal, 18, 2)}<small>NUSD</small></dd>
+          </div>
+        </dl>
+        <details className="fi-round-help">
+          <summary>How rounds work</summary>
+          <ol>
+            <li>Half of the NUSD fees from 0xPump and 0xFi fill the pool.</li>
+            <li>0xPoints accrue every second: NUSD × lock multiplier. A last-minute stake earns almost nothing.</li>
+            <li>At 10,000 NUSD (and at least a day), anyone closes the round; it is split by 0xPoints and points restart.</li>
+            <li>Rewards never expire. Principal unlocks at maturity. Round opened {formatDate(roundStart.data)}.</li>
+          </ol>
         </details>
       </article>
 
-      <div className="fi-points-workspace">
-        <article className="fi-panel fi-points-stake-card" data-program-state="active" aria-labelledby="rewards-stake-title">
-          <header className="fi-points-card-heading">
-            <div><span className="fi-label">New position</span><h2 id="rewards-stake-title">Stake NUSD</h2></div>
-          </header>
-          <div className="fi-points-stake-form">
-            <div className="fi-points-lock-field">
-              <span className="fi-label">Lock period</span>
-              <div className="fi-segmented fi-points-locks" role="group" aria-label="Lock duration">
-                {rewardLockOptions.map((option) => (
-                  <button type="button" className={duration === option.duration ? "active positive" : ""} aria-pressed={duration === option.duration} disabled={tx.pending} onClick={() => { setDuration(option.duration); tx.reset(); }} key={option.duration}>
-                    <span>{option.days}d</span><strong>{option.multiplier}</strong>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <AmountField id="rewards-stake-nusd" label="Amount" asset="NUSD" value={amountText} balance={formatAmount(walletNusd)} helper="Principal unlocks at maturity; 0xPoints accrue while it is staked." error={invalid} onChange={setAmountText} onMax={walletNusd && walletNusd > 0n ? () => setAmountText(formatUnits(walletNusd, 18)) : undefined} />
-            <dl className="fi-points-estimate" aria-label="NUSD stake estimate">
-              <div><dt>0xPoints per day</dt><dd data-tone="positive">{previewWeight === undefined ? "--" : formatAmount(previewWeight, 18, 2)}</dd></div>
-              <div><dt>Unlock date</dt><dd>{amount && nowSeconds ? formatDate(nowSeconds + duration).slice(0, 10) : "--"}</dd></div>
-            </dl>
-            {!isConnected ? <ConnectWalletButton /> : (
-              <button type="button" className="fi-button fi-button-block fi-button-primary" disabled={!walletReady || !amount || Boolean(invalid) || tx.pending} onClick={() => void stake()}>
-                {tx.pending ? "Processing" : `Stake for ${selectedLock.days} days`}
+      <div className="fi-earn-workspace">
+        <article className="fi-panel fi-earn-stake" aria-labelledby="rewards-stake-title">
+          <h2 id="rewards-stake-title" className="fi-earn-title">Stake NUSD</h2>
+          <div className="fi-segmented fi-points-locks" role="group" aria-label="Lock duration">
+            {rewardLockOptions.map((option) => (
+              <button type="button" className={duration === option.duration ? "active positive" : ""} aria-pressed={duration === option.duration} disabled={tx.pending} onClick={() => { setDuration(option.duration); tx.reset(); }} key={option.duration}>
+                <span>{option.days}d</span><strong>{option.multiplier}</strong>
               </button>
-            )}
-            <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
+            ))}
           </div>
+          <AmountField id="rewards-stake-nusd" label="Amount" asset="NUSD" value={amountText} balance={formatAmount(walletNusd)} error={invalid} onChange={setAmountText} onMax={walletNusd && walletNusd > 0n ? () => setAmountText(formatUnits(walletNusd, 18)) : undefined} />
+          <p className="fi-earn-estimate">
+            <span>{previewWeight === undefined ? "--" : formatAmount(previewWeight, 18, 2)} 0xPoints / day</span>
+            <span>Unlocks {amount && nowSeconds ? formatDate(nowSeconds + duration).slice(0, 10) : "--"}</span>
+          </p>
+          {!isConnected ? <ConnectWalletButton /> : (
+            <button type="button" className="fi-button fi-button-block fi-button-primary" disabled={!walletReady || !amount || Boolean(invalid) || tx.pending} onClick={() => void stake()}>
+              {tx.pending ? "Processing" : `Stake for ${selectedLock.days} days`}
+            </button>
+          )}
+          <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
         </article>
 
-        <aside className="fi-points-account" aria-label="Your NUSD staking account">
-          <article className="fi-panel fi-points-positions" aria-labelledby="rewards-positions-title">
-            <header className="fi-points-card-heading">
-              <div><span className="fi-label">Your positions</span><h2 id="rewards-positions-title">NUSD locks</h2></div>
-              <span className="fi-points-count">{allPositionIds === undefined ? "--" : allPositionIds.length}</span>
-            </header>
-            {isConnected ? (
-              <button type="button" className="fi-button fi-button-block fi-button-primary" disabled={!claimable || tx.pending} onClick={() => void claim()}>
-                {claimable ? `Claim ${formatAmount(claimable)} NUSD` : "Nothing to claim yet"}
-              </button>
-            ) : null}
-            {!isConnected ? <div className="fi-points-connect"><p>Connect your wallet above to view your locks and rewards.</p></div> : positions.length === 0 ? (
-              <div className="fi-empty-state fi-points-empty-state"><h2>No NUSD locks yet</h2><p>Your confirmed positions appear here without refreshing the page.</p></div>
-            ) : (
-              <div className="fi-points-position-list">
-                {positions.map(({ id, position }) => {
-                  const matured = nowSeconds !== undefined && BigInt(nowSeconds) >= position.unlockTime;
-                  const option = rewardLockOptions.find((item) => item.duration === position.lockDuration);
-                  return (
-                    <div className="fi-points-position" key={id.toString()}>
-                      <div className="fi-points-position-copy">
-                        <span className="fi-label">Position #{id.toString()}</span>
-                        <strong>{formatAmount(position.amount)} NUSD</strong>
-                        <small>{option ? `${option.days} days · ${option.multiplier}` : `${Math.round(position.lockDuration / 86_400)} days`} · unlock {formatDate(position.unlockTime).slice(0, 10)}</small>
-                      </div>
-                      <span className="fi-status" data-state={position.withdrawn ? "offline" : matured ? "live" : "warning"}>{position.withdrawn ? "Withdrawn" : matured ? "Matured" : "Locked"}</span>
-                      <button type="button" className="fi-button fi-button-muted" disabled={position.withdrawn || !matured || tx.pending} onClick={() => void withdraw(id)}>{position.withdrawn ? "Withdrawn" : matured ? "Withdraw NUSD" : "Still locked"}</button>
+        <article className="fi-panel fi-earn-locks" aria-labelledby="rewards-positions-title">
+          <header className="fi-earn-locks-head">
+            <h2 id="rewards-positions-title" className="fi-earn-title">Your locks</h2>
+            <span>{allPositionIds === undefined ? "--" : allPositionIds.length}{weight ? ` · ${formatAmount(weight, 18, 2)} 0xPoints/day` : ""}</span>
+          </header>
+          {!isConnected ? <p className="fi-earn-empty">Connect a wallet to see your locks and rewards.</p> : positions.length === 0 ? (
+            <p className="fi-earn-empty">No NUSD locks yet. New stakes appear here without a refresh.</p>
+          ) : (
+            <ul className="fi-lock-list">
+              {positions.map(({ id, position }) => {
+                const matured = nowSeconds !== undefined && BigInt(nowSeconds) >= position.unlockTime;
+                const option = rewardLockOptions.find((item) => item.duration === position.lockDuration);
+                return (
+                  <li key={id.toString()} data-state={position.withdrawn ? "withdrawn" : matured ? "matured" : "locked"}>
+                    <div>
+                      <strong>{formatAmount(position.amount)} NUSD</strong>
+                      <small>#{id.toString()} · {option ? `${option.days}d ${option.multiplier}` : `${Math.round(position.lockDuration / 86_400)}d`} · {position.withdrawn ? "withdrawn" : `unlocks ${formatDate(position.unlockTime).slice(0, 10)}`}</small>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-            {weight !== undefined && weight > 0n ? <p className="fi-points-weight-note">Earning {formatAmount(weight, 18, 2)} 0xPoints per day across active locks.</p> : null}
-          </article>
-        </aside>
+                    {position.withdrawn ? null : (
+                      <button type="button" className="fi-button fi-button-muted" disabled={!matured || tx.pending} onClick={() => void withdraw(id)}>{matured ? "Withdraw" : "Locked"}</button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </article>
       </div>
     </section>
   );

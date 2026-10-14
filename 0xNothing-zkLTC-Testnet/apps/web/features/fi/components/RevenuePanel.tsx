@@ -50,8 +50,8 @@ export function RevenuePanel() {
 
   const sources: Source[] = [
     { key: "pump", label: "0xPump fees", detail: "Creation and trading fees", asset: "NUSD", pending: value(0), call: { address: pump, abi: pumpRevenueAbi, functionName: "distributeFees" } },
-    { key: "router-nusd", label: "0xFi swap fees", detail: "Router fees paid in NUSD", asset: "NUSD", pending: value(1), call: { address: dexRouter, abi: routerRevenueAbi, functionName: "distributeFees", args: [nusd] } },
-    { key: "router-wzkltc", label: "0xFi swap fees", detail: "Router fees paid in zkLTC, 100% treasury", asset: "WzkLTC", pending: value(2), call: { address: dexRouter, abi: routerRevenueAbi, functionName: "distributeFees", args: [wzkltc] } },
+    { key: "router-nusd", label: "0xFi swap fees", detail: "Paid in NUSD", asset: "NUSD", pending: value(1), call: { address: dexRouter, abi: routerRevenueAbi, functionName: "distributeFees", args: [nusd] } },
+    { key: "router-wzkltc", label: "0xFi swap fees", detail: "Paid in zkLTC · 100% treasury", asset: "WzkLTC", pending: value(2), call: { address: dexRouter, abi: routerRevenueAbi, functionName: "distributeFees", args: [wzkltc] } },
     { key: "lending", label: "Lending spread", detail: "Protocol share of borrow interest", asset: "NUSD", pending: value(3), call: { address: lendingPool, abi: lendingRevenueAbi, functionName: "sweepProtocolInterest" } },
   ];
 
@@ -65,40 +65,37 @@ export function RevenuePanel() {
     }
   }
 
+  const pendingNusd = sources.reduce((sum, source) => (source.asset === "NUSD" ? sum + (source.pending ?? 0n) : sum), 0n);
+  const treasuryZkltc = value(6) === undefined || nativeTreasury.data === undefined ? undefined : value(6)! + nativeTreasury.data.value;
+
   return (
-    <section className="fi-panel fi-revenue-panel" aria-labelledby="revenue-title">
-      <header className="fi-points-card-heading">
-        <div><span className="fi-label">Open to anyone</span><h2 id="revenue-title">Revenue and treasury</h2></div>
-      </header>
+    <details className="fi-panel fi-revenue-panel">
+      <summary>
+        <span className="fi-revenue-title">Revenue and treasury</span>
+        <span className="fi-revenue-summary">
+          <span>Waiting <strong>{formatAmount(pendingNusd, 18, 4)}</strong> NUSD</span>
+          <span>Pool <strong>{formatAmount(value(4), 18, 2)}</strong> NUSD</span>
+          <span>Treasury <strong>{formatAmount(value(5), 18, 2)}</strong> NUSD · <strong>{formatAmount(treasuryZkltc, 18, 4)}</strong> zkLTC</span>
+        </span>
+      </summary>
       <p className="fi-revenue-copy">
-        NUSD revenue is split 50% to the 0xPoints reward pool and 50% to the treasury; zkLTC swap fees go to the
-        treasury. Nothing moves until someone sends it, and anyone may. The treasury is spent by the owner wallet alone.
+        NUSD fees split 50% to the reward pool and 50% to the treasury; zkLTC swap fees go to the treasury. Anyone can
+        send pending fees. Only the owner spends the{" "}
+        <a href={explorerAddressUrl(treasury)} target="_blank" rel="noopener noreferrer">treasury</a> (
+        <a href={explorerAddressUrl(feeSplitter)} target="_blank" rel="noopener noreferrer">splitter</a>).
       </p>
-      <div className="fi-revenue-grid">
-        <table className="fi-revenue-table">
-          <thead><tr><th scope="col">Source</th><th scope="col">Waiting</th><th scope="col"><span className="sr-only">Action</span></th></tr></thead>
-          <tbody>
-            {sources.map((source) => (
-              <tr key={source.key}>
-                <th scope="row"><strong>{source.label}</strong><small>{source.detail}</small></th>
-                <td>{formatAmount(source.pending, 18, 6)} {source.asset}</td>
-                <td>
-                  <button type="button" className="fi-button fi-button-muted" disabled={!isConnected || !source.pending || tx.pending} onClick={() => void send(source)}>
-                    Send
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <dl className="fi-points-metrics fi-revenue-balances" aria-label="Reward pool and treasury balances">
-          <div><dt>Reward pool (unallocated)</dt><dd>{formatAmount(value(4), 18, 2)} <small>NUSD</small></dd></div>
-          <div><dt>Treasury NUSD</dt><dd>{formatAmount(value(5), 18, 2)} <small>NUSD</small></dd></div>
-          <div><dt>Treasury zkLTC</dt><dd>{formatAmount(value(6) === undefined || nativeTreasury.data === undefined ? undefined : value(6)! + nativeTreasury.data.value, 18, 4)} <small>zkLTC</small></dd></div>
-          <div><dt>Contracts</dt><dd><a href={explorerAddressUrl(treasury)} target="_blank" rel="noopener noreferrer">Treasury</a> · <a href={explorerAddressUrl(feeSplitter)} target="_blank" rel="noopener noreferrer">Splitter</a></dd></div>
-        </dl>
-      </div>
+      <ul className="fi-revenue-list">
+        {sources.map((source) => (
+          <li key={source.key}>
+            <span><strong>{source.label}</strong><small>{source.detail}</small></span>
+            <span className="fi-revenue-amount">{formatAmount(source.pending, 18, 6)} {source.asset}</span>
+            <button type="button" className="fi-button fi-button-muted" disabled={!isConnected || !source.pending || tx.pending} onClick={() => void send(source)}>
+              Send
+            </button>
+          </li>
+        ))}
+      </ul>
       <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
-    </section>
+    </details>
   );
 }

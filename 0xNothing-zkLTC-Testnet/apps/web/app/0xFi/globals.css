@@ -3314,11 +3314,42 @@
 }
 @media (prefers-reduced-motion: reduce) { .fi-root .fi-points-locks button { transition: none; } }
 
-/* v2 tokenomics: reward pool progress, revenue routing and the surplus vote. */
+/* v2 tokenomics: rewards round, locks, revenue disclosure and the surplus vote. */
+.fi-earn {
+  display: grid;
+  gap: 16px;
+}
+.fi-round {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+}
+.fi-round-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.fi-round-head > div {
+  flex: 1;
+  min-width: 0;
+}
+.fi-round-head h2,
+.fi-earn-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--fi-text);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.fi-round-head .fi-label {
+  margin-bottom: 2px;
+}
 .fi-pixel-progress {
   position: relative;
   height: 8px;
-  margin-top: 16px;
   overflow: hidden;
   border-radius: 2px;
 }
@@ -3340,80 +3371,292 @@
   background: var(--accent);
   transition: width 0.4s ease;
 }
-.fi-points-pool-caption {
-  margin: 8px 0 12px;
-  color: var(--fi-muted);
-  font-size: var(--fi-text-body);
-}
-.fi-points-pool-caption strong {
-  color: var(--fi-text);
-  font-family: var(--font-num);
-}
-.fi-points-weight-note {
-  margin: 10px 0 0;
-  color: var(--fi-muted);
-  font-size: var(--fi-text-label);
-}
-.fi-revenue-panel {
-  display: grid;
-  gap: 14px;
-  margin-top: 16px;
-}
-.fi-revenue-copy {
-  max-width: 72ch;
+.fi-round-caption {
   margin: 0;
   color: var(--fi-muted);
   font-size: var(--fi-text-body);
 }
-.fi-revenue-grid {
+.fi-round-caption strong {
+  color: var(--fi-text);
+  font-family: var(--font-num);
+}
+.fi-round-stats {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
-  gap: 16px;
-  align-items: start;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--fi-line);
+  border-radius: var(--r-sm, 8px);
+  background: var(--fi-line);
 }
-.fi-revenue-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--fi-text-data);
+.fi-round-stats > div {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--fi-panel-2, var(--surface-2));
 }
-.fi-revenue-table th,
-.fi-revenue-table td {
-  padding: 10px 8px;
-  border-bottom: 1px solid var(--fi-line);
-  text-align: left;
-  vertical-align: middle;
-}
-.fi-revenue-table thead th {
+.fi-round-stats dt {
   color: var(--fi-muted);
   font-size: var(--fi-text-label);
-  font-weight: 500;
 }
-.fi-revenue-table tbody th strong,
-.fi-revenue-table tbody th small {
-  display: block;
-}
-.fi-revenue-table tbody th small {
-  color: var(--fi-muted);
-  font-weight: 400;
-}
-.fi-revenue-table td:nth-child(2) {
+.fi-round-stats dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  color: var(--fi-text);
   font-family: var(--font-num);
+  font-size: 17px;
+}
+.fi-round-stats dd small {
+  color: var(--fi-muted);
+  font-family: var(--font-ui);
+  font-size: var(--fi-text-label);
+}
+.fi-round-stats dd[data-tone="positive"] {
+  color: var(--positive);
+}
+.fi-round-claim {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--fi-text-body);
+  font-weight: 600;
+  cursor: pointer;
+}
+.fi-round-claim:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.fi-round-help {
+  color: var(--fi-muted);
+  font-size: var(--fi-text-body);
+}
+.fi-round-help summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--fi-text);
+}
+.fi-round-help ol {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+.fi-round-help > :not(summary) + * {
+  margin-top: 10px;
+}
+.fi-earn-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+.fi-earn-stake,
+.fi-earn-locks {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+}
+.fi-earn-estimate {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  color: var(--fi-muted);
+  font-family: var(--font-num);
+  font-size: var(--fi-text-body);
+}
+.fi-earn-locks-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.fi-earn-locks-head > span {
+  color: var(--fi-muted);
+  font-family: var(--font-num);
+  font-size: var(--fi-text-body);
+}
+.fi-earn-empty {
+  margin: 0;
+  color: var(--fi-muted);
+  font-size: var(--fi-text-body);
+}
+.fi-lock-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fi-lock-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--fi-line);
+}
+.fi-lock-list li:first-child {
+  border-top: 0;
+}
+.fi-lock-list li > div {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.fi-lock-list strong {
+  color: var(--fi-text);
+  font-family: var(--font-num);
+  font-size: var(--fi-text-data);
+}
+.fi-lock-list small {
+  overflow: hidden;
+  color: var(--fi-muted);
+  font-size: var(--fi-text-label);
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-.fi-revenue-table td:last-child {
-  text-align: right;
+.fi-lock-list li[data-state="withdrawn"] {
+  opacity: 0.55;
 }
-.fi-revenue-balances {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  border-left: 0;
+.fi-lock-list .fi-button {
+  min-height: 34px;
+  padding: 0 14px;
+}
+.fi-revenue-panel {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 16px 20px;
+}
+.fi-revenue-panel > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+.fi-revenue-panel > summary::-webkit-details-marker {
+  display: none;
+}
+.fi-revenue-panel > summary::after {
+  content: "+";
+  color: var(--fi-muted);
+}
+.fi-revenue-panel[open] > summary::after {
+  content: "−";
+}
+.fi-revenue-title {
+  color: var(--fi-text);
+  font-size: 15px;
+  font-weight: 600;
+}
+.fi-revenue-summary {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 18px;
+  color: var(--fi-muted);
+  font-size: var(--fi-text-body);
+}
+.fi-revenue-summary strong {
+  color: var(--fi-text);
+  font-family: var(--font-num);
+  font-weight: 500;
+}
+.fi-revenue-copy {
+  max-width: 80ch;
+  margin: 12px 0 0;
+  color: var(--fi-muted);
+  font-size: var(--fi-text-body);
+}
+.fi-revenue-copy a {
+  color: var(--fi-text);
+}
+.fi-revenue-list {
+  display: grid;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.fi-revenue-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+  border-top: 1px solid var(--fi-line);
+}
+.fi-revenue-list li > span:first-child {
+  display: grid;
+  gap: 2px;
+}
+.fi-revenue-list strong {
+  color: var(--fi-text);
+  font-size: var(--fi-text-data);
+  font-weight: 500;
+}
+.fi-revenue-list small {
+  color: var(--fi-muted);
+  font-size: var(--fi-text-label);
+}
+.fi-revenue-amount {
+  font-family: var(--font-num);
+  font-size: var(--fi-text-data);
+  white-space: nowrap;
+}
+.fi-revenue-list .fi-button {
+  min-height: 34px;
+  padding: 0 14px;
+}
+.fi-vote-overview {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 20px;
+}
+.fi-vote-overview .ox-health-gauge {
+  width: 168px;
+  margin: 0;
 }
 .fi-vote-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
-@media (max-width: 860px) {
-  .fi-revenue-grid {
+@media (max-width: 960px) {
+  .fi-round-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fi-earn-workspace,
+  .fi-vote-overview {
     grid-template-columns: 1fr;
+  }
+  .fi-vote-overview .ox-health-gauge {
+    justify-self: center;
+  }
+}
+@media (max-width: 560px) {
+  .fi-round-head {
+    flex-wrap: wrap;
+  }
+  .fi-round-head > .fi-button {
+    width: 100%;
+  }
+  .fi-revenue-list li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .fi-revenue-amount {
+    grid-column: 1;
   }
 }

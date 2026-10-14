@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Address } from "viem";
 import { useAccount, useReadContracts } from "wagmi";
 import { HealthGauge } from "@/components/Signature";
@@ -139,115 +139,111 @@ export function SurplusVoteDashboard() {
   const ratioRisk = reserve !== undefined && supply ? Number((reserve * 1000n) / (supply * 3n)) / 1000 : undefined;
   const latestBallot = latest?.ballot;
 
+  const lockLabel = `${formatAmount(voteLock, 18, 0)} NUSD`;
+  let action: ReactNode;
+  if (!isConnected) action = <ConnectWalletButton />;
+  else if (latestOpen) {
+    action = latestBallot?.cast ? (
+      <p className="fi-earn-empty" role="status">You voted {latestBallot.support ? "yes" : "no"}. Your {lockLabel} returns when voting ends.</p>
+    ) : (
+      <div className="fi-vote-actions">
+        <button type="button" className="fi-button fi-button-primary" disabled={!canLock || tx.pending} onClick={() => void run("Vote cast", "Yes recorded. Your NUSD is locked until voting ends.", { functionName: "vote", args: [true] }, voteLock)}>Vote yes</button>
+        <button type="button" className="fi-button fi-button-muted" disabled={!canLock || tx.pending} onClick={() => void run("Vote cast", "No recorded. Your NUSD is locked until voting ends.", { functionName: "vote", args: [false] }, voteLock)}>Vote no</button>
+      </div>
+    );
+  } else if (latestEndedUnsettled && latest) {
+    action = <button type="button" className="fi-button fi-button-block fi-button-primary" disabled={tx.pending} onClick={() => void run("Proposal settled", "The result is final; a passed vote minted at the current reserve.", { functionName: "settle", args: [latest.id] })}>Settle proposal #{latest.id.toString()}</button>;
+  } else {
+    action = (
+      <button type="button" className="fi-button fi-button-block fi-button-primary" disabled={!triggerReached || !canLock || tx.pending} onClick={() => void run("Proposal opened", "You voted yes with 100 NUSD. Voting runs for 3 days.", { functionName: "propose" }, voteLock)}>
+        {triggerReached ? `Propose · locks ${lockLabel}` : "Opens when the reserve reaches 3x"}
+      </button>
+    );
+  }
+
   return (
-    <section className="fi-points-dashboard" aria-label="NUSD surplus mint vote">
-      <article className="fi-panel fi-points-overview" aria-labelledby="vote-overview-title">
-        <header className="fi-points-overview-copy">
-          <div className="fi-points-kicker-row">
-            <span className="fi-label">NUSD reserve</span>
-            <span className="fi-status" data-state={triggerReached ? "live" : "warning"}>{triggerReached ? "Surplus: vote open to proposals" : "Below 3x: no vote"}</span>
-          </div>
-          <h2 id="vote-overview-title">Mint the surplus, keep 2x backing</h2>
-          <p>
-            When the zkLTC reserve is worth at least 3× the NUSD supply, the community can vote to mint NUSD until it is
-            worth exactly 2×. The new NUSD goes 50% to the 0xPoints reward pool and 50% to the treasury.
-          </p>
-        </header>
-        <HealthGauge risk={ratioRisk} value={formatRatio(reserve, supply)} caption="Reserve value / NUSD supply (vote at 3x)" warnAt={0.66} dangerAt={1} />
-        <details className="fi-points-program-details">
-          <summary>Rules</summary>
+    <section className="fi-earn" aria-label="NUSD surplus mint vote">
+      <article className="fi-panel fi-round" aria-labelledby="vote-overview-title">
+        <header className="fi-round-head">
           <div>
-            <dl aria-label="Vote rules">
-              <div><dt>Reserve value</dt><dd>{formatAmount(reserve, 18, 2)} NUSD</dd></div>
-              <div><dt>NUSD supply</dt><dd>{formatAmount(supply, 18, 2)} NUSD</dd></div>
-              <div><dt>Mintable now</dt><dd>{formatAmount(capacity?.[0], 18, 2)} NUSD</dd></div>
-              <div><dt>Voter incentive left</dt><dd>{formatAmount(incentiveAvailable, 18, 0)} / {formatAmount(incentiveBudget, 18, 0)} NUSD</dd></div>
-            </dl>
-            <p>
-              Voting lasts 3 days and passes with more yes than no votes and at least {minVoters?.toString() ?? "10"} voters.
-              Each vote locks {formatAmount(voteLock, 18, 0)} NUSD until voting ends, then returns it with a 1–10 NUSD thank-you
-              while the incentive budget lasts. Settlement re-checks the 3× reserve with a fresh oracle price.
-            </p>
+            <span className="fi-label">NUSD reserve</span>
+            <h2 id="vote-overview-title">Surplus vote</h2>
           </div>
+          <span className="fi-status" data-state={triggerReached ? "live" : "warning"}>{triggerReached ? "Proposals open" : "Below 3x"}</span>
+        </header>
+        <div className="fi-vote-overview">
+          <HealthGauge risk={ratioRisk} value={formatRatio(reserve, supply)} caption="Reserve / supply · vote at 3x" warnAt={0.66} dangerAt={1} />
+          <dl className="fi-round-stats" aria-label="Reserve overview">
+            <div><dt>Reserve value</dt><dd>{formatAmount(reserve, 18, 2)}<small>NUSD</small></dd></div>
+            <div><dt>NUSD supply</dt><dd>{formatAmount(supply, 18, 2)}<small>NUSD</small></dd></div>
+            <div><dt>Mintable now</dt><dd>{formatAmount(capacity?.[0], 18, 2)}<small>NUSD</small></dd></div>
+            <div><dt>Voter incentives</dt><dd>{formatAmount(incentiveAvailable, 18, 0)}<small>/ {formatAmount(incentiveBudget, 18, 0)} NUSD</small></dd></div>
+          </dl>
+        </div>
+        <details className="fi-round-help">
+          <summary>Vote rules</summary>
+          <ol>
+            <li>At 3× reserve/supply anyone can propose; the vote mints NUSD back down to exactly 2×.</li>
+            <li>New NUSD goes 50% to the 0xPoints reward pool and 50% to the treasury.</li>
+            <li>Voting lasts 3 days; it passes with more yes than no and at least {minVoters?.toString() ?? "10"} voters.</li>
+            <li>Each vote locks {lockLabel} until the end, then returns it with 1–10 NUSD while the budget lasts.</li>
+            <li>Settlement re-checks 3× with a fresh oracle price; a stale oracle simply mints nothing.</li>
+          </ol>
         </details>
       </article>
 
-      <div className="fi-points-workspace">
-        <article className="fi-panel fi-points-stake-card" data-program-state={latestOpen ? "active" : "ended"} aria-labelledby="vote-current-title">
-          <header className="fi-points-card-heading">
-            <div><span className="fi-label">{latest ? `Proposal #${latest.id.toString()}` : "No proposal yet"}</span><h2 id="vote-current-title">{latestOpen ? "Voting open" : "Start a vote"}</h2></div>
-          </header>
-          <div className="fi-points-stake-form">
-            {latest?.proposal ? (
-              <dl className="fi-points-estimate" aria-label="Current proposal">
-                <div><dt>Yes / No</dt><dd>{latest.proposal.yesVotes} / {latest.proposal.noVotes}</dd></div>
-                <div><dt>{latestOpen ? "Ends" : "Ended"}</dt><dd>{formatDate(latest.proposal.end)}</dd></div>
-              </dl>
-            ) : null}
-            {!isConnected ? <ConnectWalletButton /> : latestOpen ? (
-              latestBallot?.cast ? (
-                <p className="fi-inline-state" role="status">You voted {latestBallot.support ? "yes" : "no"}. Your {formatAmount(voteLock, 18, 0)} NUSD returns after voting ends.</p>
-              ) : (
-                <div className="fi-vote-actions">
-                  <button type="button" className="fi-button fi-button-primary" disabled={!canLock || tx.pending} onClick={() => void run("Vote cast", "Yes recorded. Your NUSD is locked until voting ends.", { functionName: "vote", args: [true] }, voteLock)}>Vote yes</button>
-                  <button type="button" className="fi-button fi-button-muted" disabled={!canLock || tx.pending} onClick={() => void run("Vote cast", "No recorded. Your NUSD is locked until voting ends.", { functionName: "vote", args: [false] }, voteLock)}>Vote no</button>
-                </div>
-              )
-            ) : latestEndedUnsettled && latest ? (
-              <button type="button" className="fi-button fi-button-block fi-button-primary" disabled={tx.pending} onClick={() => void run("Proposal settled", "The result is final; a passed vote minted at the current reserve.", { functionName: "settle", args: [latest.id] })}>Settle proposal #{latest.id.toString()}</button>
-            ) : (
-              <button type="button" className="fi-button fi-button-block fi-button-primary" disabled={!triggerReached || !canLock || tx.pending} onClick={() => void run("Proposal opened", "You voted yes with 100 NUSD. Voting runs for 3 days.", { functionName: "propose" }, voteLock)}>
-                {triggerReached ? `Propose (locks ${formatAmount(voteLock, 18, 0)} NUSD)` : "Reserve is below 3x"}
-              </button>
-            )}
-            {isConnected && !canLock && walletNusd !== undefined ? <p className="fi-points-weight-note">Voting needs {formatAmount(voteLock, 18, 0)} NUSD in your wallet.</p> : null}
-            <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
-          </div>
+      <div className="fi-earn-workspace">
+        <article className="fi-panel fi-earn-stake" aria-labelledby="vote-current-title">
+          <h2 id="vote-current-title" className="fi-earn-title">
+            {latest ? `Proposal #${latest.id.toString()}` : "No proposal yet"}
+            {latestOpen ? <span className="fi-status" data-state="live">Voting</span> : null}
+          </h2>
+          {latest?.proposal ? (
+            <p className="fi-earn-estimate">
+              <span>{latest.proposal.yesVotes} yes · {latest.proposal.noVotes} no</span>
+              <span>{latestOpen ? "Ends" : "Ended"} {formatDate(latest.proposal.end)}</span>
+            </p>
+          ) : null}
+          {action}
+          {isConnected && !canLock && walletNusd !== undefined ? <p className="fi-earn-empty">Voting needs {lockLabel} in your wallet.</p> : null}
+          <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
         </article>
 
-        <aside className="fi-points-account" aria-label="Recent proposals">
-          <article className="fi-panel fi-points-positions" aria-labelledby="vote-history-title">
-            <header className="fi-points-card-heading">
-              <div><span className="fi-label">Recent</span><h2 id="vote-history-title">Proposals</h2></div>
-              <span className="fi-points-count">{proposalCount === undefined ? "--" : proposalCount.toString()}</span>
-            </header>
-            {history.length === 0 ? (
-              <div className="fi-empty-state fi-points-empty-state"><h2>No proposals yet</h2><p>A proposal can open once the reserve reaches 3× supply.</p></div>
-            ) : (
-              <div className="fi-points-position-list">
-                {history.map(({ id, proposal, ballot }) => {
-                  const ended = proposal && now !== undefined && now >= proposal.end;
-                  const withdrawable = Boolean(ended && ballot?.cast && !ballot.withdrawn);
-                  const state = !proposal ? "offline" : !ended ? "warning" : proposal.executed ? "live" : "offline";
-                  const label = !proposal ? "--" : !ended ? "Voting" : !proposal.settled ? "Awaiting settle" : proposal.executed ? `Minted ${formatAmount(proposal.mintedNusd, 18, 0)}` : "Not passed";
-                  return (
-                    <div className="fi-points-position" key={id.toString()}>
-                      <div className="fi-points-position-copy">
-                        <span className="fi-label">Proposal #{id.toString()}</span>
-                        <strong>{proposal ? `${proposal.yesVotes} yes · ${proposal.noVotes} no` : "--"}</strong>
-                        <small>{ballot?.cast ? `You voted ${ballot.support ? "yes" : "no"} · +${formatAmount(ballot.incentive, 18, 0)} NUSD` : "You did not vote"}</small>
-                      </div>
-                      <span className="fi-status" data-state={state}>{label}</span>
-                      <button type="button" className="fi-button fi-button-muted" disabled={!withdrawable || tx.pending} onClick={() => void run("NUSD returned", "Your lock and incentive are back in your wallet.", { functionName: "withdraw", args: [id] })}>
-                        {ballot?.withdrawn ? "Withdrawn" : withdrawable ? "Withdraw lock" : "Locked"}
-                      </button>
+        <article className="fi-panel fi-earn-locks" aria-labelledby="vote-history-title">
+          <header className="fi-earn-locks-head">
+            <h2 id="vote-history-title" className="fi-earn-title">Recent proposals</h2>
+            <span>{proposalCount === undefined ? "--" : proposalCount.toString()}</span>
+          </header>
+          {history.length === 0 ? (
+            <p className="fi-earn-empty">None yet. A proposal can open once the reserve reaches 3× supply.</p>
+          ) : (
+            <ul className="fi-lock-list">
+              {history.map(({ id, proposal, ballot }) => {
+                const ended = proposal && now !== undefined && now >= proposal.end;
+                const withdrawable = Boolean(ended && ballot?.cast && !ballot.withdrawn);
+                const result = !proposal ? "--" : !ended ? "voting" : !proposal.settled ? "awaiting settle" : proposal.executed ? `minted ${formatAmount(proposal.mintedNusd, 18, 0)} NUSD` : "not passed";
+                return (
+                  <li key={id.toString()}>
+                    <div>
+                      <strong>#{id.toString()} · {proposal ? `${proposal.yesVotes} yes / ${proposal.noVotes} no` : "--"}</strong>
+                      <small>{result}{ballot?.cast ? ` · you voted ${ballot.support ? "yes" : "no"} (+${formatAmount(ballot.incentive, 18, 0)} NUSD)` : ""}</small>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </article>
-
-          <article className="fi-panel fi-points-positions" aria-labelledby="vote-fund-title">
-            <header className="fi-points-card-heading">
-              <div><span className="fi-label">Anyone can fund</span><h2 id="vote-fund-title">Voter incentives</h2></div>
-            </header>
-            <AmountField id="vote-fund-nusd" label="Add to budget" asset="NUSD" value={fundText} balance={formatAmount(walletNusd)} helper={`Funded ${formatAmount(incentiveFunded, 18, 0)} of ${formatAmount(incentiveBudget, 18, 0)} NUSD; the cap is fixed.`} onChange={setFundText} />
+                    {withdrawable ? (
+                      <button type="button" className="fi-button fi-button-muted" disabled={tx.pending} onClick={() => void run("NUSD returned", "Your lock and incentive are back in your wallet.", { functionName: "withdraw", args: [id] })}>Withdraw</button>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <details className="fi-round-help">
+            <summary>Fund voter incentives</summary>
+            <AmountField id="vote-fund-nusd" label="Add to budget" asset="NUSD" value={fundText} balance={formatAmount(walletNusd)} helper={`Funded ${formatAmount(incentiveFunded, 18, 0)} of ${formatAmount(incentiveBudget, 18, 0)} NUSD. Anyone can fund; the cap is fixed.`} onChange={setFundText} />
             {isConnected ? (
-              <button type="button" className="fi-button fi-button-block fi-button-muted" disabled={!fundAmount || tx.pending} onClick={() => void run("Incentives funded", "Thank you: voters draw 1–10 NUSD each from this budget.", { functionName: "fundIncentives", args: [fundAmount] }, fundAmount)}>Fund incentives</button>
+              <button type="button" className="fi-button fi-button-block fi-button-muted" disabled={!fundAmount || tx.pending} onClick={() => void run("Incentives funded", "Voters draw 1–10 NUSD each from this budget.", { functionName: "fundIncentives", args: [fundAmount] }, fundAmount)}>Fund incentives</button>
             ) : null}
-          </article>
-        </aside>
+          </details>
+        </article>
       </div>
     </section>
   );
