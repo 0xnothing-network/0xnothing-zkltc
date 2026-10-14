@@ -110,7 +110,7 @@ export function ProductHeader({ product, nav, isActive, notify, className = "" }
     return (
       <Link key={item.href} href={item.href} className={`ox-nav-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined}
         onClick={mobile ? () => setMenuOpen(false) : undefined}>
-        {item.icon}{item.label}
+        {mobile ? item.icon : null}{item.label}
       </Link>
     );
   });
@@ -136,7 +136,7 @@ export function ProductHeader({ product, nav, isActive, notify, className = "" }
               <i aria-hidden="true" />{switching ? "Switching" : "Switch to LiteForge"}
             </button>
           ) : (
-            <span className="ox-network-pill" data-state="ok"><i aria-hidden="true" />LiteForge <small>· {CHAIN_ID}</small></span>
+            <span className="ox-network-pill" data-state="ok" title={`LiteForge testnet · chain ${CHAIN_ID}`}><i aria-hidden="true" />LiteForge</span>
           )}
           {mounted && isConnected && address ? (
             <div className="ox-wallet">
@@ -144,8 +144,8 @@ export function ProductHeader({ product, nav, isActive, notify, className = "" }
                 onClick={() => setWalletOpen((open) => !open)}>
                 {!wrongChain ? (
                   <span className="ox-wallet-balances" aria-label="Wallet balances">
-                    <span><small>NUSD</small>${compact(nusd.data, 18, 2)}</span>
-                    <span><small>zkLTC</small>{native.data ? compact(native.data.value, native.data.decimals, 3) : "--"}</span>
+                    <span>{compact(nusd.data, 18, 2)}<small>NUSD</small></span>
+                    <span>{native.data ? compact(native.data.value, native.data.decimals, 3) : "--"}<small>zkLTC</small></span>
                   </span>
                 ) : null}
                 <span className="ox-wallet-avatar" aria-hidden="true" style={{ "--seed": `${parseInt(address.slice(2, 8), 16) % 360}deg` } as React.CSSProperties} />

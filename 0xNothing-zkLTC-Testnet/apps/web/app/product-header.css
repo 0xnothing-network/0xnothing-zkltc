@@ -12,10 +12,10 @@
 .ox-header-inner {
   width: min(100%, 1440px);
   margin-inline: auto;
-  min-height: 64px;
+  min-height: 56px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   padding: 0 clamp(14px, 2.4vw, 32px);
 }
 .ox-wordmark {
@@ -32,8 +32,8 @@
 .ox-wordmark-mark {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--r-md);
   background: var(--text-1);
   color: var(--bg);
@@ -57,8 +57,8 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  min-height: 30px;
-  padding: 0 12px;
+  min-height: 28px;
+  padding: 0 10px;
   border-radius: var(--r-pill);
   color: var(--text-3);
   font-size: 13px;
@@ -74,15 +74,15 @@
 .ox-switcher a:hover:not(.active) { color: var(--text-1); }
 
 /* Primary navigation: the active item carries the accent underline. */
-.ox-nav { display: flex; align-items: stretch; align-self: stretch; gap: 4px; min-width: 0; margin-left: 8px; }
+.ox-nav { display: flex; align-items: stretch; align-self: stretch; gap: 0; min-width: 0; margin-left: 4px; }
 .ox-nav-link {
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 0 12px;
+  padding: 0 10px;
   color: var(--text-2);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -91,8 +91,8 @@
 .ox-nav-link.active::after {
   content: "";
   position: absolute;
-  left: 12px;
-  right: 12px;
+  left: 10px;
+  right: 10px;
   bottom: -1px;
   height: 2px;
   border-radius: 2px 2px 0 0;
@@ -104,8 +104,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 36px;
-  padding: 0 14px;
+  min-height: 34px;
+  padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: var(--r-pill);
   background: var(--surface-1);
@@ -123,9 +123,9 @@
 .ox-wallet-button {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  min-height: 40px;
-  padding: 3px 12px 3px 14px;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 10px 0 12px;
   border: 1px solid var(--line);
   border-radius: var(--r-pill);
   background: var(--surface-1);
@@ -135,13 +135,13 @@
   font-size: 13px;
 }
 .ox-wallet-button:hover { border-color: var(--line-strong); }
-.ox-wallet-balances { display: inline-flex; gap: 12px; }
-.ox-wallet-balances > span { display: grid; line-height: 1.1; text-align: center; }
-.ox-wallet-balances small { color: var(--text-3); font-family: var(--font-ui); font-size: 10px; }
+.ox-wallet-balances { display: inline-flex; gap: 10px; padding-right: 10px; border-right: 1px solid var(--line); }
+.ox-wallet-balances > span { display: inline-flex; align-items: baseline; gap: 4px; white-space: nowrap; }
+.ox-wallet-balances small { color: var(--text-3); font-family: var(--font-ui); font-size: 11px; }
 .ox-wallet-avatar {
-  width: 22px;
-  height: 22px;
-  border-radius: 7px;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
   background: conic-gradient(from var(--seed), #7aa2ff, #e3a6ff, #b6f09c, #7aa2ff);
 }
 .ox-wallet-menu {
@@ -180,8 +180,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 38px;
-  padding: 0 16px;
+  min-height: 34px;
+  padding: 0 14px;
   border: 0;
   border-radius: var(--r-md);
   background: var(--accent);
@@ -191,13 +191,13 @@
 }
 .ox-connect:hover:not(:disabled) { filter: brightness(1.06); }
 .ox-connect:disabled { opacity: .6; cursor: progress; }
-.ox-wallet-placeholder { width: 110px; height: 38px; border-radius: var(--r-md); background: var(--surface-1); }
+.ox-wallet-placeholder { width: 110px; height: 34px; border-radius: var(--r-md); background: var(--surface-1); }
 .ox-theme-toggle,
 .ox-menu-button {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   flex: none;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
