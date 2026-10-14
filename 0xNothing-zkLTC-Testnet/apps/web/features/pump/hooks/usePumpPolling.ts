@@ -1,14 +1,17 @@
 "use client";
 
-import { LIVE_MS } from "@/lib/liveData";
+import { LIVE_MS, livePollInterval } from "@/lib/liveData";
 import {
   jitteredPollInterval,
   useVisibilityRefresh,
   type VisibilityRefreshOptions,
 } from "@/lib/pollJitter";
 
+/** Every 0xPump trade and launch emits from the factory, so the event socket covers them. */
+const SOCKET_POLL_FACTOR = 3;
+
 export function pumpPollInterval(key: string, baseInterval = LIVE_MS): number {
-  return jitteredPollInterval(key, baseInterval);
+  return jitteredPollInterval(key, livePollInterval(baseInterval, SOCKET_POLL_FACTOR));
 }
 
 export function usePumpVisibilityRefresh({

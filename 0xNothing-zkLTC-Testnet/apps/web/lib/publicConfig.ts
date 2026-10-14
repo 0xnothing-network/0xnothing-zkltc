@@ -6,6 +6,11 @@ export const PUBLIC_APP_URL = "https://0xnothing.xyz" as const;
 export const LITVM_RPC_URL = "https://liteforge.rpc.caldera.xyz/infra-partner-http" as const;
 /** Public endpoint on the same origin, used automatically when the primary fails. */
 export const LITVM_RPC_FALLBACK_URL = "https://liteforge.rpc.caldera.xyz/http" as const;
+/** Log subscriptions that push chain events to the browser; tried in order on reconnect. */
+export const LITVM_WS_URLS = [
+  "wss://liteforge.rpc.caldera.xyz/infra-partner-ws",
+  "wss://liteforge.rpc.caldera.xyz/ws",
+] as const;
 export const LITVM_EXPLORER_URL = "https://liteforge.explorer.caldera.xyz" as const;
 export const MULTICALL3_ADDRESS: Address = "0xca11bde05977b3631167028862be2a173976ca11";
 

@@ -1,46 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
-import { useBlockNumber } from "wagmi";
 import { wagmiConfig } from "@/lib/wagmi";
 import { ToastProvider } from "@/components/Toast";
-import { BLOCK_SYNC_MS, isBlockSyncedQueryKey } from "@/lib/liveData";
-import { litvm } from "@/config/wagmi";
-
-const BLOCK_POLL_MS = BLOCK_SYNC_MS + Math.floor(Math.random() * 2_001);
-
-function LiveSync() {
-  const queryClient = useQueryClient();
-  const lastBlockRef = useRef<bigint | undefined>(undefined);
-  const blockNumber = useBlockNumber({
-    chainId: litvm.id,
-    query: {
-      refetchInterval: BLOCK_POLL_MS,
-      refetchIntervalInBackground: false,
-      staleTime: 0,
-    },
-  });
-
-  useEffect(() => {
-    if (blockNumber.data === undefined) return;
-    if (lastBlockRef.current === undefined) {
-      lastBlockRef.current = blockNumber.data;
-      return;
-    }
-    if (lastBlockRef.current === blockNumber.data) return;
-    lastBlockRef.current = blockNumber.data;
-    void queryClient.invalidateQueries({
-      predicate: (query) => query.getObserversCount() > 0
-        && query.state.fetchStatus !== "fetching"
-        && isBlockSyncedQueryKey(query.queryKey),
-      refetchType: "active",
-    });
-  }, [blockNumber.data, queryClient]);
-
-  return null;
-}
+import { LiveSync } from "@/components/LiveSync";
 
 export function Providers({
   children,
