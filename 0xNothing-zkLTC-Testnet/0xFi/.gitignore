@@ -8,3 +8,4 @@ contracts/out/
 contracts/broadcast/
 contracts/deployments/fresh-deployment.json
 npm-debug.log*
+contracts/deployments/*.rehearsal.json

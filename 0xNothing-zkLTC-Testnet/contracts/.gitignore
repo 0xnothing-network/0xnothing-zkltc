@@ -2,3 +2,4 @@
 /cache/
 /out/
 /deployments/latest.json
+/deployments/*.rehearsal.json
