@@ -9,7 +9,9 @@ export const wagmiConfig = createConfig({
   ssr: true,
   chains: [litvm],
   connectors,
-  pollingInterval: 4_000,
+  // Only transaction receipt waits poll with this. LiteForge mines a block every
+  // ~0.25 s, so a 4 s cadence kept each confirmed step waiting ~4 s for its UI.
+  pollingInterval: 1_000,
   transports: {
     [litvm.id]: litvmTransport({
       batch: { batchSize: 100, wait: 10 },
