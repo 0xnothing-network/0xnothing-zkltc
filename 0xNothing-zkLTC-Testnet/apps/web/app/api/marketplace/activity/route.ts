@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { logsClient, publicClient } from "@/lib/contract";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
@@ -14,7 +14,11 @@ export const revalidate = 0;
 
 // Contract and block reads keep the batching client; parallel getLogs slices use the unbatched one.
 const activityClient = { getChainId: publicClient.getChainId, getBlock: publicClient.getBlock, readContract: publicClient.readContract, getLogs: logsClient.getLogs };
-const activityCache = createBoundedCache<NusdActivityPage>({ maxEntries: 256, ttlMs: 5_000, maxInFlight: 32 });
+const ACTIVITY_FRESH_MS = 5_000;
+// Pages are kept this long so a visitor after a quiet spell (the home page asks on
+// every view) is answered at once while the next page loads behind the response.
+const ACTIVITY_RETAIN_MS = 5 * 60_000;
+const activityCache = createBoundedCache<NusdActivityPage>({ maxEntries: 256, ttlMs: ACTIVITY_RETAIN_MS, maxInFlight: 32 });
 // `force=1` is public: a forced read is reused for 2 s so repeating it cannot multiply upstream load.
 const forcedActivityCache = createBoundedCache<NusdActivityPage>({ maxEntries: 256, ttlMs: 2_000, maxInFlight: 32 });
 const filters = new Set<NusdActivityFilter>(["ALL", "BOUGHT", "MINTED", "LISTED", "CANCELLED", "OFFERS"]);
@@ -51,8 +55,17 @@ export async function GET(request: Request) {
     });
   };
   try {
-    const payload = force ? await forcedActivityCache.load(key, load) : await activityCache.load(key, load);
-    if (force) activityCache.set(key, payload);
+    let payload: NusdActivityPage;
+    const cached = force ? undefined : activityCache.entry(key);
+    if (force) {
+      payload = await forcedActivityCache.load(key, load);
+      activityCache.set(key, payload);
+    } else if (cached?.fresh) {
+      if (cached.ageMs >= ACTIVITY_FRESH_MS) after(() => activityCache.refresh(key, load).then(() => undefined, () => undefined));
+      payload = cached.value;
+    } else {
+      payload = await activityCache.refresh(key, load);
+    }
     return NextResponse.json(payload, { headers: force ? { "Cache-Control": "private, no-store" } : publicCdnCacheHeaders("public, max-age=0, s-maxage=5, stale-while-revalidate=5", 5, 5) });
   } catch {
     return NextResponse.json({ error: "NUSD marketplace activity is unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
