@@ -12,6 +12,7 @@ const NUSD = "0x677D63c78E77E0b1971530e1494Caee4Bd7d631e";
 const NFT = "0xd83cb7aCEF921f98b6B983cBB712a583869Da9eB";
 const DEPLOYED = "0x1111111111111111111111111111111111111111";
 const generated = JSON.parse(readFileSync(new URL("../../lib/nusdMarketplace.generated.json", import.meta.url), "utf8"));
+const pending = { ...generated, address: "", owner: "", feeRecipient: "", deploymentBlock: "", deploymentHash: "" };
 const confirmed = {
   ...generated,
   address: DEPLOYED,
@@ -21,7 +22,7 @@ const confirmed = {
   deploymentHash: `0x${"ab".repeat(32)}`,
 };
 
-function configuration(override?: string, manifest = generated) {
+function configuration(override?: string, manifest = pending) {
   return evaluateModule<{ NUSD_MARKETPLACE_ADDRESS?: string }>(new URL("../../lib/nusdMarketplaceConfig.ts", import.meta.url), {
     "./publicConfig": { PIXEL_MARKET_NUSD_ADDRESS: NUSD }, "./nusdMarketplace": marketplace,
     "./nusdMarketplace.generated.json": { default: manifest },
@@ -46,7 +47,8 @@ test("pending generated config leaves trading off; a confirmed v2 record or over
   for (const manifest of [{ ...confirmed, chainId: 1 }, { ...confirmed, nusd: NFT }, { ...confirmed, implementation: "0x00" }, { ...confirmed, address: "" }]) {
     assert.equal(configuration(undefined, manifest).NUSD_MARKETPLACE_ADDRESS, undefined);
   }
-  assert.equal(generated.address, "");
+  assert.equal(generated.address, "0x1790cA481db1B8EDBCf02AC14dec70fA522aFa61");
+  assert.equal(configuration(undefined, generated).NUSD_MARKETPLACE_ADDRESS, generated.address);
   assert.equal(generated.nusd.toLowerCase(), NUSD.toLowerCase());
   assert.equal(generated.implementation, marketplace.NUSD_MARKET_IMPLEMENTATION);
   assert.equal(generated.platformFeeBps, 40);

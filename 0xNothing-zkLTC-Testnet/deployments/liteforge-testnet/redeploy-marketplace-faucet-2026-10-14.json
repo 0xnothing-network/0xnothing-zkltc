@@ -1,0 +1,39 @@
+{
+  "chainId": 4441,
+  "sourceCommit": "03f17a9",
+  "deployer": "0x58633401dCc383F010688e950878000000000000",
+  "TestnetFaucet": {
+    "address": "0xFDd7D769C36b3829E8Aa908a5E455832F312FE38",
+    "tx": "0xc771760812e1c5c8013b12811ebb52e56d066ba84f20e917997ad7f69e35226d",
+    "block": 60891934,
+    "params": {
+      "nativeDrip": "0.02 zkLTC",
+      "nusdDrip": "1 NUSD",
+      "cooldownSeconds": 28800,
+      "dailyNativeCap": "0.2 zkLTC",
+      "dailyNusdCap": "10 NUSD"
+    },
+    "fund.native(0.3 zkLTC)": "0xb4f40f667e063e8dea790078ab091c058ad545362cd54359be75bc1cf4c92e36",
+    "fund.nusd(3 NUSD)": "0x10e84aa6f78d7cc106c62fda133ad51c2c8f73f64e5608efeeead44a4d99d1ea"
+  },
+  "NusdNftMarketplace": {
+    "address": "0x1790cA481db1B8EDBCf02AC14dec70fA522aFa61",
+    "tx": "0x1dde03fd3fa899af09e0822448bac41921f0b76838df83e00b23bd7a63c68080",
+    "block": 60891872,
+    "record": "nusd-marketplace.json"
+  },
+  "seed": {
+    "OracleNUSD.mintAtOracle(0.05 zkLTC)": "0x2956820e012c8d4a4d8b14db5f30639d6d33cf68cbc46d0f273aef250a806ca2",
+    "nBTC/NUSD": {
+      "depositAndMint": "0xd56e28c1e6b33311e1c95620018381e7eb506cb5067d51325b196c9b66b71cdb",
+      "addLiquidity": "0xf5b0342017a8bbf404fa48823ce87c211d2a0c0461ff23508cf75de557848c22",
+      "nusdCollateral": "1.5 NUSD"
+    },
+    "nETH/NUSD": {
+      "depositAndMint": "0xed8302bb43955d4da66307c85153a14feaa36524190c9e02b09707b2a6f29bdb",
+      "addLiquidity": "0xf2bfdfde101d7a13aa11ab24119d2ce0919f2dd7502f8532038a8b52406d6c20",
+      "nusdCollateral": "1.5 NUSD"
+    },
+    "wzkLTC/NUSD": "already liquid, skipped"
+  }
+}

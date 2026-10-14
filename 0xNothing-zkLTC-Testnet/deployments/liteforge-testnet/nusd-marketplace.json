@@ -1,0 +1,18 @@
+{
+  "chainId": 4441,
+  "address": "0x1790cA481db1B8EDBCf02AC14dec70fA522aFa61",
+  "nusd": "0x677D63c78E77E0b1971530e1494Caee4Bd7d631e",
+  "owner": "0x58633401dCc383F010688e950878000000000000",
+  "feeRecipient": "0x58633401dCc383F010688e950878000000000000",
+  "platformFeeBps": 40,
+  "collections": [
+    "0x33A32b9b2BEe864f9e42BFa39cA7BDC72f655988",
+    "0xd83cb7aCEF921f98b6B983cBB712a583869Da9eB"
+  ],
+  "implementation": "0xcacabae418335c9bc3d401a0085ac7f27c4ec267a89868777e5712e9d9653739",
+  "deploymentBlock": "60891872",
+  "deploymentHash": "0x1dde03fd3fa899af09e0822448bac41921f0b76838df83e00b23bd7a63c68080",
+  "gasUsed": "3305725",
+  "effectiveGasPrice": "10000000",
+  "gasCostZkLtc": "0.00003305725"
+}
