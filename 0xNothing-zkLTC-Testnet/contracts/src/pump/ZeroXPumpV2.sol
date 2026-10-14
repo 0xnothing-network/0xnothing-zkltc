@@ -10,6 +10,10 @@ import {IGraduationAdapter} from "../graduation/interfaces/IGraduationAdapter.so
 import {IGraduationRouter} from "../graduation/interfaces/IGraduationRouter.sol";
 import {PumpToken} from "./PumpToken.sol";
 
+interface IFeeSplitter {
+    function distribute() external returns (uint256 amountNusd);
+}
+
 /// @title 0xPump v2
 /// @notice ZeroXPump with protocol fees routed to an immutable fee splitter (50% staker reward
 ///         pool / 50% treasury) by a permissionless call, and selling left open while paused.
@@ -373,12 +377,14 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
         );
     }
 
-    /// @notice Sends every accrued protocol fee to the fee splitter. Permissionless.
+    /// @notice Sends every accrued protocol fee to the fee splitter, which forwards it 50/50 to the
+    ///         reward pool and the treasury in the same call. Permissionless.
     function distributeFees() external nonReentrant returns (uint256 amountNusd) {
         amountNusd = accruedProtocolFeesNusd;
         if (amountNusd == 0) revert InsufficientProtocolFees();
         accruedProtocolFeesNusd = 0;
         SafeTransferLib.safeTransfer(NUSD, feeRecipient, amountNusd);
+        IFeeSplitter(feeRecipient).distribute();
         emit ProtocolFeesDistributed(msg.sender, feeRecipient, amountNusd);
     }
 

@@ -48,6 +48,17 @@ contract FeeSplitter is ReentrancyGuard {
         amountFlushedNusd = _distribute();
     }
 
+    /// @notice Synth-vault activation check. v2 has no fee gauges: each vault routes its own mint fee
+    ///         here, so the "fee pair" of a vault is the vault itself (identity mapping).
+    function mintFeePairForVault(address vault) external pure returns (address) {
+        return vault;
+    }
+
+    /// @notice Inverse of `mintFeePairForVault`.
+    function mintFeeVaultForPair(address pair) external pure returns (address) {
+        return pair;
+    }
+
     /// @notice Splits the whole NUSD balance: half (rounded down) to the pool, the rest to the treasury.
     function distribute() external nonReentrant returns (uint256 amountNusd) {
         amountNusd = _distribute();

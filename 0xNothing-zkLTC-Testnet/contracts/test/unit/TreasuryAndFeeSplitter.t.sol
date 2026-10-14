@@ -70,6 +70,13 @@ contract TreasuryAndFeeSplitterTest is TestBase {
         splitter.sweepNative();
     }
 
+    function testSynthVaultActivationShimIsAnIdentityMapping() public view {
+        address vault = address(0x5A17);
+        assertEq(splitter.mintFeePairForVault(vault), vault, "pair of vault");
+        assertEq(splitter.mintFeeVaultForPair(splitter.mintFeePairForVault(vault)), vault, "round trip");
+        assertEq(address(splitter.nusd()), address(nusd), "vault constructor check");
+    }
+
     function testSplitterRejectsBadWiring() public {
         vm.expectRevert(FeeSplitter.InvalidConfiguration.selector);
         new FeeSplitter(IERC20(address(nusd)), POOL, POOL);

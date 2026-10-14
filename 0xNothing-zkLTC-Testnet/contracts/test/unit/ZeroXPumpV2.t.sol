@@ -75,8 +75,7 @@ contract ZeroXPumpV2Test is TestBase {
         assertEq(sent, fees, "all fees");
         assertEq(pump.accruedProtocolFeesNusd(), 0, "ledger cleared");
         assertEq(nusd.balanceOf(address(pump)), reserves, "only curve reserves remain");
-
-        splitter.distribute();
+        assertEq(nusd.balanceOf(address(splitter)), 0, "split in the same call");
         assertEq(nusd.balanceOf(POOL), fees / 2, "50% reward pool");
         assertEq(nusd.balanceOf(TREASURY), fees - fees / 2, "50% treasury");
 
