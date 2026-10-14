@@ -44,6 +44,8 @@ interface ListingsPayload {
 
 const MARKETPLACE_MULTICALL_BATCH_SIZE = 16_384;
 const payloadCache = createBoundedCache<ListingsPayload>({ maxEntries: 256, ttlMs: 3_000, maxInFlight: 32 });
+// `force=1` is public: a forced read is reused for 2 s so repeating it cannot multiply RPC load.
+const forcedPayloadCache = createBoundedCache<ListingsPayload>({ maxEntries: 256, ttlMs: 2_000, maxInFlight: 32 });
 const pixelTokenCache = createBoundedCache<TokenDTO | null>({ maxEntries: 4_096, ttlMs: 60_000 });
 
 export async function GET(request: Request) {
@@ -64,7 +66,7 @@ export async function GET(request: Request) {
     return { currency: "NUSD", marketplace: NUSD_MARKETPLACE_ADDRESS!, blockNumber: state.blockNumber.toString(), totalCount: state.listingCount.toString(), page, listings, tokens: { ...pixel, ...generic } };
   };
   try {
-    const payload = force ? await payloadCache.refresh(`force:${key}`, load, 0) : await payloadCache.load(key, load);
+    const payload = force ? await forcedPayloadCache.load(key, load) : await payloadCache.load(key, load);
     if (force) payloadCache.set(key, payload);
     return NextResponse.json(payload, { headers: force ? { "Cache-Control": "private, no-store" } : publicCdnCacheHeaders("public, max-age=0, s-maxage=3, stale-while-revalidate=3", 3, 3) });
   } catch {

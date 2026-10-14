@@ -65,21 +65,6 @@ export function normalizePumpIpfsPath(value: string): string {
   return [normalizedCid, ...segments].join("/");
 }
 
-export function ipfsToGatewayUrl(uri: string): string {
-  if (!uri) return "";
-  if (uri.startsWith("ipfs://")) {
-    const cidPath = normalizePumpIpfsPath(uri);
-    if (!cidPath) return "";
-    const [cid, ...pathParts] = cidPath.split("/");
-    if (cid.startsWith("b")) {
-      const path = pathParts.length > 0 ? `/${pathParts.join("/")}` : "/";
-      return `https://${cid}.ipfs.dweb.link${path}`;
-    }
-    return `${IPFS_GATEWAY_URL}${cidPath}`;
-  }
-  return /^https?:\/\//i.test(uri) ? uri : "";
-}
-
 const MAX_EXTERNAL_URL_LENGTH = 2_048;
 
 /**
@@ -105,15 +90,16 @@ export function isValidPumpExternalUrl(value: string, maxLength = MAX_EXTERNAL_U
   return Boolean(normalizePumpExternalUrl(value, maxLength));
 }
 
-/** Same-origin, content-addressed image URL used by 0xPump logo components. */
+/**
+ * Same-origin, content-addressed image URL used by 0xPump logo components. Image
+ * URIs are chosen by whoever calls the factory, so anything other than IPFS falls
+ * back to the initials logo: a creator-chosen host never sees who views a token.
+ */
 export function getPumpImageUrl(uri: string, symbol = ""): string {
   const cidPath = normalizePumpIpfsPath(uri);
-  if (uri.trim().toLowerCase().startsWith("ipfs://") && cidPath) {
-    const params = new URLSearchParams({ cid: cidPath });
-    const initials = symbol.trim().replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase();
-    if (initials) params.set("symbol", initials);
-    return `/api/pump/image?${params.toString()}`;
-  }
-
-  return normalizePumpExternalUrl(uri);
+  if (!uri.trim().toLowerCase().startsWith("ipfs://") || !cidPath) return "";
+  const params = new URLSearchParams({ cid: cidPath });
+  const initials = symbol.trim().replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase();
+  if (initials) params.set("symbol", initials);
+  return `/api/pump/image?${params.toString()}`;
 }

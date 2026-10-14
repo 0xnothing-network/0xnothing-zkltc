@@ -8,7 +8,6 @@ import { useAccount, useConfig, usePublicClient, useReadContract, useSwitchChain
 import { pumpGraduationControllerAbi, pumpGraduationRouterAbi, zeroXPumpAbi } from "@/features/pump/abis";
 import { usePumpMarket } from "@/features/pump/hooks/usePumpData";
 import {
-  ipfsToGatewayUrl,
   normalizePumpIpfsPath,
   normalizePumpExternalUrl,
   PUMP_CHAIN_ID,
@@ -206,9 +205,9 @@ export function TokenDetail({ token }: { token: Address }) {
   const query = usePumpMarket(token);
   const market = query.data?.market;
   const metadataCid = market ? normalizePumpIpfsPath(market.metadataURI) : "";
-  const metadataUrl = metadataCid
-    ? `/api/pump/metadata?cid=${encodeURIComponent(metadataCid)}`
-    : market ? ipfsToGatewayUrl(market.metadataURI) : "";
+  // Metadata URIs are creator-controlled: IPFS content goes through the bounded
+  // server proxy, and no other host is ever fetched from a visitor's browser.
+  const metadataUrl = metadataCid ? `/api/pump/metadata?cid=${encodeURIComponent(metadataCid)}` : "";
   const metadata = useQuery({
     queryKey: ["pump-token-metadata", metadataUrl],
     enabled: Boolean(metadataUrl),

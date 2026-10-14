@@ -26,6 +26,14 @@ const nftCache = createBoundedCache<NativeNft[]>({
   ttlMs: CACHE_TTL,
   maxInFlight: CACHE_MAX_ENTRIES,
 });
+// `force=1` is public, so a forced read is shared for this long: callers still see
+// the chain after their own transaction, while repeating it cannot multiply RPC load.
+const FORCED_REUSE_MS = 2_000;
+const forcedNftCache = createBoundedCache<NativeNft[]>({
+  maxEntries: CACHE_MAX_ENTRIES,
+  ttlMs: FORCED_REUSE_MS,
+  maxInFlight: CACHE_MAX_ENTRIES,
+});
 
 export interface NativeNft {
   collection: `0x${string}`;
@@ -38,10 +46,10 @@ export interface NativeNft {
 async function fetchNativeNfts(address: string, force = false): Promise<NativeNft[]> {
   if (!force) return nftCache.load(address, () => loadNativeNfts(address, false));
 
-  // A forced reload must read past the subgraph's own response cache, so it neither
-  // uses the cached entry nor joins a non-forced load. It still coalesces with other
-  // forced reloads (a key that is never retained) and then seeds the shared entry.
-  const tokens = await nftCache.refresh(`force:${address}`, () => loadNativeNfts(address, true), 0);
+  // A forced reload reads past the token-id cache, so it never answers from a
+  // non-forced entry. It joins or reuses the last forced read of the past two
+  // seconds, then seeds the shared entry.
+  const tokens = await forcedNftCache.load(address, () => loadNativeNfts(address, true));
   nftCache.set(address, tokens);
   return tokens;
 }

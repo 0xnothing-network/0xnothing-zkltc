@@ -49,3 +49,13 @@ test("failed and oversized metadata is negatively cached without retry storms", 
   await get();
   assert.equal(calls, 2);
 });
+
+test("token logos load only from IPFS through the same-origin proxy", () => {
+  const { getPumpImageUrl } = evaluateModule<{ getPumpImageUrl: (uri: string, symbol?: string) => string }>(
+    new URL("../../features/pump/config.ts", import.meta.url), { "@/lib/publicConfig": {} }, { URLSearchParams },
+  );
+  assert.equal(getPumpImageUrl(`ipfs://${cid}`, "zk"), `/api/pump/image?cid=${cid}&symbol=ZK`);
+  for (const uri of ["https://tracker.example/logo.png", "http://tracker.example/logo.png", "data:image/png;base64,AAAA", "ipfs://not a cid", ""]) {
+    assert.equal(getPumpImageUrl(uri, "ZK"), "", `${uri} must fall back to the initials logo`);
+  }
+});

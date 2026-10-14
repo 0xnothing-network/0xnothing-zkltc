@@ -15,6 +15,8 @@ export const revalidate = 0;
 // Contract and block reads keep the batching client; parallel getLogs slices use the unbatched one.
 const activityClient = { getChainId: publicClient.getChainId, getBlock: publicClient.getBlock, readContract: publicClient.readContract, getLogs: logsClient.getLogs };
 const activityCache = createBoundedCache<NusdActivityPage>({ maxEntries: 256, ttlMs: 5_000, maxInFlight: 32 });
+// `force=1` is public: a forced read is reused for 2 s so repeating it cannot multiply upstream load.
+const forcedActivityCache = createBoundedCache<NusdActivityPage>({ maxEntries: 256, ttlMs: 2_000, maxInFlight: 32 });
 const filters = new Set<NusdActivityFilter>(["ALL", "BOUGHT", "MINTED", "LISTED", "CANCELLED", "OFFERS"]);
 
 export async function GET(request: Request) {
@@ -49,7 +51,7 @@ export async function GET(request: Request) {
     });
   };
   try {
-    const payload = force ? await activityCache.refresh(`force:${key}`, load, 0) : await activityCache.load(key, load);
+    const payload = force ? await forcedActivityCache.load(key, load) : await activityCache.load(key, load);
     if (force) activityCache.set(key, payload);
     return NextResponse.json(payload, { headers: force ? { "Cache-Control": "private, no-store" } : publicCdnCacheHeaders("public, max-age=0, s-maxage=5, stale-while-revalidate=5", 5, 5) });
   } catch {

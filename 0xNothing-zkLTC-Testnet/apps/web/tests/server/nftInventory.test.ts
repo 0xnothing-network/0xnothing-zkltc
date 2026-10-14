@@ -149,4 +149,9 @@ test("large packed-collection wallet reads packed art in bounded ordered batches
   assert.equal(peak, 1, "packed metadata progresses in bounded batches before NUSD mapping");
   assert.deepEqual(freshness, [true]);
   assert.match(response.headers.get("cache-control") ?? "", /no-store/);
+
+  const repeated = await route.GET(new Request(`https://app.test/api/user-nfts?address=${owner}&force=1`));
+  assert.equal((await repeated.json()).count, 45);
+  assert.deepEqual(freshness, [true], "a repeated public force=1 reuses the forced read of the last two seconds");
+  assert.deepEqual(widths, [20, 20, 5]);
 });
