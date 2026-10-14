@@ -40,6 +40,7 @@
   --accent-pump: #b6f09c;
   --accent-fi: #7aa2ff;
   --accent-pixel: #e3a6ff;
+  --accent-nusd: #63d5c6;
 
   /* Default accent = hub silver; product roots override below. */
   --accent: var(--accent-hub);
@@ -104,6 +105,7 @@
   --accent-pump: #9be27a;
   --accent-fi: #3e6fe0;
   --accent-pixel: #8a35b5;
+  --accent-nusd: #0e8a7e;
   --accent-ink: #ffffff;
   --hero-from: #0e1116;
   --hero-to: #69717b;
