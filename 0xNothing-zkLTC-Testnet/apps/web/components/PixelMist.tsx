@@ -22,9 +22,10 @@ type Particle = {
 const COLORS = {
   pump: { red: 119, green: 255, blue: 177, haloAlpha: 0.05, pixelAlpha: 0.15 },
   fi: { red: 181, green: 240, blue: 206, haloAlpha: 0.04, pixelAlpha: 0.12 },
+  nusd: { red: 99, green: 213, blue: 198, haloAlpha: 0.04, pixelAlpha: 0.12 },
 } as const;
 
-function PixelMistComponent({ product }: { product: "fi" | "pump" }) {
+function PixelMistComponent({ product }: { product: keyof typeof COLORS }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {

@@ -9,7 +9,7 @@ import { getAddressExplorerUrl, shortenAddress } from "@/lib/contract";
 import { PUMP_NUSD_ADDRESS } from "@/lib/publicConfig";
 import { ThemeToggle } from "./ThemeToggle";
 
-export type ProductId = "pump" | "fi" | "pixel";
+export type ProductId = "pump" | "fi" | "pixel" | "nusd";
 export type ProductNavItem = { href: string; label: string; icon?: ReactNode };
 export type HeaderNotice = (kind: "success" | "error" | "warning", title: string, message?: string) => void;
 
@@ -18,6 +18,7 @@ const PRODUCTS: { id: ProductId; name: string; href: string }[] = [
   { id: "pump", name: "Pump", href: "/0xPump" },
   { id: "fi", name: "Fi", href: "/0xFi" },
   { id: "pixel", name: "Pixel", href: "/0xpixel" },
+  { id: "nusd", name: "NUSD", href: "/nusd" },
 ];
 const balanceAbi = [{ type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ name: "", type: "uint256" }] }] as const;
 

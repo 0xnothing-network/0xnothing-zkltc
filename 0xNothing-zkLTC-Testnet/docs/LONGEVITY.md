@@ -13,7 +13,7 @@ Toàn bộ contract đã deploy là bất biến, không có proxy. Chúng khôn
 | Phân tích tĩnh (Slither 0.11.6, mức High/Medium) | Không có phát hiện thật. Các cờ còn lại là mẫu có chủ đích: Newton seed của `mulDiv`, kiểm tra chênh lệch số dư trong hàm `nonReentrant`, so sánh `== 0` |
 | Graduation của 0xPump | Permissionless. Admin của Pump là `PumpGraduationController`, nên ai cũng bấm được nút Graduate trên web. Không cần keeper |
 | 0xPoints (v2) | `RewardStaking` không owner, không pause. Ai cũng đóng vòng khi pool đủ 10,000 NUSD; claim không hết hạn; gốc luôn rút được khi đáo hạn. Points v1 và API ký voucher đã bị gỡ khỏi web |
-| Phí giao thức (v2) | Pump, router, lending, synth đều gửi phí tới `FeeSplitter` hoặc quỹ bằng lời gọi công khai; trang Earn có nút Send cho từng nguồn |
+| Phí giao thức (v2) | Pump, router, lending, synth đều gửi phí tới `FeeSplitter` hoặc quỹ bằng lời gọi công khai; trang NUSD → Earn (`/nusd/earn`) có nút Send cho từng nguồn |
 | Lending | Lãi tuyến tính theo thời gian, cộng dồn ở mỗi tương tác; không tràn số dù để yên nhiều năm |
 | `ZeroXFiPair` dùng `uint32` timestamp | Mẫu TWAP của Uniswap V2, tràn có chủ đích (năm 2106) |
 | Marketplace zkLTC cũ | **Đã pause** (tx `0x5cdff334…a65d`), không ai mua được 566 listing giá cũ |
@@ -24,7 +24,7 @@ Toàn bộ contract đã deploy là bất biến, không có proxy. Chúng khôn
 
 | Phụ thuộc | Nếu ngừng hoạt động | Mức độ |
 | --- | --- | --- |
-| **Oracle DIA trên LiteForge** (LTC, BTC, ETH; giới hạn tuổi giá 90 phút) | Mint/redeem NUSD, vay, mint synth, thanh lý, vote mint đều dừng (fail-closed). **Testnet v2:** NUSD v2 có `emergencyRedeem`: ai cũng báo lỗi oracle, sau 7 ngày người giữ NUSD rút zkLTC theo tỷ lệ, không cần giá, không ai chặn được (trang NUSD có panel "Emergency exit"). NUSD v1 vẫn không có lối thoát này | Cao, ngoài tầm kiểm soát |
+| **Oracle DIA trên LiteForge** (LTC, BTC, ETH; giới hạn tuổi giá 90 phút) | Mint/redeem NUSD, vay, mint synth, thanh lý, vote mint đều dừng (fail-closed). **Testnet v2:** NUSD v2 có `emergencyRedeem`: ai cũng báo lỗi oracle, sau 7 ngày người giữ NUSD rút zkLTC theo tỷ lệ, không cần giá, không ai chặn được (trang NUSD → Mint, `/nusd`, có panel "Emergency exit"). NUSD v1 vẫn không có lối thoát này | Cao, ngoài tầm kiểm soát |
 | RPC Caldera | Web và ví tự chuyển từ `infra-partner-http` sang `/http` công khai (cùng origin). Nếu cả hai đổi, cập nhật `LITVM_RPC_URL` / `LITVM_RPC_FALLBACK_URL` trong `apps/web/lib/publicConfig.ts` và `apps/wallet/src/config/chain.ts` | Thấp |
 | Goldsky (subgraph 0xPump, 0xFi, marketplace NUSD) | Mọi trang có đường dự phòng đọc RPC: Pump đọc markets/trades/holders, 0xFi có RPC tail, NUSD activity quét log. Chậm hơn nhưng không hỏng | Thấp |
 | Hosting (Railway, 1 replica, có healthcheck `/api/health`) | Web ngừng hiển thị; contract vẫn chạy và dùng được qua explorer | Trung bình: cần trả tiền đủ 2 năm |
@@ -52,7 +52,7 @@ Ví `0x58633401dCc383F010688e950878000000000000` đang là owner, guardian và t
 6. **Points v1:** không còn dùng. Ai còn stake ở `NusdPointsStaking` v1 rút gốc qua explorer khi đáo hạn (web đã gỡ giao diện v1).
 7. **Merge và deploy** branch `feat/tokenomics-v2` lên hosting. Các subgraph cũ đã bị xoá khỏi Goldsky, nên bản web đang chạy (bản cũ) tự chuyển sang đọc RPC cho tới khi deploy bản mới.
 8. **Goldsky:** giữ tài khoản hoạt động; nếu subgraph bị xóa, web tự dùng RPC.
-9. **Ngân sách vote:** nạp tối đa 3,000 NUSD vào `SurplusMintGovernor` (trang Vote → "Fund incentives") nếu muốn người bỏ phiếu được thưởng 1–10 NUSD.
+9. **Ngân sách vote:** nạp tối đa 3,000 NUSD vào `SurplusMintGovernor` (trang NUSD → Vote → "Fund incentives") nếu muốn người bỏ phiếu được thưởng 1–10 NUSD.
 10. **Vòng thưởng đầu tiên:** pool chỉ đầy dần theo phí thật. Nếu muốn khởi động sớm, chuyển NUSD từ quỹ vào `RewardStaking` (contract coi phần dư là pool).
 
 ## 5. Khi quay lại hoặc nhờ người khác kiểm tra

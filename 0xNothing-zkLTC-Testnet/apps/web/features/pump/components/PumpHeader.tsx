@@ -7,7 +7,6 @@ import { useToast } from "@/components/Toast";
 const PUMP_NAV = [
   { href: "/0xPump", label: "Discover" },
   { href: "/0xPump/create", label: "Create" },
-  { href: "/0xPump/nusd", label: "NUSD" },
   { href: "/0xPump/portfolio", label: "Portfolio" },
   { href: "/0xPump/stats", label: "Stats" },
 ] as const;

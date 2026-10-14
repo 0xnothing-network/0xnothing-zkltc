@@ -1,0 +1,10 @@
+/* The mint panels keep their 0xPump styles; inside NUSD the pump scope is only a style boundary. */
+.nusd-product .pump-shell.nusd-mint {
+  min-height: 0;
+  overflow-x: visible;
+  background: transparent;
+  isolation: auto;
+  display: grid;
+  gap: 16px;
+}
+.nusd-product .nusd-mint .pump-vault { margin-top: 0; }

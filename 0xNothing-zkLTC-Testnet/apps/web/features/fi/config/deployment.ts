@@ -1,5 +1,6 @@
 import { getAddress, isAddress, zeroAddress, type Address } from "viem";
 import testnet from "@fi/config/testnet.generated.json";
+import { LITVM_RPC_URL } from "@/lib/publicConfig";
 
 export const LITVM_CHAIN_ID = 4441 as const;
 
@@ -43,9 +44,8 @@ export const deployment = {
   chain: {
     id: LITVM_CHAIN_ID,
     name: "LitVM LiteForge",
-    rpcUrl:
-      process.env.NEXT_PUBLIC_LITVM_RPC_URL?.trim() ||
-      "https://liteforge.rpc.caldera.xyz/infra-partner-http",
+    // Every client uses the infra-partner endpoint first (lib/rpcTransport adds the public fallback).
+    rpcUrl: LITVM_RPC_URL,
     explorerUrl:
       process.env.NEXT_PUBLIC_LITVM_EXPLORER_URL?.trim() ||
       "https://liteforge.explorer.caldera.xyz",

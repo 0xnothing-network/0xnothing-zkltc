@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: "Community vote to mint NUSD from surplus zkLTC reserve back down to 2x backing.",
 };
 
-export default function VotePage() {
+export default function NusdVotePage() {
   return (
     <div className="fi-page">
       <PageHeading title="Vote" description="When the zkLTC reserve reaches 3x the NUSD supply, the community decides whether to mint the surplus." />

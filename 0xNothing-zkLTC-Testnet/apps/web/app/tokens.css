@@ -50,6 +50,7 @@
   --accent-pump: #b6f09c;
   --accent-fi: #7aa2ff;
   --accent-pixel: #e3a6ff;
+  --accent-nusd: #63d5c6;
 
   /* Default accent = hub silver; product roots override below. */
   --accent: var(--accent-hub);
@@ -114,6 +115,7 @@
   --accent-pump: #9be27a;
   --accent-fi: #3e6fe0;
   --accent-pixel: #8a35b5;
+  --accent-nusd: #0e8a7e;
   --accent-ink: #ffffff;
   --hero-from: #0e1116;
   --hero-to: #69717b;
@@ -130,8 +132,11 @@
 .pump-shell { --accent: var(--accent-pump); --accent-ink: #0b1a05; --accent-text: var(--accent-pump); }
 .fi-root { --accent: var(--accent-fi); --accent-ink: #050b1a; --accent-text: var(--accent-fi); }
 .pixel-product { --accent: var(--accent-pixel); --accent-ink: #1d0629; --accent-text: var(--accent-pixel); }
+/* NUSD reuses the 0xFi and 0xPump surfaces, so its root and the mint panel's pump scope both take the NUSD accent. */
+.fi-root.nusd-product, .nusd-product .pump-shell { --accent: var(--accent-nusd); --accent-ink: #04181a; --accent-text: var(--accent-nusd); }
 :root[data-theme="light"] .pump-shell { --accent-ink: #0b1a05; --accent-text: #3c7a1e; }
 :root[data-theme="light"] :is(.fi-root, .pixel-product) { --accent-ink: #ffffff; }
+:root[data-theme="light"] :is(.fi-root.nusd-product, .nusd-product .pump-shell) { --accent-ink: #ffffff; --accent-text: var(--accent-nusd); }
 
 /*
  * Aliases. Product stylesheets predate the system; mapping their

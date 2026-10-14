@@ -18,7 +18,7 @@ graph LR
   Market -->|0.4%| Creator[Người tạo NFT]
 ```
 
-Không có admin nào rút được phí. Mọi nguồn phí đều được "đẩy" đi bằng một lời gọi ai cũng thực hiện được (trang Earn có bảng "Revenue and treasury" với nút Send). Chỉ quỹ `OwnerTreasury` là do ví owner chi tiêu.
+Không có admin nào rút được phí. Mọi nguồn phí đều được "đẩy" đi bằng một lời gọi ai cũng thực hiện được (trang NUSD → Earn, `/nusd/earn`, có bảng "Revenue and treasury" với nút Send). Chỉ quỹ `OwnerTreasury` là do ví owner chi tiêu.
 
 ## Luật
 
@@ -36,7 +36,7 @@ Không có admin nào rút được phí. Mọi nguồn phí đều được "đ
 ## Giới hạn cần biết
 
 - **Sybil:** "≥ 10 người, mỗi người khoá 100 NUSD" nghĩa là một người có 10 ví và 1,000 NUSD vẫn tự thông qua được một vote. Rủi ro này được chặn bởi điều kiện 3× (vote chỉ mở khi dự trữ dư thật) và việc contract tự kiểm tra lại 3×/2× khi mint. Phần thưởng 1–10 NUSD dùng `prevrandao`, không phải ngẫu nhiên an toàn; ngân sách bị giới hạn 3,000 NUSD.
-- **Ngân sách khuyến khích chưa được nạp.** Ví deployer chỉ có khoảng 3.5 zkLTC sau khi deploy. Ai cũng nạp được (trang Vote → "Fund incentives"), tổng tối đa 3,000 NUSD.
+- **Ngân sách khuyến khích chưa được nạp.** Ví deployer chỉ có khoảng 3.5 zkLTC sau khi deploy. Ai cũng nạp được (trang NUSD → Vote → "Fund incentives"), tổng tối đa 3,000 NUSD.
 - **Pool thưởng đầy dần theo phí thật.** Ở quy mô testnet hiện tại, để có 10,000 NUSD cần rất nhiều giao dịch. Owner có thể chuyển NUSD từ quỹ vào `RewardStaking` để khởi động vòng đầu; contract coi mọi NUSD dư so với gốc và thưởng đã phân bổ là pool.
 - Subgraph trên Goldsky chỉ còn bản mới: `zeroxpump-testnet/1.0.0`, `zeroxfi-testnet/1.0.0`, `pixel-nusd-market/1.1.0` (project `cmqmpust…`). Subgraph Pump xử lý cả sự kiện phí của mainnet để giữ bản mirror giống hệt.
 

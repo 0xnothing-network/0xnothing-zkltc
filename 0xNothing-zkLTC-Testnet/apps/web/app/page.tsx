@@ -22,7 +22,8 @@ export const metadata: Metadata = {
 
 const links = [
   { href: "/0xPump", label: "0xPump", description: "Launch & discover tokens" },
-  { href: "/0xFi", label: "0xFi", description: "Swap, lend & earn" },
+  { href: "/0xFi", label: "0xFi", description: "Swap, lend & farm" },
+  { href: "/nusd", label: "NUSD", description: "Mint, stake & vote" },
   { href: "/0xpixel", label: "0xPixel", description: "Create & collect pixel art" },
 ] as const;
 

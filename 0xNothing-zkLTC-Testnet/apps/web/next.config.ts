@@ -94,6 +94,8 @@ const nextConfig: NextConfig = {
         destination: "/0xFi/earn",
         permanent: true,
       },
+      { source: "/0xPump/nusd", destination: "/nusd", permanent: true },
+      { source: "/0xFi/vote", destination: "/nusd/vote", permanent: true },
     ];
   },
   async headers() {

@@ -568,13 +568,13 @@ export default function DocsPage() {
               <SectionHeading
                 icon={<Coins size={21} aria-hidden="true" />}
                 title="0xFi"
-                description="The liquidity and risk layer for swaps, pools, NUSD staking, LP gauges, fixed-rate NUSD lending, borrowing, and DIA-priced synthetic assets."
+                description="The liquidity and risk layer for swaps, pools, LP farms, fixed-rate NUSD lending, borrowing, and DIA-priced synthetic assets."
               />
               <div className="ox-docs-fi-surfaces">
                 <div><strong>Swap and pools</strong><span>Constant-product pairs, one LP token per unordered pair, and router-protected liquidity operations.</span></div>
-                <div><strong>NUSD</strong><span>Oracle-priced mint and redeem against native zkLTC. Stale or invalid DIA data blocks value-changing actions.</span></div>
-                <div><strong>Earn</strong><span>Stake NUSD for 0xPoints; each 10,000 NUSD reward round is split by points. Half of all NUSD fees fill the pool, half go to the treasury.</span></div>
-                <div><strong>Vote</strong><span>At 3× reserve/supply the community can mint NUSD back to 2×, split between the reward pool and the treasury.</span></div>
+                <div><strong>NUSD · Mint</strong><span>In the NUSD app. Oracle-priced mint and redeem against native zkLTC. Stale or invalid DIA data blocks value-changing actions.</span></div>
+                <div><strong>NUSD · Earn</strong><span>Stake NUSD for 0xPoints; each 10,000 NUSD reward round is split by points. Half of all NUSD fees fill the pool, half go to the treasury.</span></div>
+                <div><strong>NUSD · Vote</strong><span>At 3× reserve/supply the community can mint NUSD back to 2×, split between the reward pool and the treasury.</span></div>
                 <div><strong>Lend and borrow</strong><span>Fixed 4.5% borrower rate, 4% lender rate, and 0.5% protocol spread on the active testnet pool.</span></div>
                 <div><strong>Synths</strong><span>nBTC and nETH use DIA prices, isolated collateral accounting, reserve support rules, and stale-feed guards.</span></div>
               </div>

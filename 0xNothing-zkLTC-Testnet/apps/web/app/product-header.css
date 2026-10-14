@@ -69,6 +69,7 @@
 .ox-switcher a[data-product="pump"]::before { background: var(--accent-pump); }
 .ox-switcher a[data-product="fi"]::before { background: var(--accent-fi); }
 .ox-switcher a[data-product="pixel"]::before { background: var(--accent-pixel); }
+.ox-switcher a[data-product="nusd"]::before { background: var(--accent-nusd); }
 .ox-switcher a:not(.active)::before { opacity: .45; }
 .ox-switcher a.active { background: var(--surface-3); color: var(--text-1); }
 .ox-switcher a:hover:not(.active) { color: var(--text-1); }
