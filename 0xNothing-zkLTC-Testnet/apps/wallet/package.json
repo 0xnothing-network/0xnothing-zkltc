@@ -19,7 +19,7 @@
   "dependencies": {
     "@capacitor/browser": "8.0.4",
     "@capacitor/clipboard": "8.0.1",
-    "@capacitor/core": "8.5.0",
+    "@capacitor/core": "8.5.3",
     "@capacitor/preferences": "8.0.1",
     "@types/qrcode": "1.5.6",
     "qrcode": "1.5.4",
@@ -28,8 +28,8 @@
     "viem": "2.55.10"
   },
   "devDependencies": {
-    "@capacitor/android": "8.5.0",
-    "@capacitor/cli": "8.5.0",
+    "@capacitor/android": "8.5.3",
+    "@capacitor/cli": "8.5.3",
     "@types/chrome": "0.2.7",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.5",
