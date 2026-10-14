@@ -79,7 +79,9 @@ test("marketplace uses verified RPC metadata when indexed metadata has no image"
           })),
         },
       },
-      "@/lib/marketplaceAbi": { MarketplaceAbi: [], marketplaceNftKey: (address: string, tokenId: string) => `${address}:${tokenId}` },
+      "@/lib/nusdMarketplaceConfig": { NUSD_MARKETPLACE_ADDRESS: marketplace, NFT_NUSD_ADDRESS: seller },
+      "@/lib/nusdMarketplace": { readNusdMarket: async () => ({ blockNumber: 100n, listingCount: 1n, listings: [{ id: 1n, collection, tokenId: 1n, price: 5n, seller, active: true }] }) },
+      "@/lib/pixelV2Abi": { PixelV2ABI: [] },
       "@/lib/pixelCollections": {
         PIXEL_COLLECTIONS: [{ address: collection, version: 1 }],
         PIXEL_V2_ENABLED: false,

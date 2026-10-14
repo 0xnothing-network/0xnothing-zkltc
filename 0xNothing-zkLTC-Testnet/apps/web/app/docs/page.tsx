@@ -20,9 +20,9 @@ import {
 import { DocsCodeBlock } from "./DocsCodeBlock";
 import { deployment } from "@fi/config/deployment";
 import testnet from "@fi/config/testnet.generated.json";
+import { NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
 import {
   MARKETPLACE_SUBGRAPH_URL,
-  PIXEL_MARKETPLACE_ADDRESS,
   PIXEL_NFT_ADDRESS,
   PUMP_FACTORY_ADDRESS,
   PUMP_GRADUATION_CONTROLLER_ADDRESS,
@@ -67,7 +67,7 @@ const NAV_GROUPS = [
 
 const CORE_CONTRACTS = [
   { name: "0xPixel NFT", address: PIXEL_NFT_ADDRESS, use: "Fully onchain pixel art ERC-721" },
-  { name: "0xPixel Marketplace", address: PIXEL_MARKETPLACE_ADDRESS, use: "Listings and native zkLTC offers" },
+  ...(NUSD_MARKETPLACE_ADDRESS ? [{ name: "0xPixel NUSD Marketplace", address: NUSD_MARKETPLACE_ADDRESS, use: "NUSD listings, escrowed offers and reusable credits" }] : []),
   { name: "NUSD / OracleNUSD", address: testnet.nusd, use: "Oracle-priced settlement asset" },
   { name: "0xPump", address: PUMP_FACTORY_ADDRESS, use: "Bonding-curve token launchpad" },
   { name: "0xPump Controller", address: PUMP_GRADUATION_CONTROLLER_ADDRESS, use: "Fail-closed graduation coordination" },
@@ -104,7 +104,7 @@ export const publicClient = createPublicClient({
 
 export const contracts = {
   pixel: "${PIXEL_NFT_ADDRESS}",
-  pixelMarketplace: "${PIXEL_MARKETPLACE_ADDRESS}",
+  pixelMarketplace: "${NUSD_MARKETPLACE_ADDRESS ?? "not-configured"}",
   nusd: "${testnet.nusd}",
   pump: "${PUMP_FACTORY_ADDRESS}",
   fiRouter: "${testnet.dexRouter}",
@@ -519,19 +519,20 @@ export default function DocsPage() {
               <SectionHeading
                 icon={<ImageSquare size={21} aria-hidden="true" />}
                 title="0xPixel"
-                description="A fully onchain pixel-art studio, ERC-721 collection, provenance registry, gallery, and native zkLTC marketplace."
+                description="A fully onchain pixel-art studio, ERC-721 collection, provenance registry, gallery, and NUSD NFT marketplace."
               />
               <div className="ox-docs-mechanism-grid">
                 <div><strong>Onchain art</strong><p>Pixel runs, artwork name, grid size, creator, mint time, and artwork hash live in contract storage.</p></div>
                 <div><strong>Deterministic media</strong><p>The contract generates SVG and base64 JSON metadata. The collectible does not depend on an offchain image host.</p></div>
                 <div><strong>Originality</strong><p>The registry hashes packed pixel data with the grid size and rejects an artwork that was already registered.</p></div>
-                <div><strong>Native marketplace</strong><p>Fixed-price listings and escrowed offers settle in zkLTC. Sales apply a 0.4% platform fee and a 1% creator royalty.</p></div>
+                <div><strong>NUSD marketplace</strong><p>Listings, escrowed offers, fees and creator royalties settle in NUSD. The platform fee is 0.4%; royalties follow each collection. Sale proceeds and refunds are reusable credits. zkLTC only pays gas; old listings stay on the legacy contract.</p></div>
               </div>
               <div className="ox-docs-spec-line">
                 <span>Supported grids</span><strong>8 x 8, 16 x 16, 32 x 32, 64 x 64</strong>
               </div>
               <DocsCodeBlock code={PIXEL_CODE} label="pixel-read.ts" />
               <ProductLink href="/0xpixel">Open 0xPixel studio</ProductLink>
+              <ProductLink href="/0xpixel/marketplace">Open NUSD marketplace</ProductLink>
             </section>
 
             <section id="0xpump" className="ox-docs-section ox-docs-product-section">
@@ -659,7 +660,7 @@ export default function DocsPage() {
                 description="Goldsky powers discovery, history, charts, and activity. RPC remains authoritative for balances, quotes, allowances, and transaction preflight."
               />
               <div className="ox-docs-indexers">
-                <div><strong>0xPixel marketplace</strong><code>{MARKETPLACE_SUBGRAPH_URL}</code></div>
+                <div><strong>0xPixel NFT discovery</strong><code>{MARKETPLACE_SUBGRAPH_URL}</code><p>The V1 index provides NFT metadata and ownership hints, not NUSD prices. NUSD listings and marketplace history are read from the verified contract through RPC.</p></div>
                 <div><strong>0xPump</strong><code>{PUMP_SUBGRAPH_URL}</code></div>
                 <div><strong>0xFi</strong><code>{testnet.goldskyEndpoint}</code></div>
               </div>

@@ -11,6 +11,8 @@ export const PIXEL_NFT_ADDRESS: Address = "0x33A32b9b2BEe864f9e42BFa39cA7BDC72f6
 export const PIXEL_V2_NFT_ADDRESS: Address = "0xd83cb7acef921f98b6b983cbb712a583869da9eb";
 export const PIXEL_V2_START_BLOCK = 56_305_414n;
 export const PIXEL_MARKETPLACE_ADDRESS: Address = "0x13337cadA78d53C90E3c0EcE44C17c467C1a86F4";
+/** Settlement token of the NUSD NFT marketplace; must equal the deployed market's immutable nusd(). */
+export const PIXEL_MARKET_NUSD_ADDRESS: Address = "0x677D63c78E77E0b1971530e1494Caee4Bd7d631e";
 
 export const PIXEL_START_BLOCK = 24_867_130n;
 export const MARKETPLACE_START_BLOCK = 24_867_505n;

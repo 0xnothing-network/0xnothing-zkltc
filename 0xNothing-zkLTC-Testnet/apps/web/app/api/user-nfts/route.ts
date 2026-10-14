@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import {
   PIXEL_NFT_CONTRACT_ADDRESS,
-  PIXEL_MARKETPLACE_ADDRESS,
   getUserTokenIds,
   publicClient,
 } from "@/lib/contract";
 import { getPixelImageUrl } from "@/lib/pixelImage";
-import { MarketplaceAbi } from "@/lib/marketplaceAbi";
+import { readNusdWalletListings } from "@/lib/nusdMarketplaceInventory";
+import { NFT_NUSD_ADDRESS, NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
 import { PixelNFTABI } from "@/lib/abi";
 import { PixelV2ABI } from "@/lib/pixelV2Abi";
 import {
@@ -54,7 +54,10 @@ async function fetchNativeNfts(address: string, force = false): Promise<NativeNf
 
 async function loadNativeNfts(address: string, fresh: boolean): Promise<NativeNft[]> {
   const inventories = await Promise.all(PIXEL_COLLECTIONS.map((entry) => loadCollectionNfts(address, fresh, entry.address)));
-  return inventories.flat();
+  const tokens = inventories.flat().map((token) => ({ ...token, listing: null }));
+  if (!NUSD_MARKETPLACE_ADDRESS) return tokens;
+  const listings = await readNusdWalletListings(publicClient, NUSD_MARKETPLACE_ADDRESS, NFT_NUSD_ADDRESS, tokens, address as `0x${string}`);
+  return tokens.map((token) => ({ ...token, listing: listings[`${token.collection.toLowerCase()}:${token.tokenId}`] ?? null }));
 }
 
 async function loadCollectionNfts(address: string, fresh: boolean, collection: `0x${string}`): Promise<NativeNft[]> {
@@ -85,32 +88,20 @@ async function loadCollectionNfts(address: string, fresh: boolean, collection: `
     const batch = tokenIds.slice(offset, offset + NFT_DETAILS_BATCH_SIZE);
     // Read the packed V2 getter directly: tokenData converts binary art to a
     // legacy hex string on-chain and is needlessly expensive for wallet lists.
-    const [tokenDataResults, listingResults] = await Promise.all([
-      publicClient.multicall({
-        allowFailure: true,
-        contracts: batch.map((tokenId) => packedV2 ? {
-          address: collection,
-          abi: PixelV2ABI,
-          functionName: "tokenPackedData" as const,
-          args: [tokenId] as const,
-        } : {
-          address: collection,
-          abi: PixelNFTABI,
-          functionName: "tokenData" as const,
-          args: [tokenId] as const,
-        }),
+    const tokenDataResults = await publicClient.multicall({
+      allowFailure: true,
+      contracts: batch.map((tokenId) => packedV2 ? {
+        address: collection,
+        abi: PixelV2ABI,
+        functionName: "tokenPackedData" as const,
+        args: [tokenId] as const,
+      } : {
+        address: collection,
+        abi: PixelNFTABI,
+        functionName: "tokenData" as const,
+        args: [tokenId] as const,
       }),
-      // Listing reads share the same bounded batch and retain token order.
-      publicClient.multicall({
-        allowFailure: true,
-        contracts: batch.map((n) => ({
-          address: PIXEL_MARKETPLACE_ADDRESS,
-          abi: MarketplaceAbi,
-          functionName: "getListingByToken" as const,
-          args: [collection, n] as const,
-        })),
-      }),
-    ]);
+    });
 
     tokens.push(...batch.map((tokenId, i): NativeNft => {
       const tokenResult = tokenDataResults[i];
@@ -121,24 +112,6 @@ async function loadCollectionNfts(address: string, fresh: boolean, collection: `
       const name = packedV2 ? packed?.[0] : legacy?.[0];
       const grid = packedV2 ? packed?.[2] : legacy?.[1];
       const pixels = packedV2 ? packed?.[3] : legacy?.[2];
-      let listing: NativeNft["listing"] = null;
-
-      const r = listingResults[i];
-      if (r?.status === "success" && r.result) {
-        const [listingId, listingData] = r.result as readonly [bigint, {
-          collection: `0x${string}`;
-          tokenId: bigint;
-          price: bigint;
-          seller: `0x${string}`;
-          active: boolean;
-        }];
-        if (listingId !== 0n && listingData.active) {
-          listing = {
-            listingId: listingId.toString(),
-            price: listingData.price.toString(),
-          };
-        }
-      }
 
       return {
         collection,
@@ -147,7 +120,7 @@ async function loadCollectionNfts(address: string, fresh: boolean, collection: `
         imageUrl: pixels && grid
           ? getPixelImageUrl(tokenId, collection)
           : "",
-        listing,
+        listing: null,
       };
     }));
   }

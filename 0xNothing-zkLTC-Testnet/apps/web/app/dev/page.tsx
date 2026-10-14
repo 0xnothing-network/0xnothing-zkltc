@@ -29,13 +29,14 @@ import {
   useWriteContract,
 } from "wagmi";
 import { formatUnits, getAddress, isAddress, type Address } from "viem";
-import { deployment, explorerAddressUrl } from "@fi/config/deployment";
+import { deployment } from "@fi/config/deployment";
 import { dexFactoryAbi, dexPoolAbi, dexRouterAbi } from "@fi/lib/abis/dex";
 import { erc20Abi } from "@fi/lib/abis/erc20";
 import { lendingPoolAbi } from "@fi/lib/abis/lending";
 import { nusdAbi, pumpGraduationControllerAbi, zeroXPumpAbi } from "@/features/pump/abis";
 import { litvm } from "@/config/wagmi";
-import { PIXEL_MARKETPLACE_ADDRESS, PIXEL_NFT_ADDRESS, PUMP_GRADUATION_CONTROLLER_ADDRESS } from "@/lib/publicConfig";
+import { PIXEL_NFT_ADDRESS, PUMP_GRADUATION_CONTROLLER_ADDRESS } from "@/lib/publicConfig";
+import { NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
 import { PixelNFTABI } from "@/lib/abi";
 import { publicClient } from "@/lib/contract";
 import { requireLitvmChainId } from "@/lib/chainSwitch";
@@ -447,7 +448,7 @@ export default function DevPage() {
         </section>
 
         <section className={styles.section}>
-          <div className={styles.sectionHeader}><div><span className={styles.eyebrow}>Pixel and marketplace</span><h2>Direct settlement surfaces</h2></div><p className={styles.sectionNote}>Pixel claims are limited to the caller's own pending balance. Marketplace fees settle directly to its immutable dev wallet.</p></div>
+          <div className={styles.sectionHeader}><div><span className={styles.eyebrow}>Pixel and marketplace</span><h2>Settlement and credits</h2></div><p className={styles.sectionNote}>Pixel claims are limited to the caller's own pending balance. NUSD marketplace fees become credits owned by the immutable treasury wallet.</p></div>
           <div className={`${styles.grid} ${styles.gridThree}`}>
             <div className={styles.card + " " + styles.formCard}>
               <div className={styles.cardTop}><span>0xPixel</span><Coin size={16} /></div>
@@ -458,11 +459,11 @@ export default function DevPage() {
               {!isPixelDev ? <span className={styles.subvalue}>Only the connected dev wallet can claim its own pending balance.</span> : null}
             </div>
             <div className={styles.card + " " + styles.formCard}>
-              <div className={styles.cardTop}><span>0xMarketplace</span><ShieldCheck size={16} /></div>
-              <strong className={styles.value}>Direct settlement</strong>
-              <span className={styles.subvalue}>No admin withdrawal action is exposed here.</span>
-              <span className={styles.address}>Marketplace: {shortAddress(PIXEL_MARKETPLACE_ADDRESS)}<br />Fees are forwarded directly to the immutable dev wallet at settlement time.<br />There is no pooled fee balance for this console to claim.</span>
-              <ExternalLink className={styles.monoLink} href={explorerAddressUrl(PIXEL_MARKETPLACE_ADDRESS)}>Open marketplace <ArrowSquareOut size={12} /></ExternalLink>
+              <div className={styles.cardTop}><span>0xMarketplace · NUSD</span><ShieldCheck size={16} /></div>
+              <strong className={styles.value}>Reusable NUSD credits</strong>
+              <span className={styles.subvalue}>Only the credited wallet can spend or withdraw its balance.</span>
+              <span className={styles.address}>Marketplace: {shortAddress(NUSD_MARKETPLACE_ADDRESS)}<br />Seller proceeds, royalties and platform fees are NUSD credits.<br />The owner cannot withdraw other users' escrow or credits.</span>
+              <Link className={styles.monoLink} href="/0xpixel/marketplace">Open marketplace / claim own credits <ArrowSquareOut size={12} /></Link>
             </div>
             <div className={styles.card + " " + styles.formCard}>
               <div className={styles.cardTop}><span>Authority model</span><LockKey size={16} /></div>

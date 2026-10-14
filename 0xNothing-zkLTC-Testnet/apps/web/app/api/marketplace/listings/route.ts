@@ -1,18 +1,13 @@
-import { PIXEL_COLLECTIONS, PIXEL_V2_ENABLED, isPixelCollection, isPixelV2Collection, pixelTokenKey } from "@/lib/pixelCollections";
+import { PIXEL_COLLECTIONS, isPixelCollection, isPixelV2Collection, pixelTokenKey } from "@/lib/pixelCollections";
 import { NextResponse } from "next/server";
 import type { Address } from "viem";
-import {
-  publicClient,
-  PIXEL_MARKETPLACE_ADDRESS,
-} from "@/lib/contract";
-import { MarketplaceAbi, marketplaceNftKey } from "@/lib/marketplaceAbi";
+import { publicClient } from "@/lib/contract";
+import { NFT_NUSD_ADDRESS, NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
+import { readNusdMarket } from "@/lib/nusdMarketplace";
 import { PixelNFTABI } from "@/lib/abi";
+import { PixelV2ABI } from "@/lib/pixelV2Abi";
 import { getPixelImageUrl } from "@/lib/pixelImage";
-import {
-  fetchAllMarketplaceListingsFromSubgraph,
-  fetchTokenMetadataFromSubgraph,
-  hasMarketplaceSubgraph,
-} from "@/lib/marketplaceSubgraph";
+import { fetchTokenMetadataFromSubgraph, hasMarketplaceSubgraph } from "@/lib/marketplaceSubgraph";
 import { fetchValidatedErc721Metadata } from "@/lib/erc721Metadata.server";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
@@ -39,238 +34,43 @@ interface TokenDTO {
 }
 
 interface ListingsPayload {
+  currency: "NUSD";
+  marketplace: Address;
+  blockNumber: string;
+  totalCount: string;
+  page: number;
   listings: ListingDTO[];
   tokens: Record<string, TokenDTO | null>;
 }
 
-const TOKEN_TTL = 60_000;
-const LISTING_TTL = 3_000;
 const MARKETPLACE_MULTICALL_BATCH_SIZE = 16_384;
-const MAX_PIXEL_TOKEN_CACHE_ENTRIES = 4_096;
-const PAYLOAD_CACHE_KEY = "listings:all-metadata-valid";
-// The payload entry is kept until it is overwritten, so freshness comes from the
-// entry age and the last successful payload can still answer a failed refresh.
-const payloadCache = createBoundedCache<ListingsPayload>({ maxEntries: 1 });
-const pixelTokenCache = createBoundedCache<TokenDTO | null>({
-  maxEntries: MAX_PIXEL_TOKEN_CACHE_ENTRIES,
-  ttlMs: TOKEN_TTL,
-});
+const payloadCache = createBoundedCache<ListingsPayload>({ maxEntries: 256, ttlMs: 3_000, maxInFlight: 32 });
+const pixelTokenCache = createBoundedCache<TokenDTO | null>({ maxEntries: 4_096, ttlMs: 60_000 });
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const force = searchParams.get("force") === "1";
-  const responseHeaders = force
-    ? { "Cache-Control": "private, no-store, max-age=0, must-revalidate" }
-    : publicCdnCacheHeaders(
-        "public, max-age=0, s-maxage=2, stale-while-revalidate=8",
-        2,
-        8,
-      );
-  const cached = payloadCache.entry(PAYLOAD_CACHE_KEY);
-
-  if (!force && cached && cached.ageMs < LISTING_TTL) {
-    return NextResponse.json(cached.value, { headers: responseHeaders });
-  }
-
+  if (!NUSD_MARKETPLACE_ADDRESS) return NextResponse.json({ error: "NUSD marketplace is not configured" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  const params = new URL(request.url).searchParams;
+  const rawPage = params.get("page") ?? "0";
+  const page = Number(rawPage);
+  if (!/^\d{1,16}$/.test(rawPage) || !Number.isSafeInteger(page)) return NextResponse.json({ error: "Invalid marketplace page" }, { status: 400, headers: { "Cache-Control": "no-store" } });
+  const force = params.get("force") === "1";
+  const key = `${NUSD_MARKETPLACE_ADDRESS}:${page}`;
+  const load = async (): Promise<ListingsPayload> => {
+    const state = await readNusdMarket(publicClient, NUSD_MARKETPLACE_ADDRESS!, NFT_NUSD_ADDRESS, undefined, page);
+    const listings = state.listings.filter((listing) => listing.active).map((listing) => ({
+      listingId: listing.id.toString(), collection: listing.collection, tokenId: listing.tokenId.toString(),
+      price: listing.price.toString(), seller: listing.seller, active: listing.active,
+    }));
+    const [pixel, generic] = await Promise.all([fetchPixelTokensForListings(listings), fetchGenericTokensForListings(listings)]);
+    return { currency: "NUSD", marketplace: NUSD_MARKETPLACE_ADDRESS!, blockNumber: state.blockNumber.toString(), totalCount: state.listingCount.toString(), page, listings, tokens: { ...pixel, ...generic } };
+  };
   try {
-    // A forced load bypasses the subgraph read cache, so it coalesces only with other
-    // forced loads: a separate key with a zero ttl tracks that flight without being
-    // retained, and its result then seeds the shared entry.
-    const payload = await withTimeout(
-      force
-        ? payloadCache.refresh(`force:${PAYLOAD_CACHE_KEY}`, () => loadListingsPayload(true), 0)
-        : payloadCache.refresh(PAYLOAD_CACHE_KEY, () => loadListingsPayload(false)),
-      12_000,
-      "Marketplace listing load timed out",
-    );
-    if (force) payloadCache.set(PAYLOAD_CACHE_KEY, payload);
-    return NextResponse.json(payload, { headers: responseHeaders });
-  } catch (error) {
-    console.error("[marketplace] listing load failed:", error);
-    const stale = payloadCache.entry(PAYLOAD_CACHE_KEY);
-    if (stale) return NextResponse.json(stale.value, { headers: responseHeaders });
-    return NextResponse.json(
-      { error: "Marketplace data unavailable" },
-      { status: 503, headers: { "Cache-Control": "no-store" } },
-    );
+    const payload = force ? await payloadCache.refresh(`force:${key}`, load, 0) : await payloadCache.load(key, load);
+    if (force) payloadCache.set(key, payload);
+    return NextResponse.json(payload, { headers: force ? { "Cache-Control": "private, no-store" } : publicCdnCacheHeaders("public, max-age=0, s-maxage=3, stale-while-revalidate=3", 3, 3) });
+  } catch {
+    return NextResponse.json({ error: "NUSD marketplace listings are unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
-}
-
-async function loadListingsPayload(fresh: boolean): Promise<ListingsPayload> {
-  const candidates = await loadListingCandidates(fresh);
-  const [purchasable, pixelTokens] = await Promise.all([
-    filterPurchasableListings(candidates),
-    fetchPixelTokensForListings(candidates),
-  ]);
-  const genericTokens = await fetchGenericTokensForListings(purchasable);
-  const tokens = { ...pixelTokens, ...genericTokens };
-
-  const listings = purchasable.filter((listing) => {
-    if (isPixelCollection(listing.collection)) return true;
-    return Boolean(tokens[marketplaceNftKey(listing.collection, listing.tokenId)]?.imageUrl);
-  });
-  const visibleKeys = new Set(
-    listings.map((listing) => marketplaceNftKey(listing.collection, listing.tokenId)),
-  );
-  const visibleTokens = Object.fromEntries(
-    Object.entries(tokens).filter(([key]) => visibleKeys.has(key)),
-  );
-  return { listings, tokens: visibleTokens };
-}
-
-async function loadListingCandidates(fresh: boolean): Promise<ListingDTO[]> {
-  if (!PIXEL_V2_ENABLED && hasMarketplaceSubgraph()) {
-    try {
-      const listings = await fetchAllMarketplaceListingsFromSubgraph(5_000, fresh);
-      return listings.map((listing) => ({
-        listingId: listing.listingId,
-        collection: listing.collection,
-        tokenId: listing.tokenId,
-        price: listing.price,
-        seller: listing.seller,
-        active: listing.active,
-      }));
-    } catch (error) {
-      console.warn("[marketplace] subgraph listing fetch failed; using RPC:", error);
-    }
-  }
-  return fetchActiveListingsOnchain();
-}
-
-async function fetchActiveListingsOnchain(): Promise<ListingDTO[]> {
-  const ids: bigint[] = [];
-  const seenIds = new Set<string>();
-  const pageSize = 100n;
-  let offset = 0n;
-
-  while (true) {
-    const page = (await publicClient.readContract({
-      address: PIXEL_MARKETPLACE_ADDRESS,
-      abi: MarketplaceAbi,
-      functionName: "getActiveListings",
-      args: [offset, pageSize],
-    })) as bigint[];
-    if (page.length === 0) break;
-
-    for (const id of page) {
-      const key = id.toString();
-      if (!seenIds.has(key)) {
-        seenIds.add(key);
-        ids.push(id);
-      }
-    }
-    if (page.length < Number(pageSize)) break;
-    const nextOffset = page[page.length - 1];
-    if (nextOffset <= offset) break;
-    offset = nextOffset;
-  }
-
-  if (ids.length === 0) return [];
-  const results = await publicClient.multicall({
-    allowFailure: true,
-    batchSize: MARKETPLACE_MULTICALL_BATCH_SIZE,
-    contracts: ids.map((id) => ({
-      address: PIXEL_MARKETPLACE_ADDRESS,
-      abi: MarketplaceAbi,
-      functionName: "listings" as const,
-      args: [id] as const,
-    })),
-  });
-
-  const listings: ListingDTO[] = [];
-  for (let index = 0; index < ids.length; index++) {
-    const result = results[index];
-    if (!result || result.status !== "success") continue;
-    const tuple = result.result as readonly [Address, bigint, bigint, Address, boolean];
-    if (!tuple[4]) continue;
-    listings.push({
-      listingId: ids[index].toString(),
-      collection: tuple[0],
-      tokenId: tuple[1].toString(),
-      price: tuple[2].toString(),
-      seller: tuple[3],
-      active: true,
-    });
-  }
-  return listings;
-}
-
-async function filterPurchasableListings(listings: ListingDTO[]): Promise<ListingDTO[]> {
-  if (listings.length === 0) return [];
-  const approvalPairs = new Map<string, { collection: Address; seller: Address }>();
-  for (const listing of listings) {
-    const key = `${listing.collection.toLowerCase()}:${listing.seller.toLowerCase()}`;
-    if (!approvalPairs.has(key)) {
-      approvalPairs.set(key, { collection: listing.collection, seller: listing.seller });
-    }
-  }
-  const uniqueApprovalPairs = [...approvalPairs.entries()];
-  const approvalResultIndex = new Map(
-    uniqueApprovalPairs.map(([key], index) => [key, listings.length * 3 + index]),
-  );
-  const results = await publicClient.multicall({
-    allowFailure: true,
-    batchSize: MARKETPLACE_MULTICALL_BATCH_SIZE,
-    contracts: [
-      ...listings.flatMap((listing) => {
-        const tokenId = BigInt(listing.tokenId);
-        return [
-          {
-            address: listing.collection,
-            abi: PixelNFTABI,
-            functionName: "ownerOf" as const,
-            args: [tokenId] as const,
-          },
-          {
-            address: listing.collection,
-            abi: PixelNFTABI,
-            functionName: "getApproved" as const,
-            args: [tokenId] as const,
-          },
-          {
-            address: PIXEL_MARKETPLACE_ADDRESS,
-            abi: MarketplaceAbi,
-            functionName: "listings" as const,
-            args: [BigInt(listing.listingId)] as const,
-          },
-        ];
-      }),
-      ...uniqueApprovalPairs.map(([, pair]) => (
-        {
-          address: pair.collection,
-          abi: PixelNFTABI,
-          functionName: "isApprovedForAll" as const,
-          args: [pair.seller, PIXEL_MARKETPLACE_ADDRESS] as const,
-        }
-      )),
-    ],
-  });
-
-  return listings.filter((listing, index) => {
-    const owner = results[index * 3];
-    const approved = results[index * 3 + 1];
-    const liveListing = results[index * 3 + 2];
-    const pairKey = `${listing.collection.toLowerCase()}:${listing.seller.toLowerCase()}`;
-    const approvedForAllIndex = approvalResultIndex.get(pairKey);
-    const approvedForAll = approvedForAllIndex === undefined ? undefined : results[approvedForAllIndex];
-    const ownerMatches =
-      owner?.status === "success" &&
-      String(owner.result).toLowerCase() === listing.seller.toLowerCase();
-    const tokenApproved =
-      approved?.status === "success" &&
-      String(approved.result).toLowerCase() === PIXEL_MARKETPLACE_ADDRESS.toLowerCase();
-    const collectionApproved =
-      approvedForAll?.status === "success" && approvedForAll.result === true;
-    const listingMatches = liveListing?.status === "success" && (() => {
-      const tuple = liveListing.result as readonly [Address, bigint, bigint, Address, boolean];
-      return tuple[4]
-        && tuple[0].toLowerCase() === listing.collection.toLowerCase()
-        && tuple[1].toString() === listing.tokenId
-        && tuple[2].toString() === listing.price
-        && tuple[3].toLowerCase() === listing.seller.toLowerCase();
-    })();
-    return ownerMatches && listingMatches && (tokenApproved || collectionApproved);
-  });
 }
 
 async function fetchPixelTokensForListings(
@@ -325,15 +125,21 @@ async function fetchPixelTokensOnchain(
   }
   if (missing.length === 0) return output;
 
+  const packedV2 = isPixelV2Collection(collection);
   const results = await publicClient.multicall({
     allowFailure: true,
     batchSize: MARKETPLACE_MULTICALL_BATCH_SIZE,
-    contracts: missing.map((tokenId) => ({
+    contracts: missing.map((tokenId) => packedV2 ? {
+      address: collection,
+      abi: PixelV2ABI,
+      functionName: "tokenPackedData" as const,
+      args: [BigInt(tokenId)] as const,
+    } : {
       address: collection,
       abi: PixelNFTABI,
       functionName: "tokenData" as const,
       args: [BigInt(tokenId)] as const,
-    })),
+    }),
   });
 
   for (let index = 0; index < missing.length; index++) {
@@ -341,7 +147,10 @@ async function fetchPixelTokensOnchain(
     const result = results[index];
     let metadata: TokenDTO | null = null;
     if (result?.status === "success") {
-      const tuple = result.result as readonly [string, bigint, string, Address, bigint, string];
+      const packed = result.result as readonly [string, string, bigint, string, Address, bigint, string];
+      const tuple = packedV2
+        ? [packed[0], packed[2], packed[3], packed[4], packed[5], packed[6]] as const
+        : result.result as readonly [string, bigint, string, Address, bigint, string];
       const imageUrl = tuple[2] && tuple[1]
         ? getPixelImageUrl(tokenId, collection)
         : "";
@@ -360,21 +169,4 @@ async function fetchPixelTokensOnchain(
   }
 
   return output;
-}
-
-
-async function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  message: string,
-): Promise<T> {
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
-  });
-  try {
-    return await Promise.race([promise, timeout]);
-  } finally {
-    if (timeoutId) clearTimeout(timeoutId);
-  }
 }
