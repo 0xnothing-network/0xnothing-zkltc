@@ -24,6 +24,7 @@ export type TxKind =
   | "points-stake"
   | "points-withdraw"
   | "points-redeem"
+  | "points-claim"
   | "swap"
   | "approve"
   | "nft"

@@ -67,10 +67,11 @@ export interface SwapRoute extends QuoteIdentity {
   paused: boolean;
 }
 
+/** Router v2: LP fee per hop plus one protocol fee, direct when either end is NUSD or WzkLTC. */
 interface FeeSchedule {
   lpBps: number;
-  protocolBps: number;
-  surchargeBps: number;
+  directBps: number;
+  crossBps: number;
 }
 
 const DEADLINE_MINUTES = 20;
@@ -96,9 +97,17 @@ function deadline(): bigint {
   return BigInt(Math.floor(Date.now() / 1000) + DEADLINE_MINUTES * 60);
 }
 
-function feeFor(hops: number, fees: FeeSchedule | null): number | null {
+function isBaseAsset(token: Address | undefined): boolean {
+  if (!token) return false;
+  const lower = token.toLowerCase();
+  return lower === CONTRACTS.nusd.toLowerCase() || lower === CONTRACTS.wzkltc.toLowerCase();
+}
+
+/** Mirrors `ZeroXFiRouterV2.routerFeeBpsForPath`; every v2 pair holds a base asset. */
+function feeFor(hops: number, fees: FeeSchedule | null, path: readonly Address[] = []): number | null {
   if (!fees) return null;
-  return hops * fees.lpBps + fees.protocolBps + (hops > 1 ? fees.surchargeBps : 0);
+  const cross = path.length >= 2 && !isBaseAsset(path[0]) && !isBaseAsset(path[path.length - 1]);
+  return hops * fees.lpBps + (cross ? fees.crossBps : fees.directBps);
 }
 
 /** Both pause reads fail closed, so an unreachable node cannot enable a swap. */
@@ -194,7 +203,7 @@ function pairKey(scope: string, a: Address, b: Address): string {
 
 const feeSchedules = new Map<string, Promise<FeeSchedule | null>>();
 
-/** LP, protocol and surcharge are router constants: read once per session. */
+/** LP and protocol rates are router constants: read once per session. */
 function routerFees(client: SwapClient, scope: string): Promise<FeeSchedule | null> {
   const cached = feeSchedules.get(scope);
   if (cached) return cached;
@@ -204,14 +213,14 @@ function routerFees(client: SwapClient, scope: string): Promise<FeeSchedule | nu
       allowFailure: false,
       contracts: [
         { ...router, functionName: "LP_FEE_BPS" },
-        { ...router, functionName: "PROTOCOL_FEE_BPS" },
-        { ...router, functionName: "ROUTE_SURCHARGE_BPS" },
+        { ...router, functionName: "DIRECT_FEE_BPS" },
+        { ...router, functionName: "CROSS_FEE_BPS" },
       ] as const,
     })
-    .then(([lp, protocol, surcharge]) => ({
+    .then(([lp, direct, cross]) => ({
       lpBps: Number(lp),
-      protocolBps: Number(protocol),
-      surchargeBps: Number(surcharge),
+      directBps: Number(direct),
+      crossBps: Number(cross),
     }))
     .catch(() => {
       // Let the next quote try again rather than pinning an unknown fee.
@@ -449,7 +458,7 @@ export async function quoteSwap(params: {
       kind: "via-nusd",
       amountOut: bridgeOut ?? 0n,
       path: bridgePath ?? [],
-      feeBps: feeFor(2, fees),
+      feeBps: feeFor(2, fees, bridgePath ?? []),
       stages: 1,
       paused,
     },

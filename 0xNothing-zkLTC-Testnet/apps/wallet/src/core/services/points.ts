@@ -1,17 +1,19 @@
 import type { Address, Hex } from "viem";
-import { nusdPointsStakingAbi } from "../../abis";
+import { rewardStakingAbi } from "../../abis";
 import { CONTRACTS } from "../../config/contracts";
 import { formatAmount } from "../lib/format";
 import { activeNetwork, publicClient } from "../rpc/client";
 import { ensureAllowance, type TxExecutionContext, writeCall } from "./tx";
 
-export const POINTS_PER_XPOINT = 100n;
-export const XPOINTS_DISPLAY_DIGITS = 2;
+/**
+ * v2 0xPoints (contracts/src/rewards/RewardStaking.sol). Points are lock-weighted
+ * NUSD-seconds; the wallet shows them per day, so 1 0xPoint = 1 weighted NUSD for 1 day.
+ */
+export const POINT_SECONDS_PER_DISPLAY_POINT = 86_400n;
+export const POINTS_DISPLAY_DIGITS = 2;
 
 const DAY_SECONDS = 24 * 60 * 60;
-const POINTS_WAD = 10n ** 18n;
-const POINT_CREDITS_PER_XPOINT_WAD = POINTS_PER_XPOINT * POINTS_WAD;
-const POSITION_READ_LIMIT = 50n;
+const POSITION_READ_LIMIT = 50;
 
 export const POINTS_LOCK_OPTIONS = [
   { duration: 30 * DAY_SECONDS, multiplierBps: 10_000 },
@@ -24,73 +26,50 @@ export interface PointsPosition {
   id: bigint;
   account: Address;
   amount: bigint;
-  pointCredits: bigint;
+  /** Lock-weighted amount: 0xPoints earned per second (18 decimals). */
+  weight: bigint;
   unlockTime: bigint;
   lockDuration: number;
   withdrawn: boolean;
 }
 
 export interface PointsState {
+  /** Principal still locked across the loaded positions. */
   totalLocked: bigint;
-  earnedPointCredits: bigint;
-  spentPointCredits: bigint;
-  availablePointCredits: bigint;
+  weight: bigint;
+  /** The account's 0xPoints in the open round (weighted NUSD-seconds). */
+  openPoints: bigint;
+  /** Every 0xPoint accrued by all stakers in the open round. */
+  openRoundPoints: bigint;
+  claimable: bigint;
+  poolAvailable: bigint;
+  roundReward: bigint;
   positionCount: bigint;
   positionsTruncated: boolean;
   positions: PointsPosition[];
-  stakingPaused: boolean;
-  redemptionEnabled: boolean;
-  redemptionsPaused: boolean;
-  nusdPerXPointWad: bigint;
-  redemptionReserve: bigint;
-  solvent: boolean;
-  redemptionVisible: boolean;
 }
 
-export interface PointsRedemptionState {
-  redemptionEnabled: boolean;
-  redemptionsPaused: boolean;
-  nusdPerXPointWad: bigint;
-  redemptionReserve: bigint;
-  solvent: boolean;
+/** Weighted NUSD-seconds as displayed 0xPoints, half-up to 0.01. */
+export function formatPoints(points: bigint): string {
+  const display = points > 0n ? points / POINT_SECONDS_PER_DISPLAY_POINT : 0n;
+  const quantum = 10n ** BigInt(18 - POINTS_DISPLAY_DIGITS);
+  const rounded = ((display + quantum / 2n) / quantum) * quantum;
+  return `${formatAmount(rounded, 18, POINTS_DISPLAY_DIGITS)} 0xPoints`;
 }
 
-export function pointCreditsToXPoints(pointCredits: bigint): bigint {
-  return pointCredits > 0n ? pointCredits / POINTS_PER_XPOINT : 0n;
+/** A position's weight is exactly the 0xPoints it adds per day. */
+export function formatPointsPerDay(weight: bigint): string {
+  return `${formatAmount(weight > 0n ? weight : 0n, 18, POINTS_DISPLAY_DIGITS)} 0xPoints`;
 }
 
-/** The only public points unit: round 18-decimal xPoints half-up to 0.01. */
-export function formatXPoints(xPointsWad: bigint): string {
-  const quantum = 10n ** BigInt(18 - XPOINTS_DISPLAY_DIGITS);
-  const rounded = xPointsWad > 0n
-    ? ((xPointsWad + quantum / 2n) / quantum) * quantum
-    : 0n;
-  return `${formatAmount(rounded, 18, XPOINTS_DISPLAY_DIGITS)}xPoints`;
+/** Share of the open round in basis points; 0 when nobody has points yet. */
+export function roundShareBps(points: bigint, totalPoints: bigint): number {
+  if (points <= 0n || totalPoints <= 0n) return 0;
+  return Number((points * 10_000n) / totalPoints);
 }
 
-/** Convert contract accounting credits before presenting them to the user. */
-export function formatPointCredits(pointCredits: bigint): string {
-  return formatXPoints(pointCreditsToXPoints(pointCredits));
-}
-
-export function xPointsToPointCredits(xPointsWad: bigint): bigint {
-  return xPointsWad > 0n ? xPointsWad * POINTS_PER_XPOINT : 0n;
-}
-
-export function quotePointsRedemption(
-  pointCredits: bigint,
-  nusdPerXPointWad: bigint,
-): bigint {
-  if (pointCredits <= 0n || nusdPerXPointWad <= 0n) return 0n;
-  return (pointCredits * nusdPerXPointWad) / POINT_CREDITS_PER_XPOINT_WAD;
-}
-
-export function isPointsRedemptionVisible(state: PointsRedemptionState): boolean {
-  return state.redemptionEnabled
-    && !state.redemptionsPaused
-    && state.nusdPerXPointWad > 0n
-    && state.redemptionReserve > 0n
-    && state.solvent;
+export function stakeWeight(amount: bigint, multiplierBps: number): bigint {
+  return amount > 0n ? (amount * BigInt(multiplierBps)) / 10_000n : 0n;
 }
 
 function numericResult(
@@ -99,17 +78,6 @@ function numericResult(
 ): bigint {
   const call = calls[index];
   return call?.status === "success" && typeof call.result === "bigint" ? call.result : 0n;
-}
-
-function booleanResult(
-  calls: readonly { status: string; result?: unknown }[],
-  index: number,
-  fallback: boolean,
-): boolean {
-  const call = calls[index];
-  return call?.status === "success" && typeof call.result === "boolean"
-    ? call.result
-    : fallback;
 }
 
 function normalizePosition(
@@ -122,17 +90,17 @@ function normalizePosition(
   const tuple = Array.isArray(value) ? value : undefined;
   const named = value as Record<string, unknown>;
   const account = tuple?.[0] ?? named.account;
-  const amount = tuple?.[1] ?? named.amount;
-  const pointCredits = tuple?.[2] ?? named.pointCredits;
-  const unlockTime = tuple?.[3] ?? named.unlockTime;
-  const rawLockDuration = tuple?.[4] ?? named.lockDuration;
-  const withdrawn = tuple?.[5] ?? named.withdrawn;
+  const unlockTime = tuple?.[1] ?? named.unlockTime;
+  const rawLockDuration = tuple?.[2] ?? named.lockDuration;
+  const withdrawn = tuple?.[3] ?? named.withdrawn;
+  const amount = tuple?.[4] ?? named.amount;
+  const weight = tuple?.[5] ?? named.weight;
 
   if (
     typeof account !== "string"
     || account.toLowerCase() !== expectedAccount.toLowerCase()
     || typeof amount !== "bigint"
-    || typeof pointCredits !== "bigint"
+    || typeof weight !== "bigint"
     || typeof unlockTime !== "bigint"
     || (typeof rawLockDuration !== "number" && typeof rawLockDuration !== "bigint")
     || typeof withdrawn !== "boolean"
@@ -141,50 +109,34 @@ function normalizePosition(
   const lockDuration = Number(rawLockDuration);
   if (!Number.isSafeInteger(lockDuration) || lockDuration < 0) return undefined;
 
-  return {
-    id,
-    account: account as Address,
-    amount,
-    pointCredits,
-    unlockTime,
-    lockDuration,
-    withdrawn,
-  };
+  return { id, account: account as Address, amount, weight, unlockTime, lockDuration, withdrawn };
 }
 
 /**
- * Loads the user's on-chain points state and at most the 50 newest positions.
- * Unreadable action switches fail closed; partial position reads are omitted.
+ * Loads the account's 0xPoints, claimable rewards, the pool and at most the 50
+ * newest positions. Partial reads degrade to zero; no action depends on a guess.
  */
 export async function loadPointsState(account: Address): Promise<PointsState> {
   const client = publicClient;
-  const staking = { address: CONTRACTS.nusdPointsStaking, abi: nusdPointsStakingAbi } as const;
+  const staking = { address: CONTRACTS.rewardStaking, abi: rewardStakingAbi } as const;
   const calls = await client.multicall({
     allowFailure: true,
     contracts: [
-      { ...staking, functionName: "totalLockedByUser", args: [account] },
-      { ...staking, functionName: "earnedPointCredits", args: [account] },
-      { ...staking, functionName: "spentPointCredits", args: [account] },
-      { ...staking, functionName: "availablePointCredits", args: [account] },
-      { ...staking, functionName: "userPositionCount", args: [account] },
-      { ...staking, functionName: "stakingPaused" },
-      { ...staking, functionName: "redemptionEnabled" },
-      { ...staking, functionName: "redemptionsPaused" },
-      { ...staking, functionName: "nusdPerXPointWad" },
-      { ...staking, functionName: "redemptionReserve" },
-      { ...staking, functionName: "isSolvent" },
+      { ...staking, functionName: "accountState", args: [account] },
+      { ...staking, functionName: "positionIdsOf", args: [account] },
+      { ...staking, functionName: "availableRewards" },
+      { ...staking, functionName: "ROUND_REWARD" },
+      { ...staking, functionName: "openRoundPoints" },
     ] as const,
   });
 
-  const positionCount = numericResult(calls, 4);
-  const offset = positionCount > POSITION_READ_LIMIT ? positionCount - POSITION_READ_LIMIT : 0n;
-  const positionIds = positionCount > 0n
-    ? await client.readContract({
-        ...staking,
-        functionName: "userPositionIds",
-        args: [account, offset, POSITION_READ_LIMIT],
-      }).catch(() => [] as bigint[])
-    : [];
+  const accountRead = calls[0];
+  const [weight, openPoints, claimable] = accountRead?.status === "success"
+    ? accountRead.result as readonly [bigint, bigint, bigint]
+    : [0n, 0n, 0n];
+  const idsRead = calls[1];
+  const allIds = idsRead?.status === "success" ? idsRead.result as readonly bigint[] : [];
+  const positionIds = allIds.slice(-POSITION_READ_LIMIT);
   const positionReads = positionIds.length > 0
     ? await client.multicall({
         allowFailure: true,
@@ -203,25 +155,18 @@ export async function loadPointsState(account: Address): Promise<PointsState> {
     return position ? [position] : [];
   }).reverse();
 
-  const state: PointsState = {
-    totalLocked: numericResult(calls, 0),
-    earnedPointCredits: numericResult(calls, 1),
-    spentPointCredits: numericResult(calls, 2),
-    availablePointCredits: numericResult(calls, 3),
-    positionCount,
-    positionsTruncated: positionCount > POSITION_READ_LIMIT,
+  return {
+    totalLocked: positions.reduce((sum, position) => (position.withdrawn ? sum : sum + position.amount), 0n),
+    weight,
+    openPoints,
+    openRoundPoints: numericResult(calls, 4),
+    claimable,
+    poolAvailable: numericResult(calls, 2),
+    roundReward: numericResult(calls, 3),
+    positionCount: BigInt(allIds.length),
+    positionsTruncated: allIds.length > POSITION_READ_LIMIT,
     positions,
-    // Fail closed: an unreadable flag must never enable a user action.
-    stakingPaused: booleanResult(calls, 5, true),
-    redemptionEnabled: booleanResult(calls, 6, false),
-    redemptionsPaused: booleanResult(calls, 7, true),
-    nusdPerXPointWad: numericResult(calls, 8),
-    redemptionReserve: numericResult(calls, 9),
-    solvent: booleanResult(calls, 10, false),
-    redemptionVisible: false,
   };
-  state.redemptionVisible = isPointsRedemptionVisible(state);
-  return state;
 }
 
 export async function stakeNusdForPoints(params: {
@@ -234,14 +179,14 @@ export async function stakeNusdForPoints(params: {
   await ensureAllowance({
     from: params.from,
     token: CONTRACTS.nusd,
-    spender: CONTRACTS.nusdPointsStaking,
+    spender: CONTRACTS.rewardStaking,
     amount: params.amount,
     symbol: "NUSD",
   }, context);
   return writeCall({
     from: params.from,
-    address: CONTRACTS.nusdPointsStaking,
-    abi: nusdPointsStakingAbi,
+    address: CONTRACTS.rewardStaking,
+    abi: rewardStakingAbi,
     functionName: "stake",
     args: [params.amount, params.lockDuration],
     kind: "points-stake",
@@ -259,8 +204,8 @@ export async function withdrawPointsStake(params: {
   const context = { network: activeNetwork, client: publicClient } satisfies TxExecutionContext;
   return writeCall({
     from: params.from,
-    address: CONTRACTS.nusdPointsStaking,
-    abi: nusdPointsStakingAbi,
+    address: CONTRACTS.rewardStaking,
+    abi: rewardStakingAbi,
     functionName: "withdraw",
     args: [params.positionId],
     kind: "points-withdraw",
@@ -271,21 +216,22 @@ export async function withdrawPointsStake(params: {
   }, context);
 }
 
-export async function redeemXPoints(params: {
+/** Claims every allocated reward to the signing account itself. */
+export async function claimPointsRewards(params: {
   from: Address;
-  pointCredits: bigint;
+  amount: bigint;
 }): Promise<Hex> {
   const context = { network: activeNetwork, client: publicClient } satisfies TxExecutionContext;
   return writeCall({
     from: params.from,
-    address: CONTRACTS.nusdPointsStaking,
-    abi: nusdPointsStakingAbi,
-    functionName: "redeemPoints",
-    args: [params.pointCredits],
-    kind: "points-redeem",
+    address: CONTRACTS.rewardStaking,
+    abi: rewardStakingAbi,
+    functionName: "claim",
+    args: [params.from],
+    kind: "points-claim",
     label: {
-      key: "tx.pointsRedeem",
-      params: { amount: formatPointCredits(params.pointCredits) },
+      key: "tx.pointsClaim",
+      params: { amount: formatAmount(params.amount, 18, 2) },
     },
   }, context);
 }

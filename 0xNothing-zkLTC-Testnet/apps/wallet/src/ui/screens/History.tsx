@@ -33,6 +33,7 @@ const KIND_LABEL: Record<TxKind, MessageKey> = {
   "points-stake": "kind.pointsStake",
   "points-withdraw": "kind.pointsWithdraw",
   "points-redeem": "kind.pointsRedeem",
+  "points-claim": "kind.pointsClaim",
   swap: "kind.swap",
   approve: "kind.approve",
   nft: "kind.nft",

@@ -6,16 +6,16 @@ import { t } from "../../core/i18n";
 import { describeError } from "../../core/lib/errors";
 import { formatAmount, formatBalance, parseAmount } from "../../core/lib/format";
 import {
-  formatPointCredits,
-  formatXPoints,
+  claimPointsRewards,
+  formatPoints,
+  formatPointsPerDay,
   POINTS_LOCK_OPTIONS,
   loadPointsState,
-  pointCreditsToXPoints,
-  redeemXPoints,
+  roundShareBps,
   stakeNusdForPoints,
+  stakeWeight,
   type PointsPosition,
   withdrawPointsStake,
-  xPointsToPointCredits,
 } from "../../core/services/points";
 import { loadPortfolio } from "../../core/services/portfolio";
 import { AmountField } from "../components/AmountField";
@@ -27,8 +27,6 @@ import { useLiveRead } from "../hooks/useLiveRead";
 import { reviewKey } from "../lib/reviewKey";
 import { goHome, navigate } from "../router";
 import { useWallet } from "../state/WalletContext";
-
-const SHOW_POINTS_REDEMPTION_UI = false;
 
 type ReviewAction =
   | {
@@ -46,11 +44,9 @@ type ReviewAction =
     amount: bigint;
   }
   | {
-    kind: "redeem";
+    kind: "claim";
     identity: string;
-    pointCredits: bigint;
-    xPointsWad: bigint;
-    nusdOut: bigint;
+    amount: bigint;
   };
 
 function multiplierLabel(multiplierBps: number): string {
@@ -77,7 +73,6 @@ export function Earn(): ReactNode {
   const { address, tokens, network, notify, refresh, tick } = useWallet();
   const [amount, setAmount] = useState("");
   const [lockDuration, setLockDuration] = useState(POINTS_LOCK_OPTIONS[0]!.duration);
-  const [redeemAmount, setRedeemAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [review, setReview] = useState<ReviewAction | null>(null);
@@ -107,8 +102,7 @@ export function Earn(): ReactNode {
     && state !== null
     && walletNusd !== null
     && positive
-    && !overWallet
-    && !state.stakingPaused;
+    && !overWallet;
   const amountInvalid = amount.length > 0 && (!positive || overWallet);
   const selectedLock = POINTS_LOCK_OPTIONS.find((option) => option.duration === lockDuration)
     ?? POINTS_LOCK_OPTIONS[0]!;
@@ -122,57 +116,11 @@ export function Earn(): ReactNode {
     lockDuration,
   ]);
 
-  const availableXPointsWad = state === null
-    ? null
-    : pointCreditsToXPoints(state.availablePointCredits);
-  const parsedXPointsWad = parseAmount(redeemAmount, 18);
-  const redeemPointCredits = parsedXPointsWad === null
-    ? null
-    : xPointsToPointCredits(parsedXPointsWad);
-  const redeemPositive = parsedXPointsWad !== null && parsedXPointsWad > 0n;
-  const overPoints = redeemPointCredits !== null
-    && state !== null
-    && redeemPointCredits > state.availablePointCredits;
-  const redemptionVisible = SHOW_POINTS_REDEMPTION_UI
-    && state !== null
-    && state.redemptionVisible
-    && state.redemptionEnabled
-    && !state.redemptionsPaused
-    && state.nusdPerXPointWad > 0n
-    && state.redemptionReserve > 0n
-    && state.solvent;
-  const redeemQuote = parsedXPointsWad === null || state === null
-    ? null
-    : (parsedXPointsWad * state.nusdPerXPointWad) / 10n ** 18n;
-  const redeemReady = address !== null
-    && redemptionVisible
-    && redeemPositive
-    && redeemPointCredits !== null
-    && !overPoints
-    && redeemQuote !== null
-    && redeemQuote > 0n
-    && redeemQuote <= state.redemptionReserve;
-  const redeemInvalid = redeemAmount.length > 0 && (!redeemPositive || overPoints);
-  const redeemTooSmall = redemptionVisible && redeemPositive && redeemQuote === 0n;
-  const redeemOverReserve = redemptionVisible
-    && redeemQuote !== null
-    && state !== null
-    && redeemQuote > state.redemptionReserve;
-  const redeemIdentity = reviewKey([
-    address,
-    network.id,
-    network.rpcUrl,
-    "redeem",
-    redeemAmount,
-    parsedXPointsWad,
-    redeemPointCredits,
-    redeemQuote,
-    state?.nusdPerXPointWad,
-    state?.redemptionReserve,
-  ]);
+  const claimIdentity = reviewKey([address, network.id, network.rpcUrl, "claim", state?.claimable]);
+  const claimReady = address !== null && state !== null && state.claimable > 0n;
   const now = BigInt(Math.floor(Date.now() / 1_000));
-  const estimatedPointCredits = parsed !== null && parsed > 0n
-    ? (parsed * BigInt(selectedLock.multiplierBps)) / 10_000n
+  const estimatedDailyPoints = parsed !== null && parsed > 0n
+    ? stakeWeight(parsed, selectedLock.multiplierBps)
     : null;
   const estimatedUnlockTime = parsed !== null && parsed > 0n
     ? now + BigInt(selectedLock.duration)
@@ -180,20 +128,11 @@ export function Earn(): ReactNode {
 
   useEffect(() => {
     setReview(null);
-  }, [address, amount, lockDuration, network.id, network.rpcUrl, redeemAmount]);
-
-  useEffect(() => {
-    if (!redemptionVisible && review?.kind === "redeem") setReview(null);
-  }, [redemptionVisible, review?.kind]);
+  }, [address, amount, lockDuration, network.id, network.rpcUrl]);
 
   const fillStakeMax = (): void => {
     if (walletNusd === null) return;
     setAmount(formatUnits(walletNusd, NUSD_TOKEN.decimals));
-  };
-
-  const fillRedeemMax = (): void => {
-    if (availableXPointsWad === null) return;
-    setRedeemAmount(formatUnits(availableXPointsWad, 18));
   };
 
   const openStakeReview = (): void => {
@@ -230,22 +169,10 @@ export function Earn(): ReactNode {
     });
   };
 
-  const openRedeemReview = (): void => {
-    if (
-      busy
-      || !redeemReady
-      || redeemPointCredits === null
-      || parsedXPointsWad === null
-      || redeemQuote === null
-    ) return;
+  const openClaimReview = (): void => {
+    if (busy || !claimReady || state === null) return;
     setError(null);
-    setReview({
-      kind: "redeem",
-      identity: redeemIdentity,
-      pointCredits: redeemPointCredits,
-      xPointsWad: parsedXPointsWad,
-      nusdOut: redeemQuote,
-    });
+    setReview({ kind: "claim", identity: claimIdentity, amount: state.claimable });
   };
 
   const reviewedPosition = review?.kind === "withdraw"
@@ -255,11 +182,8 @@ export function Earn(): ReactNode {
     ? false
     : review.kind === "stake"
       ? review.identity === stakeIdentity && stakeReady && review.amount === parsed
-      : review.kind === "redeem"
-        ? review.identity === redeemIdentity
-          && redeemReady
-          && review.pointCredits === redeemPointCredits
-          && review.nusdOut === redeemQuote
+      : review.kind === "claim"
+        ? review.identity === claimIdentity && claimReady && review.amount === state?.claimable
         : reviewedPosition !== null
           && review.identity === reviewKey([
             address,
@@ -312,16 +236,12 @@ export function Earn(): ReactNode {
           txUrl(hash, submittedNetwork),
         );
       } else {
-        const hash = await redeemXPoints({ from: address, pointCredits: submitted.pointCredits });
+        const hash = await claimPointsRewards({ from: address, amount: submitted.amount });
         notify(
-          t("earn.toastRedeem", {
-            points: formatXPoints(submitted.xPointsWad),
-            amount: formatAmount(submitted.nusdOut, NUSD_TOKEN.decimals, 6),
-          }),
+          t("earn.toastClaim", { amount: formatAmount(submitted.amount, NUSD_TOKEN.decimals, 6) }),
           "ok",
           txUrl(hash, submittedNetwork),
         );
-        setRedeemAmount("");
       }
       setReview(null);
       refresh();
@@ -337,12 +257,12 @@ export function Earn(): ReactNode {
     ? t("earn.reviewStake")
     : review?.kind === "withdraw"
       ? t("earn.reviewWithdraw")
-      : t("earn.reviewRedeem");
+      : t("earn.reviewClaim");
   const reviewConfirm = review?.kind === "stake"
     ? t("earn.submitStake")
     : review?.kind === "withdraw"
       ? t("earn.withdraw")
-      : t("earn.redeemSubmit");
+      : t("earn.claim");
 
   return (
     <Screen title={t("earn.title")} onBack={goHome}>
@@ -400,9 +320,9 @@ export function Earn(): ReactNode {
           </div>
           <dl className="w-earn-estimate" aria-label={t("earn.stake")}>
             <div>
-              <dt>{t("earn.positionPoints")}</dt>
+              <dt>{t("earn.pointsPerDay")}</dt>
               <dd data-tone="green">
-                {estimatedPointCredits === null ? "—" : formatPointCredits(estimatedPointCredits)}
+                {estimatedDailyPoints === null ? "—" : formatPointsPerDay(estimatedDailyPoints)}
               </dd>
             </div>
             <div>
@@ -420,16 +340,39 @@ export function Earn(): ReactNode {
                 tone="green"
               />
               <Row
-                label={t("earn.availablePoints")}
-                value={state === null ? "…" : formatPointCredits(state.availablePointCredits)}
+                label={t("earn.roundPoints")}
+                value={state === null ? "…" : formatPoints(state.openPoints)}
+                tone="green"
+              />
+              <Row
+                label={t("earn.roundShare")}
+                value={state === null
+                  ? "…"
+                  : `${(roundShareBps(state.openPoints, state.openRoundPoints) / 100).toFixed(2)}%`}
+              />
+              <Row
+                label={t("earn.pool")}
+                value={state === null
+                  ? "…"
+                  : `${formatAmount(state.poolAvailable, NUSD_TOKEN.decimals, 2)} / ${formatAmount(state.roundReward, NUSD_TOKEN.decimals, 0)} NUSD`}
+              />
+              <Row
+                label={t("earn.claimable")}
+                value={state === null
+                  ? "…"
+                  : `${formatAmount(state.claimable, NUSD_TOKEN.decimals, 4)} NUSD`}
                 tone="green"
               />
             </Rows>
+            {state !== null && state.claimable > 0n ? (
+              <PanelBody>
+                <Button type="button" variant="primary" block disabled={busy || !claimReady} onClick={openClaimReview}>
+                  {t("earn.claim")}
+                </Button>
+              </PanelBody>
+            ) : null}
           </Panel>
           {overWallet ? <Note tone="error">{t("earn.overWallet")}</Note> : null}
-          {state?.stakingPaused === true ? (
-            <Note tone="error">{t("earn.stakingPaused")}</Note>
-          ) : null}
           {read.error !== null ? <Note tone="error">{read.error}</Note> : null}
           <Note>{t("earn.stakeNote")}</Note>
         </div>
@@ -464,8 +407,8 @@ export function Earn(): ReactNode {
                       value={`${formatAmount(position.amount, NUSD_TOKEN.decimals, 4)} NUSD`}
                     />
                     <Row
-                      label={t("earn.positionPoints")}
-                      value={formatPointCredits(position.pointCredits)}
+                      label={t("earn.pointsPerDay")}
+                      value={position.withdrawn ? "—" : formatPointsPerDay(position.weight)}
                       tone="green"
                     />
                     <Row label={t("earn.unlocks")} value={unlockLabel(position.unlockTime)} />
@@ -491,58 +434,6 @@ export function Earn(): ReactNode {
         )}
       </div>
 
-      {redemptionVisible ? (
-        <form
-          className="w-flow"
-          aria-busy={busy}
-          onSubmit={(event) => {
-            event.preventDefault();
-            openRedeemReview();
-          }}
-        >
-          <div className="w-flow-main">
-            <AmountField
-              label={t("earn.redeemLabel")}
-              value={redeemAmount}
-              invalid={redeemInvalid}
-              disabled={busy}
-              onChange={(next) => {
-                setRedeemAmount(next);
-                setError(null);
-              }}
-              symbol="xPoints"
-              onMax={availableXPointsWad === null ? undefined : fillRedeemMax}
-              hint={state === null
-                ? undefined
-                : formatPointCredits(state.availablePointCredits)}
-            />
-            <Panel title={t("earn.redeem")}>
-              <Rows>
-                <Row
-                  label={t("earn.redeemRate")}
-                  value={`${formatAmount(state.nusdPerXPointWad, 18, 6)} NUSD`}
-                />
-                <Row
-                  label={t("earn.redeemReceive")}
-                  value={redeemQuote === null
-                    ? "—"
-                    : `${formatAmount(redeemQuote, NUSD_TOKEN.decimals, 6)} NUSD`}
-                  tone="green"
-                />
-              </Rows>
-            </Panel>
-            {overPoints ? <Note tone="error">{t("earn.overPoints")}</Note> : null}
-            {redeemTooSmall ? <Note tone="error">{t("earn.redeemTooSmall")}</Note> : null}
-            {redeemOverReserve ? <Note tone="error">{t("earn.redeemReserve")}</Note> : null}
-          </div>
-          <div className="w-flow-actions">
-            <Button type="submit" variant="primary" block disabled={busy || !redeemReady}>
-              {busy ? t("common.working") : t("earn.redeemSubmit")}
-            </Button>
-          </div>
-        </form>
-      ) : null}
-
       <Panel title={t("earn.lending")}>
         <PanelBody>
           <Note>{t("earn.lendingNote")}</Note>
@@ -552,7 +443,7 @@ export function Earn(): ReactNode {
         </PanelBody>
       </Panel>
 
-      {review !== null && (review.kind !== "redeem" || redemptionVisible) ? (
+      {review !== null ? (
         <TransactionReview
           title={reviewTitle}
           busy={busy}
@@ -567,12 +458,10 @@ export function Earn(): ReactNode {
                   ? t("earn.stake")
                   : review.kind === "withdraw"
                     ? t("earn.withdraw")
-                    : t("earn.redeem")}
+                    : t("earn.claim")}
               </span>
               <span className="w-summary-value">
-                {review.kind === "stake" || review.kind === "withdraw"
-                  ? `${formatAmount(review.amount, NUSD_TOKEN.decimals, 6)} NUSD`
-                  : formatXPoints(review.xPointsWad)}
+                {`${formatAmount(review.amount, NUSD_TOKEN.decimals, 6)} NUSD`}
               </span>
             </div>
           }
@@ -589,10 +478,8 @@ export function Earn(): ReactNode {
                     })}
                   />
                   <Row
-                    label={t("earn.positionPoints")}
-                    value={formatPointCredits(
-                      (review.amount * BigInt(review.multiplierBps)) / 10_000n,
-                    )}
+                    label={t("earn.pointsPerDay")}
+                    value={formatPointsPerDay(stakeWeight(review.amount, review.multiplierBps))}
                     tone="green"
                   />
                   <Row label={t("common.network")} value={network.name} />
@@ -605,8 +492,8 @@ export function Earn(): ReactNode {
               ) : (
                 <>
                   <Row
-                    label={t("earn.redeemReceive")}
-                    value={`${formatAmount(review.nusdOut, NUSD_TOKEN.decimals, 6)} NUSD`}
+                    label={t("earn.claimable")}
+                    value={`${formatAmount(review.amount, NUSD_TOKEN.decimals, 6)} NUSD`}
                     tone="green"
                   />
                   <Row label={t("common.network")} value={network.name} />

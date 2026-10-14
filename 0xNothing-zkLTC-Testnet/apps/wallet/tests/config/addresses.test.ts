@@ -42,7 +42,7 @@ test("addresses copied from the web app's generated config still match it", () =
   same(CONTRACTS.dexFactory, text(fi, "dexFactory"));
   same(CONTRACTS.dexRouter, text(fi, "dexRouter"));
   same(CONTRACTS.lendingPool, text(fi, "lendingPool"));
-  same(CONTRACTS.nusdPointsStaking, text(fi, "nusdPointsStaking"));
+  same(CONTRACTS.rewardStaking, text(fi, "rewardStaking"));
   same(CONTRACTS.diaLtcFeed, text(fi, "diaLtcFeed"));
   same(CONTRACTS.pumpFactory, text(fi, "pump"));
   assert.equal(FI_DEPLOYMENT_BLOCK, BigInt(text(fi, "deploymentBlock")));

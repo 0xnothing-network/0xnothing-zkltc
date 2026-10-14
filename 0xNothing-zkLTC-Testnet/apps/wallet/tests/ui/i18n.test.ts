@@ -113,11 +113,11 @@ const POINTS_ENGLISH: readonly MessageKey[] = [
   "earn.lockPeriod",
   "earn.lockOption",
   "earn.locked",
-  "earn.availablePoints",
-  "earn.earnedPoints",
-  "earn.spentPoints",
+  "earn.roundPoints",
+  "earn.roundShare",
+  "earn.claimable",
+  "earn.pool",
   "earn.overWallet",
-  "earn.stakingPaused",
   "earn.stakeNote",
   "earn.approvalHint",
   "earn.submitStake",
@@ -127,31 +127,26 @@ const POINTS_ENGLISH: readonly MessageKey[] = [
   "earn.positionsTruncated",
   "earn.position",
   "earn.positionAmount",
-  "earn.positionPoints",
+  "earn.pointsPerDay",
   "earn.unlocks",
   "earn.withdrawn",
   "earn.withdraw",
   "earn.toastWithdraw",
+  "earn.claim",
+  "earn.toastClaim",
   "earn.lending",
   "earn.lendingNote",
-  "earn.redeem",
-  "earn.redeemLabel",
-  "earn.redeemRate",
-  "earn.redeemReceive",
-  "earn.overPoints",
-  "earn.redeemTooSmall",
-  "earn.redeemReserve",
-  "earn.redeemSubmit",
-  "earn.toastRedeem",
   "earn.reviewStake",
   "earn.reviewWithdraw",
-  "earn.reviewRedeem",
+  "earn.reviewClaim",
   "tx.pointsStake",
   "tx.pointsWithdraw",
   "tx.pointsRedeem",
+  "tx.pointsClaim",
   "kind.pointsStake",
   "kind.pointsWithdraw",
   "kind.pointsRedeem",
+  "kind.pointsClaim",
 ];
 
 const codes = Object.keys(LOCALES) as Code[];
@@ -228,7 +223,7 @@ test("placeholders survive translation", () => {
   }
 });
 
-test("the NUSD points flow names its public unit only as xPoints", () => {
+test("the NUSD points flow names its public unit only as 0xPoints (history keeps xPoints)", () => {
   const pointsKeys = (Object.keys(EN) as MessageKey[]).filter((key) => (
     key.startsWith("earn.") || key.startsWith("kind.points") || key.startsWith("tx.points")
   ));
@@ -253,19 +248,13 @@ test("the NUSD points flow names its public unit only as xPoints", () => {
   }
 });
 
-test("xPoints toast and history templates append the public unit exactly once", () => {
-  assert.equal(
-    interpolate(EN["earn.toastRedeem"], { points: "1.24xPoints", amount: "2" }),
-    "Redeemed 1.24xPoints for 2 NUSD",
-  );
+test("reward toasts and legacy xPoints history templates interpolate exactly once", () => {
+  assert.equal(interpolate(EN["earn.toastClaim"], { amount: "2" }), "Claimed 2 NUSD");
   assert.equal(
     interpolate(EN["tx.pointsRedeem"], { amount: "1.24xPoints" }),
     "Redeemed 1.24xPoints for NUSD",
   );
-  assert.equal(
-    interpolate(vi["earn.toastRedeem"]!, { points: "1,24xPoints", amount: "2" }),
-    "Đã đổi 1,24xPoints lấy 2 NUSD",
-  );
+  assert.equal(interpolate(vi["earn.toastClaim"]!, { amount: "2" }), "Đã nhận 2 NUSD");
   assert.equal(
     interpolate(vi["tx.pointsRedeem"]!, { amount: "1,24xPoints" }),
     "Đã đổi 1,24xPoints lấy NUSD",

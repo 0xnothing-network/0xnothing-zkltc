@@ -56,8 +56,8 @@ export const dexPoolAbi = parseAbi([
 
 export const dexRouterAbi = parseAbi([
   "function LP_FEE_BPS() view returns (uint256)",
-  "function PROTOCOL_FEE_BPS() view returns (uint256)",
-  "function ROUTE_SURCHARGE_BPS() view returns (uint256)",
+  "function DIRECT_FEE_BPS() view returns (uint256)",
+  "function CROSS_FEE_BPS() view returns (uint256)",
   "function getAmountsOut(uint256 amountIn, address[] path) view returns (uint256[] amounts)",
   "function swapExactTokensForTokens(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) returns (uint256[] amounts)",
   "function swapExactNativeForTokens(uint256 amountOutMin, address[] path, address to, uint256 deadline) payable returns (uint256[] amounts)",
@@ -91,25 +91,18 @@ export const lendingPoolAbi = parseAbi([
   "function activated() view returns (bool)",
 ]);
 
-/** Public/user surface of the deployed NUSD points staking contract. */
-export const nusdPointsStakingAbi = parseAbi([
-  "function totalLockedByUser(address account) view returns (uint256)",
-  "function earnedPointCredits(address account) view returns (uint256)",
-  "function spentPointCredits(address account) view returns (uint256)",
-  "function availablePointCredits(address account) view returns (uint256)",
-  "function userPositionCount(address account) view returns (uint256)",
-  "function userPositionIds(address account, uint256 offset, uint256 limit) view returns (uint256[] ids)",
-  "function getPosition(uint256 positionId) view returns ((address account, uint256 amount, uint256 pointCredits, uint64 unlockTime, uint32 lockDuration, bool withdrawn))",
-  "function stakingPaused() view returns (bool)",
-  "function redemptionsPaused() view returns (bool)",
-  "function redemptionEnabled() view returns (bool)",
-  "function nusdPerXPointWad() view returns (uint256)",
-  "function redemptionReserve() view returns (uint256)",
-  "function isSolvent() view returns (bool)",
-  "function quoteRedemption(uint256 pointCredits) view returns (uint256)",
+/** v2 0xPoints staking (contracts/src/rewards/RewardStaking.sol). */
+export const rewardStakingAbi = parseAbi([
+  "function ROUND_REWARD() view returns (uint256)",
+  "function availableRewards() view returns (uint256)",
+  "function openRoundPoints() view returns (uint256)",
+  "function currentRound() view returns (uint32)",
+  "function accountState(address user) view returns (uint256 weight, uint256 openPoints, uint256 claimable)",
+  "function positionIdsOf(address user) view returns (uint256[])",
+  "function getPosition(uint256 positionId) view returns ((address account, uint64 unlockTime, uint32 lockDuration, bool withdrawn, uint256 amount, uint256 weight))",
   "function stake(uint256 amount, uint32 lockDuration) returns (uint256 positionId)",
   "function withdraw(uint256 positionId)",
-  "function redeemPoints(uint256 pointCredits) returns (uint256 nusdOut)",
+  "function claim(address recipient) returns (uint256 amount)",
 ]);
 
 export const diaOracleAdapterAbi = parseAbi([
