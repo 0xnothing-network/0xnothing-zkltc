@@ -137,6 +137,12 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
+        // Lend and Borrow merged into one page (ui-redesign-spec §5).
+        source: "/0xFi/borrow",
+        destination: "/0xFi/lend?tab=borrow",
+        permanent: false,
+      },
+      {
         source: "/0xFi/farm",
         destination: "/0xFi/earn",
         permanent: true,

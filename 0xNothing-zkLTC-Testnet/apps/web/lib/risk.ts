@@ -76,3 +76,30 @@ export function healthBand(hf: number | null): HealthBand {
   if (hf < 2) return "caution";
   return "safe";
 }
+
+/**
+ * HF from the pool's aggregated `accountRisk` values (both 18-decimal NUSD):
+ * liquidationCapacity already applies each collateral's on-chain liquidation
+ * threshold, so HF = liquidationCapacity / debt. Null without debt.
+ */
+export function healthFactorFromCapacity(liquidationCapacityWei: bigint | undefined, debtWei: bigint | undefined): number | null {
+  if (debtWei === undefined || debtWei <= 0n || liquidationCapacityWei === undefined) return null;
+  // Scale in bigint first so large wad values keep 4 decimals of precision.
+  return Number((liquidationCapacityWei * 10_000n) / debtWei) / 10_000;
+}
+
+/**
+ * Extra NUSD that keeps HF ≥ target, also capped by the pool's own maxBorrow.
+ * target is expressed in basis points of HF (15_000n = 1.5).
+ */
+export function safeBorrowFromCapacity(
+  liquidationCapacityWei: bigint | undefined,
+  debtWei: bigint | undefined,
+  maxBorrowWei: bigint | undefined,
+  targetHealthBps = 15_000n,
+): bigint | undefined {
+  if (liquidationCapacityWei === undefined || debtWei === undefined || maxBorrowWei === undefined || targetHealthBps <= 0n) return undefined;
+  const byHealth = (liquidationCapacityWei * 10_000n) / targetHealthBps;
+  const headroom = byHealth > debtWei ? byHealth - debtWei : 0n;
+  return headroom < maxBorrowWei ? headroom : maxBorrowWei;
+}

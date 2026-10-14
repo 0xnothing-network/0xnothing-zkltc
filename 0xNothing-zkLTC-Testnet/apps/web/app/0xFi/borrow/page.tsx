@@ -1,13 +1,9 @@
-import { BorrowWorkspace } from "@fi/components/BorrowWorkspace";
-import { OracleFeedTable } from "@fi/components/OracleFeedTable";
-import { PageHeading } from "@fi/components/UiStates";
+import { redirect } from "next/navigation";
 
+// Dynamic so the old URL answers with a real 307 instead of a static meta refresh.
+export const dynamic = "force-dynamic";
+
+/** Lend and Borrow are one page now (ui-redesign-spec §5). */
 export default function BorrowPage() {
-  return (
-    <div className="fi-page">
-      <PageHeading title="Borrow" />
-      <BorrowWorkspace />
-      <OracleFeedTable />
-    </div>
-  );
+  redirect("/0xFi/lend?tab=borrow");
 }
