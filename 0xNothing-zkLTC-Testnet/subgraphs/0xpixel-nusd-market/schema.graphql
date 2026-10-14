@@ -71,5 +71,7 @@ type NusdMarketStats @entity(immutable: false) {
   sales: BigInt!
   volume: BigInt!
   offers: BigInt!
+  "NUSD burned by the 0.1% sale fee (v2 marketplace)."
+  burned: BigInt!
   updatedAt: BigInt!
 }

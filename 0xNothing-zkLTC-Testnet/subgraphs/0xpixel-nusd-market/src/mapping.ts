@@ -28,6 +28,7 @@ function stats(event: ethereum.Event): NusdMarketStats {
     entity.sales = ZERO_BI;
     entity.volume = ZERO_BI;
     entity.offers = ZERO_BI;
+    entity.burned = ZERO_BI;
   }
   entity.updatedAt = event.block.timestamp;
   return entity;
@@ -107,6 +108,7 @@ export function handleSaleSettled(event: SaleSettled): void {
   const totals = stats(event);
   totals.sales = totals.sales.plus(ONE_BI);
   totals.volume = totals.volume.plus(event.params.price);
+  totals.burned = totals.burned.plus(event.params.burned);
   totals.save();
 }
 

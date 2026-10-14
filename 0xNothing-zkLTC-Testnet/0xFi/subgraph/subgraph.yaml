@@ -8,9 +8,9 @@ dataSources:
     name: ZeroXFiFactory
     network: liteforge
     source:
-      address: "0xe33fE815c2e12DC83b69397CeD12b09849Fa9C0D"
+      address: "0x1D1dFE055F261DB4B27962A9c3097e779dD8ac58"
       abi: ZeroXFiFactory
-      startBlock: 35303686
+      startBlock: 60811688
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -29,9 +29,9 @@ dataSources:
     name: GaugeFactory
     network: liteforge
     source:
-      address: "0x36F425fddc59d281c6ddEaDAc34B32E6f039EB13"
+      address: "0x271d09B5B073Db5c6F564E4e8c4e0bfe73F7f449"
       abi: GaugeFactory
-      startBlock: 35855510
+      startBlock: 60811712
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -46,36 +46,13 @@ dataSources:
           handler: handleGaugeCreated
         - event: GaugeFunded(indexed address,indexed address,uint256,uint256)
           handler: handleGaugeFunded
-  # SYNTH_FEE_GAUGE_FACTORY_START
-  - kind: ethereum
-    name: SynthFeeGaugeFactory
-    network: liteforge
-    source:
-      address: "0xA6bd4C009ABBDEA193CF6381BeB62e2F5eDF8999"
-      abi: GaugeFactory
-      startBlock: 37983218
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.9
-      language: wasm/assemblyscript
-      file: ./src/gaugeFactory.ts
-      entities: [Protocol, Gauge, GaugeAction]
-      abis:
-        - name: GaugeFactory
-          file: ./abis/GaugeFactory.json
-      eventHandlers:
-        - event: GaugeCreated(indexed address,indexed address,uint256)
-          handler: handleGaugeCreated
-        - event: GaugeFunded(indexed address,indexed address,uint256,uint256)
-          handler: handleGaugeFunded
-  # SYNTH_FEE_GAUGE_FACTORY_END
   - kind: ethereum
     name: NbtcVault
     network: liteforge
     source:
-      address: "0x3694a78B1E890E72F47933856B59EBa81EeCAb84"
+      address: "0x24c475Be424dF2fd1Cfd8CBe1d521e7DA39b0dc4"
       abi: SyntheticVault
-      startBlock: 37983218
+      startBlock: 60811731
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -122,9 +99,9 @@ dataSources:
     name: NethVault
     network: liteforge
     source:
-      address: "0x43dB27A73a1CB305BFBee4CfAb7F0869000A1517"
+      address: "0x0c1EAd9E1CF9cfF5504E36217a6D33AE48c68F84"
       abi: SyntheticVault
-      startBlock: 37983218
+      startBlock: 60811736
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -171,9 +148,9 @@ dataSources:
     name: LendingPool
     network: liteforge
     source:
-      address: "0x7CB638F8e10f1bd200A3c5C3fD014C3FD97BA914"
+      address: "0xF37eCaed4E7869850071BB9439E32C917F60F080"
       abi: LendingPool
-      startBlock: 37981388
+      startBlock: 60811764
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9

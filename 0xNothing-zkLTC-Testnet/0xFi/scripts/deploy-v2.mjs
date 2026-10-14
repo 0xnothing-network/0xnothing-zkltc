@@ -3,6 +3,7 @@
 //   --rehearse   full run on a local anvil fork of LiteForge: deploy, seed, smoke-test, warp, activate
 //   --broadcast  live deploy (core, then 0xFi) and seed liquidity; resumable stage by stage
 //   --activate   live, once the 1-hour graduation delay has passed: open graduation, hand admin to the controller
+//   --publish    switch the repo's active testnet set (network config, 0xFi subgraph config, web config) to v2
 //   --status     read-only summary
 // The deployer key is read from the testnet .env.local into memory and only handed to forge through the child env.
 
@@ -28,6 +29,8 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 
 import { atomicWriteFile } from "./lib/graduation-runtime.mjs";
+import { CURRENT_LENDING_IMPLEMENTATION_STATUS } from "./lib/lending-implementation.mjs";
+import { publicGeneratedConfigTarget, publicTestnetConfiguration } from "./lib/public-environment.mjs";
 import { primaryRpcUrl } from "./lib/rpc.mjs";
 import { runStep } from "./lib/spawn-step.mjs";
 
@@ -38,12 +41,17 @@ const fiContracts = path.join(fiRoot, "contracts");
 const manifestPath = path.join(testnetRoot, "deployments", "liteforge-testnet", "v2.json");
 const network = JSON.parse(fs.readFileSync(path.join(fiRoot, "config", "liteforge-testnet.json"), "utf8"));
 
-const modes = ["--rehearse", "--broadcast", "--activate", "--status"];
+const modes = ["--rehearse", "--broadcast", "--activate", "--publish", "--status"];
 const flags = process.argv.slice(2).filter((argument) => argument.startsWith("--"));
 if (flags.length !== 1 || !modes.includes(flags[0])) throw new Error(`Choose exactly one of ${modes.join(", ")}`);
 const mode = flags[0];
 
 const CHAIN_ID = 4441;
+const GOLDSKY_PROJECT = "project_cmqmpust19i8v01t595z8hpq4";
+const FI_SUBGRAPH = "zeroxfi-testnet-v2/0.2.0";
+const PUMP_SUBGRAPH = "zeroxpump-testnet-v2/0.2.0";
+const NUSD_MARKET_SUBGRAPH = "pixel-nusd-market-v2/1.0.0";
+const goldskyEndpoint = (name) => `https://api.goldsky.com/api/public/${GOLDSKY_PROJECT}/subgraphs/${name}/gn`;
 const ANVIL_PORT = 8547;
 const MIN_LIVE_BALANCE = parseEther("2.5");
 const SEED_MINT_ZKLTC = parseEther("1");
@@ -511,6 +519,135 @@ async function activateLive() {
   console.log(JSON.stringify({ stage: "active" }, null, 2));
 }
 
+/// Creation block of every v2 contract, from the local Foundry journals of the live run.
+function contractBlocks() {
+  const blocks = {};
+  for (const journal of [
+    path.join(coreContracts, "broadcast", "DeployV2Core.s.sol", String(CHAIN_ID), "run-latest.json"),
+    path.join(fiContracts, "broadcast", "Deploy0xFiV2.s.sol", String(CHAIN_ID), "run-latest.json"),
+  ]) {
+    const data = readJson(journal);
+    const blockByHash = new Map(data.receipts.map((receipt) => [receipt.transactionHash, Number(BigInt(receipt.blockNumber))]));
+    for (const transaction of data.transactions) {
+      if (transaction.transactionType === "CREATE") {
+        blocks[getAddress(transaction.contractAddress)] = blockByHash.get(transaction.hash);
+      }
+    }
+  }
+  return blocks;
+}
+
+async function publish() {
+  const manifest = readJson(manifestPath);
+  if (manifest.stage !== "seeded" && manifest.stage !== "active") throw new Error("Deploy v2 before publishing it");
+  const blocks = manifest.blocks ?? contractBlocks();
+  const blockOf = (address) => {
+    const block = blocks[getAddress(address)];
+    if (!Number.isSafeInteger(block)) throw new Error(`No creation block recorded for ${address}`);
+    return block;
+  };
+  const { core, fi } = manifest;
+  const deploymentBlock = String(blockOf(core.nusd));
+
+  // Network config: v2 becomes the active set; v1 is kept verbatim for reference.
+  const networkPath = path.join(fiRoot, "config", "liteforge-testnet.json");
+  const network = readJson(networkPath);
+  const legacyV1 = network.legacyV1 ?? {
+    existingContracts: network.existingContracts,
+    pumpGraduation: network.pumpGraduation,
+    goldsky: network.goldsky,
+    deployment: network.deployment,
+  };
+  const contracts = {
+    ...Object.fromEntries(FI_KEYS.map((key) => [key, fi[key]])),
+    wzkLTC: fi.wzkLTC,
+    ltcOracle: fi.ltcOracle,
+    btcOracle: fi.btcOracle,
+    ethOracle: fi.ethOracle,
+    treasury: core.treasury,
+    feeSplitter: core.feeSplitter,
+    rewardStaking: core.rewardStaking,
+    surplusMintGovernor: core.surplusMintGovernor,
+    nusdMarketplace: core.nusdMarketplace,
+  };
+  const updatedNetwork = {
+    ...network,
+    existingContracts: {
+      nusd: core.nusd,
+      pump: core.pump,
+      pumpGraduationRouter: core.pumpGraduationRouter,
+      pumpLiquidityLocker: core.pumpLiquidityLocker,
+    },
+    pumpGraduation: { minimumDelaySeconds: 3600 },
+    goldsky: { network: "liteforge", subgraph: FI_SUBGRAPH, tag: null, endpoint: goldskyEndpoint(FI_SUBGRAPH) },
+    deployment: {
+      status: manifest.stage === "active" ? "v2-tokenomics-active" : "v2-tokenomics-pending-graduation",
+      governanceMode: "direct-deployer-no-timelock",
+      governance: manifest.deployer,
+      guardian: manifest.deployer,
+      coreOwnershipStatus: "direct-deployer-owner-no-pending",
+      riskMode: "caps-pauses-oracles-no-nusd-health-guard",
+      lendingImplementationStatus: CURRENT_LENDING_IMPLEMENTATION_STATUS,
+      lendingImplementationMigrationRequired: false,
+      deploymentBlock,
+      finalizedAt: manifest.deployedAt,
+      contracts,
+    },
+    legacyV1,
+  };
+  atomicWriteFile(networkPath, `${JSON.stringify(updatedNetwork, null, 2)}\n`);
+
+  // 0xFi subgraph: no synth fee gauge factory in v2.
+  const subgraphConfigPath = path.join(fiRoot, "subgraph", "subgraph.config.json");
+  const subgraphConfig = readJson(subgraphConfigPath);
+  delete subgraphConfig.synthFeeGaugeFactoryAddress;
+  delete subgraphConfig.synthFeeGaugeFactoryStartBlock;
+  Object.assign(subgraphConfig, {
+    factoryAddress: fi.dexFactory,
+    gaugeFactoryAddress: fi.gaugeFactory,
+    nbtcVaultAddress: fi.nBTCVault,
+    nethVaultAddress: fi.nETHVault,
+    lendingPoolAddress: fi.lendingPool,
+    nusdAddress: core.nusd,
+    startBlock: Number(deploymentBlock),
+    factoryStartBlock: blockOf(fi.dexFactory),
+    gaugeFactoryStartBlock: blockOf(fi.gaugeFactory),
+    nbtcVaultStartBlock: blockOf(fi.nBTCVault),
+    nethVaultStartBlock: blockOf(fi.nETHVault),
+    lendingPoolStartBlock: blockOf(fi.lendingPool),
+    deploymentName: FI_SUBGRAPH.split("/")[0],
+  });
+  atomicWriteFile(subgraphConfigPath, `${JSON.stringify(subgraphConfig, null, 2)}\n`);
+
+  // Web: the same generator v1 used, plus the tokenomics contracts and v2 indexers.
+  const flat = {
+    ...contracts,
+    nusd: core.nusd,
+    pump: core.pump,
+    deploymentBlock,
+    synthRiskActivationStatus: "active",
+    synthRiskActionsEnabled: true,
+    lendingImplementationStatus: CURRENT_LENDING_IMPLEMENTATION_STATUS,
+    lendingImplementationMigrationRequired: false,
+  };
+  const generated = {
+    ...publicTestnetConfiguration({ deployment: flat, network: updatedNetwork, goldskyEndpoint: goldskyEndpoint(FI_SUBGRAPH) }),
+    treasury: core.treasury,
+    feeSplitter: core.feeSplitter,
+    rewardStaking: core.rewardStaking,
+    surplusMintGovernor: core.surplusMintGovernor,
+    nusdMarketplace: core.nusdMarketplace,
+    nusdMarketplaceDeploymentBlock: String(blockOf(core.nusdMarketplace)),
+    pumpGraduationRouter: core.pumpGraduationRouter,
+    pumpGoldskyEndpoint: goldskyEndpoint(PUMP_SUBGRAPH),
+    nusdMarketGoldskyEndpoint: goldskyEndpoint(NUSD_MARKET_SUBGRAPH),
+  };
+  atomicWriteFile(publicGeneratedConfigTarget(fiRoot), `${JSON.stringify(generated, null, 2)}\n`);
+
+  writeManifest({ ...manifest, blocks, published: { fiSubgraph: FI_SUBGRAPH, pumpSubgraph: PUMP_SUBGRAPH, nusdMarketSubgraph: NUSD_MARKET_SUBGRAPH } });
+  console.log(JSON.stringify({ published: true, deploymentBlock, web: publicGeneratedConfigTarget(fiRoot) }, null, 2));
+}
+
 async function status() {
   if (!fs.existsSync(manifestPath)) {
     console.log(JSON.stringify({ stage: "none" }));
@@ -531,4 +668,5 @@ async function status() {
 if (mode === "--rehearse") await rehearse();
 else if (mode === "--broadcast") await broadcastLive();
 else if (mode === "--activate") await activateLive();
+else if (mode === "--publish") await publish();
 else await status();

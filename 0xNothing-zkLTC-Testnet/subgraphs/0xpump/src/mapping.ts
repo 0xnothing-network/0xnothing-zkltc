@@ -1,7 +1,7 @@
 import { BigDecimal, BigInt, Bytes, log } from "@graphprotocol/graph-ts";
 import {
   CreationFeePaid,
-  ProtocolFeesWithdrawn,
+  ProtocolFeesDistributed,
   TokenCurveReopened,
   TokenCreated,
   TokenGraduated,
@@ -472,7 +472,7 @@ export function handleTokenGraduated(event: TokenGraduated): void {
   market.save();
 }
 
-export function handleProtocolFeesWithdrawn(event: ProtocolFeesWithdrawn): void {
+export function handleProtocolFeesDistributed(event: ProtocolFeesDistributed): void {
   const withdrawal = new FeeWithdrawal(eventId(event.transaction.hash, event.logIndex));
   withdrawal.recipient = event.params.recipient;
   withdrawal.amountNusd = event.params.amountNusd;

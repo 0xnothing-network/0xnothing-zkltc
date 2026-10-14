@@ -29,9 +29,10 @@ function publicUrl(value, label) {
 }
 
 export function synthRiskActionsManifestEnabled(deployment) {
+  // v1 routes synth mint fees to a fee-gauge factory, v2 to the fee splitter.
   return Boolean(
     deployment.synthSafetyReserve
-      && deployment.synthFeeGaugeFactory
+      && (deployment.synthFeeGaugeFactory || deployment.feeSplitter)
       && deployment.synthRiskActivationStatus === "active"
       && deployment.synthRiskActionsEnabled === true,
   );

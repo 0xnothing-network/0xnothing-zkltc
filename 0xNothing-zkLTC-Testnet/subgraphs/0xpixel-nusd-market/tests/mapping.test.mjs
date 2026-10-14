@@ -23,7 +23,7 @@ class GraphBytes {
   toHexString() { return this.value; }
 }
 
-const MARKET = new GraphBytes('0x188eacb8e05691ad5ca6b31703da97b13b2cf377');
+const MARKET = new GraphBytes('0xa5e3edfcba3b6fc40f3e41557f8a303a2aac7e09');
 const NFT = new GraphBytes('0xd83cb7acef921f98b6b983cbb712a583869da9eb');
 const SELLER = new GraphBytes('0x0000000000000000000000000000000000000055');
 const BUYER = new GraphBytes('0x0000000000000000000000000000000000000066');
@@ -65,7 +65,7 @@ test('listing lifecycle records price edits, the sale and volume once per settle
   const { context, event, rows, tables } = setup();
   context.handleListed(event({ listingId: big(1), collection: NFT, tokenId: big(7), seller: SELLER, price: big(10n * UNIT) }));
   context.handleListingPriceUpdated(event({ listingId: big(1), price: big(12n * UNIT) }));
-  context.handleSaleSettled(event({ seller: SELLER, buyer: BUYER, collection: NFT, tokenId: big(7), price: big(12n * UNIT), fee: big(0), royaltyReceiver: SELLER, royalty: big(0) }));
+  context.handleSaleSettled(event({ seller: SELLER, buyer: BUYER, collection: NFT, tokenId: big(7), price: big(12n * UNIT), burned: big(12n * UNIT / 1000n), creator: SELLER, creatorFee: big(48n * UNIT / 1000n) }));
   context.handleBought(event({ listingId: big(1), buyer: BUYER, price: big(12n * UNIT) }));
   const listing = tables.get('NusdListing').get('1');
   assert.equal(listing.status, 'SOLD');
@@ -78,6 +78,7 @@ test('listing lifecycle records price edits, the sale and volume once per settle
   const stats = tables.get('NusdMarketStats').get('global');
   assert.equal(stats.sales.toString(), '1');
   assert.equal(stats.volume.toString(), (12n * UNIT).toString());
+  assert.equal(stats.burned.toString(), (12n * UNIT / 1000n).toString());
 });
 
 test('cancellation and invalidation both surface as CANCELLED with the listing identity', () => {

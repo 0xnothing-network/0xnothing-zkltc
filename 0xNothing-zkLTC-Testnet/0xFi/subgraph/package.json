@@ -1,6 +1,6 @@
 {
   "name": "@0xnothing/0xfi-subgraph-testnet",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "configure": "node ./scripts/configure.mjs",
@@ -10,7 +10,7 @@
     "check": "npm run test && npm run build",
     "deploy:check": "node ./scripts/check-deploy-ready.mjs",
     "audit:live": "node ./scripts/check-live-indexer.mjs",
-    "deploy": "npm run deploy:check && npm run build && goldsky subgraph deploy zeroxfi-testnet/0.1.2 --path . --tag staging"
+    "deploy": "npm run deploy:check && npm run build && goldsky subgraph deploy zeroxfi-testnet-v2/0.2.0 --path ."
   },
   "dependencies": {
     "@graphprotocol/graph-ts": "0.38.2"

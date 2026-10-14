@@ -2,7 +2,7 @@ import { newMockEvent } from "matchstick-as";
 import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import {
   CreationFeePaid,
-  ProtocolFeesWithdrawn,
+  ProtocolFeesDistributed,
   TokenCurveReopened,
   TokenCreated,
   TokenGraduated,
@@ -203,10 +203,11 @@ export function tokenGraduatedEvent(token: Address): TokenGraduated {
   return event;
 }
 
-export function feesWithdrawnEvent(recipient: Address): ProtocolFeesWithdrawn {
-  const event = changetype<ProtocolFeesWithdrawn>(newMockEvent());
+export function feesDistributedEvent(recipient: Address): ProtocolFeesDistributed {
+  const event = changetype<ProtocolFeesDistributed>(newMockEvent());
   stamp(event, 5);
   event.parameters = new Array<ethereum.EventParam>();
+  event.parameters.push(new ethereum.EventParam("caller", ethereum.Value.fromAddress(recipient)));
   event.parameters.push(
     new ethereum.EventParam("recipient", ethereum.Value.fromAddress(recipient)),
   );
