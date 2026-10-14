@@ -39,3 +39,13 @@ test("polling stretches only while the event socket is connected", () => {
   live.setLiveSocketConnected(false);
   assert.equal(live.livePollInterval(5_000, 3), 5_000);
 });
+
+test("loaders outside React Query hear every refresh wave until they unsubscribe", () => {
+  let heard = 0;
+  const unsubscribe = live.subscribeLiveWaves(() => { heard += 1; });
+  live.notifyLiveWave();
+  live.notifyLiveWave();
+  unsubscribe();
+  live.notifyLiveWave();
+  assert.equal(heard, 2);
+});

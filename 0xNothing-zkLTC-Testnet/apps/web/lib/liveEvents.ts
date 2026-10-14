@@ -276,8 +276,9 @@ export type LiveSocketSession = {
 /**
  * One log subscription for the watched contracts and two for Transfer events to
  * and from the connected account (tokens of any contract, NFTs included). Any
- * event, and every successful (re)connect, calls `onEvent`. A dropped socket is
- * retried with exponential backoff, alternating across `urls`.
+ * event, and every successful reconnect, calls `onEvent`; the first connect does
+ * not, since the views have just loaded. A dropped socket is retried with
+ * exponential backoff, alternating across `urls`.
  */
 export function startLiveSocket({
   urls,
@@ -303,6 +304,7 @@ export function startLiveSocket({
   let reconnectTimer: unknown;
   let generation = 0;
   let connected = false;
+  let everConnected = false;
   let disposed = false;
 
   const setConnected = (value: boolean) => {
@@ -408,7 +410,8 @@ export function startLiveSocket({
       attempt = 0;
       setConnected(true);
       // Events emitted while the socket was down are not replayed; refresh once instead.
-      onEvent();
+      if (everConnected) onEvent();
+      everConnected = true;
       // The filter may have changed while subscribing.
       if (subscribedAddresses !== addresses) void resubscribe("contracts");
       if (subscribedAccount !== account) void resubscribe("account");

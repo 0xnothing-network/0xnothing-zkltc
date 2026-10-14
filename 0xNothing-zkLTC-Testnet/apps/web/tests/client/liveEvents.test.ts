@@ -193,7 +193,7 @@ test("the session subscribes to watched contracts and to transfers in and out of
   await settle();
   await settle();
   assert.deepEqual(statuses, [true]);
-  assert.equal(events, 1, "a (re)connect refreshes once because missed events are not replayed");
+  assert.equal(events, 0, "the first connect does not refetch views that have just loaded");
   const filters = opened[0]!.filters as Array<{ address?: string[]; topics?: unknown[] }>;
   assert.ok(filters.some((filter) => filter.address?.includes(testnet.pump.toLowerCase())));
   const topic = `0x${"0".repeat(24)}${ACCOUNT.slice(2).toLowerCase()}`;
@@ -208,7 +208,8 @@ test("a dropped socket reconnects with backoff, alternating endpoints, and resub
   const clock = fakeTimers();
   const { opened, open } = fakeTransports();
   const statuses: boolean[] = [];
-  const session = live.startLiveSocket({ urls: ["wss://a", "wss://b"], onEvent: () => undefined, onStatus: (value) => statuses.push(value), open, timers: clock.timers });
+  let events = 0;
+  const session = live.startLiveSocket({ urls: ["wss://a", "wss://b"], onEvent: () => { events += 1; }, onStatus: (value) => statuses.push(value), open, timers: clock.timers });
   await settle();
   opened[0]!.fail();
   assert.deepEqual(statuses, [true, false]);
@@ -220,6 +221,7 @@ test("a dropped socket reconnects with backoff, alternating endpoints, and resub
   assert.equal(opened.length, 2);
   assert.equal(opened[1]!.url, "wss://b", "a dropped connection retries on the other endpoint");
   assert.deepEqual(statuses, [true, false, true]);
+  assert.equal(events, 1, "a reconnect refreshes once because missed events are not replayed");
   session.setAddresses([TOKEN]);
   await settle();
   assert.equal(JSON.stringify(opened[1]!.filters.at(-1)), JSON.stringify({ address: [TOKEN] }));

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccount, useBlockNumber } from "wagmi";
 import { litvm } from "@/config/wagmi";
-import { BLOCK_SYNC_MS, isBlockSyncedQueryKey, isLiveQueryKey, setLiveSocketConnected } from "@/lib/liveData";
+import { BLOCK_SYNC_MS, isBlockSyncedQueryKey, isLiveQueryKey, notifyLiveWave, setLiveSocketConnected } from "@/lib/liveData";
 import { createWaveScheduler, liveWatchAddresses, startLiveSocket, type LiveSocketSession } from "@/lib/liveEvents";
 import { LITVM_WS_URLS } from "@/lib/publicConfig";
 
@@ -62,6 +62,7 @@ export function LiveSync() {
         { predicate: (query) => isLiveQueryKey(query.queryKey), refetchType: "active" },
         { cancelRefetch: false },
       );
+      notifyLiveWave();
     }, { minGapMs: WAVE_MIN_GAP_MS, followUpMs: WAVE_FOLLOW_UP_MS });
     const session = startLiveSocket({
       urls: LITVM_WS_URLS,

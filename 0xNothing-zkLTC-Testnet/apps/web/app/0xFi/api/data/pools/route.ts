@@ -33,8 +33,13 @@ type Result = { pools?: PoolRow[] };
 const MAX_RPC_TAIL_BLOCKS = 5_000n;
 const MAX_FACTORY_PAIRS = 1_000;
 const POOLS_CACHE_TTL_MS = 12_000;
-const POOLS_STALE_WHILE_REVALIDATE_MS = 30_000;
+// A visitor after a quiet spell gets the last snapshot at once instead of waiting for a
+// full Goldsky + RPC reload; the response carries its generatedAt, and the client
+// refetches within seconds when the snapshot is old.
+const POOLS_STALE_WHILE_REVALIDATE_MS = 10 * 60_000;
 const POOLS_CACHE_CONTROL = "public, s-maxage=10, stale-while-revalidate=30";
+// A stale answer must not be pinned at the CDN while the refresh runs behind it.
+const POOLS_STALE_CACHE_CONTROL = "public, s-maxage=1, stale-while-revalidate=5";
 const RPC_READ_CONCURRENCY = 24;
 const DEAD_ADDRESS: Address = "0x000000000000000000000000000000000000dEaD";
 const TOKEN_POINT_TTL_MS = 5 * 60_000;
@@ -736,7 +741,9 @@ function loadPoolsOnce(): Promise<DataEnvelope<PoolPoint[]>> {
 function poolsResponse(envelope: DataEnvelope<PoolPoint[]>, cacheStatus: "HIT" | "MISS" | "COALESCED" | "STALE") {
   return NextResponse.json(envelope, {
     headers: {
-      ...publicCdnCacheHeaders(POOLS_CACHE_CONTROL, 10, 30),
+      ...(cacheStatus === "STALE"
+        ? publicCdnCacheHeaders(POOLS_STALE_CACHE_CONTROL, 1, 5)
+        : publicCdnCacheHeaders(POOLS_CACHE_CONTROL, 10, 30)),
       "X-0xFi-Cache": cacheStatus,
     },
   });

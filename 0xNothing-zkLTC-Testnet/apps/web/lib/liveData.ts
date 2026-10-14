@@ -65,6 +65,23 @@ export function isLiveQueryKey(queryKey: QueryKey): boolean {
 }
 
 let liveSocketConnected = false;
+const liveWaveListeners = new Set<() => void>();
+
+/**
+ * Chain-event refresh waves for the few loaders that live outside React Query.
+ * Returns the unsubscribe function.
+ */
+export function subscribeLiveWaves(listener: () => void): () => void {
+  liveWaveListeners.add(listener);
+  return () => {
+    liveWaveListeners.delete(listener);
+  };
+}
+
+/** Called by LiveSync after it invalidates the live queries. */
+export function notifyLiveWave(): void {
+  for (const listener of [...liveWaveListeners]) listener();
+}
 
 /** Set by LiveSync while the chain event socket is subscribed. */
 export function setLiveSocketConnected(connected: boolean): void {

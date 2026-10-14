@@ -18,6 +18,7 @@ import { EmptyState, ErrorState, SkeletonRows } from "@fi/components/UiStates";
 import { fiPath } from "@fi/config/paths";
 import type { CandlePoint, DataEnvelope } from "@fi/lib/data";
 import { fiPollInterval } from "@fi/lib/hooks/useFiPolling";
+import { subscribeLiveWaves } from "@/lib/liveData";
 import { chartFontFamily } from "@/lib/chartTheme";
 import { fetchJson } from "@/lib/http";
 
@@ -296,12 +297,21 @@ export function MarketChart({
       }
     };
 
+    // Chain events (swaps, liquidity) refresh the chart at once; the timer is the fallback.
+    const unsubscribeWaves = subscribeLiveWaves(() => {
+      if (document.visibilityState === "hidden") return;
+      if (timer !== undefined) window.clearTimeout(timer);
+      timer = undefined;
+      void refresh(true);
+    });
+
     document.addEventListener("visibilitychange", onVisibilityChange);
     void refresh(false);
     return () => {
       disposed = true;
       generation += 1;
       if (timer !== undefined) window.clearTimeout(timer);
+      unsubscribeWaves();
       document.removeEventListener("visibilitychange", onVisibilityChange);
       requestAbortRef.current?.abort();
       requestIdRef.current += 1;
