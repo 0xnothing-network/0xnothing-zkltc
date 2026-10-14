@@ -1,6 +1,7 @@
-import { BigDecimal, BigInt, Bytes, log } from "@graphprotocol/graph-ts";
+import { Address, BigDecimal, BigInt, Bytes, ethereum, log } from "@graphprotocol/graph-ts";
 import {
   CreationFeePaid,
+  ProtocolFeesDistributed,
   ProtocolFeesWithdrawn,
   TokenCurveReopened,
   TokenCreated,
@@ -472,10 +473,13 @@ export function handleTokenGraduated(event: TokenGraduated): void {
   market.save();
 }
 
-export function handleProtocolFeesWithdrawn(event: ProtocolFeesWithdrawn): void {
+// Pump v2 sends fees to the fee splitter (`ProtocolFeesDistributed`); the v1-style contract
+// (mainnet source) lets its admin withdraw them (`ProtocolFeesWithdrawn`). Both leave the
+// curve the same way, so both are recorded as fee outflows.
+function recordFeeOutflow(event: ethereum.Event, recipient: Address, amountNusd: BigInt): void {
   const withdrawal = new FeeWithdrawal(eventId(event.transaction.hash, event.logIndex));
-  withdrawal.recipient = event.params.recipient;
-  withdrawal.amountNusd = event.params.amountNusd;
+  withdrawal.recipient = recipient;
+  withdrawal.amountNusd = amountNusd;
   withdrawal.timestamp = event.block.timestamp;
   withdrawal.blockNumber = event.block.number;
   withdrawal.txHash = event.transaction.hash;
@@ -483,8 +487,14 @@ export function handleProtocolFeesWithdrawn(event: ProtocolFeesWithdrawn): void 
   withdrawal.save();
 
   const protocol = getProtocol(event.block.timestamp);
-  protocol.totalFeesWithdrawnNusd = protocol.totalFeesWithdrawnNusd.plus(
-    event.params.amountNusd,
-  );
+  protocol.totalFeesWithdrawnNusd = protocol.totalFeesWithdrawnNusd.plus(amountNusd);
   protocol.save();
+}
+
+export function handleProtocolFeesDistributed(event: ProtocolFeesDistributed): void {
+  recordFeeOutflow(event, event.params.recipient, event.params.amountNusd);
+}
+
+export function handleProtocolFeesWithdrawn(event: ProtocolFeesWithdrawn): void {
+  recordFeeOutflow(event, event.params.recipient, event.params.amountNusd);
 }

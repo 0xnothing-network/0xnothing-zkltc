@@ -2,6 +2,7 @@ import { afterAll, assert, beforeEach, clearStore, describe, test } from "matchs
 import { Address } from "@graphprotocol/graph-ts";
 import {
   handleCreationFeePaid,
+  handleProtocolFeesDistributed,
   handleProtocolFeesWithdrawn,
   handleTokenCurveReopened,
   handleTokenCreated,
@@ -13,6 +14,7 @@ import { handleTransfer } from "../src/tokenMapping";
 import {
   FACTORY,
   creationFeePaidEvent,
+  feesDistributedEvent,
   feesWithdrawnEvent,
   initialMintTransferEvent,
   tokenCreatedEvent,
@@ -217,10 +219,11 @@ describe("0xPump mappings", () => {
     assert.fieldEquals("Protocol", "global", "readyTokenCount", "0");
   });
 
-  test("tracks protocol fee withdrawals", () => {
+  test("tracks protocol fees distributed to the fee splitter", () => {
+    handleProtocolFeesDistributed(feesDistributedEvent(CREATOR));
     handleProtocolFeesWithdrawn(feesWithdrawnEvent(CREATOR));
 
-    assert.entityCount("FeeWithdrawal", 1);
-    assert.fieldEquals("Protocol", "global", "totalFeesWithdrawnNusd", "42");
+    assert.entityCount("FeeWithdrawal", 2);
+    assert.fieldEquals("Protocol", "global", "totalFeesWithdrawnNusd", "50");
   });
 });

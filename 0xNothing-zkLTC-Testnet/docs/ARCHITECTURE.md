@@ -6,6 +6,28 @@
 
 0xPump is a separate NUSD launchpad. It does not depend on the removed legacy DEX.
 
+# Tokenomics v2 (active set since 2026-10-14)
+
+The deployed set is v2 (`deployments/liteforge-testnet/v2.json`; rules and owner powers in `TOKENOMICS_V2.md`). Every NUSD fee flows to an immutable `FeeSplitter` that pays 50% to the 0xPoints reward pool (`RewardStaking`) and 50% to the owner-spent `OwnerTreasury`; zkLTC router fees go to the treasury. All fee pushes, reward rounds and the surplus vote are permissionless.
+
+```mermaid
+graph TD
+  NUSD["OracleNUSDv2<br/>mint/redeem at DIA, burn, emergencyRedeem, mintSurplus"]
+  Gov["SurplusMintGovernor<br/>3x trigger, 2x target"] -->|mintSurplus 50/50| Pool & Treasury
+  Pump["ZeroXPumpV2"] --> Split["FeeSplitter"]
+  Router["ZeroXFiRouterV2<br/>0.1% direct / 0.3% cross"] -->|NUSD| Split
+  Router -->|WzkLTC| Treasury["OwnerTreasury"]
+  Lending["PooledNUSDLendingPoolV2"] --> Split
+  Synth["SyntheticVault x2"] -->|routeMintFee| Split
+  Split --> Pool["RewardStaking<br/>10,000 NUSD rounds"]
+  Split --> Treasury
+  Factory["ZeroXFiFactoryV2<br/>pairs need NUSD or WzkLTC"] --- Router
+  Market["NusdNftMarketplaceV2<br/>0.1% burn, 0.4% creator"] -->|burn| NUSD
+  Pump --- Grad["GraduationRouter + adapter + controller<br/>graduation open to anyone"]
+```
+
+`ZeroXFiPair`, `WzkLTC`, the DIA adapters, `SyntheticAsset`, `SynthSafetyReserve`, gauges, the LP locker and the metadata registry keep their v1 code; WzkLTC and the adapters are the same deployed instances. The sections below describe the shared mechanics; where they mention v1-only behaviour (owner fee withdrawal, platform fee, xPoints) v2 replaces it as above.
+
 # OracleNUSD and DIA
 
 DIA is the price source; it does not mint NUSD. `OracleNUSD` is both the ERC-20

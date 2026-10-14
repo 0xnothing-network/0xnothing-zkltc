@@ -3,6 +3,7 @@ import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import {
   CreationFeePaid,
   ProtocolFeesDistributed,
+  ProtocolFeesWithdrawn,
   TokenCurveReopened,
   TokenCreated,
   TokenGraduated,
@@ -212,5 +213,16 @@ export function feesDistributedEvent(recipient: Address): ProtocolFeesDistribute
     new ethereum.EventParam("recipient", ethereum.Value.fromAddress(recipient)),
   );
   event.parameters.push(new ethereum.EventParam("amountNusd", uint("42")));
+  return event;
+}
+
+export function feesWithdrawnEvent(recipient: Address): ProtocolFeesWithdrawn {
+  const event = changetype<ProtocolFeesWithdrawn>(newMockEvent());
+  stamp(event, 6);
+  event.parameters = new Array<ethereum.EventParam>();
+  event.parameters.push(
+    new ethereum.EventParam("recipient", ethereum.Value.fromAddress(recipient)),
+  );
+  event.parameters.push(new ethereum.EventParam("amountNusd", uint("8")));
   return event;
 }

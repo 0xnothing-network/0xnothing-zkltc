@@ -1,6 +1,16 @@
 # NUSD utility for 0xPixel
 
-## Status and separation
+## v2 (active since 2026-10-14)
+
+The web now uses `contracts/src/0xpixel/NusdNftMarketplaceV2.sol` at `0xA5e3EDfcba3b6fc40f3e41557f8a303a2AAC7e09` (block `60811596`), settling in NUSD v2 (`0x1d041A8e575006D46Ae0Aa2E4869C5be0327874E`). Listings, offers, credits, pause rules and the UI flows below are unchanged. The fee changed:
+
+- 0.1% of every sale is **burned** through `OracleNUSDv2.burn`, so NUSD supply falls and the reserve ratio rises.
+- 0.4% is credited to the creator: the ERC-2981 receiver of the token (both 0xPixel collections return the artist). If a collection cannot name one, or names the market itself, the seller keeps that share.
+- There is no platform fee, no fee recipient and no separate royalty rate; `quoteSale` returns `(burnAmount, creator, creatorFee, sellerProceeds)` and price = proceeds + creator fee + burn.
+
+Pixel V1 was allowed by a separate `setCollectionAllowed` call after deployment (its PUSH0 bytecode cannot run in the repository's `paris` simulation EVM). The subgraph `pixel-nusd-market-v2/1.0.0` also totals NUSD burned. The v1 sections below describe the retired `0x188e…f377` market, which remains on chain.
+
+## Status and separation (v1)
 
 `contracts/src/0xpixel/NusdNftMarketplace.sol` is a new, non-upgradeable ERC-721 marketplace. It is deployed on LiteForge `4441` at `0x188eACB8e05691aD5Ca6b31703DA97B13b2cf377`, in block `57196199`, transaction `0x91cc4213eac712015ff6f1410c944ca7aa0b22c2e2170f8d312db3a02911e4e1`. The deployment receipt, runtime bytecode against the compiled artifact, NUSD, implementation marker, owner, treasury, fee and both collection allowlists were checked.
 

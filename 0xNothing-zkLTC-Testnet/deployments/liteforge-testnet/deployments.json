@@ -17,6 +17,106 @@
   "pump": {
     "broadcasted": true,
     "liveVerified": true,
+    "version": "v2-tokenomics",
+    "nusd": "0x1d041a8e575006d46ae0aa2e4869c5be0327874e",
+    "diaOracleAdapter": "0x3579b31e3241de60f5f9462b3e0d759f346a49c8",
+    "permanentLiquidityLocker": "0xde72ff1da01c23c92f591b2249057fbba3b78a91",
+    "launchpad": "0x87ae7e019c2e511ee97310215d5ae358c28f47d9",
+    "pumpTokenImplementation": "0xf30beaA1C3196C438249A63B71Fec2DcE5fEdd0B",
+    "graduationRouter": "0xa5adffd55d8f5cc417d05a29c7ea3750e0572fc3",
+    "feeRecipient": "0x768a24803457b0e2f65d918815f7da8ae1628e19",
+    "deploymentBlock": 60811584,
+    "configuration": {
+      "unit": "wei",
+      "initialVirtualNusdReserve": "1500000000000000000000",
+      "graduationMarketCapTargetNusd": "6000000000000000000000",
+      "graduationReserveThresholdNusd": "1500000000000000000000",
+      "createFeeNusd": "1000000000000000000",
+      "tradeFeeBps": 10
+    },
+    "graduation": {
+      "enabled": true,
+      "adapter": "0x06c4271A59246659736D47503c27e30Bfb3bc3dB",
+      "controller": "0x81DF1ba96a5b9F54ABF1eC1Ce232254fA58b180e",
+      "controllerOwnsPumpAdmin": true,
+      "controllerOwnsRouterAdmin": true,
+      "operational": true,
+      "minimumDelaySeconds": 3600,
+      "controllerGovernance": "0x58633401dCc383F010688e950878000000000000",
+      "controllerGuardian": "0x58633401dCc383F010688e950878000000000000",
+      "activatedAt": "2026-10-14T02:48:02.961Z"
+    },
+    "subgraphVersion": "0.2.0",
+    "subgraphUrl": "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxpump-testnet-v2/0.2.0/gn",
+    "transactions": {
+      "OracleNUSDv2": {
+        "address": "0x1d041a8e575006d46ae0aa2e4869c5be0327874e",
+        "transactionHash": "0x29b867c95adc341e1c3300eb889e44ca24bd8584e48b16df0d4183b4bc538507",
+        "receiptBlock": 60811550
+      },
+      "OwnerTreasury": {
+        "address": "0xd840c91d9db6c4761de9f732977c3facc8976375",
+        "transactionHash": "0x7dc4f5965721b669d6e9ec558a5012b11151075e1bec3bdd66a3f1a60242b6be",
+        "receiptBlock": 60811554
+      },
+      "RewardStaking": {
+        "address": "0x735dff17df61f0bf1034603bcde02f8fa7b8cae4",
+        "transactionHash": "0x5491b3557eb2bfa331a74d6c4e720788effce62a4f9dfb56ffd3e092de113f32",
+        "receiptBlock": 60811559
+      },
+      "FeeSplitter": {
+        "address": "0x768a24803457b0e2f65d918815f7da8ae1628e19",
+        "transactionHash": "0x250748c40f9633387f79188205b86d66f38c43aeb319ed8fa36a18de734dbeb3",
+        "receiptBlock": 60811563
+      },
+      "SurplusMintGovernor": {
+        "address": "0x06a2cf180ae568f3faa487fb45dd8903c7114269",
+        "transactionHash": "0x4e8670314feb6a93141694a413d1e666b77ad130ee1df3f811baf606a97e88ba",
+        "receiptBlock": 60811567
+      },
+      "PermanentLiquidityLocker": {
+        "address": "0xde72ff1da01c23c92f591b2249057fbba3b78a91",
+        "transactionHash": "0xdbe8049dc987025e4d444ebe64fe0e8129c19658084183ac995d0acbf98effe3",
+        "receiptBlock": 60811575
+      },
+      "GraduationRouter": {
+        "address": "0xa5adffd55d8f5cc417d05a29c7ea3750e0572fc3",
+        "transactionHash": "0xa50063ce7197754cdca6037f1409106058530a7e6cbb9793d2450dfc324a53fa",
+        "receiptBlock": 60811579
+      },
+      "ZeroXPumpV2": {
+        "address": "0x87ae7e019c2e511ee97310215d5ae358c28f47d9",
+        "transactionHash": "0x8c73050b880bdbc92989f19416330b156d12947f66c3da0ecbf51d502e3ac7dc",
+        "receiptBlock": 60811584
+      },
+      "NusdNftMarketplaceV2": {
+        "address": "0xa5e3edfcba3b6fc40f3e41557f8a303a2aac7e09",
+        "transactionHash": "0x090c584b69b398840d7959301a74cadc11e81c70cacbc24f57b729aae26970c0",
+        "receiptBlock": 60811596
+      }
+    },
+    "oracleNusd": "0x1d041a8e575006d46ae0aa2e4869c5be0327874e",
+    "nusdVault": "0x1d041a8e575006d46ae0aa2e4869c5be0327874e",
+    "riskModel": {
+      "version": "oracle-nusd-v2",
+      "model": "oracle-priced-native-reserve",
+      "collateralAsset": "native-zkLTC",
+      "supplyCeilingNusd": "1000000000000000000000000",
+      "supplyCeilingUnit": "NUSD wei",
+      "mintFeeBps": 0,
+      "redeemFeeBps": 0,
+      "mintPaused": false,
+      "redeemPaused": false,
+      "pumpPaused": false,
+      "vaultCompatibility": "self",
+      "legacyPositionsMigrated": false,
+      "surplusMintGovernor": "0x06a2cf180ae568f3faa487fb45dd8903c7114269",
+      "emergencyRedeemGraceSeconds": 604800
+    }
+  },
+  "legacyPumpV1": {
+    "broadcasted": true,
+    "liveVerified": true,
     "nusd": "0x5317e21aba902c6c7087a84457bc02ffe99604d1",
     "diaOracleAdapter": "0x3579b31e3241de60f5f9462b3e0d759f346a49c8",
     "nativeCollateralVault": null,

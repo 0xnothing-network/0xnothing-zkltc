@@ -3,6 +3,7 @@ import { Address } from "@graphprotocol/graph-ts";
 import {
   handleCreationFeePaid,
   handleProtocolFeesDistributed,
+  handleProtocolFeesWithdrawn,
   handleTokenCurveReopened,
   handleTokenCreated,
   handleTokenGraduated,
@@ -14,6 +15,7 @@ import {
   FACTORY,
   creationFeePaidEvent,
   feesDistributedEvent,
+  feesWithdrawnEvent,
   initialMintTransferEvent,
   tokenCreatedEvent,
   tokenGraduatedEvent,
@@ -219,8 +221,9 @@ describe("0xPump mappings", () => {
 
   test("tracks protocol fees distributed to the fee splitter", () => {
     handleProtocolFeesDistributed(feesDistributedEvent(CREATOR));
+    handleProtocolFeesWithdrawn(feesWithdrawnEvent(CREATOR));
 
-    assert.entityCount("FeeWithdrawal", 1);
-    assert.fieldEquals("Protocol", "global", "totalFeesWithdrawnNusd", "42");
+    assert.entityCount("FeeWithdrawal", 2);
+    assert.fieldEquals("Protocol", "global", "totalFeesWithdrawnNusd", "50");
   });
 });

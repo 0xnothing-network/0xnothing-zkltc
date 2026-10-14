@@ -44,6 +44,8 @@ dataSources:
           handler: handleTokenCurveReopened
         - event: TokenGraduated(indexed address,indexed address,indexed bytes32,address,uint256,uint256,uint256,address)
           handler: handleTokenGraduated
+        - event: ProtocolFeesDistributed(indexed address,indexed address,uint256)
+          handler: handleProtocolFeesDistributed
         - event: ProtocolFeesWithdrawn(indexed address,uint256)
           handler: handleProtocolFeesWithdrawn
 templates:

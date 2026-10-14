@@ -46,6 +46,8 @@ dataSources:
           handler: handleTokenGraduated
         - event: ProtocolFeesDistributed(indexed address,indexed address,uint256)
           handler: handleProtocolFeesDistributed
+        - event: ProtocolFeesWithdrawn(indexed address,uint256)
+          handler: handleProtocolFeesWithdrawn
 templates:
   - kind: ethereum/contract
     name: PumpToken
