@@ -7,6 +7,7 @@ interface Vm {
     function startPrank(address sender) external;
     function stopPrank() external;
     function warp(uint256 newTimestamp) external;
+    function getBlockTimestamp() external view returns (uint256);
     function expectRevert() external;
     function expectRevert(bytes4 selector) external;
     function expectRevert(bytes calldata revertData) external;

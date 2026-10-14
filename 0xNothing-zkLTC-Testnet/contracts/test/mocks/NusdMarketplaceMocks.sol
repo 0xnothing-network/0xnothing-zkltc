@@ -67,3 +67,8 @@ contract MarketplaceNftMock is PixelERC721 {
         return (royaltyReceiver, price * royaltyBps / 10_000);
     }
 }
+
+/// @dev NUSD v2 exposes `burn`; the v2 marketplace burns its 0.1% share through it.
+contract MarketplaceBurnableNusdMock is MarketplaceNusdMock {
+    function burn(uint256 amount) external { _burn(msg.sender, amount); }
+}
