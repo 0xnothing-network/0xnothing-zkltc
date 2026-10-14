@@ -4,14 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run build:dogeos && next build",
-    "build:dogeos": "node scripts/prepare-dogeos.mjs",
+    "build": "next build",
     "build:cloudflare": "opennextjs-cloudflare build",
     "start": "next start",
     "preview:cloudflare": "opennextjs-cloudflare preview",
     "deploy:cloudflare": "opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
-    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test --experimental-strip-types \"tests/**/*.test.ts\" \"scripts/*.test.mjs\"",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test --experimental-strip-types \"tests/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
     "lint": "eslint ."
   },

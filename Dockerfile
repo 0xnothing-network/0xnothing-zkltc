@@ -7,16 +7,9 @@ COPY 0xNothing-zkLTC-Testnet/apps/web/package.json ./package.json
 COPY 0xNothing-zkLTC-Testnet/apps/web/package-lock.json ./package-lock.json
 RUN npm ci
 
-FROM node:24-alpine AS dogeos-dependencies
-WORKDIR /dogeos-source
-COPY 0xPixel-Dogeos/package.json ./package.json
-COPY 0xPixel-Dogeos/package-lock.json ./package-lock.json
-RUN npm ci
-
 FROM node:24-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV DOGEOS_SOURCE_DIR=/dogeos-source
 
 # Railway only exposes service variables to Docker build steps when the
 # corresponding ARG is declared. These are public values embedded by Next.js;
@@ -34,12 +27,9 @@ ARG NEXT_PUBLIC_ETH_ORACLE_ADDRESS
 ARG NEXT_PUBLIC_FARM_FACTORY_ADDRESS
 ARG NEXT_PUBLIC_GAUGE_FACTORY_ADDRESS
 ARG NEXT_PUBLIC_GOLDSKY_ENDPOINT
-ARG NEXT_PUBLIC_LEGACY_NBTC_VAULT_ADDRESS
-ARG NEXT_PUBLIC_LEGACY_NETH_VAULT_ADDRESS
 ARG NEXT_PUBLIC_LENDING_POOL_ADDRESS
 ARG NEXT_PUBLIC_LENDING_RISK_ACTIONS_ENABLED
 ARG NEXT_PUBLIC_LITVM_EXPLORER_URL
-ARG NEXT_PUBLIC_LITVM_RPC_URL
 ARG NEXT_PUBLIC_LP_LOCKER_ADDRESS
 ARG NEXT_PUBLIC_LTC_ORACLE_ADDRESS
 ARG NEXT_PUBLIC_NBTC_ADDRESS
@@ -54,7 +44,6 @@ ARG NEXT_PUBLIC_NUSD_ADDRESS
 ARG NEXT_PUBLIC_PUMP_ADDRESS
 ARG NEXT_PUBLIC_PUMP_GRADUATION_ADAPTER_ADDRESS
 ARG NEXT_PUBLIC_PUMP_GRADUATION_CONTROLLER_ADDRESS
-ARG NEXT_PUBLIC_SYNTH_FEE_GAUGE_FACTORY_ADDRESS
 ARG NEXT_PUBLIC_SYNTH_RISK_ACTIONS_ENABLED
 ARG NEXT_PUBLIC_SYNTH_SAFETY_RESERVE_ADDRESS
 ARG NEXT_PUBLIC_TOKEN_METADATA_REGISTRY_ADDRESS
@@ -63,13 +52,6 @@ ARG NEXT_PUBLIC_WZKLTC_NUSD_GAUGE_ADDRESS
 ARG NEXT_PUBLIC_WZKLTC_NUSD_PAIR_ADDRESS
 
 COPY --from=dependencies /app/node_modules ./node_modules
-COPY --from=dogeos-dependencies /dogeos-source/node_modules /dogeos-source/node_modules
-COPY 0xPixel-Dogeos/package.json 0xPixel-Dogeos/package-lock.json 0xPixel-Dogeos/tsconfig.json 0xPixel-Dogeos/vite.config.ts 0xPixel-Dogeos/index.html /dogeos-source/
-COPY 0xPixel-Dogeos/src/ /dogeos-source/src/
-COPY 0xPixel-Dogeos/public/ /dogeos-source/public/
-COPY 0xPixel-Dogeos/server/ /dogeos-source/server/
-COPY 0xPixel-Dogeos/scripts/runtime.mjs /dogeos-source/scripts/runtime.mjs
-COPY 0xPixel-Dogeos/deployments/chikyu.json /dogeos-source/deployments/chikyu.json
 COPY 0xNothing-zkLTC-Testnet/apps/web/ ./
 RUN npm run build
 
