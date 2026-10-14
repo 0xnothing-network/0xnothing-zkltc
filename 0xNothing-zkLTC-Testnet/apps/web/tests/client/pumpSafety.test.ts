@@ -380,7 +380,7 @@ function componentHarness(name: PumpComponent, changeAt?: "simulation" | "upload
       "@/components/Toast": { useToast: () => toast },
       "@/lib/actionLock": { tryAcquireAction: (ref: { current: boolean }) => ref.current ? false : (ref.current = true), releaseAction: (ref: { current: boolean }) => { ref.current = false; } },
     },
-    { TextEncoder, fetch: async () => ({ ok: true, headers: { get: () => null }, json: async () => metadataValue ?? { configured: true } }) },
+    { TextEncoder, window: { location: { host: "www.0xnothing.xyz" } }, fetch: async () => ({ ok: true, headers: { get: () => null }, json: async () => metadataValue ?? { configured: true } }) },
   );
   const render = () => { stateIndex = 0; return component[name]({ token: TOKEN }); };
   return {
@@ -423,6 +423,18 @@ for (const name of ["CreateTokenForm", "NusdOraclePanel", "TokenDetail", "PumpSt
     assert.ok(harness.writes.every(({ account, chainId }) => account === ACCOUNT && chainId === 4441));
   });
 }
+
+test("CreateTokenForm charges nothing on a host the upload server would reject", async () => {
+  const rejected = componentHarness("CreateTokenForm", undefined, { configured: true, domains: ["0xnothing.xyz"] });
+  await rejected.run();
+  assert.equal(rejected.writes.length, 0, "no approval or reservation is sent");
+  assert.equal(rejected.errors.length, 1);
+  assert.match(rejected.errors[0]!.message, /www\.0xnothing\.xyz.*0xnothing\.xyz/);
+  const accepted = componentHarness("CreateTokenForm", undefined, { configured: true, domains: ["0xnothing.xyz", "www.0xnothing.xyz"] });
+  await accepted.run();
+  assert.ok(accepted.writes.length > 0);
+  assert.equal(accepted.errors.length, 0);
+});
 
 test("CreateTokenForm stops after an upload if the wallet changed", async () => {
   const harness = componentHarness("CreateTokenForm", "upload");

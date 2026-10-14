@@ -179,9 +179,18 @@ export function CreateTokenForm() {
       const readiness = (await readinessResponse.json().catch(() => ({}))) as {
         configured?: boolean;
         error?: string;
+        domains?: unknown;
       };
       if (!readinessResponse.ok || !readiness.configured) {
         throw new Error(readiness.error || "IPFS uploads are not available");
+      }
+      // The logo upload is signed for this host. Refuse here, before the creation fee,
+      // when the server would reject that signature.
+      if (Array.isArray(readiness.domains)) {
+        const host = window.location.host.toLowerCase();
+        if (!readiness.domains.includes(host)) {
+          throw new Error(`Uploads are not accepted on ${host}; this server accepts ${readiness.domains.join(", ")}`);
+        }
       }
       reservationReady = await publicClient.readContract({
         address: PUMP_FACTORY_ADDRESS,

@@ -10,6 +10,8 @@ export interface NormalizedError {
   title: string;
   description?: string;
   kind: ToastKind;
+  /** The raw reason when no friendlier mapping applied; callers with their own title show it. */
+  reason?: string;
 }
 
 interface MaybeError {
@@ -191,6 +193,7 @@ export function normalizeError(err: unknown): NormalizedError {
     title: trimmed || "Something went wrong",
     description: "Please try again, or check the console for details.",
     kind: "error",
+    reason: trimmed || undefined,
   };
 }
 

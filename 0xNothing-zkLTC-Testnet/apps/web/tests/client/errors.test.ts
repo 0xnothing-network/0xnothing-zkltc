@@ -21,3 +21,9 @@ test("amounts and addresses containing HTTP status digits are not network failur
   assert.equal(normalizeError(new Error("Insufficient funds for 500 tokens")).title, "Insufficient balance");
   assert.equal(normalizeError(new Error("Request failed (HTTP 503)")).title, "Network unreachable");
 });
+
+test("an unmapped failure keeps its specific reason for callers that use their own title", () => {
+  const normalized = normalizeError(new Error("Signed upload domain www.0xnothing.xyz is not accepted here (expected 0xnothing.xyz)"));
+  assert.equal(normalized.reason, "Signed upload domain www.0xnothing.xyz is not accepted here (expected 0xnothing.xyz)");
+  assert.equal(normalizeError({ code: 4001 }).reason, undefined, "mapped outcomes carry their own wording");
+});

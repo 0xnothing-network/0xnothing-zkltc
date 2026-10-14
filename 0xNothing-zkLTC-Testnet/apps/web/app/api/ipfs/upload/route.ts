@@ -55,7 +55,7 @@ interface PinataV3Response {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   if (!process.env.PINATA_JWT?.trim()) {
     return NextResponse.json(
       { configured: false, error: "IPFS uploads are not configured. Set PINATA_JWT on the server." },
@@ -74,8 +74,10 @@ export async function GET() {
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );
   }
+  // The public hosts are listed so the form can refuse to charge the creation fee on
+  // a host whose signed upload this server would reject.
   return NextResponse.json(
-    { configured: true },
+    { configured: true, domains: uploadDomains(request) },
     { headers: { "Cache-Control": "no-store" } },
   );
 }
@@ -439,6 +441,8 @@ function safeFileName(original: string, fallback: string): string {
 }
 
 function jsonError(error: string, status: number) {
+  // Rejections never echo secrets; logging them is what makes a failed creation diagnosable.
+  console.warn(`[ipfs/upload] ${status}: ${error}`);
   return NextResponse.json(
     { error },
     { status, headers: { "Cache-Control": "no-store" } },
