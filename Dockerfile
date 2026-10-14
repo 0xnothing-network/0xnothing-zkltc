@@ -8,7 +8,8 @@ COPY 0xNothing-zkLTC-Testnet/apps/web/package-lock.json ./package-lock.json
 RUN npm ci
 
 FROM node:24-alpine AS builder
-WORKDIR /app
+# Mirror the repository layout: the web imports ../../shared relative to apps/web.
+WORKDIR /repo/0xNothing-zkLTC-Testnet/apps/web
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Railway only exposes service variables to Docker build steps when the
@@ -52,6 +53,7 @@ ARG NEXT_PUBLIC_WZKLTC_NUSD_GAUGE_ADDRESS
 ARG NEXT_PUBLIC_WZKLTC_NUSD_PAIR_ADDRESS
 
 COPY --from=dependencies /app/node_modules ./node_modules
+COPY 0xNothing-zkLTC-Testnet/shared/ /repo/0xNothing-zkLTC-Testnet/shared/
 COPY 0xNothing-zkLTC-Testnet/apps/web/ ./
 RUN npm run build
 
@@ -62,9 +64,9 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=node:node /app/.next/standalone ./
-COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+COPY --from=builder /repo/0xNothing-zkLTC-Testnet/apps/web/public ./public
+COPY --from=builder --chown=node:node /repo/0xNothing-zkLTC-Testnet/apps/web/.next/standalone ./
+COPY --from=builder --chown=node:node /repo/0xNothing-zkLTC-Testnet/apps/web/.next/static ./.next/static
 
 USER node
 EXPOSE 3000
