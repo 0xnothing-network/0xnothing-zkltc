@@ -10,5 +10,5 @@ const verifiedDefault = deployment.chainId === 4441
   && deployment.implementation === NUSD_MARKET_IMPLEMENTATION
   ? deployment.address : undefined;
 export const NUSD_MARKETPLACE_ADDRESS = nusdMarketplaceAddress(override || verifiedDefault);
-/** Deployed subgraphs/0xpixel-nusd-market (v2); the server env PIXEL_NUSD_SUBGRAPH_URL overrides it. */
+/** Deployed subgraphs/0xpixel-nusd-market; the server env PIXEL_NUSD_SUBGRAPH_URL overrides it. */
 export const NUSD_SUBGRAPH_URL = testnet.nusdMarketGoldskyEndpoint;

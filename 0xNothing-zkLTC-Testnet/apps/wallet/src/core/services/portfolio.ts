@@ -256,7 +256,7 @@ export async function recordSnapshot(address: Address, totalWad: bigint, network
 
 /** Fractional change (0.0125 = +1.25%), or null when there is no baseline yet. */
 export async function change24h(address: Address, totalWad: bigint, network: WalletNetwork): Promise<number | null> {
-  // Legacy address-only samples have no provable network and cannot be reused.
+  // Older address-only samples have no provable network and cannot be reused.
   const key = JSON.stringify([networkIdentity(network), address.toLowerCase()]);
   const book = await persistentStore.get<SnapshotBook>(STORAGE_KEYS.snapshots);
   const series = book?.[key];

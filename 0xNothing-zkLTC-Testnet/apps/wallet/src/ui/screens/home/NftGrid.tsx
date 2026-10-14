@@ -7,7 +7,7 @@ import { useLiveRead } from "../../hooks/useLiveRead";
 import { useWallet } from "../../state/WalletContext";
 
 /**
- * The NFT tab includes current and legacy 0xPixel collections. Artwork is built
+ * The NFT tab includes both 0xPixel collections (current and Classic). Artwork is built
  * from the on-chain pixel string, so a card is drawn without touching IPFS, a
  * metadata API or any host other than the RPC node.
  *

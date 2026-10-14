@@ -75,9 +75,8 @@ function listingHarness(options: { configured?: boolean; fail?: boolean } = {}) 
       if (options.fail) throw new Error("secret identity mismatch");
       return { blockNumber: 1000n, listingCount: 50n, listings: [{ id: BigInt(page + 1), collection: NFT, tokenId: 3n, price: 1000000000000000001n, seller: NUSD, active: true }] };
     } },
-    "@/lib/pixelCollections": { PIXEL_COLLECTIONS: [], isPixelCollection: () => false, isPixelV2Collection: () => false, pixelTokenKey: (collection: string, tokenId: string) => `${collection}:${tokenId}` },
-    "@/lib/abi": {}, "@/lib/pixelV2Abi": {}, "@/lib/pixelImage": {},
-    "@/lib/marketplaceSubgraph": { hasMarketplaceSubgraph: () => false },
+    "@/lib/pixelCollections": { PIXEL_COLLECTIONS: [], isPixelCollection: () => false, isPackedPixelCollection: () => false, pixelTokenKey: (collection: string, tokenId: string) => `${collection}:${tokenId}` },
+    "@/lib/abi": {}, "@/lib/pixelNftAbi": {}, "@/lib/pixelImage": {},
     "@/lib/erc721Metadata.server": { fetchValidatedErc721Metadata: async () => ({}) },
     "@/lib/boundedCache": { createBoundedCache }, "@/lib/server/cdnCache": { publicCdnCacheHeaders },
   }, { URL });

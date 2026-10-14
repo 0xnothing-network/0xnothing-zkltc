@@ -4,8 +4,8 @@
   "rpcUrl": "https://liteforge.rpc.caldera.xyz/infra-partner-http",
   "contractAddress": "0x87ae7e019c2e511ee97310215d5ae358c28f47d9",
   "startBlock": 60811584,
-  "deploymentName": "zeroxpump-testnet-v2",
-  "deploymentVersion": "0.2.0",
+  "deploymentName": "zeroxpump-testnet",
+  "deploymentVersion": "1.0.0",
   "deploymentTag": "untagged",
   "goldskySupported": true,
   "approvedNetworks": [

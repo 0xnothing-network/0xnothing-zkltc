@@ -4,8 +4,8 @@ import { createBoundedCache } from "../../lib/boundedCache.ts";
 import { getPixelImageUrl } from "../../lib/pixelImage.ts";
 import { evaluateModule } from "../helpers/evaluateModule.ts";
 
-const legacy = `0x${"1".repeat(40)}` as const;
-const v2 = `0x${"2".repeat(40)}` as const;
+const classic = `0x${"1".repeat(40)}` as const;
+const current = `0x${"2".repeat(40)}` as const;
 const owner = `0x${"3".repeat(40)}` as const;
 const marketplace = `0x${"4".repeat(40)}` as const;
 const quiet = { warn() {}, error() {} };
@@ -26,16 +26,16 @@ test("post-transaction enumeration bypasses a cached inventory and never masks r
     new URL("../../lib/contract.ts", import.meta.url),
     {
       viem: { createPublicClient: () => client, http: () => ({}) },
-      "./abi": { PixelNFTABI: [] },
+      "./abi": { PixelClassicABI: [] },
       "./rpcTransport": { litvmTransport: () => ({}) },
       "@/config/wagmi": { litvm: {}, LITVM_RPC_URL: "https://rpc.invalid" },
       "@/lib/boundedCache": { createBoundedCache },
-      "@/lib/publicConfig": { PIXEL_NFT_ADDRESS: legacy, PIXEL_MARKETPLACE_ADDRESS: marketplace },
+      "@/lib/publicConfig": { PIXEL_CLASSIC_ADDRESS: classic },
       "./explorer": { getTransactionExplorerUrl: () => "" },
     },
     { console: quiet, setTimeout },
   );
-  const read = (force = false) => contract.getUserTokenIds(owner, legacy, force);
+  const read = (force = false) => contract.getUserTokenIds(owner, classic, force);
   assert.deepEqual(Array.from(await read()), [1n]);
   ids = [2n, 3n];
   assert.deepEqual(Array.from(await read()), [1n], "ordinary reads retain the fast cache");
@@ -72,27 +72,27 @@ test("an older wallet enumeration cannot overwrite a completed forced refresh", 
       new URL("../../lib/contract.ts", import.meta.url),
       {
         viem: { createPublicClient: () => client, http: () => ({}) },
-        "./abi": { PixelNFTABI: [] },
+        "./abi": { PixelClassicABI: [] },
         "./rpcTransport": { litvmTransport: () => ({}) },
         "@/config/wagmi": { litvm: {}, LITVM_RPC_URL: "https://rpc.invalid" },
         "@/lib/boundedCache": { createBoundedCache },
-        "@/lib/publicConfig": { PIXEL_NFT_ADDRESS: legacy, PIXEL_MARKETPLACE_ADDRESS: marketplace },
+        "@/lib/publicConfig": { PIXEL_CLASSIC_ADDRESS: classic },
         "./explorer": { getTransactionExplorerUrl: () => "" },
       },
       { console: quiet, setTimeout },
     );
-    const oldRead = contract.getUserTokenIds(owner, legacy);
+    const oldRead = contract.getUserTokenIds(owner, classic);
     await started;
-    assert.deepEqual(Array.from(await contract.getUserTokenIds(owner, legacy, true)), freshIds);
+    assert.deepEqual(Array.from(await contract.getUserTokenIds(owner, classic, true)), freshIds);
     releaseOld([{ status: "success", result: 1n }]);
     assert.deepEqual(Array.from(await oldRead), [1n], "the original caller can finish its own snapshot");
-    assert.deepEqual(Array.from(await contract.getUserTokenIds(owner, legacy)), freshIds,
+    assert.deepEqual(Array.from(await contract.getUserTokenIds(owner, classic)), freshIds,
       "subsequent reads retain the newer ownership even when the old RPC completes last");
     assert.equal(balanceReads, 2, "the completed fresh result remains cached");
   }
 });
 
-test("large V2 wallet reads packed art in bounded ordered batches and forwards force to enumeration", async () => {
+test("large packed-collection wallet reads packed art in bounded ordered batches and forwards force to enumeration", async () => {
   const ids = Array.from({ length: 45 }, (_, i) => BigInt(i + 1));
   const widths: number[] = [];
   const freshness: boolean[] = [];
@@ -103,9 +103,9 @@ test("large V2 wallet reads packed art in bounded ordered batches and forwards f
     {
       "next/server": { NextResponse: Response },
       "@/lib/contract": {
-        PIXEL_NFT_CONTRACT_ADDRESS: legacy,
+        PIXEL_CLASSIC_CONTRACT_ADDRESS: classic,
         getUserTokenIds: async (_owner: string, collection: string, force: boolean) => {
-          assert.equal(collection, v2);
+          assert.equal(collection, current);
           freshness.push(force);
           return ids;
         },
@@ -117,24 +117,23 @@ test("large V2 wallet reads packed art in bounded ordered batches and forwards f
             await Promise.resolve();
             active--;
             return contracts.map(({ functionName, args }) => {
-              assert.equal(functionName, "tokenPackedData", "V2 never runs legacy hex conversion");
+              assert.equal(functionName, "tokenPackedData", "V2 never runs classic hex conversion");
               return { status: "success", result: [`Art ${args[0]}`, "Description", 256n, "0xaabbcc", owner, 2n, "hash"] };
             });
           },
         },
       },
       "@/lib/pixelImage": { getPixelImageUrl },
-      "@/lib/nusdMarketplaceConfig": { NUSD_MARKETPLACE_ADDRESS: marketplace, NFT_NUSD_ADDRESS: legacy },
+      "@/lib/nusdMarketplaceConfig": { NUSD_MARKETPLACE_ADDRESS: marketplace, NFT_NUSD_ADDRESS: classic },
       "@/lib/nusdMarketplaceInventory": { readNusdWalletListings: async (_client: unknown, _market: string, _nusd: string, tokens: { collection: string; tokenId: string; listing: unknown }[]) => {
-        assert.ok(tokens.every((token) => token.collection === v2 && token.listing === null));
+        assert.ok(tokens.every((token) => token.collection === current && token.listing === null));
         return Object.fromEntries(tokens.map((token) => [`${token.collection}:${token.tokenId}`, { listingId: token.tokenId, price: (BigInt(token.tokenId) * 10n).toString() }]));
       } },
-      "@/lib/abi": { PixelNFTABI: [] },
-      "@/lib/pixelV2Abi": { PixelV2ABI: [] },
-      "@/lib/marketplaceSubgraph": { hasMarketplaceSubgraph: () => false },
+      "@/lib/abi": { PixelClassicABI: [] },
+      "@/lib/pixelNftAbi": { PixelNFTABI: [] },
       "@/lib/boundedCache": { createBoundedCache },
       "@/lib/server/publicError": { publicErrorMessage: () => "unavailable" },
-      "@/lib/pixelCollections": { PIXEL_COLLECTIONS: [{ address: v2 }], isPixelV2Collection: () => true },
+      "@/lib/pixelCollections": { PIXEL_COLLECTIONS: [{ address: current }], isPackedPixelCollection: () => true },
     },
     { URL, console: quiet },
   );
@@ -144,7 +143,7 @@ test("large V2 wallet reads packed art in bounded ordered batches and forwards f
   assert.equal(body.count, 45);
   assert.deepEqual(body.tokens.map((nft: { tokenId: string }) => nft.tokenId), ids.map(String));
   assert.equal(body.tokens[44].name, "Art 45");
-  assert.equal(body.tokens[44].imageUrl, getPixelImageUrl(45, v2));
+  assert.equal(body.tokens[44].imageUrl, getPixelImageUrl(45, current));
   assert.deepEqual(body.tokens[44].listing, { listingId: "45", price: "450" });
   assert.deepEqual(widths, [20, 20, 5]);
   assert.equal(peak, 1, "packed metadata progresses in bounded batches before NUSD mapping");

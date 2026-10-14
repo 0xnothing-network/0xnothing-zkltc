@@ -1,21 +1,16 @@
 import { NextResponse } from "next/server";
 import {
-  PIXEL_NFT_CONTRACT_ADDRESS,
   getUserTokenIds,
   publicClient,
 } from "@/lib/contract";
 import { getPixelImageUrl } from "@/lib/pixelImage";
 import { readNusdWalletListings } from "@/lib/nusdMarketplaceInventory";
 import { NFT_NUSD_ADDRESS, NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
-import { PixelNFTABI } from "@/lib/abi";
-import { PixelV2ABI } from "@/lib/pixelV2Abi";
-import {
-  fetchUserNftsFromSubgraph,
-  hasMarketplaceSubgraph,
-} from "@/lib/marketplaceSubgraph";
+import { PixelClassicABI } from "@/lib/abi";
+import { PixelNFTABI } from "@/lib/pixelNftAbi";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { publicErrorMessage } from "@/lib/server/publicError";
-import { PIXEL_COLLECTIONS, isPixelV2Collection } from "@/lib/pixelCollections";
+import { PIXEL_COLLECTIONS, isPackedPixelCollection } from "@/lib/pixelCollections";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +18,6 @@ export const revalidate = 0;
 
 const CACHE_TTL = 3_000;
 const CACHE_MAX_ENTRIES = 1024;
-const MAX_SUBGRAPH_BLOCK_LAG = 128n;
 // Viem batches by calldata bytes, which do not account for large art returned
 // by these getters. Bound the token count too, including the 256 x 256 grids.
 const NFT_DETAILS_BATCH_SIZE = 20;
@@ -61,21 +55,6 @@ async function loadNativeNfts(address: string, fresh: boolean): Promise<NativeNf
 }
 
 async function loadCollectionNfts(address: string, fresh: boolean, collection: `0x${string}`): Promise<NativeNft[]> {
-  // The existing published index covers V1. V2 must read RPC until a new index is published.
-  if (collection.toLowerCase() === PIXEL_NFT_CONTRACT_ADDRESS.toLowerCase() && hasMarketplaceSubgraph()) {
-    try {
-      const payload = await fetchUserNftsFromSubgraph(address, 5_000, fresh);
-      if (await isSubgraphFresh(payload)) {
-        return payload.tokens.map((token) => ({ ...token, collection }));
-      }
-      console.warn(
-        `[user-nfts] subgraph is stale at block ${payload.indexedBlock ?? "unknown"}; using RPC`
-      );
-    } catch (err) {
-      console.warn("[user-nfts] subgraph fallback to RPC:", err);
-    }
-  }
-
   // Get token IDs first
   const tokenIds = await getUserTokenIds(address, collection, fresh);
   if (tokenIds.length === 0) {
@@ -83,21 +62,21 @@ async function loadCollectionNfts(address: string, fresh: boolean, collection: `
   }
 
   const tokens: NativeNft[] = [];
-  const packedV2 = isPixelV2Collection(collection);
+  const isPacked = isPackedPixelCollection(collection);
   for (let offset = 0; offset < tokenIds.length; offset += NFT_DETAILS_BATCH_SIZE) {
     const batch = tokenIds.slice(offset, offset + NFT_DETAILS_BATCH_SIZE);
-    // Read the packed V2 getter directly: tokenData converts binary art to a
-    // legacy hex string on-chain and is needlessly expensive for wallet lists.
+    // Read the packed getter directly: tokenData converts binary art to a
+    // hex string on-chain and is needlessly expensive for wallet lists.
     const tokenDataResults = await publicClient.multicall({
       allowFailure: true,
-      contracts: batch.map((tokenId) => packedV2 ? {
+      contracts: batch.map((tokenId) => isPacked ? {
         address: collection,
-        abi: PixelV2ABI,
+        abi: PixelNFTABI,
         functionName: "tokenPackedData" as const,
         args: [tokenId] as const,
       } : {
         address: collection,
-        abi: PixelNFTABI,
+        abi: PixelClassicABI,
         functionName: "tokenData" as const,
         args: [tokenId] as const,
       }),
@@ -105,13 +84,13 @@ async function loadCollectionNfts(address: string, fresh: boolean, collection: `
 
     tokens.push(...batch.map((tokenId, i): NativeNft => {
       const tokenResult = tokenDataResults[i];
-      const legacy = tokenResult?.status === "success"
+      const classic = tokenResult?.status === "success"
         ? tokenResult.result as readonly [string, bigint, string, string, bigint, string] : null;
       const packed = tokenResult?.status === "success"
         ? tokenResult.result as readonly [string, string, bigint, string, string, bigint, string] : null;
-      const name = packedV2 ? packed?.[0] : legacy?.[0];
-      const grid = packedV2 ? packed?.[2] : legacy?.[1];
-      const pixels = packedV2 ? packed?.[3] : legacy?.[2];
+      const name = isPacked ? packed?.[0] : classic?.[0];
+      const grid = isPacked ? packed?.[2] : classic?.[1];
+      const pixels = isPacked ? packed?.[3] : classic?.[2];
 
       return {
         collection,
@@ -155,35 +134,4 @@ export async function GET(request: Request) {
   }
 }
 
-async function isSubgraphFresh(payload: {
-  indexedBlock: number | null;
-  hasIndexingErrors: boolean;
-}): Promise<boolean> {
-  if (payload.hasIndexingErrors || payload.indexedBlock === null) return false;
-  try {
-    const currentBlock = await withTimeout(
-      publicClient.getBlockNumber(),
-      2_500,
-      "RPC head check timed out"
-    );
-    return BigInt(payload.indexedBlock) + MAX_SUBGRAPH_BLOCK_LAG >= currentBlock;
-  } catch {
-    return false;
-  }
-}
 
-async function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  message: string
-): Promise<T> {
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
-  });
-  try {
-    return await Promise.race([promise, timeout]);
-  } finally {
-    if (timeoutId) clearTimeout(timeoutId);
-  }
-}

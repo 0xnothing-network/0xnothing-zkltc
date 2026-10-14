@@ -82,9 +82,9 @@
     "0x86a9a04288a122D494193a138e6ae083097495fb": 60811809
   },
   "published": {
-    "fiSubgraph": "zeroxfi-testnet-v2/0.2.0",
-    "pumpSubgraph": "zeroxpump-testnet-v2/0.2.0",
-    "nusdMarketSubgraph": "pixel-nusd-market-v2/1.0.0"
+    "fiSubgraph": "zeroxfi-testnet/1.0.0",
+    "pumpSubgraph": "zeroxpump-testnet/1.0.0",
+    "nusdMarketSubgraph": "pixel-nusd-market/1.1.0"
   },
   "activatedAt": "2026-10-14T02:48:02.961Z"
 }

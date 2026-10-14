@@ -48,8 +48,8 @@ export const surplusMintGovernorAbi = parseAbi([
   "function withdraw(uint256 proposalId)",
 ]);
 
-/** NUSD v2 surplus and emergency surface (contracts/src/nusd/OracleNUSDv2.sol). */
-export const nusdV2Abi = parseAbi([
+/** NUSD surplus and emergency surface. */
+export const nusdReserveAbi = parseAbi([
   "function totalSupply() view returns (uint256)",
   "function totalCollateralWei() view returns (uint256)",
   "function reserveValueNusd() view returns (uint256)",

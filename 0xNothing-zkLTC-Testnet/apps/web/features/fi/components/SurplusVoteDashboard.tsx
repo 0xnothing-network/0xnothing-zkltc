@@ -10,7 +10,7 @@ import { NotDeployed, TransactionStatus } from "@fi/components/UiStates";
 import { useToast } from "@fi/components/Toast";
 import { deployment } from "@fi/config/deployment";
 import { erc20Abi } from "@fi/lib/abis/erc20";
-import { nusdV2Abi, surplusMintGovernorAbi } from "@fi/lib/abis/tokenomics";
+import { nusdReserveAbi, surplusMintGovernorAbi } from "@fi/lib/abis/tokenomics";
 import { formatAmount, parseAmount } from "@fi/lib/format";
 import { useProtocolTransaction } from "@fi/lib/hooks/useProtocolTransaction";
 
@@ -60,9 +60,9 @@ export function SurplusVoteDashboard() {
 
   const base = useReadContracts({
     contracts: governor && nusd ? [
-      { address: nusd, abi: nusdV2Abi, functionName: "reserveValueNusd" },
-      { address: nusd, abi: nusdV2Abi, functionName: "totalSupply" },
-      { address: nusd, abi: nusdV2Abi, functionName: "surplusMintCapacity" },
+      { address: nusd, abi: nusdReserveAbi, functionName: "reserveValueNusd" },
+      { address: nusd, abi: nusdReserveAbi, functionName: "totalSupply" },
+      { address: nusd, abi: nusdReserveAbi, functionName: "surplusMintCapacity" },
       { address: governor, abi: surplusMintGovernorAbi, functionName: "proposalCount" },
       { address: governor, abi: surplusMintGovernorAbi, functionName: "VOTE_LOCK" },
       { address: governor, abi: surplusMintGovernorAbi, functionName: "MIN_VOTERS" },

@@ -1,13 +1,9 @@
-import { resolvePixelCollection, pixelTokenKey, isPixelV2Collection } from "@/lib/pixelCollections";
+import { resolvePixelCollection, pixelTokenKey, isPackedPixelCollection } from "@/lib/pixelCollections";
 import { NextResponse } from "next/server";
 import { publicClient } from "@/lib/contract";
-import { PixelNFTABI } from "@/lib/abi";
-import { PixelV2ABI } from "@/lib/pixelV2Abi";
+import { PixelClassicABI } from "@/lib/abi";
+import { PixelNFTABI } from "@/lib/pixelNftAbi";
 import { getPixelImageUrl } from "@/lib/pixelImage";
-import {
-  fetchTokenMetadataFromSubgraph,
-  hasMarketplaceSubgraph,
-} from "@/lib/marketplaceSubgraph";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { publicErrorMessage } from "@/lib/server/publicError";
 import { normalizeUint256TokenId } from "@/lib/tokenId";
@@ -116,49 +112,22 @@ async function fetchMetadataBatch(
 
   if (missing.length === 0) return out;
 
-  let rpcMissing = missing;
-  if (!isPixelV2Collection(collection) && hasMarketplaceSubgraph()) {
-    try {
-      const subgraphTokens = await fetchTokenMetadataFromSubgraph(missing);
-      rpcMissing = [];
+  const rpcMissing = missing;
 
-      for (const id of missing) {
-        const meta = subgraphTokens[id] ?? null;
-        if (meta?.imageUrl) {
-          const next: TokenMetadata = {
-            tokenId: meta.tokenId,
-            name: meta.name || `Token #${id}`,
-            imageUrl: meta.imageUrl,
-            creator: meta.creator,
-            mintedAt: meta.mintedAt,
-          };
-          metadataCache.set(pixelTokenKey(collection, id), next);
-          out[id] = next;
-        } else {
-          rpcMissing.push(id);
-        }
-      }
-    } catch (err) {
-      console.warn("[token-metadata] subgraph fallback to RPC:", err);
-      rpcMissing = missing;
-    }
-  }
 
-  if (rpcMissing.length === 0) return out;
-
-  // V2 returns the immutable description and binary art directly, avoiding
+  // The packed collection returns the immutable description and binary art directly, avoiding
   // tokenURI's SVG/base64 rendering cost and tokenData's hex conversion.
-  const packedV2 = isPixelV2Collection(collection);
+  const isPacked = isPackedPixelCollection(collection);
   const results = await publicClient.multicall({
     allowFailure: true,
-    contracts: rpcMissing.map((id) => packedV2 ? {
+    contracts: rpcMissing.map((id) => isPacked ? {
       address: collection,
-      abi: PixelV2ABI,
+      abi: PixelNFTABI,
       functionName: "tokenPackedData" as const,
       args: [BigInt(id)] as const,
     } : {
       address: collection,
-      abi: PixelNFTABI,
+      abi: PixelClassicABI,
       functionName: "tokenData" as const,
       args: [BigInt(id)] as const,
     }),
@@ -173,18 +142,18 @@ async function fetchMetadataBatch(
       out[id] = null;
       continue;
     }
-    const legacy = r.result as readonly [string, bigint, string, string, bigint, string];
+    const classic = r.result as readonly [string, bigint, string, string, bigint, string];
     const packed = r.result as readonly [string, string, bigint, string, string, bigint, string];
-    const [name, gridSize, pixelData, creator, mintedAt] = packedV2
+    const [name, gridSize, pixelData, creator, mintedAt] = isPacked
       ? [packed[0], packed[2], packed[3], packed[4], packed[5]] as const
-      : legacy;
+      : classic;
     const imageUrl = pixelData && gridSize
       ? getPixelImageUrl(id, collection)
       : "";
     const meta: TokenMetadata = {
       tokenId: id,
       name: name || `Token #${id}`,
-      ...(packedV2 ? { description: packed[1] } : {}),
+      ...(isPacked ? { description: packed[1] } : {}),
       imageUrl,
       creator,
       mintedAt: Number(mintedAt),

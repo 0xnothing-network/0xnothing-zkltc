@@ -141,11 +141,9 @@ const POINTS_ENGLISH: readonly MessageKey[] = [
   "earn.reviewClaim",
   "tx.pointsStake",
   "tx.pointsWithdraw",
-  "tx.pointsRedeem",
   "tx.pointsClaim",
   "kind.pointsStake",
   "kind.pointsWithdraw",
-  "kind.pointsRedeem",
   "kind.pointsClaim",
 ];
 
@@ -223,7 +221,7 @@ test("placeholders survive translation", () => {
   }
 });
 
-test("the NUSD points flow names its public unit only as 0xPoints (history keeps xPoints)", () => {
+test("the NUSD points flow names its public unit only as 0xPoints", () => {
   const pointsKeys = (Object.keys(EN) as MessageKey[]).filter((key) => (
     key.startsWith("earn.") || key.startsWith("kind.points") || key.startsWith("tx.points")
   ));
@@ -248,15 +246,8 @@ test("the NUSD points flow names its public unit only as 0xPoints (history keeps
   }
 });
 
-test("reward toasts and legacy xPoints history templates interpolate exactly once", () => {
+test("reward toasts interpolate the amount exactly once", () => {
   assert.equal(interpolate(EN["earn.toastClaim"], { amount: "2" }), "Claimed 2 NUSD");
-  assert.equal(
-    interpolate(EN["tx.pointsRedeem"], { amount: "1.24xPoints" }),
-    "Redeemed 1.24xPoints for NUSD",
-  );
   assert.equal(interpolate(vi["earn.toastClaim"]!, { amount: "2" }), "Đã nhận 2 NUSD");
-  assert.equal(
-    interpolate(vi["tx.pointsRedeem"]!, { amount: "1,24xPoints" }),
-    "Đã đổi 1,24xPoints lấy NUSD",
-  );
+  assert.equal(interpolate(EN["tx.pointsClaim"], { amount: "2" }), "Claimed 2 NUSD of rewards");
 });

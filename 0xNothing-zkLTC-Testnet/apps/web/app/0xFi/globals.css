@@ -517,9 +517,6 @@
   font-size: 12px;
 }
 
-.fi-legacy-recovery {
-  margin-top: 14px;
-}
 
 .fi-panel-copy {
   margin-top: 8px;
@@ -528,35 +525,10 @@
   line-height: 1.6;
 }
 
-.fi-legacy-recovery-row {
-  display: grid;
-  grid-template-columns: minmax(140px, 1fr) auto auto minmax(170px, auto);
-  min-height: 72px;
-  align-items: center;
-  gap: 16px;
-  border-bottom: 1px solid var(--fi-line);
-}
 
-.fi-legacy-recovery-row > :is(span, div) {
-  display: grid;
-  gap: 4px;
-  color: var(--fi-muted);
-  font-size: 12px;
-}
 
-.fi-legacy-recovery-row strong {
-  color: var(--fi-text);
-  font-size: 12px;
-  font-weight: 500;
-}
 
-.fi-legacy-recovery-action {
-  justify-items: end;
-}
 
-.fi-legacy-recovery-action .fi-transaction-status {
-  max-width: 280px;
-}
 
 .fi-segmented {
   display: flex;
@@ -1520,15 +1492,7 @@
     padding: 22px 0;
   }
 
-  .fi-legacy-recovery-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-    padding: 12px 0;
-  }
 
-  .fi-legacy-recovery-action {
-    grid-column: 1 / -1;
-    justify-items: stretch;
-  }
 
   .fi-page-heading h1 {
     font-size: 27px;
@@ -3314,7 +3278,7 @@
 }
 @media (prefers-reduced-motion: reduce) { .fi-root .fi-points-locks button { transition: none; } }
 
-/* v2 tokenomics: rewards round, locks, revenue disclosure and the surplus vote. */
+/* Tokenomics: rewards round, locks, revenue disclosure and the surplus vote. */
 .fi-earn {
   display: grid;
   gap: 16px;

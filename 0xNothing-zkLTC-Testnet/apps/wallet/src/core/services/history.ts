@@ -23,7 +23,6 @@ export type TxKind =
   | "withdraw"
   | "points-stake"
   | "points-withdraw"
-  | "points-redeem"
   | "points-claim"
   | "swap"
   | "approve"
@@ -80,13 +79,29 @@ async function readBook(): Promise<HistoryBook> {
   return (await persistentStore.get<HistoryBook>(STORAGE_KEYS.history)) ?? {};
 }
 
+const TX_KINDS: ReadonlySet<string> = new Set<TxKind>([
+  "send",
+  "mint-nusd",
+  "redeem-nusd",
+  "supply",
+  "withdraw",
+  "points-stake",
+  "points-withdraw",
+  "points-claim",
+  "swap",
+  "approve",
+  "nft",
+  "dapp",
+]);
+
 export async function listRecords(
   account: Address,
   network: WalletNetwork = activeNetwork,
 ): Promise<TxRecord[]> {
   const book = await readBook();
+  // Rows written for features the wallet no longer has are kept in storage but not shown.
   return (book[account.toLowerCase()] ?? []).filter(
-    (entry) => (entry.networkId ?? LITVM_NETWORK.id) === network.id,
+    (entry) => (entry.networkId ?? LITVM_NETWORK.id) === network.id && TX_KINDS.has(entry.kind),
   );
 }
 

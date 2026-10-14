@@ -3,7 +3,7 @@ import "server-only";
 import { createPublicClient, getAddress, type Address } from "viem";
 import { litvmTransport } from "@/lib/rpcTransport";
 import { litvm } from "@/config/wagmi";
-import { marketplaceNftKey } from "@/lib/marketplaceAbi";
+import { marketplaceNftKey } from "@/lib/nftKey";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { isUnsafeRemoteHostname } from "@/lib/server/networkAddress";
 import { readLimitedBytes } from "@/lib/server/readLimitedBytes";

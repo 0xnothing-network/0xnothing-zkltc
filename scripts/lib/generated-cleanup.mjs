@@ -22,7 +22,6 @@ export const GENERATED_DIRECTORIES = Object.freeze([
   "0xNothing-zkLTC-Testnet/apps/web/.open-next",
   "0xNothing-zkLTC-Testnet/contracts/cache",
   "0xNothing-zkLTC-Testnet/contracts/out",
-  "0xNothing-zkLTC-Testnet/subgraphs/0xpixel-marketplace/build",
   "0xNothing-zkLTC-Testnet/subgraphs/0xpump/build",
   "0xNothing-zkLTC-Testnet/subgraphs/0xpump/generated",
   "0xPixel-Dogeos/contracts/cache",

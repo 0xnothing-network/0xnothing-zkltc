@@ -46,8 +46,8 @@
       "controllerGuardian": "0x58633401dCc383F010688e950878000000000000",
       "activatedAt": "2026-10-14T02:48:02.961Z"
     },
-    "subgraphVersion": "0.2.0",
-    "subgraphUrl": "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxpump-testnet-v2/0.2.0/gn",
+    "subgraphVersion": "1.0.0",
+    "subgraphUrl": "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxpump-testnet/1.0.0/gn",
     "transactions": {
       "OracleNUSDv2": {
         "address": "0x1d041a8e575006d46ae0aa2e4869c5be0327874e",

@@ -47,7 +47,7 @@ test("NFT deep links retain exact uint256 IDs and reject arrays, invalid address
   for (const [collection, tokenId] of [[NFT, (maximum + 1n).toString()], [NFT, "9".repeat(79)], [NFT, "-1"], [NFT, "1.5"], [NFT, "1e2"], [NFT, ["1", "2"]], [[NFT, NFT], "1"], ["invalid", "1"], [undefined, undefined]]) assert.equal(marketplace.nusdNftSelection(collection, tokenId), "");
 });
 
-test("the canonical marketplace renders NUSD and the former NUSD alias redirects without using the legacy ABI", async () => {
+test("the canonical marketplace renders NUSD and the former NUSD alias redirects without using the classic ABI", async () => {
   const dashboard = () => null;
   const route = evaluateModule<{ default: (props: { searchParams: Promise<Record<string, unknown>> }) => Promise<Element>; metadata: { alternates: { canonical: string } } }>(new URL("../../app/0xpixel/marketplace/page.tsx", import.meta.url), {
     "react/jsx-runtime": { jsx, jsxs: jsx }, "@/features/pixel/components/NusdMarketplaceDashboard": { NusdMarketplaceDashboard: dashboard }, "@/lib/nusdMarketplace": marketplace,
@@ -81,8 +81,3 @@ test("Gallery has only NUSD selling and management, without native signer contro
   assert.doesNotMatch(source, /marketplaceAbi|formatEther|writeContract|legacyMarketplace/);
 });
 
-test("old marketplace bookmarks redirect to the only NUSD marketplace", async () => {
-  const { default: config } = evaluateModule<{ default: { redirects: () => Promise<{ source: string; destination: string }[]> } }>(new URL("../../next.config.ts", import.meta.url), {}, { process: { env: {} }, __dirname: "." });
-  const redirect = (await config.redirects()).find((item) => item.source === "/0xpixel/marketplace/legacy");
-  assert.equal(redirect?.destination, "/0xpixel/marketplace");
-});

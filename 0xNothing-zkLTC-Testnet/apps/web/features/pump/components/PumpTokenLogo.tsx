@@ -55,7 +55,7 @@ function PumpTokenLogoInner({
   return (
     // Both sources stay plain <img>. The same-origin IPFS proxy must skip Next's
     // image optimizer, which can run on a separate host in production and turn a
-    // healthy proxy response into a misleading /_next/image 404; legacy HTTPS
+    // healthy proxy response into a misleading /_next/image 404; older HTTPS
     // logos stay browser-fetched so the server never proxies an arbitrary host.
     // eslint-disable-next-line @next/next/no-img-element
     <img

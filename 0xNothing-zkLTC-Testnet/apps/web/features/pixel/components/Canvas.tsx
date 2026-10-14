@@ -1,5 +1,5 @@
 "use client";
-import { pixelCellSize } from "@/lib/pixelV2";
+import { pixelCellSize } from "@/lib/pixelPacking";
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { downloadAsPNG, downloadAsJSON, pixelDataToJSON } from "@/lib/gridParser";

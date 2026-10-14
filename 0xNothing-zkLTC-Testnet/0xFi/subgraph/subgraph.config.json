@@ -12,5 +12,5 @@
   "nbtcVaultStartBlock": 60811731,
   "nethVaultStartBlock": 60811736,
   "lendingPoolStartBlock": 60811764,
-  "deploymentName": "zeroxfi-testnet-v2"
+  "deploymentName": "zeroxfi-testnet"
 }

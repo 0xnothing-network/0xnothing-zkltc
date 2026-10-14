@@ -67,7 +67,7 @@ export interface SwapRoute extends QuoteIdentity {
   paused: boolean;
 }
 
-/** Router v2: LP fee per hop plus one protocol fee, direct when either end is NUSD or WzkLTC. */
+/** Router fees: LP fee per hop plus one protocol fee, direct when either end is NUSD or WzkLTC. */
 interface FeeSchedule {
   lpBps: number;
   directBps: number;
@@ -103,7 +103,7 @@ function isBaseAsset(token: Address | undefined): boolean {
   return lower === CONTRACTS.nusd.toLowerCase() || lower === CONTRACTS.wzkltc.toLowerCase();
 }
 
-/** Mirrors `ZeroXFiRouterV2.routerFeeBpsForPath`; every v2 pair holds a base asset. */
+/** Mirrors the router's `routerFeeBpsForPath`; every pair holds a base asset. */
 function feeFor(hops: number, fees: FeeSchedule | null, path: readonly Address[] = []): number | null {
   if (!fees) return null;
   const cross = path.length >= 2 && !isBaseAsset(path[0]) && !isBaseAsset(path[path.length - 1]);

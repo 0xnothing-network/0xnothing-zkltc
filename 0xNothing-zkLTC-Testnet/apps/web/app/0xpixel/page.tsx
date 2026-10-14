@@ -8,7 +8,7 @@ import { AIPromptGenerator } from "@/features/pixel/components/AIPromptGenerator
 import { PixelLoadingIndicator } from "@/components/PageLoader";
 import { ImageImporter } from "@/features/pixel/components/ImageImporter";
 
-import { pixelHistoryLimit } from "@/lib/pixelV2";
+import { pixelHistoryLimit } from "@/lib/pixelPacking";
 const DEFAULT_GRID_SIZE = 16;
 
 function makeEmptyGrid(gridSize: number): string[][] {

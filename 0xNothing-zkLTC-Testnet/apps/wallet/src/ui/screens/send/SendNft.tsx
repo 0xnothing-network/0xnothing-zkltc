@@ -40,7 +40,7 @@ export function SendNft({ tokenId, collection }: { tokenId: string; collection: 
   const confirmGate = useActionGate();
 
   // Existing bookmarks without a collection refer to the original NFT contract.
-  const selectedCollection = collection ?? CONTRACTS.pixelLegacyNft;
+  const selectedCollection = collection ?? CONTRACTS.pixelClassicNft;
   const valid = /^\d+$/u.test(tokenId) && PIXEL_COLLECTIONS.some((entry) => entry.address.toLowerCase() === selectedCollection.toLowerCase());
   const nft = read.data ? findPixelNft(read.data, selectedCollection, tokenId) : null;
   const recipient = validateRecipient(to);

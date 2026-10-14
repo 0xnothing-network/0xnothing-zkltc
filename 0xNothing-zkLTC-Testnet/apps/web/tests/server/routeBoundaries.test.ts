@@ -61,14 +61,13 @@ test("candle API preserves every supported period", async () => {
   assert.deepEqual(harness.queriedPeriods, [300, 3_600, 14_400, 86_400]);
 });
 
-test("marketplace uses verified RPC metadata when indexed metadata has no image", async () => {
+test("marketplace hydrates listing metadata from verified RPC reads", async () => {
   const route = evaluateModule<{ GET: (request: Request) => Promise<Response> }>(
     new URL("../../app/api/marketplace/listings/route.ts", import.meta.url),
     {
       "next/server": { NextResponse: Response },
       "@/lib/contract": {
-        PIXEL_NFT_CONTRACT_ADDRESS: collection,
-        PIXEL_MARKETPLACE_ADDRESS: marketplace,
+        PIXEL_CLASSIC_CONTRACT_ADDRESS: collection,
         publicClient: {
           multicall: async ({ contracts }: { contracts: Array<{ functionName: string }> }) => contracts.map(({ functionName }) => ({
             status: "success",
@@ -82,20 +81,16 @@ test("marketplace uses verified RPC metadata when indexed metadata has no image"
       },
       "@/lib/nusdMarketplaceConfig": { NUSD_MARKETPLACE_ADDRESS: marketplace, NFT_NUSD_ADDRESS: seller },
       "@/lib/nusdMarketplace": { readNusdMarket: async () => ({ blockNumber: 100n, listingCount: 1n, listings: [{ id: 1n, collection, tokenId: 1n, price: 5n, seller, active: true }] }) },
-      "@/lib/pixelV2Abi": { PixelV2ABI: [] },
+      "@/lib/pixelNftAbi": { PixelNFTABI: [] },
       "@/lib/pixelCollections": {
-        PIXEL_COLLECTIONS: [{ address: collection, version: 1 }],
-        PIXEL_V2_ENABLED: false,
+        PIXEL_COLLECTIONS: [{ address: collection, name: "0xPixel Classic" }],
+        PIXEL_MINT_ENABLED: false,
         isPixelCollection: (address: string) => address === collection,
-        isPixelV2Collection: () => false,
+        isPackedPixelCollection: () => false,
         pixelTokenKey: (address: string, tokenId: string) => `${address}:${tokenId}`,
       },
-      "@/lib/abi": { PixelNFTABI: [] },
+      "@/lib/abi": { PixelClassicABI: [] },
       "@/lib/pixelImage": { getPixelImageUrl: (tokenId: string) => `/api/pixel-image?tokenId=${tokenId}` },
-      "@/lib/marketplaceSubgraph": {
-        hasMarketplaceSubgraph: () => true,
-        fetchTokenMetadataFromSubgraph: async () => ({ "1": { tokenId: "1", name: "Incomplete index", imageUrl: "", creator: seller, mintedAt: 0 } }),
-      },
       "@/lib/erc721Metadata.server": { fetchValidatedErc721Metadata: async () => ({}) },
       "@/lib/boundedCache": { createBoundedCache },
       "@/lib/server/cdnCache": { publicCdnCacheHeaders },

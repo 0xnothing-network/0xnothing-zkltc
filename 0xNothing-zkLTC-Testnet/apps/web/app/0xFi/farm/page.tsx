@@ -1,6 +1,6 @@
 import { permanentRedirect } from "next/navigation";
 
-export default async function LegacyFarmRoute({
+export default async function FarmRoute({
   searchParams,
 }: {
   searchParams: Promise<{ pair?: string | string[] }>;

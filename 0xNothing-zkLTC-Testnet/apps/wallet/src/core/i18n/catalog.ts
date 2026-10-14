@@ -287,7 +287,6 @@ export const EN = {
   "kind.approve": "Approve",
   "kind.pointsStake": "0xPoints stake",
   "kind.pointsWithdraw": "0xPoints withdrawal",
-  "kind.pointsRedeem": "xPoints redemption",
   "kind.pointsClaim": "0xPoints reward",
   "kind.nft": "NFT",
   "kind.dapp": "Dapp",
@@ -307,7 +306,6 @@ export const EN = {
   "tx.dapp": "Request from {host}",
   "tx.pointsStake": "Staked {amount} NUSD for 0xPoints",
   "tx.pointsWithdraw": "Withdrew 0xPoints position #{position}",
-  "tx.pointsRedeem": "Redeemed {amount} for NUSD",
   "tx.pointsClaim": "Claimed {amount} NUSD of rewards",
 
   // ── Unlock and reset ───────────────────────────────────────────────────────

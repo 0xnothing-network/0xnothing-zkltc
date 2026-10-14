@@ -6,7 +6,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useAccount, useReadContract } from "wagmi";
 import { OwnedNftCard, type OwnedNft } from "@/features/pixel/components/OwnedNftCard";
 import { GridSkeleton } from "@/features/pixel/components/Skeleton";
-import { LegacyListingsNotice } from "@/features/pixel/components/LegacyListingsNotice";
 import { fetchJson } from "@/lib/http";
 import { NusdMarketplaceAbi } from "@/lib/nusdMarketplace";
 import { NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
@@ -95,8 +94,6 @@ export default function GalleryPage() {
           Marketplace is paused. New listings and purchases are temporarily disabled; you can still cancel listings and withdraw credits.
         </div>
       ) : null}
-
-      {isConnected && address && data?.length ? <LegacyListingsNotice address={address} tokens={data} /> : null}
 
       {error && data ? (
         <div className="mb-4 flex items-center justify-between gap-3 border border-(--negative)/30 bg-(--negative)/10 px-4 py-3 text-sm text-(--negative)" role="alert">

@@ -178,7 +178,7 @@ export function PumpStatsDashboard() {
 }
 
 /**
- * v2: protocol fees no longer belong to an admin. Anyone can send them to the fee splitter,
+ * Protocol fees do not belong to an admin. Anyone can send them to the fee splitter,
  * which forwards 50% to the 0xPoints reward pool and 50% to the treasury in the same call.
  */
 function ProtocolFeePanel({

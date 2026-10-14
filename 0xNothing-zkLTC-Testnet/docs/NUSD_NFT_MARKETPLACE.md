@@ -8,7 +8,7 @@ The web now uses `contracts/src/0xpixel/NusdNftMarketplaceV2.sol` at `0xA5e3EDfc
 - 0.4% is credited to the creator: the ERC-2981 receiver of the token (both 0xPixel collections return the artist). If a collection cannot name one, or names the market itself, the seller keeps that share.
 - There is no platform fee, no fee recipient and no separate royalty rate; `quoteSale` returns `(burnAmount, creator, creatorFee, sellerProceeds)` and price = proceeds + creator fee + burn.
 
-Pixel V1 was allowed by a separate `setCollectionAllowed` call after deployment (its PUSH0 bytecode cannot run in the repository's `paris` simulation EVM). The subgraph `pixel-nusd-market-v2/1.0.0` also totals NUSD burned. The v1 sections below describe the retired `0x188e…f377` market, which remains on chain.
+Pixel V1 was allowed by a separate `setCollectionAllowed` call after deployment (its PUSH0 bytecode cannot run in the repository's `paris` simulation EVM). The subgraph `pixel-nusd-market/1.1.0` also totals NUSD burned. NFT ownership is read from the collections through RPC; the old zkLTC marketplace index is no longer used. The v1 sections below describe the retired `0x188e…f377` market, which remains on chain.
 
 ## Status and separation (v1)
 

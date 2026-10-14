@@ -48,9 +48,9 @@ const mode = flags[0];
 
 const CHAIN_ID = 4441;
 const GOLDSKY_PROJECT = "project_cmqmpust19i8v01t595z8hpq4";
-const FI_SUBGRAPH = "zeroxfi-testnet-v2/0.2.0";
-const PUMP_SUBGRAPH = "zeroxpump-testnet-v2/0.2.0";
-const NUSD_MARKET_SUBGRAPH = "pixel-nusd-market-v2/1.0.0";
+const FI_SUBGRAPH = "zeroxfi-testnet/1.0.0";
+const PUMP_SUBGRAPH = "zeroxpump-testnet/1.0.0";
+const NUSD_MARKET_SUBGRAPH = "pixel-nusd-market/1.1.0";
 const goldskyEndpoint = (name) => `https://api.goldsky.com/api/public/${GOLDSKY_PROJECT}/subgraphs/${name}/gn`;
 const ANVIL_PORT = 8547;
 const MIN_LIVE_BALANCE = parseEther("2.5");
@@ -642,6 +642,8 @@ async function publish() {
     pumpGoldskyEndpoint: goldskyEndpoint(PUMP_SUBGRAPH),
     nusdMarketGoldskyEndpoint: goldskyEndpoint(NUSD_MARKET_SUBGRAPH),
   };
+  // The shared generator still emits keys only the retired suite used; the web no longer reads them.
+  for (const key of ["nusdPointsStaking", "synthFeeGaugeFactory", "legacyNbtcVault", "legacyNethVault"]) delete generated[key];
   atomicWriteFile(publicGeneratedConfigTarget(fiRoot), `${JSON.stringify(generated, null, 2)}\n`);
 
   writeManifest({ ...manifest, blocks, published: { fiSubgraph: FI_SUBGRAPH, pumpSubgraph: PUMP_SUBGRAPH, nusdMarketSubgraph: NUSD_MARKET_SUBGRAPH } });

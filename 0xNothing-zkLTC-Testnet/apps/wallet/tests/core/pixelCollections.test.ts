@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 
-const legacy = `0x${"11".repeat(20)}`;
+const classic = `0x${"11".repeat(20)}`;
 const upgraded = `0x${"22".repeat(20)}`;
 const owner = `0x${"33".repeat(20)}`;
 const recipient = `0x${"44".repeat(20)}`;
@@ -26,11 +26,11 @@ function fixture() {
     readContract: async (request: Request) => { reads.push(request); return 1n; },
     multicall: async ({ contracts }: { contracts: Request[] }) => contracts.map((request) => {
       reads.push(request);
-      const isV2 = request.address === upgraded;
+      const isCurrent = request.address === upgraded;
       return {
         status: "success",
         result: request.functionName === "userTokens" ? 1n
-          : [isV2 ? "V2 artwork" : "Legacy artwork", isV2 ? 256n : 64n, "000001ffffff", owner, isV2 ? 2n : 1n, "0x"],
+          : [isCurrent ? "Current artwork" : "Classic artwork", isCurrent ? 256n : 64n, "000001ffffff", owner, isCurrent ? 2n : 1n, "0x"],
       };
     }),
   };
@@ -38,8 +38,8 @@ function fixture() {
     "../../abis": { pixelNftAbi: [] },
     "../../config/contracts": {
       PIXEL_COLLECTIONS: [
-        { address: upgraded, name: "0xPixel V2" },
-        { address: legacy, name: "0xPixel" },
+        { address: upgraded, name: "0xPixel" },
+        { address: classic, name: "0xPixel Classic" },
       ],
     },
     "../lib/pixelSvg": { pixelDataToSvgDataUrl: () => "data:image/svg+xml,test" },
@@ -67,23 +67,23 @@ test("the wallet preserves both collections when their token ids overlap", async
   assert.equal(rows.length, 2);
   assert.equal(rows[0]?.collection, upgraded);
   assert.equal(rows[0]?.gridSize, 256);
-  assert.equal(rows[1]?.collection, legacy);
+  assert.equal(rows[1]?.collection, classic);
   assert.equal(rows[0]?.tokenId, rows[1]?.tokenId);
-  assert.notEqual(service.pixelNftKey(upgraded, 1n), service.pixelNftKey(legacy, 1n));
-  assert.equal(service.findPixelNft(rows, legacy.toUpperCase(), "1")?.name, "Legacy artwork");
-  assert.equal(service.findPixelNft(rows, upgraded, "1")?.name, "V2 artwork");
+  assert.notEqual(service.pixelNftKey(upgraded, 1n), service.pixelNftKey(classic, 1n));
+  assert.equal(service.findPixelNft(rows, classic.toUpperCase(), "1")?.name, "Classic artwork");
+  assert.equal(service.findPixelNft(rows, upgraded, "1")?.name, "Current artwork");
   assert.equal(service.findPixelNft(rows, recipient, "1"), null);
-  for (const address of [legacy, upgraded]) {
+  for (const address of [classic, upgraded]) {
     assert.deepEqual(reads.filter((read) => read.address === address).map((read) => read.functionName), ["balanceOf", "userTokens", "tokenData"]);
   }
 });
 
-test("an upgraded NFT transfer targets its collection while legacy transfers still work", async () => {
+test("an upgraded NFT transfer targets its collection while Classic transfers still work", async () => {
   const { service, writes } = fixture();
   const params = { from: owner, to: recipient, tokenId: 1n, name: "Artwork" };
   assert.equal(await service.transferPixelNft({ ...params, collection: upgraded }), hash);
-  assert.equal(await service.transferPixelNft({ ...params, collection: legacy }), hash);
-  assert.deepEqual(writes.map((write) => write.address), [upgraded, legacy]);
+  assert.equal(await service.transferPixelNft({ ...params, collection: classic }), hash);
+  assert.deepEqual(writes.map((write) => write.address), [upgraded, classic]);
   await assert.rejects(service.transferPixelNft({ ...params, collection: recipient }), /Unknown 0xPixel collection/u);
   assert.equal(writes.length, 2);
 });
@@ -92,13 +92,13 @@ test("a failure in either collection keeps a complete inventory from being repla
   const { service, client } = fixture();
   const read = client.readContract;
   client.readContract = async (request) => {
-    if (request.address === legacy) throw new Error("Legacy RPC unavailable");
+    if (request.address === classic) throw new Error("Classic RPC unavailable");
     return read(request);
   };
-  await assert.rejects(service.loadPixelNfts(owner), /Legacy RPC unavailable/u);
+  await assert.rejects(service.loadPixelNfts(owner), /Classic RPC unavailable/u);
 });
 
-test("a 256-wide legacy-compatible run renders the full row after splitting 255 plus 1", () => {
+test("a 256-wide Classic-compatible run renders the full row after splitting 255 plus 1", () => {
   const source = readFileSync(new URL("../../src/core/lib/pixelSvg.ts", import.meta.url), "utf8");
   const code = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },

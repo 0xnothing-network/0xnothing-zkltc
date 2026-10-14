@@ -1,5 +1,5 @@
-/** Canonical V2 binary runs: x, y, width minus one, red, green, blue. */
-export function pixelDataToV2PackedBytes(pixelData: string[][], gridSize: number): `0x${string}` {
+/** Canonical packed binary runs: x, y, width minus one, red, green, blue. */
+export function pixelDataToPackedBytes(pixelData: string[][], gridSize: number): `0x${string}` {
   if (![8, 16, 32, 64, 128, 256].includes(gridSize) || pixelData.length !== gridSize) {
     throw new Error("Invalid pixel grid size");
   }

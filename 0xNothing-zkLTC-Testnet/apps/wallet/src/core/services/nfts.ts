@@ -26,7 +26,7 @@ export interface PixelNft {
   image: string;
 }
 
-/** Cap each collection independently so legacy artwork remains accessible. */
+/** Cap each collection independently so Classic artwork remains accessible. */
 const MAX_LISTED = 60;
 
 type TokenData = readonly [string, bigint, string, Address, bigint, Hex];

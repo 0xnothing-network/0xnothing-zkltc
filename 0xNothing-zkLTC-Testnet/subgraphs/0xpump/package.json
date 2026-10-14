@@ -1,6 +1,6 @@
 {
   "name": "@0xnothing/0xpump-subgraph-testnet",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "private": true,
   "description": "0xPump Goldsky subgraph for LitVM Liteforge testnet",
   "scripts": {
@@ -11,7 +11,7 @@
     "test": "npm run codegen && graph test",
     "check": "npm run build && npm run test:compile",
     "deploy:check": "node ./scripts/check-deploy-ready.mjs",
-    "deploy": "npm run deploy:check && npm run build && goldsky subgraph deploy zeroxpump-testnet-v2/0.2.0 --path ."
+    "deploy": "npm run deploy:check && npm run build && goldsky subgraph deploy zeroxpump-testnet/1.0.0 --path ."
   },
   "dependencies": {
     "@graphprotocol/graph-ts": "0.38.2"

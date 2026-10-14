@@ -37,7 +37,7 @@ function parseNusd(value: string): bigint {
 }
 
 /**
- * NUSD v2 price-free exit. If the DIA oracle stays unusable for 7 days after anyone reports it,
+ * NUSD price-free exit. If the DIA oracle stays unusable for 7 days after anyone reports it,
  * holders can burn NUSD for their pro-rata share of the zkLTC reserve, even while redeem is paused.
  */
 export function NusdEmergencyPanel() {

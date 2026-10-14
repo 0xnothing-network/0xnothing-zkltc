@@ -6,7 +6,7 @@ import { activeNetwork, publicClient } from "../rpc/client";
 import { ensureAllowance, type TxExecutionContext, writeCall } from "./tx";
 
 /**
- * v2 0xPoints (contracts/src/rewards/RewardStaking.sol). Points are lock-weighted
+ * 0xPoints (contracts/src/rewards/RewardStaking.sol). Points are lock-weighted
  * NUSD-seconds; the wallet shows them per day, so 1 0xPoint = 1 weighted NUSD for 1 day.
  */
 export const POINT_SECONDS_PER_DISPLAY_POINT = 86_400n;

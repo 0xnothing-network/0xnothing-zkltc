@@ -40,8 +40,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // Produce the minimal self-hosted server consumed by the Railway image.
   output: "standalone",
-  // Escape the legacy /_next dev-chunk cache that was previously marked
-  // immutable; future responses under this namespace are explicitly no-store.
+  // Dev chunks live under their own prefix so a cache that marked /_next immutable never serves them.
   assetPrefix: process.env.NODE_ENV === "development" ? "/_0xfi-dev" : undefined,
   compress: true,
   // Keep development HMR artifacts isolated from production builds. Running
@@ -80,17 +79,11 @@ const nextConfig: NextConfig = {
     // remote pattern here would only widen /_next/image without serving anything.
     localPatterns: [
       { pathname: "/0xNothing.jpg", search: "" },
-      { pathname: "/images/nothing-hero-v2.png", search: "" },
     ],
     remotePatterns: [],
   },
   async redirects() {
     return [
-      {
-        source: "/0xpixel/marketplace/legacy",
-        destination: "/0xpixel/marketplace",
-        permanent: true,
-      },
       {
         source: "/0xPump/faq",
         destination: "/0xPump/stats",

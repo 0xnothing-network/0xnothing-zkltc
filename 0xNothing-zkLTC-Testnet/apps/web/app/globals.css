@@ -16,7 +16,7 @@
 }
 
 :root {
-  /* Legacy names kept for product stylesheets; values come from tokens.css. */
+  /* Product stylesheet names; values come from tokens.css. */
   --nothing-black: var(--bg);
   --nothing-ink: var(--bg);
   --nothing-panel: var(--surface-1);

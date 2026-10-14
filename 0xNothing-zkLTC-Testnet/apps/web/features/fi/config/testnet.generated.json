@@ -1,6 +1,6 @@
 {
   "appUrl": "https://0xnothing.xyz/0xFi",
-  "goldskyEndpoint": "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet-v2/0.2.0/gn",
+  "goldskyEndpoint": "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.0.0/gn",
   "deploymentBlock": "60811550",
   "nusd": "0x1d041A8e575006D46Ae0Aa2E4869C5be0327874E",
   "wzkltc": "0xE93d4373CE1eDA3df6c3Ab7ed3ab07A07aA5939F",
@@ -9,16 +9,12 @@
   "dexFactory": "0x1D1dFE055F261DB4B27962A9c3097e779dD8ac58",
   "dexRouter": "0xF33fCB0Bd0795EAcbe4b1BB4E8c3d904483847F5",
   "farmFactory": "0x271d09B5B073Db5c6F564E4e8c4e0bfe73F7f449",
-  "nusdPointsStaking": null,
-  "synthFeeGaugeFactory": null,
   "synthSafetyReserve": "0x9ddEA1A4D4cB80f0F69cA327fF8eeaE183396052",
   "synthRiskActionsEnabled": true,
   "lendingPool": "0xF37eCaed4E7869850071BB9439E32C917F60F080",
   "lendingRiskActionsEnabled": true,
   "nbtcVault": "0x24c475Be424dF2fd1Cfd8CBe1d521e7DA39b0dc4",
   "nethVault": "0x0c1EAd9E1CF9cfF5504E36217a6D33AE48c68F84",
-  "legacyNbtcVault": null,
-  "legacyNethVault": null,
   "ltcOracle": "0x54361dB5F9DF455B448E882Ce65612D5e418f3Ee",
   "btcOracle": "0x781178849cE1D131EFbedff1EF52323A6E117813",
   "ethOracle": "0x8E9BD05a80542B171719ac0d749a7A609D69E324",
@@ -43,6 +39,6 @@
   "nusdMarketplace": "0xA5e3EDfcba3b6fc40f3e41557f8a303a2AAC7e09",
   "nusdMarketplaceDeploymentBlock": "60811596",
   "pumpGraduationRouter": "0xa5aDFFD55D8F5Cc417d05a29C7EA3750e0572fc3",
-  "pumpGoldskyEndpoint": "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxpump-testnet-v2/0.2.0/gn",
-  "nusdMarketGoldskyEndpoint": "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/pixel-nusd-market-v2/1.0.0/gn"
+  "pumpGoldskyEndpoint": "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxpump-testnet/1.0.0/gn",
+  "nusdMarketGoldskyEndpoint": "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/pixel-nusd-market/1.1.0/gn"
 }

@@ -1,6 +1,6 @@
 import { parseAbi } from "viem";
 
-export const PixelV2ABI = parseAbi([
+export const PixelNFTABI = parseAbi([
   "function mintPacked(string artName,string description,uint256 grid,bytes pixels) returns (uint256)",
   "function checkOriginalPacked(bytes pixels,uint256 grid) view returns (bool)",
   "function getCreatorPacked(bytes pixels,uint256 grid) view returns (address)",

@@ -67,14 +67,6 @@ export const deployment = {
       deploymentOverride(process.env.NEXT_PUBLIC_GAUGE_FACTORY_ADDRESS, process.env.NEXT_PUBLIC_FARM_FACTORY_ADDRESS),
       TESTNET.farmFactory,
     ),
-    nusdPointsStaking: configuredAddress(
-      deploymentOverride(process.env.NEXT_PUBLIC_0XFI_POINTS_STAKING_ADDRESS),
-      TESTNET.nusdPointsStaking,
-    ),
-    synthFeeGaugeFactory: configuredAddress(
-      deploymentOverride(process.env.NEXT_PUBLIC_SYNTH_FEE_GAUGE_FACTORY_ADDRESS),
-      TESTNET.synthFeeGaugeFactory,
-    ),
     synthSafetyReserve: configuredAddress(
       deploymentOverride(process.env.NEXT_PUBLIC_SYNTH_SAFETY_RESERVE_ADDRESS),
       TESTNET.synthSafetyReserve,
@@ -82,14 +74,6 @@ export const deployment = {
     lendingPool: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_LENDING_POOL_ADDRESS), TESTNET.lendingPool),
     nbtcVault: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_NBTC_VAULT_ADDRESS), TESTNET.nbtcVault),
     nethVault: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_NETH_VAULT_ADDRESS), TESTNET.nethVault),
-    legacyNbtcVault: configuredAddress(
-      deploymentOverride(process.env.NEXT_PUBLIC_LEGACY_NBTC_VAULT_ADDRESS),
-      TESTNET.legacyNbtcVault,
-    ),
-    legacyNethVault: configuredAddress(
-      deploymentOverride(process.env.NEXT_PUBLIC_LEGACY_NETH_VAULT_ADDRESS),
-      TESTNET.legacyNethVault,
-    ),
     ltcOracle: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_LTC_ORACLE_ADDRESS), TESTNET.ltcOracle),
     btcOracle: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_BTC_ORACLE_ADDRESS), TESTNET.btcOracle),
     ethOracle: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_ETH_ORACLE_ADDRESS), TESTNET.ethOracle),
@@ -122,7 +106,7 @@ export const deployment = {
     pump: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_PUMP_ADDRESS), TESTNET.pump),
     lpLocker: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_LP_LOCKER_ADDRESS), TESTNET.lpLocker || undefined),
     tokenMetadataRegistry: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_TOKEN_METADATA_REGISTRY_ADDRESS), TESTNET.tokenMetadataRegistry || undefined),
-    // v2 tokenomics: fees split 50/50 between the 0xPoints reward pool and the owner treasury.
+    // Tokenomics: fees split 50/50 between the 0xPoints reward pool and the owner treasury.
     treasury: configuredAddress(undefined, TESTNET.treasury),
     feeSplitter: configuredAddress(undefined, TESTNET.feeSplitter),
     rewardStaking: configuredAddress(undefined, TESTNET.rewardStaking),

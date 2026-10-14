@@ -13,9 +13,9 @@ import {
 } from "wagmi";
 import { decodeEventLog, encodeFunctionData } from "viem";
 import { publicClient, getMarketplaceTxUrl } from "@/lib/contract";
-import { PixelV2ABI } from "@/lib/pixelV2Abi";
-import { pixelDataToV2PackedBytes } from "@/lib/pixelV2";
-import { PIXEL_MINT_ADDRESS, PIXEL_V2_ENABLED, pixelUtf8Bytes } from "@/lib/pixelCollections";
+import { PixelNFTABI } from "@/lib/pixelNftAbi";
+import { pixelDataToPackedBytes } from "@/lib/pixelPacking";
+import { PIXEL_MINT_ADDRESS, PIXEL_MINT_ENABLED, pixelUtf8Bytes } from "@/lib/pixelCollections";
 import { PixelButton } from "@/features/pixel/components/PixelButton";
 import { pixelDataToPNG } from "@/lib/gridParser";
 import { useToast } from "@/components/Toast";
@@ -99,7 +99,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
     debounceTimerRef.current = setTimeout(() => {
       setPreviewBase64(pixelDataToPNG(snapshot, gridSize));
       try {
-        setDebouncedPackedBytes(pixelDataToV2PackedBytes(snapshot, gridSize));
+        setDebouncedPackedBytes(pixelDataToPackedBytes(snapshot, gridSize));
         setEncodingError("");
         preparedPixelDataRef.current = snapshot;
       } catch (error) {
@@ -111,14 +111,14 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
   const { data: isOriginal, isError: originalCheckFailed, refetch: retryOriginalCheck } = useReadContract({
     chainId: LITVM_CHAIN_ID,
     address: PIXEL_MINT_ADDRESS,
-    abi: PixelV2ABI,
+    abi: PixelNFTABI,
     functionName: "checkOriginalPacked",
     args: [debouncedPackedBytes, BigInt(gridSize)],
     query: {
-      enabled: PIXEL_V2_ENABLED && debouncedPackedBytes !== "0x",
+      enabled: PIXEL_MINT_ENABLED && debouncedPackedBytes !== "0x",
     },
   });
-  const isCheckingOriginal = PIXEL_V2_ENABLED && !encodingError && hasDrawing && (
+  const isCheckingOriginal = PIXEL_MINT_ENABLED && !encodingError && hasDrawing && (
     debouncedPackedBytes === "0x" || isCanvasUpdating || (isOriginal === undefined && !originalCheckFailed)
   );
 
@@ -144,7 +144,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
           if (log.address.toLowerCase() !== PIXEL_MINT_ADDRESS.toLowerCase()) continue;
           try {
             const decoded = decodeEventLog({
-              abi: PixelV2ABI,
+              abi: PixelNFTABI,
               data: log.data,
               topics: log.topics,
             });
@@ -206,7 +206,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
       switchChain?.({ chainId: LITVM_CHAIN_ID });
       return;
     }
-    if (!PIXEL_V2_ENABLED) {
+    if (!PIXEL_MINT_ENABLED) {
       toast.info("Mint unavailable", "The new pixel collection is being prepared.");
       return;
     }
@@ -247,7 +247,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
       const packedPixelBytes = debouncedPackedBytes;
 
       const data = encodeFunctionData({
-        abi: PixelV2ABI,
+        abi: PixelNFTABI,
         functionName: "mintPacked",
         args: [name.trim(), description, BigInt(gridSize), packedPixelBytes],
       });
@@ -257,7 +257,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
         client.estimateContractGas({
           account: address,
           address: PIXEL_MINT_ADDRESS,
-          abi: PixelV2ABI,
+          abi: PixelNFTABI,
           functionName: "mintPacked",
           args: [name.trim(), description, BigInt(gridSize), packedPixelBytes],
         }),
@@ -322,7 +322,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
   ]);
 
   const canMint =
-    PIXEL_V2_ENABLED &&
+    PIXEL_MINT_ENABLED &&
     !encodingError &&
     pixelUtf8Bytes(name.trim()) <= 64 &&
     pixelUtf8Bytes(description) <= 1024 &&

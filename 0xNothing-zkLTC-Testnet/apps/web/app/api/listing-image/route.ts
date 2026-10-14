@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { PixelNFTABI } from "@/lib/abi";
+import { PixelClassicABI } from "@/lib/abi";
 import { publicClient } from "@/lib/contract";
 import { getPixelImageUrl } from "@/lib/pixelImage";
 import { resolvePixelCollection } from "@/lib/pixelCollections";
@@ -22,13 +22,13 @@ export async function GET(request: Request) {
   try {
     const tokenData = await publicClient.readContract({
       address: collection,
-      abi: PixelNFTABI,
+      abi: PixelClassicABI,
       functionName: "tokenData",
       args: [BigInt(tokenId)],
     }) as readonly [string, bigint, string, `0x${string}`, bigint, string];
     if (tokenData[2]) imageUrl = getPixelImageUrl(tokenId, collection);
   } catch {
-    // Preserve the legacy endpoint contract for missing token IDs.
+    // Keep the endpoint contract for missing token IDs.
   }
 
   return NextResponse.json(

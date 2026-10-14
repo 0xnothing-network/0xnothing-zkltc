@@ -17,17 +17,16 @@ test("partial metadata failures stay off CDN while healthy metadata retains publ
       "@/lib/pixelCollections": {
         resolvePixelCollection: () => collection,
         pixelTokenKey: (address: string, id: string) => `${address}:${id}`,
-        isPixelV2Collection: () => false,
+        isPackedPixelCollection: () => false,
       },
       "@/lib/contract": { publicClient: { multicall: async ({ contracts }: { contracts: Array<{ args: bigint[] }> }) => {
         batches.push(Array.from(contracts, ({ args }) => String(args[0])));
         return contracts.map(({ args }) => args[0] === 2n ? { status: "failure", error: new Error("transient RPC error") }
           : { status: "success", result: ["Art", 8n, "pixels", creator, 1n, ""] });
       } } },
-      "@/lib/abi": { PixelNFTABI: [] },
-      "@/lib/pixelV2Abi": { PixelV2ABI: [] },
+      "@/lib/abi": { PixelClassicABI: [] },
+      "@/lib/pixelNftAbi": { PixelNFTABI: [] },
       "@/lib/pixelImage": { getPixelImageUrl: (id: string) => `/api/pixel-image?tokenId=${id}` },
-      "@/lib/marketplaceSubgraph": { hasMarketplaceSubgraph: () => false },
       "@/lib/boundedCache": { createBoundedCache },
       "@/lib/server/publicError": { publicErrorMessage: () => "unavailable" },
       "@/lib/tokenId": { normalizeUint256TokenId },

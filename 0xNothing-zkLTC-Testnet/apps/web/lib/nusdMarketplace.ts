@@ -1,6 +1,6 @@
 import { getAddress, isAddress, keccak256, parseAbi, parseUnits, toBytes, zeroAddress, type Address, type PublicClient } from "viem";
 
-/** v2: 0.1% of every sale is burned and 0.4% goes to the creator; there is no platform fee. */
+/** 0.1% of every sale is burned and 0.4% goes to the creator; there is no platform fee. The marker is fixed on chain. */
 export const NUSD_MARKET_IMPLEMENTATION = keccak256(toBytes("0xpixel.nusd.marketplace.v2"));
 export const NUSD_MARKET_PAGE_SIZE = 24;
 export const NUSD_CATALOGUE_LIMIT = 1000;

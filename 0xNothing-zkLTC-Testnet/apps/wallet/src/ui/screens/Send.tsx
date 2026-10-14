@@ -29,7 +29,7 @@ export function Send(): ReactNode {
   const route = useRoute();
   const nft = route.params.get("nft");
   const collection = route.params.get("collection");
-  if (nft !== null) return <SendNft key={`nft:${collection ?? "legacy"}:${nft}`} tokenId={nft} collection={collection} />;
+  if (nft !== null) return <SendNft key={`nft:${collection ?? "classic"}:${nft}`} tokenId={nft} collection={collection} />;
   const initial = route.params.get("token");
   return <SendToken key={`token:${initial ?? "native"}`} initial={initial} />;
 }

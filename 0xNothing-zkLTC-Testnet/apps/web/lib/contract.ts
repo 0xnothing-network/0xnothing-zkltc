@@ -1,11 +1,10 @@
 import { createPublicClient } from "viem";
 import { litvmTransport } from "./rpcTransport";
-import { PixelNFTABI } from "./abi";
+import { PixelClassicABI } from "./abi";
 import { litvm } from "@/config/wagmi";
 import { createBoundedCache } from "@/lib/boundedCache";
 import {
-  PIXEL_MARKETPLACE_ADDRESS as PUBLIC_PIXEL_MARKETPLACE_ADDRESS,
-  PIXEL_NFT_ADDRESS,
+  PIXEL_CLASSIC_ADDRESS,
 } from "@/lib/publicConfig";
 import { getTransactionExplorerUrl } from "./explorer";
 
@@ -16,9 +15,7 @@ export {
   getTransactionExplorerUrl,
 } from "./explorer";
 
-export const PIXEL_NFT_CONTRACT_ADDRESS = PIXEL_NFT_ADDRESS;
-
-export const PIXEL_MARKETPLACE_ADDRESS = PUBLIC_PIXEL_MARKETPLACE_ADDRESS;
+export const PIXEL_CLASSIC_CONTRACT_ADDRESS = PIXEL_CLASSIC_ADDRESS;
 
 export function getMarketplaceTxUrl(txHash: string): string {
   return getTransactionExplorerUrl(txHash);
@@ -101,7 +98,7 @@ const enumerationTokens = createBoundedCache<symbol>({
   maxEntries: USER_NFT_CACHE_MAX,
 });
 
-export async function getUserTokenIds(address: string, collection: `0x${string}` = PIXEL_NFT_CONTRACT_ADDRESS, force = false): Promise<bigint[]> {
+export async function getUserTokenIds(address: string, collection: `0x${string}` = PIXEL_CLASSIC_CONTRACT_ADDRESS, force = false): Promise<bigint[]> {
   if (!address || typeof address !== "string" || !address.match(/^0x[0-9a-fA-F]{40}$/)) {
     return [];
   }
@@ -117,7 +114,7 @@ export async function getUserTokenIds(address: string, collection: `0x${string}`
     const balance = (await withRetry(() =>
       publicClient.readContract({
         address: collection,
-        abi: PixelNFTABI,
+        abi: PixelClassicABI,
         functionName: "balanceOf",
         args: [addr],
       })
@@ -144,7 +141,7 @@ export async function getUserTokenIds(address: string, collection: `0x${string}`
         allowFailure: true,
         contracts: indexes.map((index) => ({
           address: collection,
-          abi: PixelNFTABI,
+          abi: PixelClassicABI,
           functionName: "userTokens" as const,
           args: [addr, BigInt(index)] as const,
         })),
@@ -156,7 +153,7 @@ export async function getUserTokenIds(address: string, collection: `0x${string}`
         return withRetry(() =>
           publicClient.readContract({
             address: collection,
-            abi: PixelNFTABI,
+            abi: PixelClassicABI,
             functionName: "userTokens",
             args: [addr, BigInt(index)],
           }) as Promise<bigint>

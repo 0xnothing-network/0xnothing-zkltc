@@ -48,10 +48,6 @@ test("generated cleanup never targets Graph bindings tracked by Git", () => {
     GENERATED_DIRECTORIES.includes("0xNothing-zkLTC-Testnet/0xFi/subgraph/generated"),
     false,
   );
-  assert.equal(
-    GENERATED_DIRECTORIES.includes("0xNothing-zkLTC-Testnet/subgraphs/0xpixel-marketplace/generated"),
-    false,
-  );
 });
 
 test("workspace verification and cleanup include the standalone DogeOS project", async () => {

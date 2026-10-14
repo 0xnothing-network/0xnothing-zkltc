@@ -134,7 +134,7 @@
 :root[data-theme="light"] :is(.fi-root, .pixel-product) { --accent-ink: #ffffff; }
 
 /*
- * Legacy aliases. Product stylesheets predate the system; mapping their
+ * Aliases. Product stylesheets predate the system; mapping their
  * variables here moves them onto the semantic tokens (and light mode) without
  * rewriting every rule.
  */

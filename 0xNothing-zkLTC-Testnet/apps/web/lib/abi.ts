@@ -1,4 +1,4 @@
-export const PixelNFTABI = [
+export const PixelClassicABI = [
   {
     type: "constructor",
     inputs: [

@@ -37,9 +37,9 @@
   },
   "goldsky": {
     "network": "liteforge",
-    "subgraph": "zeroxfi-testnet-v2/0.2.0",
+    "subgraph": "zeroxfi-testnet/1.0.0",
     "tag": null,
-    "endpoint": "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet-v2/0.2.0/gn"
+    "endpoint": "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.0.0/gn"
   },
   "deployment": {
     "status": "v2-tokenomics-active",

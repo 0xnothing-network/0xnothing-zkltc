@@ -21,8 +21,7 @@ import { deployment } from "@fi/config/deployment";
 import testnet from "@fi/config/testnet.generated.json";
 import { NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
 import {
-  MARKETPLACE_SUBGRAPH_URL,
-  PIXEL_NFT_ADDRESS,
+  PIXEL_CLASSIC_ADDRESS,
   PUMP_FACTORY_ADDRESS,
   PUMP_GRADUATION_CONTROLLER_ADDRESS,
   PUMP_SUBGRAPH_URL,
@@ -65,7 +64,7 @@ const NAV_GROUPS = [
 ] as const;
 
 const CORE_CONTRACTS = [
-  { name: "0xPixel NFT", address: PIXEL_NFT_ADDRESS, use: "Fully onchain pixel art ERC-721" },
+  { name: "0xPixel NFT", address: PIXEL_CLASSIC_ADDRESS, use: "Fully onchain pixel art ERC-721" },
   ...(NUSD_MARKETPLACE_ADDRESS ? [{ name: "0xPixel NUSD Marketplace", address: NUSD_MARKETPLACE_ADDRESS, use: "NUSD listings, escrowed offers and reusable credits" }] : []),
   { name: "NUSD / OracleNUSD", address: testnet.nusd, use: "Oracle-priced settlement asset" },
   { name: "0xPump", address: PUMP_FACTORY_ADDRESS, use: "Bonding-curve token launchpad" },
@@ -102,7 +101,7 @@ export const publicClient = createPublicClient({
 });
 
 export const contracts = {
-  pixel: "${PIXEL_NFT_ADDRESS}",
+  pixel: "${PIXEL_CLASSIC_ADDRESS}",
   pixelMarketplace: "${NUSD_MARKETPLACE_ADDRESS ?? "not-configured"}",
   nusd: "${testnet.nusd}",
   pump: "${PUMP_FACTORY_ADDRESS}",
@@ -313,7 +312,7 @@ Implementation requirements
 - Create typed chain config, minimal ABIs, quote service, transaction service, React hook, and accessible swap UI.
 - Accept bigint amounts internally. Read token decimals, balance, and allowance over RPC.
 - For ERC-20 routes, probe [tokenIn, tokenOut] and [tokenIn, NUSD, tokenOut]. Choose the successful quote with the largest final output.
-- Use getAmountsOut for executable AMM quotes. It already includes LP fees, protocol fees, route surcharge, and price impact.
+- Use getAmountsOut for executable AMM quotes. It already includes LP fees, the protocol fee, and price impact.
 - Use swapExactTokensForTokens for ERC-20 pairs.
 - Use swapExactNativeForTokens when input is native zkLTC. The path must start with WzkLTC and the transaction must send value.
 - Use swapExactTokensForNative when output is native zkLTC. The path must end with WzkLTC.
@@ -334,7 +333,7 @@ Required delivery
 - Mark the integration as testnet-only. Do not describe it as audited or mainnet-ready.`;
 
 const INDEXER_CODE = `const INDEXERS = {
-  pixelMarketplace: "${MARKETPLACE_SUBGRAPH_URL}",
+  pixelMarket: "${testnet.nusdMarketGoldskyEndpoint}",
   pump: "${PUMP_SUBGRAPH_URL}",
   fi: "${testnet.goldskyEndpoint}",
 } as const;
@@ -524,7 +523,7 @@ export default function DocsPage() {
                 <div><strong>Onchain art</strong><p>Pixel runs, artwork name, grid size, creator, mint time, and artwork hash live in contract storage.</p></div>
                 <div><strong>Deterministic media</strong><p>The contract generates SVG and base64 JSON metadata. The collectible does not depend on an offchain image host.</p></div>
                 <div><strong>Originality</strong><p>The registry hashes packed pixel data with the grid size and rejects an artwork that was already registered.</p></div>
-                <div><strong>NUSD marketplace</strong><p>Listings, escrowed offers, fees and creator royalties settle in NUSD. The platform fee is 0.4%; royalties follow each collection. Sale proceeds and refunds are reusable credits. zkLTC only pays gas; old listings stay on the legacy contract.</p></div>
+                <div><strong>NUSD marketplace</strong><p>Listings and escrowed offers settle in NUSD. Each sale burns 0.1% of the price and pays 0.4% to the artwork&apos;s creator; there is no platform fee. Sale proceeds and refunds are reusable credits. zkLTC only pays gas.</p></div>
               </div>
               <div className="ox-docs-spec-line">
                 <span>Supported grids</span><strong>8 x 8, 16 x 16, 32 x 32, 64 x 64</strong>
@@ -574,21 +573,22 @@ export default function DocsPage() {
               <div className="ox-docs-fi-surfaces">
                 <div><strong>Swap and pools</strong><span>Constant-product pairs, one LP token per unordered pair, and router-protected liquidity operations.</span></div>
                 <div><strong>NUSD</strong><span>Oracle-priced mint and redeem against native zkLTC. Stale or invalid DIA data blocks value-changing actions.</span></div>
-                <div><strong>Earn</strong><span>Lock NUSD for on-chain xPoints; nBTC/NUSD and nETH/NUSD LP gauges continue as separate programs.</span></div>
+                <div><strong>Earn</strong><span>Stake NUSD for 0xPoints; each 10,000 NUSD reward round is split by points. Half of all NUSD fees fill the pool, half go to the treasury.</span></div>
+                <div><strong>Vote</strong><span>At 3× reserve/supply the community can mint NUSD back to 2×, split between the reward pool and the treasury.</span></div>
                 <div><strong>Lend and borrow</strong><span>Fixed 4.5% borrower rate, 4% lender rate, and 0.5% protocol spread on the active testnet pool.</span></div>
                 <div><strong>Synths</strong><span>nBTC and nETH use DIA prices, isolated collateral accounting, reserve support rules, and stale-feed guards.</span></div>
               </div>
               <div className="ox-docs-fee-table-wrap">
                 <table>
-                  <thead><tr><th>AMM path</th><th>LP fee</th><th>Router charge</th><th>Nominal total</th></tr></thead>
+                  <thead><tr><th>Swap</th><th>LP fee</th><th>Protocol fee</th><th>Nominal total</th></tr></thead>
                   <tbody>
-                    <tr><td>1 pool</td><td>0.5%</td><td>0.1%</td><td>0.6%</td></tr>
-                    <tr><td>2 pools</td><td>1.0%</td><td>0.2%</td><td>1.2%</td></tr>
-                    <tr><td>3 pools</td><td>1.5%</td><td>0.2%</td><td>1.7%</td></tr>
+                    <tr><td>TOKEN ↔ NUSD or zkLTC</td><td>0.5%</td><td>0.1%</td><td>0.6%</td></tr>
+                    <tr><td>Via NUSD or zkLTC, one end a base</td><td>1.0%</td><td>0.1%</td><td>1.1%</td></tr>
+                    <tr><td>TOKEN → base → TOKEN</td><td>1.0%</td><td>0.3%</td><td>1.3%</td></tr>
                   </tbody>
                 </table>
               </div>
-              <p className="ox-docs-copy"><code>getAmountsOut</code> already includes LP fees, router charges, and price impact. Do not subtract them twice.</p>
+              <p className="ox-docs-copy"><code>getAmountsOut</code> already includes LP fees, the protocol fee, and price impact. Do not subtract them twice. Every pool pairs a token with NUSD or zkLTC, and the protocol fee is always paid in one of them.</p>
               <ProductLink href="/0xFi">Open 0xFi</ProductLink>
             </section>
 
@@ -659,7 +659,7 @@ export default function DocsPage() {
                 description="Goldsky powers discovery, history, charts, and activity. RPC remains authoritative for balances, quotes, allowances, and transaction preflight."
               />
               <div className="ox-docs-indexers">
-                <div><strong>0xPixel NFT discovery</strong><code>{MARKETPLACE_SUBGRAPH_URL}</code><p>The V1 index provides NFT metadata and ownership hints, not NUSD prices. NUSD listings and marketplace history are read from the verified contract through RPC.</p></div>
+                <div><strong>0xPixel marketplace</strong><code>{testnet.nusdMarketGoldskyEndpoint}</code><p>Marketplace activity and burn totals. NFT ownership and listings are read from the contracts through RPC.</p></div>
                 <div><strong>0xPump</strong><code>{PUMP_SUBGRAPH_URL}</code></div>
                 <div><strong>0xFi</strong><code>{testnet.goldskyEndpoint}</code></div>
               </div>

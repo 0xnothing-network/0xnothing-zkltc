@@ -5,7 +5,7 @@ import { useReadContracts } from "wagmi";
 import { dexRouterAbi } from "@fi/lib/abis/dex";
 
 /**
- * Router v2 schedule. Pairs keep the LP fee on every hop; the router adds one protocol fee per
+ * Router fee schedule. Pairs keep the LP fee on every hop; the router adds one protocol fee per
  * swap, paid in NUSD or zkLTC: the direct rate when either end of the path is NUSD or WzkLTC,
  * the cross rate when both ends are ordinary tokens (TOKEN -> base -> TOKEN).
  */
@@ -35,7 +35,7 @@ function isBase(token: Address, bases: readonly (Address | undefined)[]): boolea
   return bases.some((base) => base?.toLowerCase() === token.toLowerCase());
 }
 
-/** Protocol fee for a path, mirroring `ZeroXFiRouterV2.routerFeeBpsForPath`. */
+/** Protocol fee for a path, mirroring the router's `routerFeeBpsForPath`. */
 export function routerFeeBpsForPath(
   schedule: DexFeeSchedule,
   path: readonly Address[],

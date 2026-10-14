@@ -91,7 +91,7 @@ export const lendingPoolAbi = parseAbi([
   "function activated() view returns (bool)",
 ]);
 
-/** v2 0xPoints staking (contracts/src/rewards/RewardStaking.sol). */
+/** 0xPoints staking (contracts/src/rewards/RewardStaking.sol). */
 export const rewardStakingAbi = parseAbi([
   "function ROUND_REWARD() view returns (uint256)",
   "function availableRewards() view returns (uint256)",

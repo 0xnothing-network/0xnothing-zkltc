@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { publicClient } from "@/lib/contract";
-import { PixelNFTABI } from "@/lib/abi";
+import { PixelClassicABI } from "@/lib/abi";
 import { pixelDataToSVGMarkup } from "@/lib/gridParser";
 import { normalizeUint256TokenId } from "@/lib/tokenId";
 import { resolvePixelCollection } from "@/lib/pixelCollections";
@@ -12,7 +12,7 @@ const readPixelImage = unstable_cache(
   async (tokenId: string, collection: `0x${string}`) => {
     const tuple = await publicClient.readContract({
       address: collection,
-      abi: PixelNFTABI,
+      abi: PixelClassicABI,
       functionName: "tokenData",
       args: [BigInt(tokenId)],
     }) as readonly [string, bigint, string, `0x${string}`, bigint, string];
@@ -21,7 +21,7 @@ const readPixelImage = unstable_cache(
     if (!tuple[2] || !Number.isInteger(gridSize) || gridSize <= 0) return "";
     return pixelDataToSVGMarkup(tuple[2], gridSize);
   },
-  ["pixel-image-v2-collection"],
+  ["pixel-image-collection"],
   { revalidate: 31_536_000 },
 );
 

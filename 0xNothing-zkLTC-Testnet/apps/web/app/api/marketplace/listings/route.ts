@@ -1,13 +1,12 @@
-import { PIXEL_COLLECTIONS, isPixelCollection, isPixelV2Collection, pixelTokenKey } from "@/lib/pixelCollections";
+import { PIXEL_COLLECTIONS, isPixelCollection, isPackedPixelCollection, pixelTokenKey } from "@/lib/pixelCollections";
 import { NextResponse } from "next/server";
 import type { Address } from "viem";
 import { publicClient } from "@/lib/contract";
 import { NFT_NUSD_ADDRESS, NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
 import { readNusdMarket } from "@/lib/nusdMarketplace";
-import { PixelNFTABI } from "@/lib/abi";
-import { PixelV2ABI } from "@/lib/pixelV2Abi";
+import { PixelClassicABI } from "@/lib/abi";
+import { PixelNFTABI } from "@/lib/pixelNftAbi";
 import { getPixelImageUrl } from "@/lib/pixelImage";
-import { fetchTokenMetadataFromSubgraph, hasMarketplaceSubgraph } from "@/lib/marketplaceSubgraph";
 import { fetchValidatedErc721Metadata } from "@/lib/erc721Metadata.server";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
@@ -81,15 +80,9 @@ async function fetchPixelTokensForListings(
     const pixelListings = listings.filter((listing) => listing.collection.toLowerCase() === entry.address.toLowerCase());
     const pixelIds = Array.from(new Set(pixelListings.map((listing) => listing.tokenId)));
     if (!pixelIds.length) continue;
-    let indexed: Awaited<ReturnType<typeof fetchTokenMetadataFromSubgraph>> = {};
-    if (!isPixelV2Collection(entry.address) && hasMarketplaceSubgraph()) {
-      try { indexed = await fetchTokenMetadataFromSubgraph(pixelIds); }
-      catch (error) { console.warn("[marketplace] pixel metadata index failed; using RPC:", error); }
-    }
-    const missing = pixelIds.filter((tokenId) => !indexed[tokenId]?.imageUrl);
-    const onchain = await fetchPixelTokensOnchain(missing, entry.address);
+    const onchain = await fetchPixelTokensOnchain(pixelIds, entry.address);
     for (const tokenId of pixelIds) {
-      output[pixelTokenKey(entry.address, tokenId)] = indexed[tokenId]?.imageUrl ? indexed[tokenId] : onchain[tokenId] ?? null;
+      output[pixelTokenKey(entry.address, tokenId)] = onchain[tokenId] ?? null;
     }
   }
 
@@ -125,18 +118,18 @@ async function fetchPixelTokensOnchain(
   }
   if (missing.length === 0) return output;
 
-  const packedV2 = isPixelV2Collection(collection);
+  const isPacked = isPackedPixelCollection(collection);
   const results = await publicClient.multicall({
     allowFailure: true,
     batchSize: MARKETPLACE_MULTICALL_BATCH_SIZE,
-    contracts: missing.map((tokenId) => packedV2 ? {
+    contracts: missing.map((tokenId) => isPacked ? {
       address: collection,
-      abi: PixelV2ABI,
+      abi: PixelNFTABI,
       functionName: "tokenPackedData" as const,
       args: [BigInt(tokenId)] as const,
     } : {
       address: collection,
-      abi: PixelNFTABI,
+      abi: PixelClassicABI,
       functionName: "tokenData" as const,
       args: [BigInt(tokenId)] as const,
     }),
@@ -148,7 +141,7 @@ async function fetchPixelTokensOnchain(
     let metadata: TokenDTO | null = null;
     if (result?.status === "success") {
       const packed = result.result as readonly [string, string, bigint, string, Address, bigint, string];
-      const tuple = packedV2
+      const tuple = isPacked
         ? [packed[0], packed[2], packed[3], packed[4], packed[5], packed[6]] as const
         : result.result as readonly [string, bigint, string, Address, bigint, string];
       const imageUrl = tuple[2] && tuple[1]
