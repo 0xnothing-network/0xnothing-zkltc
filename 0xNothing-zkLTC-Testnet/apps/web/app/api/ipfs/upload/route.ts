@@ -68,7 +68,7 @@ export async function GET() {
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );
   }
-  if (process.env.NODE_ENV === "production" && !configuredUploadDomain()) {
+  if (process.env.NODE_ENV === "production" && configuredUploadDomains().length === 0) {
     return NextResponse.json(
       { configured: false, error: "Set UPLOAD_SIGNING_DOMAIN to the public upload host." },
       { status: 503, headers: { "Cache-Control": "no-store" } },
@@ -95,8 +95,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const expectedDomain = uploadDomain(request);
-  if (!expectedDomain) {
+  const expectedDomains = uploadDomains(request);
+  if (expectedDomains.length === 0) {
     return jsonError("IPFS uploads are not configured for this deployment", 503);
   }
 
@@ -168,8 +168,9 @@ export async function POST(request: Request) {
     return jsonError("Signed upload message does not match the content hash", 401);
   }
 
-  if (fields.domain.toLowerCase() !== expectedDomain.toLowerCase()) {
-    return jsonError("Signed upload domain does not match this application", 401);
+  if (!expectedDomains.includes(fields.domain.toLowerCase())) {
+    // Both values are public hosts; naming them makes a misconfigured UPLOAD_SIGNING_DOMAIN obvious.
+    return jsonError(`Signed upload domain ${fields.domain} is not accepted here (expected ${expectedDomains.join(", ")})`, 401);
   }
   if (fields.chainId !== PUMP_CHAIN_ID) {
     return jsonError("Signed upload message uses the wrong chain", 401);
@@ -309,16 +310,20 @@ async function readLimitedRequestBody(
   return new Blob([body.buffer as ArrayBuffer]);
 }
 
-function uploadDomain(request: Request): string {
-  const configured = configuredUploadDomain();
-  if (configured) return configured;
-  if (process.env.NODE_ENV === "production") return "";
-  return new URL(request.url).host.toLowerCase();
+function uploadDomains(request: Request): string[] {
+  const configured = configuredUploadDomains();
+  if (configured.length > 0) return configured;
+  if (process.env.NODE_ENV === "production") return [];
+  return [new URL(request.url).host.toLowerCase()];
 }
 
-function configuredUploadDomain(): string | null {
-  const configured = process.env.UPLOAD_SIGNING_DOMAIN?.trim();
-  return configured ? normalizeUploadDomain(configured) : null;
+/** UPLOAD_SIGNING_DOMAIN holds every public host the app is served from, comma-separated. */
+function configuredUploadDomains(): string[] {
+  const entries = (process.env.UPLOAD_SIGNING_DOMAIN ?? "").split(",");
+  return Array.from(new Set(entries.flatMap((entry) => {
+    const domain = normalizeUploadDomain(entry);
+    return domain ? [domain] : [];
+  })));
 }
 
 function clientIp(request: Request): string {
