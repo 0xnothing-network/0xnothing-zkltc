@@ -9,9 +9,9 @@ import { TestBase } from "../helpers/TestBase.sol";
 import { FeeSplitterMock } from "../mocks/FeeSplitterMock.sol";
 import { MockCollateralToken, MockNUSD, MockPriceOracle } from "../mocks/RiskMocks.sol";
 
-/// v2 revenue paths outside the router: lending protocol interest and synth mint fees both end in
-/// the fee splitter, 50% reward pool / 50% treasury, with no owner withdrawal.
-contract TokenomicsV2RevenueTest is TestBase {
+/// Revenue paths outside the router: lending protocol interest and synth mint fees both end in the
+/// fee splitter (70% stakers / 20% burned / 10% treasury), with no owner withdrawal.
+contract TokenomicsRevenueTest is TestBase {
     address private constant SUPPLIER = address(0x5150);
     address private constant ALICE = address(0xA11CE);
     address private constant POOL = address(0xB001);
@@ -61,8 +61,7 @@ contract TokenomicsV2RevenueTest is TestBase {
         assertEq(swept, interest, "everything accrued");
         assertEq(lending.accruedProtocolInterestNusd(), 0, "claim cleared");
         assertEq(lending.totalAssetsNusd(), supplierAssets, "suppliers unchanged");
-        assertEq(nusd.balanceOf(POOL), swept / 2, "pool half");
-        assertEq(nusd.balanceOf(TREASURY), swept - swept / 2, "treasury half");
+        _assertSplit(swept);
 
         vm.expectRevert(PooledNUSDLendingPoolV2.ProtocolInterestExceeded.selector);
         lending.sweepProtocolInterest();
@@ -106,8 +105,18 @@ contract TokenomicsV2RevenueTest is TestBase {
         vm.prank(ALICE);
         vault.depositAndMint(150_000 ether, 1 ether, fee, ALICE);
 
-        assertEq(nusd.balanceOf(POOL), fee / 2, "mint fee half to pool");
-        assertEq(nusd.balanceOf(TREASURY), fee - fee / 2, "mint fee half to treasury");
+        _assertSplit(fee);
         assertEq(nusd.balanceOf(address(vault)), 150_000 ether, "vault keeps only collateral");
+    }
+
+    function _assertSplit(uint256 amount) private view {
+        assertEq(nusd.balanceOf(POOL), amount * 7_000 / 10_000, "70% to stakers");
+        assertEq(nusd.balanceOf(TREASURY), amount * 1_000 / 10_000, "10% to treasury");
+        assertEq(
+            nusd.balanceOf(splitter.BURN_SINK()),
+            amount - amount * 7_000 / 10_000 - amount * 1_000 / 10_000,
+            "20% burned"
+        );
+        assertEq(nusd.balanceOf(address(splitter)), 0, "nothing left in the splitter");
     }
 }

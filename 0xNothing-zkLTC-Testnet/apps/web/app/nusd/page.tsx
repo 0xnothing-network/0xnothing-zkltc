@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function NusdMintPage() {
   return (
     <div className="fi-page">
-      <PageHeading title="Mint" description="Mint NUSD with zkLTC or redeem it back at the DIA price, with no protocol fee." />
+      <PageHeading title="Mint" description="Mint NUSD with zkLTC or redeem it at the DIA price, never for more than its share of the reserve. Redemption is always open." />
       <div className="pump-shell nusd-mint">
         <NusdOraclePanel />
         <NusdEmergencyPanel />

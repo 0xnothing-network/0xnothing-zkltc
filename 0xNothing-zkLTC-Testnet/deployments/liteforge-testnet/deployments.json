@@ -17,101 +17,105 @@
   "pump": {
     "broadcasted": true,
     "liveVerified": true,
-    "version": "v2-tokenomics",
-    "nusd": "0x1d041a8e575006d46ae0aa2e4869c5be0327874e",
-    "diaOracleAdapter": "0x3579b31e3241de60f5f9462b3e0d759f346a49c8",
-    "permanentLiquidityLocker": "0xde72ff1da01c23c92f591b2249057fbba3b78a91",
-    "launchpad": "0x87ae7e019c2e511ee97310215d5ae358c28f47d9",
-    "pumpTokenImplementation": "0xf30beaA1C3196C438249A63B71Fec2DcE5fEdd0B",
-    "graduationRouter": "0xa5adffd55d8f5cc417d05a29c7ea3750e0572fc3",
-    "feeRecipient": "0x768a24803457b0e2f65d918815f7da8ae1628e19",
-    "deploymentBlock": 60811584,
+    "version": "v3-tokenomics",
+    "nusd": "0x69320a82accec1b8a5ef59fd02b217e7ea4aea19",
+    "nusdOracle": "0xf9ccf611b7c4e642852d3d1a7a6c3883985a2962",
+    "permanentLiquidityLocker": "0xe37f01c1f34512d45241c508499552b4a8276b59",
+    "launchpad": "0x0239baec3c695a6ea893ad90a7608112e0580526",
+    "pumpTokenImplementation": "0x1EE9f05cDDAd56690B6298CAa512d63edF8C3ED0",
+    "graduationRouter": "0xdf151ab408d099cb7edf3b44d284011767c2475a",
+    "feeRecipient": "0xaea1ef82dbe800bb3683009630813457d990a9b0",
+    "deploymentBlock": 61141414,
     "configuration": {
       "unit": "wei",
       "initialVirtualNusdReserve": "1500000000000000000000",
       "graduationMarketCapTargetNusd": "6000000000000000000000",
       "graduationReserveThresholdNusd": "1500000000000000000000",
       "createFeeNusd": "1000000000000000000",
-      "tradeFeeBps": 10
+      "tradeFeeBps": 10,
+      "perMarketTerms": true
     },
     "graduation": {
       "enabled": true,
-      "adapter": "0x06c4271A59246659736D47503c27e30Bfb3bc3dB",
-      "controller": "0x81DF1ba96a5b9F54ABF1eC1Ce232254fA58b180e",
+      "adapter": "0x6345cAFFFc5e87668508873Dd586662e5fE145a5",
+      "controller": "0x935ec3B5ED5ef330895C87139e0a905B009187a5",
       "controllerOwnsPumpAdmin": true,
       "controllerOwnsRouterAdmin": true,
       "operational": true,
       "minimumDelaySeconds": 3600,
       "controllerGovernance": "0x58633401dCc383F010688e950878000000000000",
       "controllerGuardian": "0x58633401dCc383F010688e950878000000000000",
-      "activatedAt": "2026-10-14T02:48:02.961Z"
+      "activatedAt": "2026-10-15T05:32:16.591Z"
     },
     "subgraphVersion": "1.0.0",
     "subgraphUrl": "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxpump-testnet/1.0.0/gn",
     "transactions": {
-      "OracleNUSDv2": {
-        "address": "0x1d041a8e575006d46ae0aa2e4869c5be0327874e",
-        "transactionHash": "0x29b867c95adc341e1c3300eb889e44ca24bd8584e48b16df0d4183b4bc538507",
-        "receiptBlock": 60811550
+      "ltcOracle": {
+        "contract": "OracleRouter",
+        "address": "0xf9ccf611b7c4e642852d3d1a7a6c3883985a2962",
+        "transactionHash": "0x93abe9816e7db96131f345279e3a6265f8285472ccbd1e1316660ca875dfd714",
+        "receiptBlock": 61141359
       },
-      "OwnerTreasury": {
-        "address": "0xd840c91d9db6c4761de9f732977c3facc8976375",
-        "transactionHash": "0x7dc4f5965721b669d6e9ec558a5012b11151075e1bec3bdd66a3f1a60242b6be",
-        "receiptBlock": 60811554
+      "btcOracle": {
+        "contract": "OracleRouter",
+        "address": "0xacb29cd8e1d7a206133bd4409b744d7c621c4535",
+        "transactionHash": "0xd345029633b5e2f8c902552bf9cd5aa8e8a22524668096d6988171dd2988b20a",
+        "receiptBlock": 61141363
       },
-      "RewardStaking": {
-        "address": "0x735dff17df61f0bf1034603bcde02f8fa7b8cae4",
-        "transactionHash": "0x5491b3557eb2bfa331a74d6c4e720788effce62a4f9dfb56ffd3e092de113f32",
-        "receiptBlock": 60811559
+      "ethOracle": {
+        "contract": "OracleRouter",
+        "address": "0xc8df5a07a2ab6c98694ee77adf1dd4ec26541677",
+        "transactionHash": "0x48afb043172ae16e2b83641e9fbb8c45258284b91bf6022fe185c048ef46a7c3",
+        "receiptBlock": 61141368
       },
-      "FeeSplitter": {
-        "address": "0x768a24803457b0e2f65d918815f7da8ae1628e19",
-        "transactionHash": "0x250748c40f9633387f79188205b86d66f38c43aeb319ed8fa36a18de734dbeb3",
-        "receiptBlock": 60811563
+      "nusd": {
+        "contract": "OracleNUSDv2",
+        "address": "0x69320a82accec1b8a5ef59fd02b217e7ea4aea19",
+        "transactionHash": "0x10ae531267613b404675749de47ce91c24247a3b87c9c7e73e5645d680674ee1",
+        "receiptBlock": 61141371
       },
-      "SurplusMintGovernor": {
-        "address": "0x06a2cf180ae568f3faa487fb45dd8903c7114269",
-        "transactionHash": "0x4e8670314feb6a93141694a413d1e666b77ad130ee1df3f811baf606a97e88ba",
-        "receiptBlock": 60811567
+      "treasury": {
+        "contract": "OwnerTreasury",
+        "address": "0xc5353f677e69c3386c752ab3b3fd7ca2c9372052",
+        "transactionHash": "0x927702066b860a069259eead7f1289e2f7bfccba5e692be4b918b62d3d294519",
+        "receiptBlock": 61141376
       },
-      "PermanentLiquidityLocker": {
-        "address": "0xde72ff1da01c23c92f591b2249057fbba3b78a91",
-        "transactionHash": "0xdbe8049dc987025e4d444ebe64fe0e8129c19658084183ac995d0acbf98effe3",
-        "receiptBlock": 60811575
+      "rewardStaking": {
+        "contract": "RewardStaking",
+        "address": "0x59589d9a5840d2cef7a6e4a8cb55c258cc73e483",
+        "transactionHash": "0x5a6a8f0393dbe67daf2631e56502b4f6e58776c52ddd8edd37f620dd51a951a2",
+        "receiptBlock": 61141380
       },
-      "GraduationRouter": {
-        "address": "0xa5adffd55d8f5cc417d05a29c7ea3750e0572fc3",
-        "transactionHash": "0xa50063ce7197754cdca6037f1409106058530a7e6cbb9793d2450dfc324a53fa",
-        "receiptBlock": 60811579
+      "feeSplitter": {
+        "contract": "FeeSplitter",
+        "address": "0xaea1ef82dbe800bb3683009630813457d990a9b0",
+        "transactionHash": "0xd3f2cf5fd4e4fe8b49d8b4ab7c02c7dc3b1c00d4400dc6d463a6f5a4e2184e75",
+        "receiptBlock": 61141385
       },
-      "ZeroXPumpV2": {
-        "address": "0x87ae7e019c2e511ee97310215d5ae358c28f47d9",
-        "transactionHash": "0x8c73050b880bdbc92989f19416330b156d12947f66c3da0ecbf51d502e3ac7dc",
-        "receiptBlock": 60811584
+      "pumpLiquidityLocker": {
+        "contract": "PermanentLiquidityLocker",
+        "address": "0xe37f01c1f34512d45241c508499552b4a8276b59",
+        "transactionHash": "0xf076f3ad34075b18a1e860622adba4a2bf5d59f83360f73dd7b681034cab3906",
+        "receiptBlock": 61141404
       },
-      "NusdNftMarketplaceV2": {
-        "address": "0xa5e3edfcba3b6fc40f3e41557f8a303a2aac7e09",
-        "transactionHash": "0x090c584b69b398840d7959301a74cadc11e81c70cacbc24f57b729aae26970c0",
-        "receiptBlock": 60811596
+      "pumpGraduationRouter": {
+        "contract": "GraduationRouter",
+        "address": "0xdf151ab408d099cb7edf3b44d284011767c2475a",
+        "transactionHash": "0xf8d8e3850f040aa698d40bdfc416b89a67c562f39c971b235a396dbfccca8517",
+        "receiptBlock": 61141409
+      },
+      "pump": {
+        "contract": "ZeroXPumpV2",
+        "address": "0x0239baec3c695a6ea893ad90a7608112e0580526",
+        "transactionHash": "0x1c55b7a5ddbb3f8537de04cdf16021a467d8cc91596dc9dae5143ad269be57f0",
+        "receiptBlock": 61141414
+      },
+      "nusdMarketplace": {
+        "contract": "NusdNftMarketplaceV2",
+        "address": "0xd219effe076b68934e212313c8d468b994d6e52e",
+        "transactionHash": "0x5970c9599bc4e849a6f856f61c140d43870d3f1391a1d7041dc0cef6de235a3f",
+        "receiptBlock": 61141428
       }
-    },
-    "oracleNusd": "0x1d041a8e575006d46ae0aa2e4869c5be0327874e",
-    "nusdVault": "0x1d041a8e575006d46ae0aa2e4869c5be0327874e",
-    "riskModel": {
-      "version": "oracle-nusd-v2",
-      "model": "oracle-priced-native-reserve",
-      "collateralAsset": "native-zkLTC",
-      "supplyCeilingNusd": "1000000000000000000000000",
-      "supplyCeilingUnit": "NUSD wei",
-      "mintFeeBps": 0,
-      "redeemFeeBps": 0,
-      "mintPaused": false,
-      "redeemPaused": false,
-      "pumpPaused": false,
-      "vaultCompatibility": "self",
-      "legacyPositionsMigrated": false,
-      "surplusMintGovernor": "0x06a2cf180ae568f3faa487fb45dd8903c7114269",
-      "emergencyRedeemGraceSeconds": 604800
     }
   },
   "legacyPumpV1": {

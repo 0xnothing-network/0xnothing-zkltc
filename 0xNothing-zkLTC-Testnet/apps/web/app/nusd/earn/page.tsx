@@ -5,13 +5,13 @@ import { PageHeading } from "@fi/components/UiStates";
 
 export const metadata: Metadata = {
   title: "Earn",
-  description: "Stake NUSD for 0xPoints and a share of each 10,000 NUSD reward round.",
+  description: "Stake NUSD for 0xPoints and a share of every protocol fee, streamed to stakers over 7 days.",
 };
 
 export default function NusdEarnPage() {
   return (
     <div className="fi-page">
-      <PageHeading title="Earn" description="Stake NUSD for 0xPoints and a share of each 10,000 NUSD reward round." />
+      <PageHeading title="Earn" description="Stake NUSD for 0xPoints and a share of every protocol fee, streamed to stakers over 7 days." />
       <RewardsDashboard />
       <RevenuePanel />
     </div>

@@ -14,9 +14,12 @@ interface IFeeSplitter {
     function distribute() external returns (uint256 amountNusd);
 }
 
-/// @title 0xPump v2
-/// @notice ZeroXPump with protocol fees routed to an immutable fee splitter (50% staker reward
-///         pool / 50% treasury) by a permissionless call, and selling left open while paused.
+/// @title 0xPump
+/// @notice Bonding-curve launchpad. Every protocol fee goes to the fee splitter by a permissionless
+///         call, and selling stays open while paused.
+///         Each market keeps the parameters it was created with (trade fee, curve, graduation
+///         target): the parameter admin can tune them, within bounds, for markets created later
+///         only, so a change never touches a market that already exists.
 contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
     using Clones for address;
 
@@ -36,8 +39,9 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
 
     uint256 public constant BPS_DENOMINATOR = 10_000;
     uint256 public constant WAD = 1e18;
-    uint256 public constant CREATE_FEE_NUSD = 1e18;
-    uint256 public constant TRADE_FEE_BPS = 10;
+    /// @notice Bounds on what the parameter admin may set for new markets.
+    uint256 public constant MAX_TRADE_FEE_BPS = 100;
+    uint256 public constant MAX_CREATE_FEE_NUSD = 100e18;
     uint256 public constant MAX_NAME_LENGTH = 64;
     uint256 public constant MAX_SYMBOL_LENGTH = 16;
     uint256 public constant MAX_URI_LENGTH = 200;
@@ -63,6 +67,15 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
         address pool;
     }
 
+    /// @notice The terms a market was created with; they never change afterwards.
+    struct MarketParams {
+        uint16 tradeFeeBps;
+        /// @dev Fully diluted market-cap target, in 18-decimal NUSD.
+        uint120 graduationThresholdNusd;
+        /// @dev Real NUSD reserve at which the curve reaches the market-cap target.
+        uint120 graduationReserveThresholdNusd;
+    }
+
     address public immutable NUSD;
     /// @notice Receives every protocol fee (creation fees and trade fees).
     address public immutable feeRecipient;
@@ -70,15 +83,21 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
     IGraduationRouter public immutable graduationRouter;
     address public immutable tokenImplementation;
     uint256 public immutable tokenTotalSupply;
-    uint256 public immutable initialVirtualNusdReserve;
     uint256 public immutable initialVirtualTokenReserve;
-    /// @notice Fully diluted market-cap target, denominated in 18-decimal NUSD.
-    uint256 public immutable graduationThresholdNusd;
-    /// @notice Real NUSD reserve required for the curve to reach the market-cap target.
-    uint256 public immutable graduationReserveThresholdNusd;
+
+    /// @notice Tunes the terms of future markets; separate from `admin`, the graduation controller.
+    address public paramAdmin;
+    address public pendingParamAdmin;
+
+    // Terms for the next market created.
+    uint128 public createFee;
+    uint128 public initialVirtualNusdReserve;
+    MarketParams private _nextParams;
 
     mapping(address => Market) public markets;
-    mapping(address => mapping(bytes32 => bool)) public creationReservations;
+    mapping(address => MarketParams) public marketParams;
+    /// @dev Creation fee paid for a reservation, plus one (zero means no reservation).
+    mapping(address => mapping(bytes32 => uint256)) private _reservations;
     mapping(address => mapping(bytes32 => address)) public createdTokenByContentHash;
     mapping(address => address[]) private _tokensByCreator;
     address[] private _allTokens;
@@ -136,6 +155,15 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
     );
     event ProtocolFeesDistributed(address indexed caller, address indexed recipient, uint256 amountNusd);
     event PauseUpdated(bool paused);
+    event MarketParamsUpdated(
+        uint256 createFee,
+        uint256 tradeFeeBps,
+        uint256 virtualNusdReserve,
+        uint256 graduationThresholdNusd,
+        uint256 graduationReserveThresholdNusd
+    );
+    event ParamAdminTransferStarted(address indexed currentAdmin, address indexed pendingAdmin);
+    event ParamAdminTransferred(address indexed previousAdmin, address indexed newAdmin);
 
     constructor(
         address nusdAddress,
@@ -143,62 +171,47 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
         address router,
         address protocolFeeRecipient,
         address initialAdmin,
+        address initialParamAdmin,
         uint256 totalSupply,
         uint256 virtualNusdReserve,
-        uint256 graduationMarketCapNusd
+        uint256 graduationMarketCapNusd,
+        uint256 initialCreateFeeNusd,
+        uint256 initialTradeFeeBps
     ) TwoStepAdmin(initialAdmin) {
         if (
-            nusdAddress == address(0) || nusdAddress.code.length == 0 || nusdVault == address(0)
-                || nusdVault.code.length == 0 || router == address(0) || router.code.length == 0 || totalSupply == 0
-                || virtualNusdReserve == 0 || virtualNusdReserve > type(uint128).max
-                || graduationMarketCapNusd <= virtualNusdReserve || graduationMarketCapNusd > type(uint128).max
-                || protocolFeeRecipient == address(0)
+            nusdAddress.code.length == 0 || nusdVault.code.length == 0 || router.code.length == 0
+                || totalSupply == 0 || protocolFeeRecipient == address(0) || initialParamAdmin == address(0)
         ) revert InvalidConfiguration();
-        if (MathX.mulDiv(virtualNusdReserve, WAD, totalSupply) == 0) {
-            revert InvalidConfiguration();
-        }
-
-        uint256 reserveThresholdNusd = MathX.sqrtUp(virtualNusdReserve * graduationMarketCapNusd) - virtualNusdReserve;
-        if (reserveThresholdNusd == 0) revert InvalidConfiguration();
-
-        uint256 terminalVirtualNusd = virtualNusdReserve + reserveThresholdNusd;
-        uint256 terminalTokenReserve =
-            totalSupply - MathX.mulDiv(reserveThresholdNusd, totalSupply, terminalVirtualNusd);
-        if (terminalTokenReserve == 0) revert InvalidConfiguration();
-        uint256 terminalSpotPrice = MathX.mulDiv(terminalVirtualNusd, WAD, terminalTokenReserve);
-        if (terminalSpotPrice == 0) revert InvalidConfiguration();
-        if (MathX.mulDiv(terminalSpotPrice, totalSupply, WAD) < graduationMarketCapNusd) {
-            revert InvalidConfiguration();
-        }
-        uint256 terminalTokenLiquidity = MathX.mulDiv(reserveThresholdNusd, WAD, terminalSpotPrice);
-        if (terminalTokenLiquidity == 0 || terminalTokenLiquidity > terminalTokenReserve) {
-            revert InvalidConfiguration();
-        }
 
         NUSD = nusdAddress;
         feeRecipient = protocolFeeRecipient;
         vault = nusdVault;
         graduationRouter = IGraduationRouter(router);
         tokenTotalSupply = totalSupply;
-        initialVirtualNusdReserve = virtualNusdReserve;
         initialVirtualTokenReserve = totalSupply;
-        graduationThresholdNusd = graduationMarketCapNusd;
-        graduationReserveThresholdNusd = reserveThresholdNusd;
         tokenImplementation = address(new PumpToken());
+        paramAdmin = initialParamAdmin;
+        emit ParamAdminTransferred(address(0), initialParamAdmin);
+        _setMarketParams(
+            totalSupply, initialCreateFeeNusd, initialTradeFeeBps, virtualNusdReserve, graduationMarketCapNusd
+        );
     }
 
     function reserveMarket(bytes32 contentHash) external nonReentrant {
         if (paused) revert ContractPaused();
         if (contentHash == bytes32(0)) revert InvalidCommitment();
         if (
-            creationReservations[msg.sender][contentHash]
+            _reservations[msg.sender][contentHash] != 0
                 || createdTokenByContentHash[msg.sender][contentHash] != address(0)
         ) revert InvalidReservation();
 
-        _pullExactNusd(msg.sender, CREATE_FEE_NUSD);
-        accruedProtocolFeesNusd += CREATE_FEE_NUSD;
-        creationReservations[msg.sender][contentHash] = true;
-        emit CreationFeePaid(msg.sender, contentHash, CREATE_FEE_NUSD);
+        uint256 fee = createFee;
+        if (fee != 0) {
+            _pullExactNusd(msg.sender, fee);
+            accruedProtocolFeesNusd += fee;
+        }
+        _reservations[msg.sender][contentHash] = fee + 1;
+        emit CreationFeePaid(msg.sender, contentHash, fee);
     }
 
     function createMarket(
@@ -211,21 +224,23 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
         if (paused) revert ContractPaused();
         _validateMetadata(name, symbol, metadataURI, imageURI);
         if (contentHash == bytes32(0)) revert InvalidCommitment();
-        if (
-            !creationReservations[msg.sender][contentHash]
-                || createdTokenByContentHash[msg.sender][contentHash] != address(0)
-        ) revert InvalidReservation();
-        creationReservations[msg.sender][contentHash] = false;
+        uint256 reservation = _reservations[msg.sender][contentHash];
+        if (reservation == 0 || createdTokenByContentHash[msg.sender][contentHash] != address(0)) {
+            revert InvalidReservation();
+        }
+        _reservations[msg.sender][contentHash] = 0;
 
         token = tokenImplementation.clone();
         PumpToken(token).initialize(name, symbol, metadataURI, imageURI, tokenTotalSupply, address(this));
 
+        MarketParams memory params = _nextParams;
+        uint256 virtualNusdReserve = initialVirtualNusdReserve;
         markets[token] = Market({
             creator: msg.sender,
             tokenReserve: tokenTotalSupply,
             realNusdReserve: 0,
             virtualTokenReserve: initialVirtualTokenReserve,
-            virtualNusdReserve: initialVirtualNusdReserve,
+            virtualNusdReserve: virtualNusdReserve,
             totalNusdVolume: 0,
             createdAt: uint64(block.timestamp),
             lifecycle: Lifecycle.TRADING,
@@ -233,6 +248,7 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
             dexPairId: bytes32(0),
             pool: address(0)
         });
+        marketParams[token] = params;
         _allTokens.push(token);
         _tokensByCreator[msg.sender].push(token);
         createdTokenByContentHash[msg.sender][contentHash] = token;
@@ -247,11 +263,11 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
             imageURI,
             tokenTotalSupply,
             tokenTotalSupply,
-            initialVirtualNusdReserve,
+            virtualNusdReserve,
             initialVirtualTokenReserve,
-            graduationThresholdNusd,
-            graduationReserveThresholdNusd,
-            CREATE_FEE_NUSD
+            params.graduationThresholdNusd,
+            params.graduationReserveThresholdNusd,
+            reservation - 1
         );
     }
 
@@ -263,11 +279,12 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
         if (paused) revert ContractPaused();
         if (block.timestamp > deadline) revert DeadlineExpired();
         Market storage market = _tradingMarket(token);
+        MarketParams memory params = marketParams[token];
 
         uint256 curveNusdAmount;
         uint256 feeNusd;
         bool readyAfter;
-        (tokenOut, curveNusdAmount, userNusdAmount, feeNusd, readyAfter) = _quoteBuy(market, maxNusdIn);
+        (tokenOut, curveNusdAmount, userNusdAmount, feeNusd, readyAfter) = _quoteBuy(market, params, maxNusdIn);
         if (tokenOut == 0 || curveNusdAmount == 0) revert InvalidAmount();
         if (tokenOut < minTokenOut) revert SlippageExceeded();
 
@@ -281,11 +298,13 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
         accruedProtocolFeesNusd += feeNusd;
 
         SafeTransferLib.safeTransfer(token, msg.sender, tokenOut);
-        _emitTrade(token, msg.sender, true, tokenOut, curveNusdAmount, userNusdAmount, feeNusd, market);
+        _emitTrade(token, msg.sender, true, tokenOut, curveNusdAmount, userNusdAmount, feeNusd, market, params);
 
         if (readyAfter) {
             market.lifecycle = Lifecycle.READY;
-            emit TokenReadyForGraduation(token, market.realNusdReserve, market.tokenReserve, graduationThresholdNusd);
+            emit TokenReadyForGraduation(
+                token, market.realNusdReserve, market.tokenReserve, params.graduationThresholdNusd
+            );
         }
     }
 
@@ -298,11 +317,12 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
         // (create/buy) but must never trap holders if the admin is absent.
         if (block.timestamp > deadline) revert DeadlineExpired();
         Market storage market = _sellableMarket(token);
+        MarketParams memory params = marketParams[token];
         bool reopenCurve = market.lifecycle == Lifecycle.READY;
 
         uint256 curveNusdAmount;
         uint256 feeNusd;
-        (curveNusdAmount, userNusdAmount, feeNusd) = _quoteSell(market, tokenIn);
+        (curveNusdAmount, userNusdAmount, feeNusd) = _quoteSell(market, params, tokenIn);
         if (curveNusdAmount == 0 || userNusdAmount == 0) revert InvalidAmount();
         if (userNusdAmount < minNusdOut) revert SlippageExceeded();
 
@@ -322,7 +342,7 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
         if (reopenCurve) market.lifecycle = Lifecycle.TRADING;
 
         SafeTransferLib.safeTransfer(NUSD, msg.sender, userNusdAmount);
-        _emitTrade(token, msg.sender, false, tokenIn, curveNusdAmount, userNusdAmount, feeNusd, market);
+        _emitTrade(token, msg.sender, false, tokenIn, curveNusdAmount, userNusdAmount, feeNusd, market, params);
         if (reopenCurve) {
             emit TokenCurveReopened(token, market.realNusdReserve, market.tokenReserve);
         }
@@ -377,8 +397,8 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
         );
     }
 
-    /// @notice Sends every accrued protocol fee to the fee splitter, which forwards it 50/50 to the
-    ///         reward pool and the treasury in the same call. Permissionless.
+    /// @notice Sends every accrued protocol fee to the fee splitter, which splits it in the same
+    ///         call. Permissionless.
     function distributeFees() external nonReentrant returns (uint256 amountNusd) {
         amountNusd = accruedProtocolFeesNusd;
         if (amountNusd == 0) revert InsufficientProtocolFees();
@@ -393,12 +413,44 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
         emit PauseUpdated(newPaused);
     }
 
+    // ---------------------------------------------------------------- parameter admin
+
+    /// @notice Terms for markets created from now on. Existing markets keep their own.
+    function setMarketParams(
+        uint256 newCreateFeeNusd,
+        uint256 newTradeFeeBps,
+        uint256 virtualNusdReserve,
+        uint256 graduationMarketCapNusd
+    ) external {
+        if (msg.sender != paramAdmin) revert Unauthorized();
+        _setMarketParams(
+            tokenTotalSupply, newCreateFeeNusd, newTradeFeeBps, virtualNusdReserve, graduationMarketCapNusd
+        );
+    }
+
+    function transferParamAdmin(address newParamAdmin) external {
+        if (msg.sender != paramAdmin) revert Unauthorized();
+        if (newParamAdmin == address(0)) revert ZeroAddress();
+        pendingParamAdmin = newParamAdmin;
+        emit ParamAdminTransferStarted(msg.sender, newParamAdmin);
+    }
+
+    function acceptParamAdmin() external {
+        if (msg.sender != pendingParamAdmin) revert Unauthorized();
+        address previous = paramAdmin;
+        paramAdmin = msg.sender;
+        pendingParamAdmin = address(0);
+        emit ParamAdminTransferred(previous, msg.sender);
+    }
+
+    // ---------------------------------------------------------------- views
+
     function quoteBuy(address token, uint256 maxNusdIn)
         external
         view
         returns (uint256 tokenOut, uint256 curveNusdAmount, uint256 userNusdAmount, uint256 feeNusd, bool readyAfter)
     {
-        return _quoteBuy(_tradingMarketView(token), maxNusdIn);
+        return _quoteBuy(_tradingMarket(token), marketParams[token], maxNusdIn);
     }
 
     function quoteSell(address token, uint256 tokenIn)
@@ -406,31 +458,41 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
         view
         returns (uint256 curveNusdAmount, uint256 userNusdAmount, uint256 feeNusd)
     {
-        return _quoteSell(_sellableMarketView(token), tokenIn);
+        return _quoteSell(_sellableMarket(token), marketParams[token], tokenIn);
+    }
+
+    /// @notice Whether `owner` has paid for a creation slot under `contentHash` that is still unused.
+    function creationReservations(address owner, bytes32 contentHash) external view returns (bool) {
+        return _reservations[owner][contentHash] != 0;
     }
 
     function status(address token) external view returns (uint8) {
-        return uint8(_marketView(token).lifecycle);
+        return uint8(_market(token).lifecycle);
     }
 
     function spotPriceNusdWad(address token) public view returns (uint256) {
-        return _spotPrice(_marketView(token));
+        return _spotPrice(_market(token));
     }
 
     function curveProgressBps(address token) public view returns (uint256) {
-        Market storage market = _marketView(token);
+        Market storage market = _market(token);
         if (market.lifecycle == Lifecycle.GRADUATED) return BPS_DENOMINATOR;
-        return MathX.min(
-            BPS_DENOMINATOR, MathX.mulDiv(market.realNusdReserve, BPS_DENOMINATOR, graduationReserveThresholdNusd)
-        );
+        return _progressBps(market, marketParams[token]);
     }
 
-    function createFee() external pure returns (uint256) {
-        return CREATE_FEE_NUSD;
+    /// @notice Trade fee for markets created from now on; a market's own fee is in `marketParams`.
+    function tradeFeeBps() external view returns (uint256) {
+        return _nextParams.tradeFeeBps;
     }
 
-    function tradeFeeBps() external pure returns (uint256) {
-        return TRADE_FEE_BPS;
+    /// @notice Market-cap target for markets created from now on.
+    function graduationThresholdNusd() external view returns (uint256) {
+        return _nextParams.graduationThresholdNusd;
+    }
+
+    /// @notice Reserve target for markets created from now on.
+    function graduationReserveThresholdNusd() external view returns (uint256) {
+        return _nextParams.graduationReserveThresholdNusd;
     }
 
     function nusd() external view returns (address) {
@@ -453,26 +515,80 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
         return totalRealNusdReserves + accruedProtocolFeesNusd;
     }
 
-    function _quoteBuy(Market storage market, uint256 maxNusdIn)
+    // ---------------------------------------------------------------- internals
+
+    /// @dev Applies the constructor's curve checks to every future set of terms, so no admin
+    ///      setting can produce a curve that cannot graduate.
+    function _setMarketParams(
+        uint256 totalSupply,
+        uint256 newCreateFeeNusd,
+        uint256 newTradeFeeBps,
+        uint256 virtualNusdReserve,
+        uint256 graduationMarketCapNusd
+    ) private {
+        if (
+            newCreateFeeNusd > MAX_CREATE_FEE_NUSD || newTradeFeeBps > MAX_TRADE_FEE_BPS || virtualNusdReserve == 0
+                || virtualNusdReserve > type(uint120).max || graduationMarketCapNusd <= virtualNusdReserve
+                || graduationMarketCapNusd > type(uint120).max
+        ) revert InvalidConfiguration();
+        if (MathX.mulDiv(virtualNusdReserve, WAD, totalSupply) == 0) revert InvalidConfiguration();
+
+        uint256 reserveThresholdNusd = MathX.sqrtUp(virtualNusdReserve * graduationMarketCapNusd) - virtualNusdReserve;
+        if (reserveThresholdNusd == 0) revert InvalidConfiguration();
+
+        uint256 terminalVirtualNusd = virtualNusdReserve + reserveThresholdNusd;
+        uint256 terminalTokenReserve =
+            totalSupply - MathX.mulDiv(reserveThresholdNusd, totalSupply, terminalVirtualNusd);
+        if (terminalTokenReserve == 0) revert InvalidConfiguration();
+        uint256 terminalSpotPrice = MathX.mulDiv(terminalVirtualNusd, WAD, terminalTokenReserve);
+        if (terminalSpotPrice == 0) revert InvalidConfiguration();
+        if (MathX.mulDiv(terminalSpotPrice, totalSupply, WAD) < graduationMarketCapNusd) {
+            revert InvalidConfiguration();
+        }
+        uint256 terminalTokenLiquidity = MathX.mulDiv(reserveThresholdNusd, WAD, terminalSpotPrice);
+        if (terminalTokenLiquidity == 0 || terminalTokenLiquidity > terminalTokenReserve) {
+            revert InvalidConfiguration();
+        }
+
+        // Every value was bounds-checked above.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        createFee = uint128(newCreateFeeNusd);
+        // forge-lint: disable-next-line(unsafe-typecast)
+        initialVirtualNusdReserve = uint128(virtualNusdReserve);
+        _nextParams = MarketParams({
+            // forge-lint: disable-next-line(unsafe-typecast)
+            tradeFeeBps: uint16(newTradeFeeBps),
+            // forge-lint: disable-next-line(unsafe-typecast)
+            graduationThresholdNusd: uint120(graduationMarketCapNusd),
+            // forge-lint: disable-next-line(unsafe-typecast)
+            graduationReserveThresholdNusd: uint120(reserveThresholdNusd)
+        });
+        emit MarketParamsUpdated(
+            newCreateFeeNusd, newTradeFeeBps, virtualNusdReserve, graduationMarketCapNusd, reserveThresholdNusd
+        );
+    }
+
+    function _quoteBuy(Market storage market, MarketParams memory params, uint256 maxNusdIn)
         internal
         view
         returns (uint256 tokenOut, uint256 curveNusdAmount, uint256 userNusdAmount, uint256 feeNusd, bool readyAfter)
     {
         if (maxNusdIn == 0) return (0, 0, 0, 0, false);
-        uint256 remainingNusd = graduationReserveThresholdNusd - market.realNusdReserve;
-        uint256 maximumGross = ((remainingNusd * BPS_DENOMINATOR) - 1) / (BPS_DENOMINATOR - TRADE_FEE_BPS);
+        uint256 reserveThreshold = params.graduationReserveThresholdNusd;
+        uint256 remainingNusd = reserveThreshold - market.realNusdReserve;
+        uint256 maximumGross = ((remainingNusd * BPS_DENOMINATOR) - 1) / (BPS_DENOMINATOR - params.tradeFeeBps);
         userNusdAmount = MathX.min(maxNusdIn, maximumGross);
-        feeNusd = MathX.mulDiv(userNusdAmount, TRADE_FEE_BPS, BPS_DENOMINATOR);
+        feeNusd = MathX.mulDiv(userNusdAmount, params.tradeFeeBps, BPS_DENOMINATOR);
         curveNusdAmount = userNusdAmount - feeNusd;
         if (curveNusdAmount == 0) return (0, 0, 0, 0, false);
 
         tokenOut =
             MathX.mulDiv(curveNusdAmount, market.virtualTokenReserve, market.virtualNusdReserve + curveNusdAmount);
         if (tokenOut > market.tokenReserve) tokenOut = market.tokenReserve;
-        readyAfter = market.realNusdReserve + curveNusdAmount >= graduationReserveThresholdNusd;
+        readyAfter = market.realNusdReserve + curveNusdAmount >= reserveThreshold;
     }
 
-    function _quoteSell(Market storage market, uint256 tokenIn)
+    function _quoteSell(Market storage market, MarketParams memory params, uint256 tokenIn)
         internal
         view
         returns (uint256 curveNusdAmount, uint256 userNusdAmount, uint256 feeNusd)
@@ -480,7 +596,7 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
         if (tokenIn == 0) return (0, 0, 0);
         curveNusdAmount = MathX.mulDiv(tokenIn, market.virtualNusdReserve, market.virtualTokenReserve + tokenIn);
         if (curveNusdAmount > market.realNusdReserve) curveNusdAmount = market.realNusdReserve;
-        feeNusd = MathX.mulDiv(curveNusdAmount, TRADE_FEE_BPS, BPS_DENOMINATOR);
+        feeNusd = MathX.mulDiv(curveNusdAmount, params.tradeFeeBps, BPS_DENOMINATOR);
         userNusdAmount = curveNusdAmount - feeNusd;
     }
 
@@ -492,7 +608,8 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
         uint256 curveNusdAmount,
         uint256 userNusdAmount,
         uint256 feeNusd,
-        Market storage market
+        Market storage market,
+        MarketParams memory params
     ) internal {
         emit TokenTraded(
             token,
@@ -508,9 +625,14 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
             market.virtualTokenReserve,
             tokenTotalSupply - market.tokenReserve,
             _spotPrice(market),
-            MathX.min(
-                BPS_DENOMINATOR, MathX.mulDiv(market.realNusdReserve, BPS_DENOMINATOR, graduationReserveThresholdNusd)
-            )
+            _progressBps(market, params)
+        );
+    }
+
+    function _progressBps(Market storage market, MarketParams memory params) internal view returns (uint256) {
+        return MathX.min(
+            BPS_DENOMINATOR,
+            MathX.mulDiv(market.realNusdReserve, BPS_DENOMINATOR, params.graduationReserveThresholdNusd)
         );
     }
 
@@ -552,17 +674,9 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
         if (market.lifecycle == Lifecycle.NONE) revert MarketNotFound();
     }
 
-    function _marketView(address token) internal view returns (Market storage market) {
-        market = _market(token);
-    }
-
     function _tradingMarket(address token) internal view returns (Market storage market) {
         market = _market(token);
         if (market.lifecycle != Lifecycle.TRADING) revert MarketNotTrading();
-    }
-
-    function _tradingMarketView(address token) internal view returns (Market storage market) {
-        market = _tradingMarket(token);
     }
 
     function _sellableMarket(address token) internal view returns (Market storage market) {
@@ -570,9 +684,5 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
         if (market.lifecycle != Lifecycle.TRADING && market.lifecycle != Lifecycle.READY) {
             revert MarketNotTrading();
         }
-    }
-
-    function _sellableMarketView(address token) internal view returns (Market storage market) {
-        market = _sellableMarket(token);
     }
 }

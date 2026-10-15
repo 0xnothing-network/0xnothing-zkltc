@@ -67,6 +67,8 @@ const CORE_CONTRACTS = [
   { name: "0xPixel NFT", address: PIXEL_CLASSIC_ADDRESS, use: "Fully onchain pixel art ERC-721" },
   ...(NUSD_MARKETPLACE_ADDRESS ? [{ name: "0xPixel NUSD Marketplace", address: NUSD_MARKETPLACE_ADDRESS, use: "NUSD listings, escrowed offers and reusable credits" }] : []),
   { name: "NUSD / OracleNUSD", address: testnet.nusd, use: "Oracle-priced settlement asset" },
+  { name: "Fee Splitter", address: testnet.feeSplitter, use: "Single inbox for every protocol fee" },
+  { name: "0xPoints Staking", address: testnet.rewardStaking, use: "NUSD locks and streaming rewards" },
   { name: "0xPump", address: PUMP_FACTORY_ADDRESS, use: "Bonding-curve token launchpad" },
   { name: "0xPump Controller", address: PUMP_GRADUATION_CONTROLLER_ADDRESS, use: "Fail-closed graduation coordination" },
 ] as const;
@@ -572,9 +574,9 @@ export default function DocsPage() {
               />
               <div className="ox-docs-fi-surfaces">
                 <div><strong>Swap and pools</strong><span>Constant-product pairs, one LP token per unordered pair, and router-protected liquidity operations.</span></div>
-                <div><strong>NUSD · Mint</strong><span>In the NUSD app. Oracle-priced mint and redeem against native zkLTC. Stale or invalid DIA data blocks value-changing actions.</span></div>
-                <div><strong>NUSD · Earn</strong><span>Stake NUSD for 0xPoints; each 10,000 NUSD reward round is split by points. Half of all NUSD fees fill the pool, half go to the treasury.</span></div>
-                <div><strong>NUSD · Vote</strong><span>At 3× reserve/supply the community can mint NUSD back to 2×, split between the reward pool and the treasury.</span></div>
+                <div><strong>NUSD · Mint</strong><span>In the NUSD app. Oracle-priced mint and redeem against native zkLTC. Redeem pays the DIA value but never more than a holder&apos;s share of the reserve, and it can never be paused.</span></div>
+                <div><strong>NUSD · Earn</strong><span>Stake NUSD for 0xPoints and streaming rewards: 70% of every NUSD fee reaches stakers over 7 days by lock weight, 20% is burned and 10% goes to the treasury.</span></div>
+                <div><strong>NUSD · Surplus</strong><span>When the zkLTC reserve reaches 3.3× the NUSD supply, anyone can mint the excess down to 3.0×, at most weekly: 80% to stakers, 20% to the treasury.</span></div>
                 <div><strong>Lend and borrow</strong><span>Fixed 4.5% borrower rate, 4% lender rate, and 0.5% protocol spread on the active testnet pool.</span></div>
                 <div><strong>Synths</strong><span>nBTC and nETH use DIA prices, isolated collateral accounting, reserve support rules, and stale-feed guards.</span></div>
               </div>

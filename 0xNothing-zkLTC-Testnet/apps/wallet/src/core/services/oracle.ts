@@ -13,8 +13,8 @@ import { writeCall } from "./tx";
  * Redeem is the mirror image and shares the screen.
  */
 export interface OracleState {
+  /** Only minting can be paused; redemption is always open. */
   mintPaused: boolean;
-  redeemPaused: boolean;
   ceilingNusd: bigint;
   totalSupplyNusd: bigint;
   /** How much NUSD may still be minted before the ceiling binds. */
@@ -32,7 +32,6 @@ export async function loadOracleState(): Promise<OracleState> {
     allowFailure: true,
     contracts: [
       { address: CONTRACTS.nusd, abi: nusdOracleAbi, functionName: "mintPaused" },
-      { address: CONTRACTS.nusd, abi: nusdOracleAbi, functionName: "redeemPaused" },
       { address: CONTRACTS.nusd, abi: nusdOracleAbi, functionName: "supplyCeilingNusd" },
       { address: CONTRACTS.nusd, abi: nusdOracleAbi, functionName: "totalSupply" },
       { address: CONTRACTS.nusd, abi: nusdOracleAbi, functionName: "totalCollateralWei" },
@@ -44,22 +43,21 @@ export async function loadOracleState(): Promise<OracleState> {
   const value = <T>(index: number, fallback: T): T =>
     calls[index]?.status === "success" ? (calls[index]!.result as T) : fallback;
 
-  const ceiling = value<bigint>(2, 0n);
-  const supply = value<bigint>(3, 0n);
-  const price = calls[5]?.status === "success"
-    ? (calls[5]!.result as readonly [bigint, bigint, bigint])[0]
+  const ceiling = value<bigint>(1, 0n);
+  const supply = value<bigint>(2, 0n);
+  const price = calls[4]?.status === "success"
+    ? (calls[4]!.result as readonly [bigint, bigint, bigint])[0]
     : 0n;
 
   return {
     // Fail closed: a pause flag that could not be read is treated as paused.
     mintPaused: calls[0]?.status === "success" ? (calls[0]!.result as boolean) : true,
-    redeemPaused: calls[1]?.status === "success" ? (calls[1]!.result as boolean) : true,
     ceilingNusd: ceiling,
     totalSupplyNusd: supply,
     headroomNusd: ceiling > supply ? ceiling - supply : 0n,
-    collateralWei: value<bigint>(4, 0n),
+    collateralWei: value<bigint>(3, 0n),
     priceWad: price,
-    priceFresh: calls[6]?.status === "success" ? (calls[6]!.result as boolean) : false,
+    priceFresh: calls[5]?.status === "success" ? (calls[5]!.result as boolean) : false,
   };
 }
 

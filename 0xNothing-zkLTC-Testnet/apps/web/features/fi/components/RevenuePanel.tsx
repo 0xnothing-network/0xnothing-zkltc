@@ -1,12 +1,17 @@
 "use client";
 
-import type { Abi, Address } from "viem";
 import { useAccount, useBalance, useReadContracts } from "wagmi";
 import { TransactionStatus } from "@fi/components/UiStates";
 import { useToast } from "@fi/components/Toast";
 import { deployment, explorerAddressUrl } from "@fi/config/deployment";
 import { erc20Abi } from "@fi/lib/abis/erc20";
-import { lendingRevenueAbi, pumpRevenueAbi, rewardStakingAbi, routerRevenueAbi } from "@fi/lib/abis/tokenomics";
+import {
+  feeSplitterAbi,
+  lendingRevenueAbi,
+  pumpRevenueAbi,
+  rewardStakingAbi,
+  routerRevenueAbi,
+} from "@fi/lib/abis/tokenomics";
 import { formatAmount } from "@fi/lib/format";
 import { useProtocolTransaction } from "@fi/lib/hooks/useProtocolTransaction";
 
@@ -18,12 +23,11 @@ type Source = {
   detail: string;
   asset: "NUSD" | "WzkLTC";
   pending: bigint | undefined;
-  call?: { address: Address; abi: Abi; functionName: string; args?: readonly unknown[] };
 };
 
 /**
- * Where protocol revenue sits and where it goes. Every source is pushed by a permissionless call:
- * NUSD is split 50/50 between the 0xPoints reward pool and the treasury, WzkLTC goes to the treasury.
+ * Where protocol revenue waits and where it goes. One permissionless harvest collects every
+ * source: NUSD splits 70% stakers / 20% burned / 10% treasury, zkLTC 90% NUSD reserve / 10% treasury.
  */
 export function RevenuePanel() {
   const { isConnected } = useAccount();
@@ -37,7 +41,7 @@ export function RevenuePanel() {
       { address: dexRouter, abi: routerRevenueAbi, functionName: "accruedRouterFees", args: [nusd] },
       { address: dexRouter, abi: routerRevenueAbi, functionName: "accruedRouterFees", args: [wzkltc] },
       { address: lendingPool, abi: lendingRevenueAbi, functionName: "protocolInterestNusd" },
-      { address: rewardStaking, abi: rewardStakingAbi, functionName: "availableRewards" },
+      { address: rewardStaking, abi: rewardStakingAbi, functionName: "queuedRewards" },
       { address: nusd, abi: erc20Abi, functionName: "balanceOf", args: [treasury] },
       { address: wzkltc, abi: erc20Abi, functionName: "balanceOf", args: [treasury] },
     ] as const : [],
@@ -49,17 +53,18 @@ export function RevenuePanel() {
   if (!pump || !dexRouter || !lendingPool || !nusd || !wzkltc || !treasury || !rewardStaking || !feeSplitter) return null;
 
   const sources: Source[] = [
-    { key: "pump", label: "0xPump fees", detail: "Creation and trading fees", asset: "NUSD", pending: value(0), call: { address: pump, abi: pumpRevenueAbi, functionName: "distributeFees" } },
-    { key: "router-nusd", label: "0xFi swap fees", detail: "Paid in NUSD", asset: "NUSD", pending: value(1), call: { address: dexRouter, abi: routerRevenueAbi, functionName: "distributeFees", args: [nusd] } },
-    { key: "router-wzkltc", label: "0xFi swap fees", detail: "Paid in zkLTC · 100% treasury", asset: "WzkLTC", pending: value(2), call: { address: dexRouter, abi: routerRevenueAbi, functionName: "distributeFees", args: [wzkltc] } },
-    { key: "lending", label: "Lending spread", detail: "Protocol share of borrow interest", asset: "NUSD", pending: value(3), call: { address: lendingPool, abi: lendingRevenueAbi, functionName: "sweepProtocolInterest" } },
+    { key: "pump", label: "0xPump fees", detail: "Creation and trading fees", asset: "NUSD", pending: value(0) },
+    { key: "router-nusd", label: "0xFi swap fees", detail: "Paid in NUSD", asset: "NUSD", pending: value(1) },
+    { key: "router-wzkltc", label: "0xFi swap fees", detail: "Paid in zkLTC · 90% backs NUSD", asset: "WzkLTC", pending: value(2) },
+    { key: "lending", label: "Lending spread", detail: "Protocol share of borrow interest", asset: "NUSD", pending: value(3) },
   ];
+  const anyPending = sources.some((source) => Boolean(source.pending));
 
-  async function send(source: Source) {
-    if (!source.call || !source.pending) return;
-    const hash = await tx.execute({ call: source.call });
+  async function harvest() {
+    if (!feeSplitter) return;
+    const hash = await tx.execute({ call: { address: feeSplitter, abi: feeSplitterAbi, functionName: "harvest" } });
     if (hash) {
-      toast.show("Revenue sent", `${formatAmount(source.pending)} ${source.asset} left ${source.label}.`, "success");
+      toast.show("Fees distributed", "Waiting fees were collected and split; stakers' share starts streaming.", "success");
       void reads.refetch();
       void nativeTreasury.refetch();
     }
@@ -74,13 +79,14 @@ export function RevenuePanel() {
         <span className="fi-revenue-title">Revenue and treasury</span>
         <span className="fi-revenue-summary">
           <span>Waiting <strong>{formatAmount(pendingNusd, 18, 4)}</strong> NUSD</span>
-          <span>Pool <strong>{formatAmount(value(4), 18, 2)}</strong> NUSD</span>
+          <span>Streaming <strong>{formatAmount(value(4), 18, 2)}</strong> NUSD</span>
           <span>Treasury <strong>{formatAmount(value(5), 18, 2)}</strong> NUSD · <strong>{formatAmount(treasuryZkltc, 18, 4)}</strong> zkLTC</span>
         </span>
       </summary>
       <p className="fi-revenue-copy">
-        NUSD fees split 50% to the reward pool and 50% to the treasury; zkLTC swap fees go to the treasury. Anyone can
-        send pending fees. Only the owner spends the{" "}
+        NUSD fees go 70% to stakers, 20% burned (raising NUSD backing) and 10% to the treasury; zkLTC fees go 90% into the
+        NUSD reserve and 10% to the treasury. Every stake and claim distributes waiting fees, and anyone can do it here.
+        Only the owner spends the{" "}
         <a href={explorerAddressUrl(treasury)} target="_blank" rel="noopener noreferrer">treasury</a> (
         <a href={explorerAddressUrl(feeSplitter)} target="_blank" rel="noopener noreferrer">splitter</a>).
       </p>
@@ -89,12 +95,12 @@ export function RevenuePanel() {
           <li key={source.key}>
             <span><strong>{source.label}</strong><small>{source.detail}</small></span>
             <span className="fi-revenue-amount">{formatAmount(source.pending, 18, 6)} {source.asset}</span>
-            <button type="button" className="fi-button fi-button-muted" disabled={!isConnected || !source.pending || tx.pending} onClick={() => void send(source)}>
-              Send
-            </button>
           </li>
         ))}
       </ul>
+      <button type="button" className="fi-button fi-button-muted fi-revenue-harvest" disabled={!isConnected || !anyPending || tx.pending} onClick={() => void harvest()}>
+        Distribute fees
+      </button>
       <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
     </details>
   );

@@ -3,14 +3,14 @@ import { PixelMist } from "@/components/PixelMist";
 import { Providers } from "@/app/providers";
 import { ToastProvider } from "@fi/components/Toast";
 import { NusdHeader } from "@/features/nusd/components/NusdHeader";
-// NUSD is built from the 0xFi surfaces (Earn, Vote) and the 0xPump mint panels.
+// NUSD is built from the 0xFi Earn surface and the 0xPump mint panels.
 import "../0xFi/globals.css";
 import "../0xPump/globals.css";
 import "./nusd.css";
 
 export const metadata: Metadata = {
   title: { default: "NUSD | 0xNothing", template: "%s | NUSD" },
-  description: "Mint and redeem NUSD against the zkLTC reserve, stake it for 0xPoints, and vote on surplus mints.",
+  description: "Mint and redeem NUSD against the zkLTC reserve, and stake it for streaming rewards and 0xPoints.",
 };
 
 export default function NusdLayout({ children }: Readonly<{ children: React.ReactNode }>) {

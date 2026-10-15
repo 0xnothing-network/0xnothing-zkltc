@@ -8,9 +8,9 @@ import { evaluateModule } from "../helpers/evaluateModule.ts";
 
 type Element = { type: unknown; props: Record<string, unknown> };
 const jsx = (type: unknown, props: Record<string, unknown>): Element => ({ type, props });
-const NUSD = "0x1d041A8e575006D46Ae0Aa2E4869C5be0327874E";
+const NUSD = "0x69320A82ACCeC1b8A5EF59fd02b217e7ea4aEa19";
 const NFT = "0xd83cb7aCEF921f98b6B983cBB712a583869Da9eB";
-const DEPLOYED = "0xA5e3EDfcba3b6fc40f3e41557f8a303a2AAC7e09";
+const DEPLOYED = "0xd219EfFe076B68934e212313C8d468b994d6e52E";
 const generated = JSON.parse(readFileSync(new URL("../../lib/nusdMarketplace.generated.json", import.meta.url), "utf8"));
 
 function configuration(override?: string, manifest = generated) {

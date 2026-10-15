@@ -6,27 +6,29 @@
 
 0xPump is a separate NUSD launchpad. It does not depend on the removed legacy DEX.
 
-# Tokenomics v2 (active set since 2026-10-14)
+# Tokenomics v3 (active set since 2026-10-15)
 
-The deployed set is v2 (`deployments/liteforge-testnet/v2.json`; rules and owner powers in `TOKENOMICS_V2.md`). Every NUSD fee flows to an immutable `FeeSplitter` that pays 50% to the 0xPoints reward pool (`RewardStaking`) and 50% to the owner-spent `OwnerTreasury`; zkLTC router fees go to the treasury. All fee pushes, reward rounds and the surplus vote are permissionless.
+The deployed set is v3 (`deployments/liteforge-testnet/v3.json`; rules and owner powers in `TOKENOMICS.md`). Every fee flows to one permanent `FeeSplitter`: NUSD splits 70% to stakers (`RewardStaking`, streamed over 7 days), 20% burned, 10% to the owner-spent `OwnerTreasury`; zkLTC splits 90% into the NUSD reserve and 10% to the treasury. `harvest()` collects every registered source and runs inside each stake and claim. Prices come through `OracleRouter`s whose source the owner can replace within a 25% deviation check, so NUSD, lending and the synths never need redeploying for a new feed.
 
 ```mermaid
 graph TD
-  NUSD["OracleNUSDv2<br/>mint/redeem at DIA, burn, emergencyRedeem, mintSurplus"]
-  Gov["SurplusMintGovernor<br/>3x trigger, 2x target"] -->|mintSurplus 50/50| Pool & Treasury
-  Pump["ZeroXPumpV2"] --> Split["FeeSplitter"]
-  Router["ZeroXFiRouterV2<br/>0.1% direct / 0.3% cross"] -->|NUSD| Split
-  Router -->|WzkLTC| Treasury["OwnerTreasury"]
+  NUSD["OracleNUSDv2<br/>mint at oracle, redeem = min(oracle, pro rata), always open<br/>surplus 3.3x -> 3.0x weekly, 80/20"]
+  Oracle["OracleRouter LTC/BTC/ETH"] --> NUSD
+  Pump["ZeroXPumpV2<br/>per-market terms"] --> Split["FeeSplitter"]
+  Router["ZeroXFiRouterV2<br/>0.1% direct / 0.3% cross"] -->|NUSD and WzkLTC| Split
   Lending["PooledNUSDLendingPoolV2"] --> Split
   Synth["SyntheticVault x2"] -->|routeMintFee| Split
-  Split --> Pool["RewardStaking<br/>10,000 NUSD rounds"]
-  Split --> Treasury
+  Split -->|NUSD 70%| Staking["RewardStaking<br/>7-day stream"]
+  Split -->|NUSD 20% burn, zkLTC 90%| NUSD
+  Split -->|10%| Treasury["OwnerTreasury"]
+  NUSD -->|surplus 80%| Staking
+  NUSD -->|surplus 20%| Treasury
   Factory["ZeroXFiFactoryV2<br/>pairs need NUSD or WzkLTC"] --- Router
   Market["NusdNftMarketplaceV2<br/>0.1% burn, 0.4% creator"] -->|burn| NUSD
   Pump --- Grad["GraduationRouter + adapter + controller<br/>graduation open to anyone"]
 ```
 
-`ZeroXFiPair`, `WzkLTC`, the DIA adapters, `SyntheticAsset`, `SynthSafetyReserve`, gauges, the LP locker and the metadata registry keep their v1 code; WzkLTC and the adapters are the same deployed instances. The sections below describe the shared mechanics; where they mention v1-only behaviour (owner fee withdrawal, platform fee, xPoints) v2 replaces it as above.
+`ZeroXFiPair`, `WzkLTC`, the DIA adapters, `SyntheticAsset`, `SynthSafetyReserve`, gauges, the LP locker and the metadata registry keep their v1 code; WzkLTC and the adapters are the same deployed instances, now behind the routers. The sections below describe the shared mechanics; where they mention v1-only behaviour (owner fee withdrawal, platform fee, xPoints) v3 replaces it as above.
 
 # OracleNUSD and DIA
 
@@ -37,8 +39,11 @@ tracks recognized native backing in `totalCollateralWei`, and exposes itself fro
 0xPump only transfers NUSD for creation fees and curve trades; it has no mint or
 reserve authority.
 
-Mint output is `floor(msg.value * priceWad / 1e18)`. Redemption output is
-`floor(amountNusd * 1e18 / priceWad)`. There is no protocol fee, user debt
+Mint output is `floor(msg.value * priceWad / 1e18)`. Redemption output is the
+lower of `floor(amountNusd * 1e18 / priceWad)` and the holder's pro-rata share
+`floor(amountNusd * totalCollateralWei / totalSupply)`, so an under-backed reserve
+is shared evenly instead of first come, first served. Mint and redeem fees default
+to zero (owner-bounded at 0.5%, kept in the reserve). There is no user debt
 position, collateral ratio, or liquidation path. The configured supply ceiling
 limits `totalSupply`, and burned supply restores headroom. `coverReserve` can add
 recognized backing without minting; there is no administrator reserve sweep.
@@ -46,8 +51,8 @@ recognized backing without minting; there is no administrator reserve sweep.
 This is an oracle-priced reserve model, not an overcollateralized stablecoin.
 A decline in zkLTC/USD after minting can make reserve value lower than NUSD
 supply, while a rise can create reserve surplus. Stale or invalid oracle data
-blocks both value-changing paths. Mint and redeem have independent pause controls,
-while quote reads and reserve coverage remain available.
+blocks both value-changing paths. Only minting can be paused; redemption is
+always open, and quote reads and reserve coverage remain available.
 
 The new `OracleNUSD` deployment does not migrate balances or collateral from the
 legacy NUSD and `NativeCollateralVault`. Their addresses remain only as

@@ -1,42 +1,42 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "../common/ReentrancyGuard.sol";
 
-/// @title 0xPoints staking and reward rounds
-/// @notice Stake NUSD to earn 0xPoints; 0xPoints decide each staker's share of a reward round.
-///
-/// - 0xPoints accrue every second at `amount x lockMultiplier`, so a stake made just before a
-///   round closes earns almost nothing for that round.
-/// - The reward pool is every NUSD this contract holds beyond principal and already-allocated
-///   rewards. Anyone may `trigger()` once the pool holds at least 10,000 NUSD and the round
-///   has lasted a day: the round closes and exactly 10,000 NUSD is split pro rata to the
-///   round's 0xPoints. Points reset for the next round; any extra NUSD rolls over.
-/// - Claims are pull-based and never expire. Principal can always be withdrawn after the
-///   lock ends. There is no owner, no pause and no way to move principal or rewards.
+interface IRewardHarvester {
+    function harvest() external returns (uint256 sourcesSucceeded);
+}
+
+/// @title 0xPoints staking
+/// @notice Lock NUSD for 30/90/180/365 days (weight x1 / x1.2 / x1.5 / x3) and earn every NUSD
+///         that reaches this contract: protocol fees, NUSD surplus, donations. Income needs no
+///         notification: anything held beyond principal and owed rewards is picked up on the next
+///         interaction and streamed evenly over the following 7 days, pro rata to weight. While
+///         nobody is staked the stream pauses instead of being lost.
+/// @dev No admin, no rounds, no thresholds. A position's principal can always be withdrawn after
+///      its unlock time, and withdrawal never runs the fee harvest, so nothing outside NUSD can block it.
 contract RewardStaking is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    error InvalidConfiguration();
     error InvalidAmount();
     error InvalidLockDuration();
-    error InvalidRecipient();
     error UnknownPosition();
     error NotPositionOwner();
-    error PositionLocked(uint64 unlockTime);
     error AlreadyWithdrawn();
-    error RoundTooShort(uint256 availableAt);
-    error PoolBelowThreshold(uint256 availableNusd);
-    error NoPointsInRound();
+    error PositionLocked(uint256 unlockTime);
     error NothingToClaim();
+    error InvalidRecipient();
     error NonExactTransfer();
+    error Unauthorized();
+    error HarvesterAlreadyBound();
+    error InvalidHarvester();
 
     uint256 public constant BPS = 10_000;
-    uint256 public constant ROUND_REWARD = 10_000e18;
-    uint256 public constant MIN_ROUND_DURATION = 1 days;
+    uint256 public constant STREAM_DURATION = 7 days;
+    /// @notice Gas forwarded to the fee harvest, so a slow harvest can only be skipped, never block.
+    uint256 public constant HARVEST_GAS = 3_000_000;
     uint256 private constant PRECISION = 1e36;
     uint32 public constant LOCK_30_DAYS = 30 days;
     uint32 public constant LOCK_90_DAYS = 90 days;
@@ -52,69 +52,102 @@ contract RewardStaking is ReentrancyGuard {
         uint256 weight;
     }
 
-    /// @dev Lazy checkpoint: points earned in `anchorRound` up to `anchorTime`, plus settled rewards.
     struct Account {
         uint256 weight;
-        uint256 anchorPoints;
+        uint256 rewardPerWeightPaid;
         uint256 pendingReward;
-        uint64 anchorTime;
-        uint32 anchorRound;
+        /// @dev Lifetime 0xPoints: weight x seconds staked.
+        uint256 points;
+        uint64 checkpointAt;
     }
 
     IERC20 public immutable nusd;
+    address private immutable _binder;
+
+    // Packed: read together on every interaction.
+    address public harvester;
+    uint64 public lastUpdate;
+    uint64 public periodFinish;
 
     uint256 public totalWeight;
     uint256 public totalPrincipal;
-    uint256 public totalAllocatedUnpaid;
-    uint256 public currentRoundPoints;
-    uint64 public lastGlobalUpdate;
-    uint32 public currentRound;
+    /// @notice Lifetime 0xPoints of everyone, as of `lastUpdate`.
+    uint256 public totalPoints;
+    uint256 public rewardPerWeightStored;
+    /// @dev NUSD wei per second, scaled by PRECISION.
+    uint256 public rewardRateScaled;
+    /// @dev NUSD wei committed to the stream but not streamed yet, scaled by PRECISION.
+    uint256 public unstreamedScaled;
+    /// @notice Every NUSD ever recognised as reward income, and every NUSD paid out of it.
+    uint256 public rewardFunded;
+    uint256 public rewardPaid;
     uint256 public nextPositionId = 1;
 
-    mapping(uint256 => uint64) public roundStart;
-    mapping(uint256 => uint256) public roundTotalPoints;
-    /// @dev Reward per point, scaled by PRECISION, for each closed round.
-    mapping(uint256 => uint256) public roundRate;
-    /// @dev Prefix sum of `rate x duration` over closed rounds: reward per unit weight held for whole rounds.
-    mapping(uint256 => uint256) private _fullRoundIndex;
     mapping(uint256 => Position) private _positions;
     mapping(address => uint256[]) private _positionIds;
     mapping(address => Account) private _accounts;
 
-    event Staked(uint256 indexed positionId, address indexed account, uint256 amount, uint256 weight, uint32 lockDuration, uint64 unlockTime);
+    event Staked(
+        uint256 indexed positionId,
+        address indexed account,
+        uint256 amount,
+        uint256 weight,
+        uint32 lockDuration,
+        uint64 unlockTime
+    );
     event Withdrawn(uint256 indexed positionId, address indexed account, uint256 amount);
-    event RoundClosed(uint256 indexed round, address indexed caller, uint256 totalPoints, uint256 reward, uint64 start, uint64 end);
     event RewardClaimed(address indexed account, address indexed recipient, uint256 amount);
+    event RewardRestaked(address indexed account, uint256 indexed positionId, uint256 amount);
+    event RewardsQueued(uint256 income, uint256 rewardRatePerSecond, uint256 periodFinish);
+    event HarvesterBound(address indexed harvester);
 
-    constructor(IERC20 nusdToken) {
-        if (address(nusdToken).code.length == 0) revert InvalidConfiguration();
-        nusd = nusdToken;
-        roundStart[0] = uint64(block.timestamp);
-        lastGlobalUpdate = uint64(block.timestamp);
+    constructor(IERC20 nusd_) {
+        if (address(nusd_).code.length == 0) revert InvalidAmount();
+        nusd = nusd_;
+        _binder = msg.sender;
+        lastUpdate = uint64(block.timestamp);
+        periodFinish = uint64(block.timestamp);
     }
 
-    // ---------------------------------------------------------------- staking
+    /// @notice Binds the fee harvest run before stakes and claims. Once, by the deployer.
+    function bindHarvester(address harvester_) external {
+        if (msg.sender != _binder) revert Unauthorized();
+        if (harvester != address(0)) revert HarvesterAlreadyBound();
+        if (harvester_.code.length == 0) revert InvalidHarvester();
+        harvester = harvester_;
+        emit HarvesterBound(harvester_);
+    }
+
+    // ---------------------------------------------------------------- positions
 
     function stake(uint256 amount, uint32 lockDuration) external nonReentrant returns (uint256 positionId) {
         if (amount == 0) revert InvalidAmount();
-        uint256 weight = Math.mulDiv(amount, lockMultiplierBps(lockDuration), BPS);
-        _updateGlobal();
+        uint256 multiplierBps = lockMultiplierBps(lockDuration);
+        _harvest();
         Account storage account = _checkpoint(msg.sender);
 
         uint256 balanceBefore = nusd.balanceOf(address(this));
         nusd.safeTransferFrom(msg.sender, address(this), amount);
         if (nusd.balanceOf(address(this)) != balanceBefore + amount) revert NonExactTransfer();
 
-        uint64 unlockTime = uint64(block.timestamp + lockDuration);
-        positionId = nextPositionId++;
-        _positions[positionId] = Position(msg.sender, unlockTime, lockDuration, false, amount, weight);
-        _positionIds[msg.sender].push(positionId);
-        account.weight += weight;
-        totalWeight += weight;
-        totalPrincipal += amount;
-        emit Staked(positionId, msg.sender, amount, weight, lockDuration, unlockTime);
+        positionId = _open(msg.sender, account, amount, lockDuration, multiplierBps);
     }
 
+    /// @notice Claims every earned reward into a new position instead of the wallet.
+    function claimAndStake(uint32 lockDuration) external nonReentrant returns (uint256 positionId) {
+        uint256 multiplierBps = lockMultiplierBps(lockDuration);
+        _harvest();
+        Account storage account = _checkpoint(msg.sender);
+        uint256 amount = account.pendingReward;
+        if (amount == 0) revert NothingToClaim();
+        account.pendingReward = 0;
+        // Reward liability becomes principal: the NUSD never leaves the contract.
+        rewardPaid += amount;
+        positionId = _open(msg.sender, account, amount, lockDuration, multiplierBps);
+        emit RewardRestaked(msg.sender, positionId, amount);
+    }
+
+    /// @notice Returns an unlocked position's principal. Never runs the fee harvest.
     function withdraw(uint256 positionId) external nonReentrant {
         Position storage position = _positions[positionId];
         if (position.account == address(0)) revert UnknownPosition();
@@ -123,7 +156,6 @@ contract RewardStaking is ReentrancyGuard {
         // forge-lint: disable-next-line(block-timestamp)
         if (block.timestamp < position.unlockTime) revert PositionLocked(position.unlockTime);
 
-        _updateGlobal();
         Account storage account = _checkpoint(msg.sender);
         position.withdrawn = true;
         account.weight -= position.weight;
@@ -133,43 +165,22 @@ contract RewardStaking is ReentrancyGuard {
         emit Withdrawn(positionId, msg.sender, position.amount);
     }
 
-    // ---------------------------------------------------------------- rounds
-
-    /// @notice Closes the current round and allocates exactly 10,000 NUSD to it. Permissionless.
-    function trigger() external nonReentrant {
-        _updateGlobal();
-        uint32 round = currentRound;
-        uint64 start = roundStart[round];
-        // forge-lint: disable-next-line(block-timestamp)
-        if (block.timestamp < uint256(start) + MIN_ROUND_DURATION) revert RoundTooShort(uint256(start) + MIN_ROUND_DURATION);
-        uint256 available = availableRewards();
-        if (available < ROUND_REWARD) revert PoolBelowThreshold(available);
-        uint256 points = currentRoundPoints;
-        if (points == 0) revert NoPointsInRound();
-
-        uint256 rate = Math.mulDiv(ROUND_REWARD, PRECISION, points);
-        uint64 end = uint64(block.timestamp);
-        roundTotalPoints[round] = points;
-        roundRate[round] = rate;
-        _fullRoundIndex[round] = (round == 0 ? 0 : _fullRoundIndex[round - 1]) + rate * (end - start);
-        totalAllocatedUnpaid += ROUND_REWARD;
-
-        currentRound = round + 1;
-        roundStart[round + 1] = end;
-        currentRoundPoints = 0;
-        emit RoundClosed(round, msg.sender, points, ROUND_REWARD, start, end);
-    }
-
     function claim(address recipient) external nonReentrant returns (uint256 amount) {
         if (recipient == address(0)) revert InvalidRecipient();
-        _updateGlobal();
+        _harvest();
         Account storage account = _checkpoint(msg.sender);
         amount = account.pendingReward;
         if (amount == 0) revert NothingToClaim();
         account.pendingReward = 0;
-        totalAllocatedUnpaid -= amount;
+        rewardPaid += amount;
         nusd.safeTransfer(recipient, amount);
         emit RewardClaimed(msg.sender, recipient, amount);
+    }
+
+    /// @notice Harvests fees and starts streaming any new income now. Permissionless.
+    function sync() external nonReentrant {
+        _harvest();
+        _updateGlobal();
     }
 
     // ---------------------------------------------------------------- views
@@ -182,29 +193,48 @@ contract RewardStaking is ReentrancyGuard {
         revert InvalidLockDuration();
     }
 
-    /// @notice Unallocated NUSD in the pool (balance minus principal minus allocated-but-unclaimed).
-    function availableRewards() public view returns (uint256) {
-        uint256 balance = nusd.balanceOf(address(this));
-        uint256 reserved = totalPrincipal + totalAllocatedUnpaid;
-        return balance > reserved ? balance - reserved : 0;
+    /// @notice Reward the account could claim now (income not picked up yet is not included).
+    function earned(address user) public view returns (uint256) {
+        Account storage account = _accounts[user];
+        return account.pendingReward
+            + account.weight * (_currentRewardPerWeight() - account.rewardPerWeightPaid) / PRECISION;
     }
 
-    /// @notice Timestamp from which `trigger()` is allowed (if the pool is also funded).
-    function nextTriggerTime() external view returns (uint256) {
-        return uint256(roundStart[currentRound]) + MIN_ROUND_DURATION;
+    /// @notice Lifetime 0xPoints of `user` as of now.
+    function pointsOf(address user) public view returns (uint256) {
+        Account storage account = _accounts[user];
+        return account.points + account.weight * (block.timestamp - account.checkpointAt);
     }
 
-    /// @notice Total 0xPoints accrued in the open round so far.
-    function openRoundPoints() public view returns (uint256) {
-        return currentRoundPoints + totalWeight * (block.timestamp - lastGlobalUpdate);
+    /// @notice Lifetime 0xPoints of everyone as of now.
+    function totalPointsNow() external view returns (uint256) {
+        return totalPoints + totalWeight * (block.timestamp - lastUpdate);
     }
 
-    /// @notice An account's 0xPoints in the open round and its claimable reward from closed rounds.
-    function accountState(address user) external view returns (uint256 weight, uint256 openPoints, uint256 claimable) {
-        Account memory account = _accounts[user];
-        weight = account.weight;
-        if (account.anchorTime == 0) return (weight, 0, 0);
-        (claimable, openPoints) = _settle(account, uint64(block.timestamp));
+    /// @notice Weight (0xPoints per second), lifetime 0xPoints and claimable reward.
+    function accountState(address user) external view returns (uint256 weight, uint256 points, uint256 claimable) {
+        return (_accounts[user].weight, pointsOf(user), earned(user));
+    }
+
+    /// @notice NUSD streamed to stakers per second right now.
+    function rewardRate() external view returns (uint256) {
+        // forge-lint: disable-next-line(block-timestamp)
+        if (block.timestamp >= periodFinish || totalWeight == 0) return 0;
+        return rewardRateScaled / PRECISION;
+    }
+
+    /// @notice NUSD still to be streamed, including income not picked up yet.
+    function queuedRewards() external view returns (uint256) {
+        uint256 pending = unstreamedScaled / PRECISION;
+        uint256 finish = periodFinish;
+        uint256 last = lastUpdate;
+        if (totalWeight != 0 && finish > last) {
+            // forge-lint: disable-next-line(block-timestamp)
+            uint256 end = block.timestamp < finish ? block.timestamp : finish;
+            uint256 streamed = rewardRateScaled * (end - last) / PRECISION;
+            pending = pending > streamed ? pending - streamed : 0;
+        }
+        return pending + _unrecognisedIncome();
     }
 
     function getPosition(uint256 positionId) external view returns (Position memory) {
@@ -217,43 +247,92 @@ contract RewardStaking is ReentrancyGuard {
 
     // ---------------------------------------------------------------- internals
 
-    function _updateGlobal() private {
-        uint64 now_ = uint64(block.timestamp);
-        currentRoundPoints += totalWeight * (now_ - lastGlobalUpdate);
-        lastGlobalUpdate = now_;
+    function _open(address owner, Account storage account, uint256 amount, uint32 lockDuration, uint256 multiplierBps)
+        private
+        returns (uint256 positionId)
+    {
+        uint256 weight = amount * multiplierBps / BPS;
+        if (weight == 0) revert InvalidAmount();
+        uint64 unlockTime = uint64(block.timestamp + lockDuration);
+        positionId = nextPositionId++;
+        _positions[positionId] = Position(owner, unlockTime, lockDuration, false, amount, weight);
+        _positionIds[owner].push(positionId);
+        account.weight += weight;
+        totalWeight += weight;
+        totalPrincipal += amount;
+        emit Staked(positionId, owner, amount, weight, lockDuration, unlockTime);
     }
 
-    /// @dev Must run after `_updateGlobal()` and before any change to the account's weight.
+    function _harvest() private {
+        address target = harvester;
+        if (target == address(0)) return;
+        try IRewardHarvester(target).harvest{gas: HARVEST_GAS}() {} catch {}
+    }
+
     function _checkpoint(address user) private returns (Account storage account) {
+        _updateGlobal();
         account = _accounts[user];
-        uint64 now_ = uint64(block.timestamp);
-        if (account.anchorTime == 0) {
-            account.anchorRound = currentRound;
-            account.anchorTime = now_;
-            return account;
+        uint256 rewardPerWeight = rewardPerWeightStored;
+        uint256 weight = account.weight;
+        if (weight != 0) {
+            account.pendingReward += weight * (rewardPerWeight - account.rewardPerWeightPaid) / PRECISION;
+            account.points += weight * (block.timestamp - account.checkpointAt);
         }
-        (uint256 pending, uint256 openPoints) = _settle(account, now_);
-        account.pendingReward = pending;
-        account.anchorPoints = openPoints;
-        account.anchorRound = currentRound;
-        account.anchorTime = now_;
+        account.rewardPerWeightPaid = rewardPerWeight;
+        account.checkpointAt = uint64(block.timestamp);
     }
 
-    /// @dev Rewards from every round closed since the anchor, and points earned in the open round by `now_`.
-    function _settle(Account memory account, uint64 now_) private view returns (uint256 pending, uint256 openPoints) {
-        pending = account.pendingReward;
-        uint32 round = currentRound;
-        uint32 anchor = account.anchorRound;
-        if (anchor == round) {
-            return (pending, account.anchorPoints + account.weight * (now_ - account.anchorTime));
+    /// @dev Advances the stream to now, then streams any new income over the next 7 days.
+    function _updateGlobal() private {
+        uint256 last = lastUpdate;
+        uint256 weight = totalWeight;
+        // forge-lint: disable-next-line(block-timestamp)
+        if (block.timestamp > last) {
+            totalPoints += weight * (block.timestamp - last);
+            uint256 finish = periodFinish;
+            if (finish > last) {
+                if (weight == 0) {
+                    // Nobody to pay: hold the stream, keeping the time it had left.
+                    // forge-lint: disable-next-line(unsafe-typecast)
+                    periodFinish = uint64(block.timestamp + (finish - last));
+                } else {
+                    // forge-lint: disable-next-line(block-timestamp)
+                    uint256 end = block.timestamp < finish ? block.timestamp : finish;
+                    uint256 streamed = rewardRateScaled * (end - last);
+                    rewardPerWeightStored += streamed / weight;
+                    unstreamedScaled -= streamed;
+                }
+            }
+            lastUpdate = uint64(block.timestamp);
         }
-        // Remainder of the (closed) anchor round.
-        uint256 points = account.anchorPoints + account.weight * (roundStart[anchor + 1] - account.anchorTime);
-        pending += Math.mulDiv(points, roundRate[anchor], PRECISION);
-        // Whole closed rounds strictly between the anchor round and the open round.
-        if (round - 1 > anchor) {
-            pending += Math.mulDiv(account.weight, _fullRoundIndex[round - 1] - _fullRoundIndex[anchor], PRECISION);
+
+        uint256 income = _unrecognisedIncome();
+        if (income != 0) {
+            rewardFunded += income;
+            uint256 unstreamed = unstreamedScaled + income * PRECISION;
+            unstreamedScaled = unstreamed;
+            rewardRateScaled = unstreamed / STREAM_DURATION;
+            // forge-lint: disable-next-line(unsafe-typecast)
+            periodFinish = uint64(block.timestamp + STREAM_DURATION);
+            emit RewardsQueued(income, unstreamed / STREAM_DURATION / PRECISION, block.timestamp + STREAM_DURATION);
         }
-        openPoints = account.weight * (now_ - roundStart[round]);
+    }
+
+    function _unrecognisedIncome() private view returns (uint256) {
+        uint256 balance = nusd.balanceOf(address(this));
+        uint256 accounted = totalPrincipal + rewardFunded - rewardPaid;
+        return balance > accounted ? balance - accounted : 0;
+    }
+
+    function _currentRewardPerWeight() private view returns (uint256 rewardPerWeight) {
+        rewardPerWeight = rewardPerWeightStored;
+        uint256 weight = totalWeight;
+        uint256 last = lastUpdate;
+        uint256 finish = periodFinish;
+        if (weight != 0 && finish > last) {
+            // forge-lint: disable-next-line(block-timestamp)
+            uint256 end = block.timestamp < finish ? block.timestamp : finish;
+            if (end > last) rewardPerWeight += rewardRateScaled * (end - last) / weight;
+        }
     }
 }

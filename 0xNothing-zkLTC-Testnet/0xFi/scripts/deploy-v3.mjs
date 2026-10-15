@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Testnet v2 deployment (new tokenomics). One orchestrator for both Foundry roots:
+// Testnet v3 deployment (autonomous tokenomics). One orchestrator for both Foundry roots:
 //   --rehearse   full run on a local anvil fork of LiteForge: deploy, seed, smoke-test, warp, activate
 //   --broadcast  live deploy (core, then 0xFi) and seed liquidity; resumable stage by stage
 //   --activate   live, once the 1-hour graduation delay has passed: open graduation, hand admin to the controller
-//   --publish    switch the repo's active testnet set (network config, 0xFi subgraph config, web config) to v2
+//   --publish    switch the repo's active testnet set (network config, subgraph configs, web config) to v3
 //   --status     read-only summary
 // The deployer key is read from the testnet .env.local into memory and only handed to forge through the child env.
 
@@ -38,7 +38,7 @@ const fiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const testnetRoot = path.resolve(fiRoot, "..");
 const coreContracts = path.join(testnetRoot, "contracts");
 const fiContracts = path.join(fiRoot, "contracts");
-const manifestPath = path.join(testnetRoot, "deployments", "liteforge-testnet", "v2.json");
+const manifestPath = path.join(testnetRoot, "deployments", "liteforge-testnet", "v3.json");
 const network = JSON.parse(fs.readFileSync(path.join(fiRoot, "config", "liteforge-testnet.json"), "utf8"));
 
 const modes = ["--rehearse", "--broadcast", "--activate", "--publish", "--status"];
@@ -58,6 +58,12 @@ const SEED_MINT_ZKLTC = parseEther("1");
 const SEED_CORE_ZKLTC = parseEther("0.5");
 const SEED_NBTC = parseEther("0.00002");
 const SEED_NETH = parseEther("0.001");
+// The adapters the oracle routers start on; checked fresh before a live run.
+const LIVE_ADAPTERS = [
+  "0x54361dB5F9DF455B448E882Ce65612D5e418f3Ee",
+  "0x781178849cE1D131EFbedff1EF52323A6E117813",
+  "0x8E9BD05a80542B171719ac0d749a7A609D69E324",
+];
 
 const chain = defineChain({
   id: CHAIN_ID,
@@ -69,11 +75,16 @@ const chain = defineChain({
 const nusdAbi = parseAbi([
   "function balanceOf(address) view returns (uint256)",
   "function totalSupply() view returns (uint256)",
+  "function totalCollateralWei() view returns (uint256)",
   "function approve(address,uint256) returns (bool)",
   "function quoteMint(uint256) view returns (uint256)",
   "function mintAtOracle(uint256 minNusdOut,address recipient) payable returns (uint256)",
+  "function quoteRedeem(uint256) view returns (uint256)",
+  "function redeemAtOracle(uint256 amountNusd,uint256 minCollateralOutWei,address recipient) returns (uint256)",
   "function reserveValueNusd() view returns (uint256)",
-  "function surplusMintCapacity() view returns (uint256 amountNusd,bool triggerReached)",
+  "function backingRatioWad() view returns (uint256)",
+  "function surplusMintCapacity() view returns (uint256 amountNusd,bool ready)",
+  "function releaseSurplus() returns (uint256)",
 ]);
 const erc20Abi = parseAbi([
   "function balanceOf(address) view returns (uint256)",
@@ -91,7 +102,6 @@ const routerAbi = parseAbi([
   "function swapExactTokensForNative(uint256 amountIn,uint256 amountOutMin,address[] path,address to,uint256 deadline) returns (uint256[])",
   "function swapExactNativeForTokens(uint256 amountOutMin,address[] path,address to,uint256 deadline) payable returns (uint256[])",
   "function accruedRouterFees(address) view returns (uint256)",
-  "function distributeFees(address token) returns (uint256)",
 ]);
 const pairAbi = parseAbi(["function getReserves() view returns (uint112,uint112,uint32)"]);
 const vaultAbi = parseAbi([
@@ -101,13 +111,20 @@ const vaultAbi = parseAbi([
 const pumpAbi = parseAbi([
   "function admin() view returns (address)",
   "function pendingAdmin() view returns (address)",
+  "function paramAdmin() view returns (address)",
   "function transferAdmin(address newAdmin)",
   "function reserveMarket(bytes32 commitment)",
   "function createMarket(string name,string symbol,string metadataURI,string imageURI,bytes32 commitment) returns (address)",
   "function createdTokenByContentHash(address creator,bytes32 contentHash) view returns (address)",
   "function buy(address token,uint256 maxNusdIn,uint256 minTokenOut,uint256 deadline) returns (uint256,uint256)",
   "function accruedProtocolFeesNusd() view returns (uint256)",
-  "function distributeFees() returns (uint256)",
+  "function marketParams(address token) view returns (uint16 tradeFeeBps,uint120 graduationThresholdNusd,uint120 graduationReserveThresholdNusd)",
+  "function tokenImplementation() view returns (address)",
+  "function createFee() view returns (uint256)",
+  "function tradeFeeBps() view returns (uint256)",
+  "function initialVirtualNusdReserve() view returns (uint256)",
+  "function graduationThresholdNusd() view returns (uint256)",
+  "function graduationReserveThresholdNusd() view returns (uint256)",
 ]);
 const pumpRouterAbi = parseAbi([
   "function admin() view returns (address)",
@@ -124,12 +141,18 @@ const controllerAbi = parseAbi([
   "function acceptProtocolAdmin()",
   "function governance() view returns (address)",
 ]);
+const splitterAbi = parseAbi([
+  "function harvest() returns (uint256 sourcesSucceeded)",
+  "function sourceCount() view returns (uint256)",
+]);
 const stakingAbi = parseAbi([
   "function stake(uint256 amount,uint32 lockDuration) returns (uint256)",
-  "function accountState(address) view returns (uint256 weight,uint256 openPoints,uint256 claimable)",
-  "function availableRewards() view returns (uint256)",
+  "function accountState(address) view returns (uint256 weight,uint256 points,uint256 claimable)",
+  "function rewardFunded() view returns (uint256)",
+  "function rewardRate() view returns (uint256)",
+  "function queuedRewards() view returns (uint256)",
+  "function totalPrincipal() view returns (uint256)",
 ]);
-const governorAbi = parseAbi(["function propose() returns (uint256)"]);
 const marketAbi = parseAbi([
   "function quoteSale(address collection,uint256 tokenId,uint256 price) view returns (uint256 burnAmount,address creator,uint256 creatorFee,uint256 sellerProceeds)",
 ]);
@@ -137,12 +160,17 @@ const royaltyAbi = parseAbi(["function royaltyInfo(uint256,uint256) view returns
 const marketAdminAbi = parseAbi([
   "function collectionAllowed(address) view returns (bool)",
   "function setCollectionAllowed(address collection,bool allowed)",
+  "function IMPLEMENTATION_ID() view returns (bytes32)",
+  "function BURN_BPS() view returns (uint16)",
+  "function CREATOR_BPS() view returns (uint16)",
+  "function nusd() view returns (address)",
+  "function owner() view returns (address)",
 ]);
 const lendingAbi = parseAbi(["function sweepProtocolInterest() returns (uint256)"]);
 
 const CORE_KEYS = [
-  "nusd", "treasury", "rewardStaking", "feeSplitter", "surplusMintGovernor", "pumpLiquidityLocker",
-  "pumpGraduationRouter", "pump", "nusdMarketplace",
+  "ltcOracle", "btcOracle", "ethOracle", "nusd", "treasury", "rewardStaking", "feeSplitter",
+  "pumpLiquidityLocker", "pumpGraduationRouter", "pump", "nusdMarketplace",
 ];
 const FI_KEYS = [
   "dexFactory", "dexRouter", "pumpGraduationAdapter", "pumpGraduationController", "gaugeFactory",
@@ -201,6 +229,10 @@ async function expectRevert(ctx, address, abi, functionName, args, label) {
   throw new Error(`${label}: expected a revert`);
 }
 
+function expectEqual(actual, expected, label) {
+  if (actual !== expected) throw new Error(`${label}: expected ${expected}, got ${actual}`);
+}
+
 async function deadline(ctx) {
   const block = await ctx.publicClient.getBlock();
   return block.timestamp + 1200n;
@@ -216,14 +248,14 @@ async function requireCode(ctx, addresses) {
 // ------------------------------------------------------------------ stages
 
 async function deployCore(ctx, suffix) {
-  console.log("Deploying v2 core (NUSD v2, treasury, splitter, staking, governor, Pump v2, marketplace v2)");
+  console.log("Deploying v3 core (oracle routers, NUSD, treasury, splitter, staking, Pump, marketplace)");
   await runStep(
     "forge",
-    ["script", "script/DeployV2Core.s.sol:DeployV2Core", "--rpc-url", ctx.url, "--broadcast", "--slow"],
-    { PRIVATE_KEY: privateKey, V2_MANIFEST_SUFFIX: suffix },
+    ["script", "script/DeployV3Core.s.sol:DeployV3Core", "--rpc-url", ctx.url, "--broadcast", "--slow"],
+    { PRIVATE_KEY: privateKey, V3_MANIFEST_SUFFIX: suffix },
     coreContracts,
   );
-  const core = readJson(path.join(coreContracts, "deployments", `v2-core${suffix}.json`));
+  const core = readJson(path.join(coreContracts, "deployments", `v3-core${suffix}.json`));
   const addresses = Object.fromEntries(CORE_KEYS.map((key) => [key, getAddress(core[key])]));
   await requireCode(ctx, addresses);
   const pixelV1 = getAddress(core.pixelV1);
@@ -234,31 +266,28 @@ async function deployCore(ctx, suffix) {
 }
 
 async function deployFi(ctx, core, suffix) {
-  console.log("Deploying v2 0xFi (hub factory, router, lending, synths, gauges, graduation)");
+  console.log("Deploying v3 0xFi (hub factory, router, lending, synths, gauges, graduation, fee sources)");
   await runStep(
     "forge",
-    ["script", "script/Deploy0xFiV2.s.sol:Deploy0xFiV2", "--rpc-url", ctx.url, "--broadcast", "--slow"],
+    ["script", "script/Deploy0xFiV3.s.sol:Deploy0xFiV3", "--rpc-url", ctx.url, "--broadcast", "--slow"],
     {
       PRIVATE_KEY: privateKey,
-      V2_MANIFEST_SUFFIX: suffix,
-      V2_NUSD: core.nusd,
-      V2_PUMP: core.pump,
-      V2_PUMP_GRADUATION_ROUTER: core.pumpGraduationRouter,
-      V2_FEE_SPLITTER: core.feeSplitter,
-      V2_TREASURY: core.treasury,
+      V3_MANIFEST_SUFFIX: suffix,
+      V3_NUSD: core.nusd,
+      V3_PUMP: core.pump,
+      V3_PUMP_GRADUATION_ROUTER: core.pumpGraduationRouter,
+      V3_FEE_SPLITTER: core.feeSplitter,
+      V3_TREASURY: core.treasury,
+      V3_LTC_ORACLE: core.ltcOracle,
+      V3_BTC_ORACLE: core.btcOracle,
+      V3_ETH_ORACLE: core.ethOracle,
     },
     fiContracts,
   );
-  const fi = readJson(path.join(fiContracts, "deployments", `v2-fi${suffix}.json`));
+  const fi = readJson(path.join(fiContracts, "deployments", `v3-fi${suffix}.json`));
   const addresses = Object.fromEntries(FI_KEYS.map((key) => [key, getAddress(fi[key])]));
   await requireCode(ctx, addresses);
-  return {
-    ...addresses,
-    wzkLTC: getAddress(fi.wzkLTC),
-    ltcOracle: getAddress(fi.ltcOracle),
-    btcOracle: getAddress(fi.btcOracle),
-    ethOracle: getAddress(fi.ethOracle),
-  };
+  return { ...addresses, wzkLTC: getAddress(fi.wzkLTC) };
 }
 
 async function priceOf(ctx, oracle) {
@@ -343,85 +372,114 @@ async function activateGraduation(ctx, c) {
   if (!same(await read(ctx, c.pump, pumpAbi, "admin"), c.pumpGraduationController)) {
     await send(ctx, c.pumpGraduationController, controllerAbi, "acceptProtocolAdmin");
   }
-  const [pumpAdmin, routerAdmin, enabled, governance] = await Promise.all([
+  const [pumpAdmin, routerAdmin, enabled, governance, paramAdmin] = await Promise.all([
     read(ctx, c.pump, pumpAbi, "admin"),
     read(ctx, router, pumpRouterAbi, "admin"),
     read(ctx, router, pumpRouterAbi, "enabled"),
     read(ctx, c.pumpGraduationController, controllerAbi, "governance"),
+    read(ctx, c.pump, pumpAbi, "paramAdmin"),
   ]);
   if (!same(pumpAdmin, c.pumpGraduationController) || !same(routerAdmin, c.pumpGraduationController) || !enabled
-    || !same(governance, account.address)) {
+    || !same(governance, account.address) || !same(paramAdmin, account.address)) {
     throw new Error("Graduation activation did not reach the expected admin state");
   }
 }
 
-/// Fork-only: exercises every new revenue path on the real deployed bytecode.
+/// Fork-only: exercises every revenue path on the real deployed bytecode.
 async function smokeTest(ctx, c) {
-  console.log("Smoke-testing fee routing, staking, governor, marketplace and Pump v2");
+  console.log("Smoke-testing oracles, fee harvest, streaming staking, NUSD, marketplace and Pump");
   const me = account.address;
   const nusdOf = (holder) => read(ctx, c.nusd, nusdAbi, "balanceOf", [holder]);
+
+  for (const oracle of [c.ltcOracle, c.btcOracle, c.ethOracle]) {
+    if (!(await read(ctx, oracle, oracleAbi, "isFresh"))) throw new Error(`Oracle router ${oracle} is not fresh`);
+  }
+  expectEqual(await read(ctx, c.feeSplitter, splitterAbi, "sourceCount"), 4n, "fee sources");
 
   // 0xFi: NUSD -> zkLTC pays 0.1% in NUSD; zkLTC -> NUSD pays 0.1% in WzkLTC.
   await send(ctx, c.nusd, nusdAbi, "approve", [c.dexRouter, parseEther("1")]);
   await send(ctx, c.dexRouter, routerAbi, "swapExactTokensForNative", [parseEther("1"), 0n, [c.nusd, c.wzkLTC], me, await deadline(ctx)]);
-  if ((await read(ctx, c.dexRouter, routerAbi, "accruedRouterFees", [c.nusd])) !== parseEther("0.001")) {
-    throw new Error("Router NUSD fee is not 0.1% of the input");
-  }
+  expectEqual(await read(ctx, c.dexRouter, routerAbi, "accruedRouterFees", [c.nusd]), parseEther("0.001"), "router NUSD fee");
   await send(ctx, c.dexRouter, routerAbi, "swapExactNativeForTokens", [0n, [c.wzkLTC, c.nusd], me, await deadline(ctx)], parseEther("0.01"));
-  const stakingBefore = await nusdOf(c.rewardStaking);
-  const treasuryBefore = await nusdOf(c.treasury);
-  await send(ctx, c.dexRouter, routerAbi, "distributeFees", [c.nusd]);
-  await send(ctx, c.dexRouter, routerAbi, "distributeFees", [c.wzkLTC]);
-  if ((await nusdOf(c.rewardStaking)) - stakingBefore !== parseEther("0.0005")
-    || (await nusdOf(c.treasury)) - treasuryBefore !== parseEther("0.0005")) {
-    throw new Error("Router NUSD fee was not split 50/50");
-  }
-  if ((await read(ctx, c.wzkLTC, erc20Abi, "balanceOf", [c.treasury])) !== parseEther("0.00001")) {
-    throw new Error("Router WzkLTC fee did not reach the treasury");
-  }
+  expectEqual(await read(ctx, c.dexRouter, routerAbi, "accruedRouterFees", [c.wzkLTC]), parseEther("0.00001"), "router WzkLTC fee");
 
-  // 0xPump v2: creation fee + 10 bps buy fee reach the pool through one permissionless call.
-  const commitment = keccak256(toHex(`v2-rehearsal-${Date.now()}`));
+  // 0xPump: creation fee + 10 bps buy fee, and the market keeps its own terms.
+  const commitment = keccak256(toHex(`v3-rehearsal-${Date.now()}`));
   await send(ctx, c.nusd, nusdAbi, "approve", [c.pump, parseEther("5")]);
   await send(ctx, c.pump, pumpAbi, "reserveMarket", [commitment]);
   await send(ctx, c.pump, pumpAbi, "createMarket", ["Rehearsal", "REH", "ipfs://bafybeimetadata", "ipfs://bafybeiimage", commitment]);
   const token = await read(ctx, c.pump, pumpAbi, "createdTokenByContentHash", [me, commitment]);
   await send(ctx, c.pump, pumpAbi, "buy", [token, parseEther("2"), 0n, await deadline(ctx)]);
-  const pumpFees = await read(ctx, c.pump, pumpAbi, "accruedProtocolFeesNusd");
-  const beforePump = await nusdOf(c.rewardStaking);
-  await send(ctx, c.pump, pumpAbi, "distributeFees");
-  if ((await nusdOf(c.rewardStaking)) - beforePump !== pumpFees / 2n) throw new Error("Pump fees were not split");
+  const [tradeFeeBps, marketCap, reserveTarget] = await read(ctx, c.pump, pumpAbi, "marketParams", [token]);
+  if (tradeFeeBps !== 10 || marketCap !== parseEther("6000") || reserveTarget !== parseEther("1500")) {
+    throw new Error("Pump market did not snapshot 10 bps / 6,000 / 1,500");
+  }
+  expectEqual(await read(ctx, c.pump, pumpAbi, "accruedProtocolFeesNusd"), parseEther("1.002"), "Pump fees");
 
-  // 0xPoints staking, governor gate, lending sweep gate, surplus capacity.
+  // One permissionless harvest collects Pump + router fees (lending has none and is skipped):
+  // NUSD 70% stakers / 20% burned / 10% treasury, WzkLTC 90% NUSD reserve / 10% treasury.
+  const before = {
+    staking: await nusdOf(c.rewardStaking),
+    treasury: await nusdOf(c.treasury),
+    treasuryNative: await ctx.publicClient.getBalance({ address: c.treasury }),
+    supply: await read(ctx, c.nusd, nusdAbi, "totalSupply"),
+    reserve: await read(ctx, c.nusd, nusdAbi, "totalCollateralWei"),
+  };
+  await send(ctx, c.feeSplitter, splitterAbi, "harvest");
+  expectEqual((await nusdOf(c.rewardStaking)) - before.staking, parseEther("0.7021"), "stakers' 70%");
+  expectEqual((await nusdOf(c.treasury)) - before.treasury, parseEther("0.1003"), "treasury's 10%");
+  expectEqual(before.supply - (await read(ctx, c.nusd, nusdAbi, "totalSupply")), parseEther("0.2006"), "20% burned");
+  expectEqual((await read(ctx, c.nusd, nusdAbi, "totalCollateralWei")) - before.reserve, parseEther("0.000009"), "zkLTC fee backs NUSD");
+  expectEqual((await ctx.publicClient.getBalance({ address: c.treasury })) - before.treasuryNative, parseEther("0.000001"), "treasury zkLTC");
+  expectEqual(await read(ctx, c.pump, pumpAbi, "accruedProtocolFeesNusd"), 0n, "Pump fees collected");
+
+  // Streaming staking picks every fee it holds (synth mint fees from seeding included) up on the
+  // first stake and starts paying them out.
+  const income = await nusdOf(c.rewardStaking);
   await send(ctx, c.nusd, nusdAbi, "approve", [c.rewardStaking, parseEther("1")]);
   await send(ctx, c.rewardStaking, stakingAbi, "stake", [parseEther("1"), 30 * 24 * 3600]);
   const [weight] = await read(ctx, c.rewardStaking, stakingAbi, "accountState", [me]);
-  if (weight !== parseEther("1")) throw new Error("Staking weight mismatch");
-  const [, triggerReached] = await read(ctx, c.nusd, nusdAbi, "surplusMintCapacity");
-  if (triggerReached) throw new Error("Fresh NUSD v2 unexpectedly reports a 3x surplus");
-  await expectRevert(ctx, c.surplusMintGovernor, governorAbi, "propose", [], "propose below 3x");
-  await expectRevert(ctx, c.lendingPool, lendingAbi, "sweepProtocolInterest", [], "sweep with no interest");
+  expectEqual(weight, parseEther("1"), "staking weight");
+  expectEqual(await read(ctx, c.rewardStaking, stakingAbi, "rewardFunded"), income, "income recognised");
+  if ((await read(ctx, c.rewardStaking, stakingAbi, "rewardRate")) === 0n) throw new Error("Reward stream did not start");
 
-  // Marketplace v2 on the real Pixel V2 collection: 0.1% burn, 0.4% to the ERC-2981 creator.
+  // NUSD: no surplus near 1x backing; redeem pays the oracle value; lending has nothing to sweep.
+  const [, ready] = await read(ctx, c.nusd, nusdAbi, "surplusMintCapacity");
+  if (ready) throw new Error("Fresh NUSD unexpectedly reports a surplus");
+  await expectRevert(ctx, c.nusd, nusdAbi, "releaseSurplus", [], "surplus below 3.3x");
+  await expectRevert(ctx, c.lendingPool, lendingAbi, "sweepProtocolInterest", [], "sweep with no interest");
+  const price = await priceOf(ctx, c.ltcOracle);
+  const quote = await read(ctx, c.nusd, nusdAbi, "quoteRedeem", [parseEther("1")]);
+  expectEqual(quote, (parseEther("1") * 10n ** 18n) / price, "redeem at the oracle");
+  const supplyBefore = await read(ctx, c.nusd, nusdAbi, "totalSupply");
+  await send(ctx, c.nusd, nusdAbi, "redeemAtOracle", [parseEther("1"), quote, me]);
+  expectEqual(supplyBefore - (await read(ctx, c.nusd, nusdAbi, "totalSupply")), parseEther("1"), "redeem burns");
+
+  // Marketplace on the real Pixel V2 collection: 0.1% burn, 0.4% to the ERC-2981 creator.
   const [burnAmount, creator, creatorFee] = await read(ctx, c.nusdMarketplace, marketAbi, "quoteSale", [c.pixelV2, 1n, parseEther("100")]);
   const [royaltyReceiver] = await read(ctx, c.pixelV2, royaltyAbi, "royaltyInfo", [1n, parseEther("100")]);
   if (burnAmount !== parseEther("0.1") || creatorFee !== parseEther("0.4") || !same(creator, royaltyReceiver)) {
-    throw new Error("Marketplace v2 quote does not follow the 0.1% burn / 0.4% creator schedule");
+    throw new Error("Marketplace quote does not follow the 0.1% burn / 0.4% creator schedule");
   }
   console.log("  smoke tests passed");
 }
 
-async function deploymentBlock(ctx) {
-  const blocks = [];
+/// Creation block of every v3 contract, from the local Foundry journals of the last run.
+function contractBlocks() {
+  const blocks = {};
   for (const journal of [
-    path.join(coreContracts, "broadcast", "DeployV2Core.s.sol", String(CHAIN_ID), "run-latest.json"),
-    path.join(fiContracts, "broadcast", "Deploy0xFiV2.s.sol", String(CHAIN_ID), "run-latest.json"),
+    path.join(coreContracts, "broadcast", "DeployV3Core.s.sol", String(CHAIN_ID), "run-latest.json"),
+    path.join(fiContracts, "broadcast", "Deploy0xFiV3.s.sol", String(CHAIN_ID), "run-latest.json"),
   ]) {
-    if (!fs.existsSync(journal)) continue;
-    for (const receipt of readJson(journal).receipts || []) blocks.push(BigInt(receipt.blockNumber));
+    const data = readJson(journal);
+    const blockByHash = new Map(data.receipts.map((receipt) => [receipt.transactionHash, Number(BigInt(receipt.blockNumber))]));
+    for (const transaction of data.transactions) {
+      if (transaction.transactionType === "CREATE") {
+        blocks[getAddress(transaction.contractAddress)] = blockByHash.get(transaction.hash);
+      }
+    }
   }
-  if (!blocks.length) return (await ctx.publicClient.getBlockNumber()).toString();
-  return blocks.reduce((min, value) => (value < min ? value : min)).toString();
+  return blocks;
 }
 
 function writeManifest(manifest) {
@@ -462,8 +520,8 @@ async function rehearse() {
     await ctx.publicClient.request({ method: "evm_increaseTime", params: [toHex(readyAt - now + 1n)] });
     await ctx.publicClient.request({ method: "evm_mine", params: [] });
     await activateGraduation(ctx, c);
-    const spent = (await ctx.publicClient.getBalance({ address: account.address }));
-    console.log(JSON.stringify({ mode: "rehearsal", passed: true, reserves, deployerBalanceAfter: formatEther(spent) }, null, 2));
+    const balance = await ctx.publicClient.getBalance({ address: account.address });
+    console.log(JSON.stringify({ mode: "rehearsal", passed: true, reserves, deployerBalanceAfter: formatEther(balance) }, null, 2));
   } finally {
     anvil.kill();
   }
@@ -473,13 +531,13 @@ async function broadcastLive() {
   const ctx = clientsFor(primaryRpcUrl(network));
   if ((await ctx.publicClient.getChainId()) !== CHAIN_ID) throw new Error("Wrong chain");
   let manifest = fs.existsSync(manifestPath) ? readJson(manifestPath) : { stage: "none" };
-  if (manifest.stage === "seeded" || manifest.stage === "active") throw new Error("v2 is already deployed");
+  if (manifest.stage === "seeded" || manifest.stage === "active") throw new Error("v3 is already deployed");
 
   if (manifest.stage === "none") {
     const balance = await ctx.publicClient.getBalance({ address: account.address });
     if (balance < MIN_LIVE_BALANCE) throw new Error(`Deployer balance ${formatEther(balance)} zkLTC is below 2.5`);
-    for (const oracle of [network.deployment.contracts.ltcOracle, network.deployment.contracts.btcOracle, network.deployment.contracts.ethOracle]) {
-      if (!(await read(ctx, oracle, oracleAbi, "isFresh"))) throw new Error(`Oracle ${oracle} is stale; seeding would fail`);
+    for (const adapter of LIVE_ADAPTERS) {
+      if (!(await read(ctx, adapter, oracleAbi, "isFresh"))) throw new Error(`Oracle ${adapter} is stale; seeding would fail`);
     }
     const core = await deployCore(ctx, "");
     manifest = { chainId: CHAIN_ID, deployer: account.address, stage: "core", core };
@@ -487,7 +545,8 @@ async function broadcastLive() {
   }
   if (manifest.stage === "core") {
     const fi = await deployFi(ctx, manifest.core, "");
-    manifest = { ...manifest, stage: "fi", fi, deploymentBlock: await deploymentBlock(ctx) };
+    // Record creation blocks now: a later rehearsal overwrites the Foundry journals.
+    manifest = { ...manifest, stage: "fi", fi, blocks: contractBlocks() };
     writeManifest(manifest);
   }
   if (manifest.stage === "fi") {
@@ -519,27 +578,154 @@ async function activateLive() {
   console.log(JSON.stringify({ stage: "active" }, null, 2));
 }
 
-/// Creation block of every v2 contract, from the local Foundry journals of the live run.
-function contractBlocks() {
-  const blocks = {};
-  for (const journal of [
-    path.join(coreContracts, "broadcast", "DeployV2Core.s.sol", String(CHAIN_ID), "run-latest.json"),
-    path.join(fiContracts, "broadcast", "Deploy0xFiV2.s.sol", String(CHAIN_ID), "run-latest.json"),
-  ]) {
-    const data = readJson(journal);
-    const blockByHash = new Map(data.receipts.map((receipt) => [receipt.transactionHash, Number(BigInt(receipt.blockNumber))]));
-    for (const transaction of data.transactions) {
-      if (transaction.transactionType === "CREATE") {
-        blocks[getAddress(transaction.contractAddress)] = blockByHash.get(transaction.hash);
-      }
-    }
+function writeSubgraphConfigs({ core, fi }, blockOf) {
+  // 0xFi subgraph: hub factory, gauges, vaults, lending and NUSD.
+  const fiConfigPath = path.join(fiRoot, "subgraph", "subgraph.config.json");
+  const fiConfig = readJson(fiConfigPath);
+  delete fiConfig.synthFeeGaugeFactoryAddress;
+  delete fiConfig.synthFeeGaugeFactoryStartBlock;
+  Object.assign(fiConfig, {
+    factoryAddress: fi.dexFactory,
+    gaugeFactoryAddress: fi.gaugeFactory,
+    nbtcVaultAddress: fi.nBTCVault,
+    nethVaultAddress: fi.nETHVault,
+    lendingPoolAddress: fi.lendingPool,
+    nusdAddress: core.nusd,
+    // The suite's first contract, the same block the network config records as its deployment.
+    startBlock: blockOf(core.ltcOracle),
+    factoryStartBlock: blockOf(fi.dexFactory),
+    gaugeFactoryStartBlock: blockOf(fi.gaugeFactory),
+    nbtcVaultStartBlock: blockOf(fi.nBTCVault),
+    nethVaultStartBlock: blockOf(fi.nETHVault),
+    lendingPoolStartBlock: blockOf(fi.lendingPool),
+    deploymentName: FI_SUBGRAPH.split("/")[0],
+  });
+  atomicWriteFile(fiConfigPath, `${JSON.stringify(fiConfig, null, 2)}\n`);
+
+  // 0xPump subgraph: the Pump and the graduation pair it reports.
+  const pumpConfigPath = path.join(testnetRoot, "subgraphs", "0xpump", "subgraph.config.json");
+  const pumpConfig = readJson(pumpConfigPath);
+  Object.assign(pumpConfig, {
+    contractAddress: core.pump.toLowerCase(),
+    startBlock: blockOf(core.pump),
+    graduationPolicy: {
+      mode: "controller-active",
+      controllerAddress: fi.pumpGraduationController.toLowerCase(),
+      adapterAddress: fi.pumpGraduationAdapter.toLowerCase(),
+    },
+  });
+  atomicWriteFile(pumpConfigPath, `${JSON.stringify(pumpConfig, null, 2)}\n`);
+
+  // NUSD marketplace subgraph: the marketplace and the Pixel V1 transfers it watches, from its creation.
+  const marketManifestPath = path.join(testnetRoot, "subgraphs", "0xpixel-nusd-market", "subgraph.yaml");
+  const marketBlock = blockOf(core.nusdMarketplace);
+  const marketManifest = fs.readFileSync(marketManifestPath, "utf8")
+    .replace(/(name: NusdNftMarketplace[\s\S]*?address: )"0x[0-9a-fA-F]{40}"/, `$1"${core.nusdMarketplace}"`)
+    .replace(/startBlock: \d+/g, `startBlock: ${marketBlock}`);
+  if (!marketManifest.includes(`address: "${core.nusdMarketplace}"`)) {
+    throw new Error("Could not point the NUSD marketplace subgraph at the v3 marketplace");
   }
-  return blocks;
+  atomicWriteFile(marketManifestPath, marketManifest);
+}
+
+/// Creation transactions of the core contracts, keyed like the manifest. Refuses a journal from a
+/// rehearsal: every created address must be one of the live core contracts.
+function coreTransactions(core) {
+  const journal = readJson(path.join(coreContracts, "broadcast", "DeployV3Core.s.sol", String(CHAIN_ID), "run-latest.json"));
+  const keyOf = new Map(CORE_KEYS.map((key) => [core[key].toLowerCase(), key]));
+  const blockByHash = new Map(journal.receipts.map((receipt) => [receipt.transactionHash, Number(BigInt(receipt.blockNumber))]));
+  const transactions = {};
+  for (const transaction of journal.transactions) {
+    if (transaction.transactionType !== "CREATE") continue;
+    const key = keyOf.get(transaction.contractAddress.toLowerCase());
+    if (!key) throw new Error(`The core journal is not the live run (${transaction.contractName} ${transaction.contractAddress})`);
+    transactions[key] = {
+      contract: transaction.contractName,
+      address: transaction.contractAddress.toLowerCase(),
+      transactionHash: transaction.hash,
+      receiptBlock: blockByHash.get(transaction.hash),
+    };
+  }
+  return transactions;
+}
+
+/// The deployment record other operator tools and the wallet tests read the live Pump from.
+async function writePumpRecord(manifest, blockOf) {
+  const ctx = clientsFor(primaryRpcUrl(network));
+  const { core, fi } = manifest;
+  const recordPath = path.join(testnetRoot, "deployments", "liteforge-testnet", "deployments.json");
+  const record = readJson(recordPath);
+  const pumpRead = (functionName) => read(ctx, core.pump, pumpAbi, functionName);
+  const active = manifest.stage === "active";
+  record.pump = {
+    broadcasted: true,
+    liveVerified: true,
+    version: "v3-tokenomics",
+    nusd: core.nusd.toLowerCase(),
+    nusdOracle: core.ltcOracle.toLowerCase(),
+    permanentLiquidityLocker: core.pumpLiquidityLocker.toLowerCase(),
+    launchpad: core.pump.toLowerCase(),
+    pumpTokenImplementation: getAddress(await pumpRead("tokenImplementation")),
+    graduationRouter: core.pumpGraduationRouter.toLowerCase(),
+    feeRecipient: core.feeSplitter.toLowerCase(),
+    deploymentBlock: blockOf(core.pump),
+    // Terms for markets created from now on; every market keeps the terms it launched with.
+    configuration: {
+      unit: "wei",
+      initialVirtualNusdReserve: String(await pumpRead("initialVirtualNusdReserve")),
+      graduationMarketCapTargetNusd: String(await pumpRead("graduationThresholdNusd")),
+      graduationReserveThresholdNusd: String(await pumpRead("graduationReserveThresholdNusd")),
+      createFeeNusd: String(await pumpRead("createFee")),
+      tradeFeeBps: Number(await pumpRead("tradeFeeBps")),
+      perMarketTerms: true,
+    },
+    graduation: {
+      enabled: active,
+      adapter: fi.pumpGraduationAdapter,
+      controller: fi.pumpGraduationController,
+      controllerOwnsPumpAdmin: active,
+      controllerOwnsRouterAdmin: active,
+      operational: active,
+      minimumDelaySeconds: 3600,
+      controllerGovernance: manifest.deployer,
+      controllerGuardian: manifest.deployer,
+      activatedAt: manifest.activatedAt ?? null,
+    },
+    subgraphVersion: PUMP_SUBGRAPH.split("/")[1],
+    subgraphUrl: goldskyEndpoint(PUMP_SUBGRAPH),
+    transactions: coreTransactions(core),
+  };
+  atomicWriteFile(recordPath, `${JSON.stringify(record, null, 2)}\n`);
+}
+
+/// The web's NUSD marketplace pin; the site only trusts it when its NUSD and identity match.
+async function writeMarketplaceRecord(manifest, blockOf) {
+  const ctx = clientsFor(primaryRpcUrl(network));
+  const { core } = manifest;
+  const market = (functionName, args = []) => read(ctx, core.nusdMarketplace, marketAdminAbi, functionName, args);
+  const collections = [core.pixelV1, core.pixelV2];
+  for (const collection of collections) {
+    if (!(await market("collectionAllowed", [collection]))) throw new Error(`Marketplace does not allow ${collection}`);
+  }
+  if (!same(await market("nusd"), core.nusd)) throw new Error("Marketplace is bound to another NUSD");
+  const record = {
+    chainId: CHAIN_ID,
+    address: core.nusdMarketplace,
+    nusd: core.nusd,
+    owner: getAddress(await market("owner")),
+    burnBps: Number(await market("BURN_BPS")),
+    creatorBps: Number(await market("CREATOR_BPS")),
+    collections,
+    implementation: await market("IMPLEMENTATION_ID"),
+    deploymentBlock: String(blockOf(core.nusdMarketplace)),
+  };
+  const target = path.join(testnetRoot, "apps", "web", "lib", "nusdMarketplace.generated.json");
+  atomicWriteFile(target, `${JSON.stringify(record, null, 2)}\n`);
 }
 
 async function publish() {
   const manifest = readJson(manifestPath);
-  if (manifest.stage !== "seeded" && manifest.stage !== "active") throw new Error("Deploy v2 before publishing it");
+  if (manifest.stage !== "seeded" && manifest.stage !== "active") throw new Error("Deploy v3 before publishing it");
   const blocks = manifest.blocks ?? contractBlocks();
   const blockOf = (address) => {
     const block = blocks[getAddress(address)];
@@ -547,31 +733,30 @@ async function publish() {
     return block;
   };
   const { core, fi } = manifest;
-  const deploymentBlock = String(blockOf(core.nusd));
+  const deploymentBlock = String(blockOf(core.ltcOracle));
 
-  // Network config: v2 becomes the active set; v1 is kept verbatim for reference.
+  // Network config: v3 becomes the active set; v1 is kept verbatim for reference.
   const networkPath = path.join(fiRoot, "config", "liteforge-testnet.json");
-  const network = readJson(networkPath);
-  const legacyV1 = network.legacyV1 ?? {
-    existingContracts: network.existingContracts,
-    pumpGraduation: network.pumpGraduation,
-    goldsky: network.goldsky,
-    deployment: network.deployment,
+  const currentNetwork = readJson(networkPath);
+  const legacyV1 = currentNetwork.legacyV1 ?? {
+    existingContracts: currentNetwork.existingContracts,
+    pumpGraduation: currentNetwork.pumpGraduation,
+    goldsky: currentNetwork.goldsky,
+    deployment: currentNetwork.deployment,
   };
   const contracts = {
     ...Object.fromEntries(FI_KEYS.map((key) => [key, fi[key]])),
     wzkLTC: fi.wzkLTC,
-    ltcOracle: fi.ltcOracle,
-    btcOracle: fi.btcOracle,
-    ethOracle: fi.ethOracle,
+    ltcOracle: core.ltcOracle,
+    btcOracle: core.btcOracle,
+    ethOracle: core.ethOracle,
     treasury: core.treasury,
     feeSplitter: core.feeSplitter,
     rewardStaking: core.rewardStaking,
-    surplusMintGovernor: core.surplusMintGovernor,
     nusdMarketplace: core.nusdMarketplace,
   };
   const updatedNetwork = {
-    ...network,
+    ...currentNetwork,
     existingContracts: {
       nusd: core.nusd,
       pump: core.pump,
@@ -581,12 +766,12 @@ async function publish() {
     pumpGraduation: { minimumDelaySeconds: 3600 },
     goldsky: { network: "liteforge", subgraph: FI_SUBGRAPH, tag: null, endpoint: goldskyEndpoint(FI_SUBGRAPH) },
     deployment: {
-      status: manifest.stage === "active" ? "v2-tokenomics-active" : "v2-tokenomics-pending-graduation",
+      status: manifest.stage === "active" ? "v3-tokenomics-active" : "v3-tokenomics-pending-graduation",
       governanceMode: "direct-deployer-no-timelock",
       governance: manifest.deployer,
       guardian: manifest.deployer,
       coreOwnershipStatus: "direct-deployer-owner-no-pending",
-      riskMode: "caps-pauses-oracles-no-nusd-health-guard",
+      riskMode: "caps-pauses-oracle-routers-no-nusd-health-guard",
       lendingImplementationStatus: CURRENT_LENDING_IMPLEMENTATION_STATUS,
       lendingImplementationMigrationRequired: false,
       deploymentBlock,
@@ -597,29 +782,11 @@ async function publish() {
   };
   atomicWriteFile(networkPath, `${JSON.stringify(updatedNetwork, null, 2)}\n`);
 
-  // 0xFi subgraph: no synth fee gauge factory in v2.
-  const subgraphConfigPath = path.join(fiRoot, "subgraph", "subgraph.config.json");
-  const subgraphConfig = readJson(subgraphConfigPath);
-  delete subgraphConfig.synthFeeGaugeFactoryAddress;
-  delete subgraphConfig.synthFeeGaugeFactoryStartBlock;
-  Object.assign(subgraphConfig, {
-    factoryAddress: fi.dexFactory,
-    gaugeFactoryAddress: fi.gaugeFactory,
-    nbtcVaultAddress: fi.nBTCVault,
-    nethVaultAddress: fi.nETHVault,
-    lendingPoolAddress: fi.lendingPool,
-    nusdAddress: core.nusd,
-    startBlock: Number(deploymentBlock),
-    factoryStartBlock: blockOf(fi.dexFactory),
-    gaugeFactoryStartBlock: blockOf(fi.gaugeFactory),
-    nbtcVaultStartBlock: blockOf(fi.nBTCVault),
-    nethVaultStartBlock: blockOf(fi.nETHVault),
-    lendingPoolStartBlock: blockOf(fi.lendingPool),
-    deploymentName: FI_SUBGRAPH.split("/")[0],
-  });
-  atomicWriteFile(subgraphConfigPath, `${JSON.stringify(subgraphConfig, null, 2)}\n`);
+  writeSubgraphConfigs(manifest, blockOf);
+  await writePumpRecord(manifest, blockOf);
+  await writeMarketplaceRecord(manifest, blockOf);
 
-  // Web: the same generator v1 used, plus the tokenomics contracts and v2 indexers.
+  // Web: the same generator v1 used, plus the tokenomics contracts and the indexers.
   const flat = {
     ...contracts,
     nusd: core.nusd,
@@ -635,14 +802,13 @@ async function publish() {
     treasury: core.treasury,
     feeSplitter: core.feeSplitter,
     rewardStaking: core.rewardStaking,
-    surplusMintGovernor: core.surplusMintGovernor,
     nusdMarketplace: core.nusdMarketplace,
     nusdMarketplaceDeploymentBlock: String(blockOf(core.nusdMarketplace)),
     pumpGraduationRouter: core.pumpGraduationRouter,
     pumpGoldskyEndpoint: goldskyEndpoint(PUMP_SUBGRAPH),
     nusdMarketGoldskyEndpoint: goldskyEndpoint(NUSD_MARKET_SUBGRAPH),
   };
-  // The shared generator still emits keys only the retired suite used; the web no longer reads them.
+  // The shared generator still emits keys only the retired suites used; the web no longer reads them.
   for (const key of ["nusdPointsStaking", "synthFeeGaugeFactory", "legacyNbtcVault", "legacyNethVault"]) delete generated[key];
   atomicWriteFile(publicGeneratedConfigTarget(fiRoot), `${JSON.stringify(generated, null, 2)}\n`);
 
@@ -662,7 +828,10 @@ async function status() {
   if (c.nusd) {
     extra.nusdSupply = formatEther(await read(ctx, c.nusd, nusdAbi, "totalSupply"));
     extra.reserveValueNusd = formatEther(await read(ctx, c.nusd, nusdAbi, "reserveValueNusd"));
-    extra.rewardPoolAvailable = formatEther(await read(ctx, c.rewardStaking, stakingAbi, "availableRewards"));
+    extra.backingRatio = formatEther(await read(ctx, c.nusd, nusdAbi, "backingRatioWad"));
+    extra.stakedNusd = formatEther(await read(ctx, c.rewardStaking, stakingAbi, "totalPrincipal"));
+    extra.queuedRewardsNusd = formatEther(await read(ctx, c.rewardStaking, stakingAbi, "queuedRewards"));
+    extra.feeSources = String(await read(ctx, c.feeSplitter, splitterAbi, "sourceCount"));
   }
   console.log(JSON.stringify({ stage: manifest.stage, graduationReadyAt: manifest.graduationReadyAt, ...extra }, null, 2));
 }

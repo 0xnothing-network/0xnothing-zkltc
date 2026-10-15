@@ -10,8 +10,9 @@ import {
   formatPoints,
   formatPointsPerDay,
   POINTS_LOCK_OPTIONS,
+  dailyReward,
   loadPointsState,
-  roundShareBps,
+  rewardShareBps,
   stakeNusdForPoints,
   stakeWeight,
   type PointsPosition,
@@ -340,21 +341,30 @@ export function Earn(): ReactNode {
                 tone="green"
               />
               <Row
-                label={t("earn.roundPoints")}
-                value={state === null ? "…" : formatPoints(state.openPoints)}
+                label={t("earn.points")}
+                value={state === null ? "…" : formatPoints(state.points)}
                 tone="green"
               />
               <Row
-                label={t("earn.roundShare")}
+                label={t("earn.rewardShare")}
                 value={state === null
                   ? "…"
-                  : `${(roundShareBps(state.openPoints, state.openRoundPoints) / 100).toFixed(2)}%`}
+                  : `${(rewardShareBps(state.weight, state.totalWeight) / 100).toFixed(2)}%`}
               />
               <Row
-                label={t("earn.pool")}
+                label={t("earn.yourDaily")}
                 value={state === null
                   ? "…"
-                  : `${formatAmount(state.poolAvailable, NUSD_TOKEN.decimals, 2)} / ${formatAmount(state.roundReward, NUSD_TOKEN.decimals, 0)} NUSD`}
+                  : `${formatAmount(dailyReward(state.rewardRate, state.weight, state.totalWeight), NUSD_TOKEN.decimals, 4)} NUSD`}
+                tone="green"
+              />
+              <Row
+                label={t("earn.stream")}
+                value={state === null
+                  ? "…"
+                  : state.rewardRate > 0n
+                    ? `${formatAmount(state.rewardRate * 86_400n, NUSD_TOKEN.decimals, 2)} NUSD`
+                    : `${formatAmount(state.queued, NUSD_TOKEN.decimals, 2)} NUSD`}
               />
               <Row
                 label={t("earn.claimable")}

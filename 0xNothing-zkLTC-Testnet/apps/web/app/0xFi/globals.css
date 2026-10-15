@@ -3398,6 +3398,11 @@
   opacity: 0.5;
   cursor: default;
 }
+.fi-round-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
 .fi-round-help {
   color: var(--fi-muted);
   font-size: var(--fi-text-body);
@@ -3579,35 +3584,17 @@
   font-size: var(--fi-text-data);
   white-space: nowrap;
 }
-.fi-revenue-list .fi-button {
+.fi-revenue-harvest {
+  justify-self: start;
   min-height: 34px;
   padding: 0 14px;
-}
-.fi-vote-overview {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 20px;
-}
-.fi-vote-overview .ox-health-gauge {
-  width: 168px;
-  margin: 0;
-}
-.fi-vote-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
 }
 @media (max-width: 960px) {
   .fi-round-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .fi-earn-workspace,
-  .fi-vote-overview {
+  .fi-earn-workspace {
     grid-template-columns: 1fr;
-  }
-  .fi-vote-overview .ox-health-gauge {
-    justify-self: center;
   }
 }
 @media (max-width: 560px) {

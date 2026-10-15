@@ -91,8 +91,9 @@ export function MintNusd(): ReactNode {
   const quoted = quote.data;
   const minOut = quoted === null ? null : applySlippage(quoted, settings.slippageBps);
 
-  // Fail closed while the flags are unknown: `state === null` reads as paused.
-  const paused = mint ? state?.mintPaused !== false : state?.redeemPaused !== false;
+  // Fail closed while the flag is unknown: `state === null` reads as paused. Redemption
+  // has no pause switch.
+  const paused = mint ? state?.mintPaused !== false : false;
   const fresh = state?.priceFresh === true;
   const overHeadroom = mint && quoted !== null && state !== null && quoted > state.headroomNusd;
   const overCollateral = !mint && quoted !== null && state !== null && quoted > state.collateralWei;

@@ -8,9 +8,9 @@ dataSources:
     name: ZeroXFiFactory
     network: liteforge
     source:
-      address: "0x1D1dFE055F261DB4B27962A9c3097e779dD8ac58"
+      address: "0xc6B675d701a168789A5cc7Dd04Ef9e531886114c"
       abi: ZeroXFiFactory
-      startBlock: 60811688
+      startBlock: 61141544
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -29,9 +29,9 @@ dataSources:
     name: GaugeFactory
     network: liteforge
     source:
-      address: "0x271d09B5B073Db5c6F564E4e8c4e0bfe73F7f449"
+      address: "0xB300Faa8AE7a36eFa17e028dE325dA0c12110904"
       abi: GaugeFactory
-      startBlock: 60811712
+      startBlock: 61141569
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -50,9 +50,9 @@ dataSources:
     name: NbtcVault
     network: liteforge
     source:
-      address: "0x24c475Be424dF2fd1Cfd8CBe1d521e7DA39b0dc4"
+      address: "0x094343B925941D00424E8440C572231D6b93a751"
       abi: SyntheticVault
-      startBlock: 60811731
+      startBlock: 61141585
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -99,9 +99,9 @@ dataSources:
     name: NethVault
     network: liteforge
     source:
-      address: "0x0c1EAd9E1CF9cfF5504E36217a6D33AE48c68F84"
+      address: "0xF909924f8BD003673d97667EA150173f87FaFA1B"
       abi: SyntheticVault
-      startBlock: 60811736
+      startBlock: 61141589
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -148,9 +148,9 @@ dataSources:
     name: LendingPool
     network: liteforge
     source:
-      address: "0xF37eCaed4E7869850071BB9439E32C917F60F080"
+      address: "0x6Cc96c044321b3205Ac108107Fc6d2d47e0B3E44"
       abi: LendingPool
-      startBlock: 60811764
+      startBlock: 61141614
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9

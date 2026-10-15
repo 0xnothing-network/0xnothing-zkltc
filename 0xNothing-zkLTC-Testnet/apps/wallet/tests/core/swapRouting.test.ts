@@ -18,7 +18,7 @@ function fixture(oraclePause: boolean | "unreadable", swapsPaused = false) {
     if (functionName === "getReserves") return [1_000_000n, 1_000_000n, 0];
     if (functionName === "totalSupply") return 1_000_000n;
     if (functionName === "swapsPaused") return swapsPaused;
-    if (functionName === "mintPaused" || functionName === "redeemPaused") {
+    if (functionName === "mintPaused") {
       if (oraclePause === "unreadable") throw new Error("RPC unavailable");
       return oraclePause;
     }
@@ -40,14 +40,20 @@ function fixture(oraclePause: boolean | "unreadable", swapsPaused = false) {
   });
 }
 
-test("live AMM routes remain available when a higher-output oracle route is paused or unreadable", async () => {
+test("live AMM routes remain available when a higher-output mint route is paused or unreadable", async () => {
   for (const paused of [true, "unreadable"] as const) {
-    for (const [tokenIn, tokenOut] of [[native, token], [token, native]]) {
-      const quote = await fixture(paused).quoteSwap({ tokenIn, tokenOut, amountIn: 100n });
-      assert.equal(quote.kind, "direct");
-      assert.equal(quote.amountOut, 1_000n);
-      assert.equal(quote.paused, false);
-    }
+    const quote = await fixture(paused).quoteSwap({ tokenIn: native, tokenOut: token, amountIn: 100n });
+    assert.equal(quote.kind, "direct");
+    assert.equal(quote.amountOut, 1_000n);
+    assert.equal(quote.paused, false);
+  }
+});
+
+test("redemption has no pause switch, so redeem routes stay open", async () => {
+  for (const paused of [true, "unreadable"] as const) {
+    const quote = await fixture(paused).quoteSwap({ tokenIn: token, tokenOut: native, amountIn: 100n });
+    assert.equal(quote.kind, "oracle-redeem");
+    assert.equal(quote.paused, false);
   }
 });
 

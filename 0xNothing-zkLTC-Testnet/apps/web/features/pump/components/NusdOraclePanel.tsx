@@ -60,6 +60,14 @@ function displayUsdWad(value: bigint | undefined, pending: boolean, digits = 2):
   return amount === "..." || amount === "--" ? amount : `$${amount}`;
 }
 
+/** Reserve value over supply; the contract reports max uint while nothing is minted. */
+function displayBacking(ratioWad: bigint | undefined, pending: boolean): string {
+  if (pending) return "...";
+  if (ratioWad === undefined) return "--";
+  if (ratioWad > 10n ** 24n) return "--";
+  return `${(Number(ratioWad / 10n ** 14n) / 10_000).toFixed(2)}x`;
+}
+
 export function NusdOraclePanel() {
   const toast = useToast();
   const { address, isConnected, chainId } = useAccount();
@@ -112,10 +120,10 @@ export function NusdOraclePanel() {
     chainId: PUMP_CHAIN_ID,
     query: { enabled: configured },
   });
-  const supplyCeiling = useReadContract({
+  const backingRatio = useReadContract({
     address: PUMP_NUSD_ADDRESS,
     abi: nusdAbi,
-    functionName: "supplyCeilingNusd",
+    functionName: "backingRatioWad",
     chainId: PUMP_CHAIN_ID,
     query: { enabled: configured },
   });
@@ -123,13 +131,6 @@ export function NusdOraclePanel() {
     address: PUMP_NUSD_ADDRESS,
     abi: nusdAbi,
     functionName: "mintPaused",
-    chainId: PUMP_CHAIN_ID,
-    query: { enabled: configured },
-  });
-  const redeemPaused = useReadContract({
-    address: PUMP_NUSD_ADDRESS,
-    abi: nusdAbi,
-    functionName: "redeemPaused",
     chainId: PUMP_CHAIN_ID,
     query: { enabled: configured },
   });
@@ -203,10 +204,11 @@ export function NusdOraclePanel() {
   const quoteError = mode === "mint" ? mintQuote.error : redeemQuote.error;
   const minOut = minimumOutput(quote ?? 0n);
   const metricsReadFailed = Boolean(
-    totalSupply.error || reserve.error || reserveValue.error || supplyCeiling.error,
+    totalSupply.error || reserve.error || reserveValue.error || backingRatio.error,
   );
-  const actionPaused = mode === "mint" ? mintPaused.data : redeemPaused.data;
-  const pausePending = mode === "mint" ? mintPaused.isPending : redeemPaused.isPending;
+  // Only minting can be paused; redemption is always open.
+  const actionPaused = mode === "mint" && mintPaused.data;
+  const pausePending = mode === "mint" && mintPaused.isPending;
   const balancePending = mode === "mint" ? nativeBalance.isPending : nusdBalance.isPending;
   const amountExceedsBalance = mode === "mint"
     ? nativeBalance.data !== undefined && collateralWei > nativeBalance.data.value
@@ -216,9 +218,7 @@ export function NusdOraclePanel() {
       ? "Amount exceeds your zkLTC balance."
       : "Amount exceeds your NUSD balance."
     : actionPaused
-      ? mode === "mint"
-        ? "Minting is temporarily paused."
-        : "Redemption is temporarily paused."
+      ? "Minting is temporarily paused."
       : quoteError
         ? "A fresh DIA quote is unavailable."
         : null;
@@ -239,9 +239,8 @@ export function NusdOraclePanel() {
       totalSupply.refetch(),
       reserve.refetch(),
       reserveValue.refetch(),
-      supplyCeiling.refetch(),
+      backingRatio.refetch(),
       mintPaused.refetch(),
-      redeemPaused.refetch(),
       oraclePrice.refetch(),
       oracleFresh.refetch(),
     ]);
@@ -361,7 +360,7 @@ export function NusdOraclePanel() {
         <div><span>zkLTC / USD</span><strong>{oracleChecking ? "..." : oracleReady ? `${displayWad(oraclePriceWad, false, 4)} USD` : "--"}</strong></div>
         <div><span>DIA updated</span><strong>{oracleUpdatedAt ? formatRelativeTime(oracleUpdatedAt) : "--"}</strong></div>
         <div><span>Reserve value</span><strong>{displayUsdWad(reserveValue.data, reserveValue.isPending, 2)}</strong></div>
-        <div><span>Supply ceiling</span><strong>{displayUsdWad(supplyCeiling.data, supplyCeiling.isPending, 2)}</strong></div>
+        <div><span>Backing</span><strong>{displayBacking(backingRatio.data, backingRatio.isPending)}</strong></div>
       </div>
 
       <div className="pump-vault-metrics">

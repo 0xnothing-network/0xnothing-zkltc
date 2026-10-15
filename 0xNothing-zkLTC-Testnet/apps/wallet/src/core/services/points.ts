@@ -6,11 +6,14 @@ import { activeNetwork, publicClient } from "../rpc/client";
 import { ensureAllowance, type TxExecutionContext, writeCall } from "./tx";
 
 /**
- * 0xPoints (contracts/src/rewards/RewardStaking.sol). Points are lock-weighted
- * NUSD-seconds; the wallet shows them per day, so 1 0xPoint = 1 weighted NUSD for 1 day.
+ * 0xPoints staking (contracts/src/rewards/RewardStaking.sol). Every NUSD that reaches the
+ * contract streams to stakers over the following 7 days, pro rata to lock weight. Points are
+ * lifetime lock-weighted NUSD-seconds; the wallet shows them per day, so 1 0xPoint = 1 weighted
+ * NUSD for 1 day.
  */
 export const POINT_SECONDS_PER_DISPLAY_POINT = 86_400n;
 export const POINTS_DISPLAY_DIGITS = 2;
+export const SECONDS_PER_DAY = 86_400n;
 
 const DAY_SECONDS = 24 * 60 * 60;
 const POSITION_READ_LIMIT = 50;
@@ -37,13 +40,15 @@ export interface PointsState {
   /** Principal still locked across the loaded positions. */
   totalLocked: bigint;
   weight: bigint;
-  /** The account's 0xPoints in the open round (weighted NUSD-seconds). */
-  openPoints: bigint;
-  /** Every 0xPoint accrued by all stakers in the open round. */
-  openRoundPoints: bigint;
+  /** The account's lifetime 0xPoints (weighted NUSD-seconds). */
+  points: bigint;
   claimable: bigint;
-  poolAvailable: bigint;
-  roundReward: bigint;
+  /** NUSD wei streamed to all stakers per second right now. */
+  rewardRate: bigint;
+  /** Lock weight of every staker. */
+  totalWeight: bigint;
+  /** NUSD still to stream, income not picked up yet included. */
+  queued: bigint;
   positionCount: bigint;
   positionsTruncated: boolean;
   positions: PointsPosition[];
@@ -62,10 +67,16 @@ export function formatPointsPerDay(weight: bigint): string {
   return `${formatAmount(weight > 0n ? weight : 0n, 18, POINTS_DISPLAY_DIGITS)} 0xPoints`;
 }
 
-/** Share of the open round in basis points; 0 when nobody has points yet. */
-export function roundShareBps(points: bigint, totalPoints: bigint): number {
-  if (points <= 0n || totalPoints <= 0n) return 0;
-  return Number((points * 10_000n) / totalPoints);
+/** Share of the reward stream in basis points; 0 when nobody is staked. */
+export function rewardShareBps(weight: bigint, totalWeight: bigint): number {
+  if (weight <= 0n || totalWeight <= 0n) return 0;
+  return Number((weight * 10_000n) / totalWeight);
+}
+
+/** NUSD wei the account receives per day at the current stream rate. */
+export function dailyReward(rewardRate: bigint, weight: bigint, totalWeight: bigint): bigint {
+  if (rewardRate <= 0n || weight <= 0n || totalWeight <= 0n) return 0n;
+  return (rewardRate * weight * SECONDS_PER_DAY) / totalWeight;
 }
 
 export function stakeWeight(amount: bigint, multiplierBps: number): bigint {
@@ -113,7 +124,7 @@ function normalizePosition(
 }
 
 /**
- * Loads the account's 0xPoints, claimable rewards, the pool and at most the 50
+ * Loads the account's 0xPoints, claimable rewards, the reward stream and at most the 50
  * newest positions. Partial reads degrade to zero; no action depends on a guess.
  */
 export async function loadPointsState(account: Address): Promise<PointsState> {
@@ -124,14 +135,14 @@ export async function loadPointsState(account: Address): Promise<PointsState> {
     contracts: [
       { ...staking, functionName: "accountState", args: [account] },
       { ...staking, functionName: "positionIdsOf", args: [account] },
-      { ...staking, functionName: "availableRewards" },
-      { ...staking, functionName: "ROUND_REWARD" },
-      { ...staking, functionName: "openRoundPoints" },
+      { ...staking, functionName: "rewardRate" },
+      { ...staking, functionName: "totalWeight" },
+      { ...staking, functionName: "queuedRewards" },
     ] as const,
   });
 
   const accountRead = calls[0];
-  const [weight, openPoints, claimable] = accountRead?.status === "success"
+  const [weight, points, claimable] = accountRead?.status === "success"
     ? accountRead.result as readonly [bigint, bigint, bigint]
     : [0n, 0n, 0n];
   const idsRead = calls[1];
@@ -158,11 +169,11 @@ export async function loadPointsState(account: Address): Promise<PointsState> {
   return {
     totalLocked: positions.reduce((sum, position) => (position.withdrawn ? sum : sum + position.amount), 0n),
     weight,
-    openPoints,
-    openRoundPoints: numericResult(calls, 4),
+    points,
     claimable,
-    poolAvailable: numericResult(calls, 2),
-    roundReward: numericResult(calls, 3),
+    rewardRate: numericResult(calls, 2),
+    totalWeight: numericResult(calls, 3),
+    queued: numericResult(calls, 4),
     positionCount: BigInt(allIds.length),
     positionsTruncated: allIds.length > POSITION_READ_LIMIT,
     positions,
@@ -216,7 +227,7 @@ export async function withdrawPointsStake(params: {
   }, context);
 }
 
-/** Claims every allocated reward to the signing account itself. */
+/** Claims every streamed reward to the signing account itself. */
 export async function claimPointsRewards(params: {
   from: Address;
   amount: bigint;

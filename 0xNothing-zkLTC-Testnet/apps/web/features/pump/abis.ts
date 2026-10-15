@@ -76,7 +76,7 @@ export const nusdAbi = parseAbi([
   "function totalCollateralWei() view returns (uint256)",
   "function reserveValueNusd() view returns (uint256)",
   "function mintPaused() view returns (bool)",
-  "function redeemPaused() view returns (bool)",
+  "function backingRatioWad() view returns (uint256)",
   "function quoteMint(uint256 collateralWei) view returns (uint256 amountNusd)",
   "function mintAtOracle(uint256 minNusdOut,address recipient) payable returns (uint256 amountNusd)",
   "function quoteRedeem(uint256 amountNusd) view returns (uint256 collateralOutWei)",

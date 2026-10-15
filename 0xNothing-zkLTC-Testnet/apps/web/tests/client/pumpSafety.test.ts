@@ -350,7 +350,7 @@ function componentHarness(name: PumpComponent, changeAt?: "simulation" | "upload
               : functionName === "pump" ? FACTORY : functionName === "adapter" ? adapter
                 : functionName === "oracle" ? adapter
                   : functionName === "readPriceWad" ? [100n, 1n, 1n]
-                    : ["graduationsPaused", "mintPaused", "redeemPaused"].includes(functionName) ? false
+                    : ["graduationsPaused", "mintPaused"].includes(functionName) ? false
                       : ["enabled", "isAdapterAllowed", "isFresh"].includes(functionName) ? true
                         : functionName === "governance" ? ACCOUNT : 10n * 10n ** 18n;
           void address;

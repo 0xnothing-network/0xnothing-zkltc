@@ -7,7 +7,6 @@ import { useToast } from "@fi/components/Toast";
 const NUSD_NAV = [
   { href: "/nusd", label: "Mint" },
   { href: "/nusd/earn", label: "Earn" },
-  { href: "/nusd/vote", label: "Vote" },
 ] as const;
 
 function isActiveRoute(pathname: string, href: string): boolean {

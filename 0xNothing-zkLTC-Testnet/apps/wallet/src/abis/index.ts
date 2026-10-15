@@ -34,7 +34,6 @@ export const nusdOracleAbi = parseAbi([
   "function quoteRedeem(uint256 amountNusd) view returns (uint256 collateralOutWei)",
   "function redeemAtOracle(uint256 amountNusd, uint256 minCollateralOutWei, address recipient) returns (uint256 collateralOutWei)",
   "function mintPaused() view returns (bool)",
-  "function redeemPaused() view returns (bool)",
   "function supplyCeilingNusd() view returns (uint256)",
   "function totalSupply() view returns (uint256)",
   "function totalCollateralWei() view returns (uint256)",
@@ -74,6 +73,7 @@ export const zeroXPumpAbi = parseAbi([
   "function spotPriceNusdWad(address token) view returns (uint256)",
   "function getAllTokens() view returns (address[] tokens)",
   "function paused() view returns (bool)",
+  "function marketParams(address token) view returns (uint16 tradeFeeBps,uint120 graduationThresholdNusd,uint120 graduationReserveThresholdNusd)",
 ]);
 
 /** 0xFi lending pool; distinct from fixed-duration points staking. */
@@ -93,11 +93,10 @@ export const lendingPoolAbi = parseAbi([
 
 /** 0xPoints staking (contracts/src/rewards/RewardStaking.sol). */
 export const rewardStakingAbi = parseAbi([
-  "function ROUND_REWARD() view returns (uint256)",
-  "function availableRewards() view returns (uint256)",
-  "function openRoundPoints() view returns (uint256)",
-  "function currentRound() view returns (uint32)",
-  "function accountState(address user) view returns (uint256 weight, uint256 openPoints, uint256 claimable)",
+  "function rewardRate() view returns (uint256)",
+  "function totalWeight() view returns (uint256)",
+  "function queuedRewards() view returns (uint256)",
+  "function accountState(address user) view returns (uint256 weight, uint256 points, uint256 claimable)",
   "function positionIdsOf(address user) view returns (uint256[])",
   "function getPosition(uint256 positionId) view returns ((address account, uint64 unlockTime, uint32 lockDuration, bool withdrawn, uint256 amount, uint256 weight))",
   "function stake(uint256 amount, uint32 lockDuration) returns (uint256 positionId)",

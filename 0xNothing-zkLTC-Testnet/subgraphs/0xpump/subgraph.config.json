@@ -2,8 +2,8 @@
   "network": "liteforge",
   "chainId": 4441,
   "rpcUrl": "https://liteforge.rpc.caldera.xyz/infra-partner-http",
-  "contractAddress": "0x87ae7e019c2e511ee97310215d5ae358c28f47d9",
-  "startBlock": 60811584,
+  "contractAddress": "0x0239baec3c695a6ea893ad90a7608112e0580526",
+  "startBlock": 61141414,
   "deploymentName": "zeroxpump-testnet",
   "deploymentVersion": "1.0.0",
   "deploymentTag": "untagged",
@@ -13,7 +13,7 @@
   ],
   "graduationPolicy": {
     "mode": "controller-active",
-    "controllerAddress": "0x81df1ba96a5b9f54abf1ec1ce232254fa58b180e",
-    "adapterAddress": "0x06c4271a59246659736d47503c27e30bfb3bc3db"
+    "controllerAddress": "0x935ec3b5ed5ef330895c87139e0a905b009187a5",
+    "adapterAddress": "0x6345cafffc5e87668508873dd586662e5fe145a5"
   }
 }

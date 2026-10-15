@@ -106,11 +106,10 @@ export const deployment = {
     pump: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_PUMP_ADDRESS), TESTNET.pump),
     lpLocker: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_LP_LOCKER_ADDRESS), TESTNET.lpLocker || undefined),
     tokenMetadataRegistry: configuredAddress(deploymentOverride(process.env.NEXT_PUBLIC_TOKEN_METADATA_REGISTRY_ADDRESS), TESTNET.tokenMetadataRegistry || undefined),
-    // Tokenomics: fees split 50/50 between the 0xPoints reward pool and the owner treasury.
+    // Tokenomics: every fee lands in the splitter: NUSD 70% stakers / 20% burned / 10% treasury.
     treasury: configuredAddress(undefined, TESTNET.treasury),
     feeSplitter: configuredAddress(undefined, TESTNET.feeSplitter),
     rewardStaking: configuredAddress(undefined, TESTNET.rewardStaking),
-    surplusMintGovernor: configuredAddress(undefined, TESTNET.surplusMintGovernor),
     nusdMarketplace: configuredAddress(undefined, TESTNET.nusdMarketplace),
   },
 } as const;

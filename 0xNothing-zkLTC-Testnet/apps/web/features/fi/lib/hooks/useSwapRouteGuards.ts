@@ -38,12 +38,6 @@ export function useSwapRouteGuards({
     functionName: "mintPaused",
     query: { enabled: Boolean(needsMint && deployment.contracts.nusd) },
   });
-  const redeemPauseState = useReadContract({
-    address: deployment.contracts.nusd,
-    abi: nusdOracleAbi,
-    functionName: "redeemPaused",
-    query: { enabled: Boolean(needsRedeem && deployment.contracts.nusd) },
-  });
   const supplyCeilingState = useReadContract({
     address: deployment.contracts.nusd,
     abi: nusdOracleAbi,
@@ -66,12 +60,12 @@ export function useSwapRouteGuards({
   const pauseReads: readonly { data?: boolean; error: unknown }[] = [
     ...(needsDex ? [{ data: dexPauseState.data, error: dexPauseState.error }] : []),
     ...(needsMint ? [{ data: mintPauseState.data, error: mintPauseState.error }] : []),
-    ...(needsRedeem ? [{ data: redeemPauseState.data, error: redeemPauseState.error }] : []),
   ];
   // Any applicable pause closes the route; "not paused" needs every switch to say so.
+  // Redemption has no pause switch: a redeem-only route is never paused.
   const routePaused = pauseReads.some((read) => read.data === true)
     ? true
-    : pauseReads.length > 0 && pauseReads.every((read) => read.data === false)
+    : pauseReads.every((read) => read.data === false)
       ? false
       : undefined;
   const capacityStateReady = (!needsMint || (
@@ -92,8 +86,7 @@ export function useSwapRouteGuards({
     redeemReserveUnavailable: Boolean(collateralReserveState.error),
     remainingMintCapacity,
     routePaused,
-    routeStateReady: pauseReads.length > 0
-      && pauseReads.every((read) => read.data !== undefined && !read.error)
+    routeStateReady: pauseReads.every((read) => read.data !== undefined && !read.error)
       && capacityStateReady,
   };
 }

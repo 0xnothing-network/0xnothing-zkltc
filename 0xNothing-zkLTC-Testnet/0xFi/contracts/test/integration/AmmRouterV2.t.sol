@@ -184,7 +184,7 @@ contract AmmRouterV2Test is TestBase {
 
     // ---------------------------------------------------------------- distribution
 
-    function testAnyoneDistributesNusdHalfToPoolAndWzkLTCToTreasury() public {
+    function testAnyoneDistributesNusdThroughTheSplitterAndWzkLTCToItsRecipient() public {
         _swap(_path2(address(tokenA), address(nusd)), 10_000 ether, 0);
         _swap(_path2(address(tokenA), address(wrapped)), 1_000 ether, 0);
         uint256 nusdFees = router.accruedRouterFees(address(nusd));
@@ -192,18 +192,26 @@ contract AmmRouterV2Test is TestBase {
 
         vm.prank(address(0xCAFE));
         router.distributeFees(address(nusd));
-        assertEq(nusd.balanceOf(POOL), nusdFees / 2, "pool half");
-        assertEq(nusd.balanceOf(TREASURY), nusdFees - nusdFees / 2, "treasury half");
+        assertEq(nusd.balanceOf(POOL), nusdFees * 7_000 / 10_000, "70% to stakers");
+        assertEq(nusd.balanceOf(TREASURY), nusdFees * 1_000 / 10_000, "10% to treasury");
         assertEq(nusd.balanceOf(address(splitter)), 0, "split immediately");
 
         router.distributeFees(address(wrapped));
-        assertEq(IERC20(address(wrapped)).balanceOf(TREASURY), wzkFees, "all WzkLTC to treasury");
-        assertEq(IERC20(address(wrapped)).balanceOf(POOL), 0, "pool only takes NUSD");
+        assertEq(IERC20(address(wrapped)).balanceOf(TREASURY), wzkFees, "all WzkLTC to the native recipient");
+        assertEq(IERC20(address(wrapped)).balanceOf(POOL), 0, "stakers only take NUSD");
 
         vm.expectRevert(ZeroXFiRouterV2.NothingToDistribute.selector);
         router.distributeFees(address(nusd));
         vm.expectRevert(ZeroXFiRouterV2.NothingToDistribute.selector);
         router.distributeFees(address(tokenA));
+    }
+
+    /// v3 wiring: the splitter is also the native-fee recipient, so WzkLTC fees back NUSD.
+    function testTheSplitterCanAlsoReceiveWzkLTCFees() public {
+        ZeroXFiRouterV2 wired =
+            new ZeroXFiRouterV2(address(factory), address(wrapped), address(splitter), address(splitter));
+        assertEq(wired.feeSplitter(), address(splitter), "NUSD fees");
+        assertEq(wired.treasury(), address(splitter), "WzkLTC fees");
     }
 
     function testConstructorRejectsMismatchedWiring() public {

@@ -5,15 +5,13 @@ import { activeNetwork, publicClient } from "../rpc/client";
 import type { WalletNetwork } from "../../config/networks";
 
 /**
- * Which DIA adapter a zkLTC price should come from.
+ * Which oracle a zkLTC price should come from.
  *
- * NUSD holds its adapter in an `immutable` and prices every mint and redeem
- * through it, so that contract — not another adapter that happens to wrap the
- * same feed — is the one whose number the wallet has any business showing. The
- * 0xFi stack deploys its own adapter for lending and the synths; both read the
- * same DIA LTC/USD feed, but they are separate contracts with their own
- * freshness window and price bounds, so they can disagree, and a price the mint
- * does not use is a price the user cannot act on.
+ * NUSD holds its LTC/USD oracle router in an `immutable` and prices every mint
+ * and redeem through it, so that contract is the one whose number the wallet
+ * shows: a price the mint does not use is a price the user cannot act on. The
+ * router's DIA source can be replaced, but the router address itself never
+ * changes.
  *
  * The address cannot change on a given chain, so it is read once per selected
  * RPC profile and kept for the life of that profile. The configured address is

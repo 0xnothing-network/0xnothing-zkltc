@@ -178,8 +178,8 @@ export function PumpStatsDashboard() {
 }
 
 /**
- * Protocol fees do not belong to an admin. Anyone can send them to the fee splitter,
- * which forwards 50% to the 0xPoints reward pool and 50% to the treasury in the same call.
+ * Protocol fees do not belong to an admin. Anyone can send them to the fee splitter, which
+ * splits them in the same call: 70% to stakers, 20% burned, 10% to the treasury.
  */
 function ProtocolFeePanel({
   address,
@@ -255,7 +255,7 @@ function ProtocolFeePanel({
       const receipt = await waitForProtocolReceipt(publicClient, hash);
       toast.show({
         title: "Fees distributed",
-        description: `${formatWad(pending, 6)} NUSD went 50% to the reward pool and 50% to the treasury.`,
+        description: `${formatWad(pending, 6)} NUSD went 70% to stakers, 20% burned and 10% to the treasury.`,
         kind: "success",
         href: getTransactionExplorerUrl(receipt.transactionHash),
         hrefLabel: "View transaction",
@@ -285,8 +285,8 @@ function ProtocolFeePanel({
           <span className="pump-eyebrow">Open to anyone</span>
           <h2 id="pump-fees-title">Protocol fees</h2>
           <p>
-            Creation and trading fees go 50% to the 0xPoints reward pool and 50% to the treasury.
-            Anyone can send them; curve reserves never move.
+            Creation and trading fees go 70% to NUSD stakers, 20% burned (raising NUSD backing) and
+            10% to the treasury. Anyone can send them; curve reserves never move.
           </p>
         </div>
       </div>

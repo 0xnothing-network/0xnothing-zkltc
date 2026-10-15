@@ -49,21 +49,16 @@ test("addresses copied from the web app's generated config still match it", () =
 });
 
 /**
- * NUSD prices its own mint and redeem through this adapter, and the wallet reads
- * the address off the contract at runtime. What is pinned here is the fallback
- * for a failed read: the 0xFi stack deploys a *second* adapter over the same DIA
- * feed (`ltcOracle` in the generated config), and quoting a mint against that
- * one would mean showing a price the mint does not use.
+ * NUSD prices its own mint and redeem through its LTC/USD oracle router, and the
+ * wallet reads the address off the contract at runtime. What is pinned here is
+ * the fallback for a failed read: it must be the router NUSD is bound to, which
+ * the whole protocol shares (`ltcOracle` in the generated config).
  */
-test("the NUSD oracle fallback is NUSD's own adapter, not 0xFi's", () => {
+test("the NUSD oracle fallback is the LTC router NUSD is bound to", () => {
   const pump = group(deployed, "pump");
-  same(CONTRACTS.nusdOracleAdapter, text(pump, "diaOracleAdapter"));
+  same(CONTRACTS.nusdOracleAdapter, text(pump, "nusdOracle"));
   same(CONTRACTS.nusd, text(pump, "nusd"));
-  assert.notEqual(
-    CONTRACTS.nusdOracleAdapter.toLowerCase(),
-    text(fi, "ltcOracle").toLowerCase(),
-    "the wallet is back on the 0xFi adapter",
-  );
+  same(CONTRACTS.nusdOracleAdapter, text(fi, "ltcOracle"));
 });
 
 test("pixel addresses and the log-scan floor match the deployment record", () => {

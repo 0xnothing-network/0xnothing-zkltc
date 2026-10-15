@@ -12,6 +12,8 @@ interface Vm {
     function expectRevert(bytes4 selector) external;
     function expectRevert(bytes calldata revertData) external;
     function assume(bool condition) external;
+    function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool checkData, address emitter)
+        external;
     function createSelectFork(string calldata rpcUrl) external returns (uint256 forkId);
     function envOr(string calldata key, string calldata defaultValue) external returns (string memory value);
     function envOr(string calldata key, uint256 defaultValue) external returns (uint256 value);
@@ -50,6 +52,14 @@ abstract contract TestBase {
 
     function assertLe(uint256 actual, uint256 expected, string memory message) internal pure {
         require(actual <= expected, message);
+    }
+
+    function assertApproxEq(uint256 actual, uint256 expected, uint256 tolerance, string memory message)
+        internal
+        pure
+    {
+        uint256 difference = actual > expected ? actual - expected : expected - actual;
+        require(difference <= tolerance, message);
     }
 
     function bound(uint256 value, uint256 minimum, uint256 maximum) internal pure returns (uint256) {

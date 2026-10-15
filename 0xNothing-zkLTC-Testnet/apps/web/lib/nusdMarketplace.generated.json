@@ -1,7 +1,7 @@
 {
   "chainId": 4441,
-  "address": "0xA5e3EDfcba3b6fc40f3e41557f8a303a2AAC7e09",
-  "nusd": "0x1d041A8e575006D46Ae0Aa2E4869C5be0327874E",
+  "address": "0xd219EfFe076B68934e212313C8d468b994d6e52E",
+  "nusd": "0x69320A82ACCeC1b8A5EF59fd02b217e7ea4aEa19",
   "owner": "0x58633401dCc383F010688e950878000000000000",
   "burnBps": 10,
   "creatorBps": 40,
@@ -10,5 +10,5 @@
     "0xd83cb7aCEF921f98b6B983cBB712a583869Da9eB"
   ],
   "implementation": "0xcacabae418335c9bc3d401a0085ac7f27c4ec267a89868777e5712e9d9653739",
-  "deploymentBlock": "60811596"
+  "deploymentBlock": "61141428"
 }

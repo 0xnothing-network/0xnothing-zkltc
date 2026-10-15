@@ -6,6 +6,7 @@ import { MarketplaceBurnableNusdMock, MarketplaceNftMock } from "../mocks/NusdMa
 import { ZeroXPixelV2 } from "../../src/0xpixel/ZeroXPixelV2.sol";
 import { DIAOracleAdapter } from "../../src/nusd/DIAOracleAdapter.sol";
 import { OracleNUSDv2 } from "../../src/nusd/OracleNUSDv2.sol";
+import { IPriceOracle } from "../../src/oracle/IPriceOracle.sol";
 import { MockDIAFeed } from "../mocks/MockDIAFeed.sol";
 
 contract NusdNftMarketplaceV2Test is TestBase {
@@ -128,7 +129,9 @@ contract NusdNftMarketplaceV2Test is TestBase {
     function testRealNusdV2AndPixelV2SaleShrinksSupply() public {
         MockDIAFeed feed = new MockDIAFeed(18);
         feed.setRound(1, 50 ether, vm.getBlockTimestamp(), 1);
-        OracleNUSDv2 realNusd = new OracleNUSDv2(new DIAOracleAdapter(address(feed), 90 minutes), address(this), 1_000_000 ether);
+        OracleNUSDv2 realNusd = new OracleNUSDv2(
+            IPriceOracle(address(new DIAOracleAdapter(address(feed), 90 minutes))), address(this), 1_000_000 ether
+        );
         ZeroXPixelV2 pixel = new ZeroXPixelV2();
         address[] memory collections = new address[](1);
         collections[0] = address(pixel);

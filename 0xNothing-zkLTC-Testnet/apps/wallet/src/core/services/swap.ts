@@ -75,7 +75,6 @@ interface FeeSchedule {
 }
 
 const DEADLINE_MINUTES = 20;
-const PUMP_TRADE_FEE_BPS = 10;
 const PUMP_TRADING = 1;
 const PUMP_READY = 2;
 type SwapClient = typeof publicClient;
@@ -121,12 +120,14 @@ async function swapsPaused(client: SwapClient): Promise<boolean> {
     .catch(() => true);
 }
 
+/** Only minting can be paused; redemption is always open. */
 async function oraclePaused(client: SwapClient, leg: "mint" | "redeem"): Promise<boolean> {
+  if (leg === "redeem") return false;
   return client
     .readContract({
       address: CONTRACTS.nusd,
       abi: nusdOracleAbi,
-      functionName: leg === "mint" ? "mintPaused" : "redeemPaused",
+      functionName: "mintPaused",
     })
     .catch(() => true);
 }
@@ -142,6 +143,19 @@ async function pumpStatus(client: SwapClient, token: Address): Promise<number> {
     })
     .catch(() => 0n);
   return Number(status);
+}
+
+/** Each market keeps the trade fee it launched with; null when it cannot be read. */
+async function pumpTradeFeeBps(client: SwapClient, token: Address): Promise<number | null> {
+  const terms = await client
+    .readContract({
+      address: CONTRACTS.pumpFactory,
+      abi: zeroXPumpAbi,
+      functionName: "marketParams",
+      args: [token],
+    })
+    .catch(() => undefined);
+  return terms === undefined ? null : Number(terms[0]);
 }
 
 /** An unreadable pause flag must never enable a Pump trade. */
@@ -385,24 +399,30 @@ export async function quoteSwap(params: {
     const pumpActive = status === PUMP_TRADING || (status === PUMP_READY && !buying);
     if (pumpActive) {
       if (buying) {
-        const quote = await pumpBuyQuote(client, pumpToken, amountIn);
+        const [quote, feeBps] = await Promise.all([
+          pumpBuyQuote(client, pumpToken, amountIn),
+          pumpTradeFeeBps(client, pumpToken),
+        ]);
         return {
           ...identity,
           kind: "pump-buy",
           amountOut: quote?.[0] ?? 0n,
           path: [input, output],
-          feeBps: PUMP_TRADE_FEE_BPS,
+          feeBps,
           stages: 1,
           paused,
         };
       }
-      const quote = await pumpSellQuote(client, pumpToken, amountIn);
+      const [quote, feeBps] = await Promise.all([
+        pumpSellQuote(client, pumpToken, amountIn),
+        pumpTradeFeeBps(client, pumpToken),
+      ]);
       return {
         ...identity,
         kind: "pump-sell",
         amountOut: quote?.[1] ?? 0n,
         path: [input, output],
-        feeBps: PUMP_TRADE_FEE_BPS,
+        feeBps,
         stages: 1,
         paused,
       };

@@ -209,7 +209,7 @@ export const EN = {
   "lend.toastSupply": "Supplied {amount} {symbol}",
   "lend.toastWithdraw": "Withdrew {amount} {symbol}",
 
-  // ── Time-locked NUSD for 0xPoints and 10,000 NUSD reward rounds ───────────
+  // ── Time-locked NUSD for 0xPoints and streaming fee rewards ───────────────
   "earn.title": "Earn 0xPoints",
   "earn.stake": "Stake NUSD",
   "earn.stakeLabel": "NUSD to stake",
@@ -217,13 +217,14 @@ export const EN = {
   "earn.lockPeriod": "Lock period",
   "earn.lockOption": "{days} days · x{multiplier}",
   "earn.locked": "NUSD locked",
-  "earn.roundPoints": "Your 0xPoints this round",
-  "earn.roundShare": "Your share of the round",
+  "earn.points": "Your 0xPoints",
+  "earn.rewardShare": "Your share of the reward stream",
+  "earn.yourDaily": "Your rewards per day",
   "earn.claimable": "Claimable rewards",
-  "earn.pool": "Reward pool toward 10,000 NUSD",
+  "earn.stream": "Streaming to stakers per day",
   "earn.overWallet": "More than this account holds",
   "earn.stakeNote":
-    "0xPoints accrue every second: NUSD × lock multiplier. Each 10,000 NUSD round is shared by 0xPoints; NUSD unlocks at maturity.",
+    "70% of every NUSD fee goes to stakers, streamed over 7 days by NUSD × lock multiplier. 0xPoints accrue every second; NUSD unlocks at maturity.",
   "earn.approvalHint": "An exact NUSD approval may be sent before the stake.",
   "earn.submitStake": "Stake NUSD",
   "earn.toastStake": "Staked {amount} NUSD for {days} days",

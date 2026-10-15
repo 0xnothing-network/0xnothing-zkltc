@@ -7,16 +7,16 @@ const live = evaluateModule<typeof LiveData>(new URL("../../lib/liveData.ts", im
 const read = (functionName: string) => ["readContract", { address: "0x0000000000000000000000000000000000000001", functionName }];
 
 test("every contract read is live state unless it is a constant or fixed metadata", () => {
-  for (const functionName of ["accountState", "openRoundPoints", "getProposal", "surplusMintCapacity", "balanceOf", "owner", "oracle"]) {
+  for (const functionName of ["accountState", "queuedRewards", "earned", "surplusMintCapacity", "balanceOf", "owner", "oracle"]) {
     assert.equal(live.isBlockSyncedQueryKey(read(functionName)), true, functionName);
   }
-  for (const functionName of ["symbol", "decimals", "name", "token0", "tokenPackedData", "ROUND_REWARD", "BURN_BPS", "IMPLEMENTATION_ID"]) {
+  for (const functionName of ["symbol", "decimals", "name", "token0", "tokenPackedData", "STREAM_DURATION", "BURN_BPS", "IMPLEMENTATION_ID"]) {
     assert.equal(live.isBlockSyncedQueryKey(read(functionName)), false, functionName);
   }
 });
 
 test("a batch is live when any of its reads is", () => {
-  assert.equal(live.isBlockSyncedQueryKey(["readContracts", { contracts: [{ functionName: "symbol" }, { functionName: "availableRewards" }] }]), true);
+  assert.equal(live.isBlockSyncedQueryKey(["readContracts", { contracts: [{ functionName: "symbol" }, { functionName: "rewardRate" }] }]), true);
   assert.equal(live.isBlockSyncedQueryKey(["readContracts", { contracts: [{ functionName: "symbol" }, { functionName: "decimals" }] }]), false);
   assert.equal(live.isBlockSyncedQueryKey(["balance", { address: "0x0000000000000000000000000000000000000002" }]), true);
 });

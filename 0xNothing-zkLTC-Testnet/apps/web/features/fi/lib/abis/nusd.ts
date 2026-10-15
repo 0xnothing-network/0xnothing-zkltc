@@ -43,13 +43,6 @@ export const nusdOracleAbi = [
   },
   {
     type: "function",
-    name: "redeemPaused",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ name: "", type: "bool" }],
-  },
-  {
-    type: "function",
     name: "supplyCeilingNusd",
     stateMutability: "view",
     inputs: [],

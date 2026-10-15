@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { formatUnits, type Address } from "viem";
-import { useAccount, useReadContract, useReadContracts } from "wagmi";
+import { useAccount, useReadContracts } from "wagmi";
 import { AmountField } from "@fi/components/AmountField";
 import { ConnectWalletButton } from "@fi/components/ConnectWalletButton";
 import { NotDeployed, TransactionStatus } from "@fi/components/UiStates";
@@ -16,6 +16,8 @@ import { useProtocolTransaction } from "@fi/lib/hooks/useProtocolTransaction";
 const REWARDS_POLL_MS = 10_000;
 const POSITION_LIMIT = 50;
 const SECONDS_PER_DAY = 86_400n;
+const SECONDS_PER_YEAR = 31_536_000n;
+const STREAM_SECONDS = 7n * SECONDS_PER_DAY;
 
 type RewardPosition = {
   account: Address;
@@ -37,10 +39,10 @@ function formatPoints(points: bigint | undefined): string {
   return formatAmount(points / SECONDS_PER_DAY, 18, 2);
 }
 
-function formatShare(part: bigint | undefined, total: bigint | undefined): string {
-  if (part === undefined || total === undefined) return "--";
-  if (total === 0n) return "0%";
-  return `${(Number((part * 1_000_000n) / total) / 10_000).toFixed(2)}%`;
+/** Yearly rate of `perSecond` NUSD against `base`, as a percentage with two decimals. */
+function formatApr(perSecond: bigint | undefined, base: bigint | undefined): string {
+  if (perSecond === undefined || !base) return "--";
+  return `${(Number((perSecond * SECONDS_PER_YEAR * 10_000n) / base) / 100).toFixed(2)}%`;
 }
 
 export function RewardsDashboard() {
@@ -49,36 +51,36 @@ export function RewardsDashboard() {
   const tx = useProtocolTransaction();
   const [amountText, setAmountText] = useState("");
   const [duration, setDuration] = useState<number>(rewardLockOptions[0].duration);
-  const [nowSeconds, setNowSeconds] = useState<number>();
+  const [nowMs, setNowMs] = useState<number>();
   const staking = deployment.contracts.rewardStaking;
   const nusd = deployment.contracts.nusd;
   const amount = parseAmount(amountText);
   const selectedLock = rewardLockOptions.find((option) => option.duration === duration) ?? rewardLockOptions[0];
 
+  // One-second clock: claimable rewards visibly accrue between reads.
   useEffect(() => {
-    const updateClock = () => setNowSeconds(Math.floor(Date.now() / 1000));
-    updateClock();
-    const timer = window.setInterval(updateClock, 15_000);
+    const tick = () => setNowMs(Date.now());
+    tick();
+    const timer = window.setInterval(tick, 1_000);
     return () => window.clearInterval(timer);
   }, []);
+  const nowSeconds = nowMs === undefined ? undefined : Math.floor(nowMs / 1000);
 
   const pool = useReadContracts({
     contracts: staking ? [
-      { address: staking, abi: rewardStakingAbi, functionName: "ROUND_REWARD" },
-      { address: staking, abi: rewardStakingAbi, functionName: "availableRewards" },
-      { address: staking, abi: rewardStakingAbi, functionName: "nextTriggerTime" },
-      { address: staking, abi: rewardStakingAbi, functionName: "openRoundPoints" },
-      { address: staking, abi: rewardStakingAbi, functionName: "currentRound" },
+      { address: staking, abi: rewardStakingAbi, functionName: "rewardRate" },
+      { address: staking, abi: rewardStakingAbi, functionName: "periodFinish" },
+      { address: staking, abi: rewardStakingAbi, functionName: "totalWeight" },
       { address: staking, abi: rewardStakingAbi, functionName: "totalPrincipal" },
+      { address: staking, abi: rewardStakingAbi, functionName: "queuedRewards" },
     ] as const : [],
     query: { enabled: Boolean(staking), refetchInterval: REWARDS_POLL_MS, refetchIntervalInBackground: false },
   });
-  const roundReward = pool.data?.[0]?.result as bigint | undefined;
-  const available = pool.data?.[1]?.result as bigint | undefined;
-  const nextTrigger = pool.data?.[2]?.result as bigint | undefined;
-  const openRoundPoints = pool.data?.[3]?.result as bigint | undefined;
-  const currentRound = pool.data?.[4]?.result as number | undefined;
-  const totalPrincipal = pool.data?.[5]?.result as bigint | undefined;
+  const rewardRate = pool.data?.[0]?.result as bigint | undefined;
+  const periodFinish = pool.data?.[1]?.result as bigint | undefined;
+  const totalWeight = pool.data?.[2]?.result as bigint | undefined;
+  const totalPrincipal = pool.data?.[3]?.result as bigint | undefined;
+  const queued = pool.data?.[4]?.result as bigint | undefined;
 
   const wallet = useReadContracts({
     contracts: address && staking && nusd ? [
@@ -91,7 +93,7 @@ export function RewardsDashboard() {
   const walletNusd = wallet.data?.[0]?.result as bigint | undefined;
   const account = wallet.data?.[1]?.result as readonly [bigint, bigint, bigint] | undefined;
   const allPositionIds = wallet.data?.[2]?.result as readonly bigint[] | undefined;
-  const [weight, openPoints, claimable] = account ?? [undefined, undefined, undefined];
+  const [weight, points, claimableAtRead] = account ?? [undefined, undefined, undefined];
   const positionIds = useMemo(() => (allPositionIds ?? []).slice(-POSITION_LIMIT), [allPositionIds]);
 
   const positionReads = useReadContracts({
@@ -107,24 +109,27 @@ export function RewardsDashboard() {
     read.status === "success" ? [{ id: positionIds[index], position: read.result as RewardPosition }] : []
   )).reverse() ?? [], [positionIds, positionReads.data]);
 
-  const roundStart = useReadContract({
-    address: staking,
-    abi: rewardStakingAbi,
-    functionName: "roundStart",
-    args: currentRound === undefined ? undefined : [BigInt(currentRound)],
-    query: { enabled: Boolean(staking && currentRound !== undefined) },
-  });
-
-  const progress = available !== undefined && roundReward
-    ? Math.min(1, Number((available * 10_000n) / roundReward) / 10_000)
-    : 0;
-  const poolReady = available !== undefined && roundReward !== undefined && available >= roundReward;
-  const timeReady = nextTrigger !== undefined && nowSeconds !== undefined && BigInt(nowSeconds) >= nextTrigger;
-  const canTrigger = poolReady && timeReady && Boolean(openRoundPoints && openRoundPoints > 0n);
-  const estimatedReward = openPoints !== undefined && openRoundPoints && roundReward
-    ? (openPoints * roundReward) / openRoundPoints
+  const activePrincipal = positions.reduce((sum, { position }) => (position.withdrawn ? sum : sum + position.amount), 0n);
+  const streaming = Boolean(rewardRate && totalWeight && periodFinish && nowSeconds !== undefined && BigInt(nowSeconds) < periodFinish);
+  const yourRate = rewardRate !== undefined && weight !== undefined && totalWeight
+    ? (rewardRate * weight) / totalWeight
     : undefined;
+  // Accrual since the last read, capped at the end of the stream.
+  const claimable = useMemo(() => {
+    if (claimableAtRead === undefined) return undefined;
+    if (!yourRate || !periodFinish || nowMs === undefined || !wallet.dataUpdatedAt) return claimableAtRead;
+    const readAt = BigInt(Math.floor(wallet.dataUpdatedAt / 1000));
+    const now = BigInt(Math.floor(nowMs / 1000));
+    const end = now < periodFinish ? now : periodFinish;
+    return end > readAt ? claimableAtRead + yourRate * (end - readAt) : claimableAtRead;
+  }, [claimableAtRead, yourRate, periodFinish, nowMs, wallet.dataUpdatedAt]);
+  const streamProgress = streaming && periodFinish && nowSeconds !== undefined
+    ? Math.max(0, Math.min(1, 1 - Number(periodFinish - BigInt(nowSeconds)) / Number(STREAM_SECONDS)))
+    : 0;
   const previewWeight = amount ? (amount * BigInt(selectedLock.multiplierBps)) / 10_000n : undefined;
+  const previewRate = previewWeight !== undefined && rewardRate !== undefined && totalWeight !== undefined && streaming
+    ? (rewardRate * previewWeight) / (totalWeight + previewWeight)
+    : undefined;
   const walletReady = !address || (walletNusd !== undefined && account !== undefined);
   const invalid = useMemo(() => {
     if (!amountText) return undefined;
@@ -133,16 +138,16 @@ export function RewardsDashboard() {
     return undefined;
   }, [amount, amountText, walletNusd]);
 
-  let closeHint = `Closes from ${formatDate(nextTrigger)} once the pool holds 10,000 NUSD`;
-  if (canTrigger) closeHint = "Ready: anyone can close the round now";
-  else if (poolReady && !timeReady) closeHint = `Pool full · closes from ${formatDate(nextTrigger)}`;
-  else if (timeReady && !poolReady) closeHint = "Waiting for the pool to reach 10,000 NUSD";
+  const caption = streaming
+    ? <><strong>{formatAmount(rewardRate === undefined ? undefined : rewardRate * SECONDS_PER_DAY, 18, 2)}</strong> NUSD/day to stakers · this stream ends {formatDate(periodFinish)}</>
+    : queued
+      ? <><strong>{formatAmount(queued, 18, 4)}</strong> NUSD queued · it starts streaming with the next stake</>
+      : <>No rewards streaming yet · fees start a new 7-day stream as they arrive</>;
 
   function refresh() {
     void pool.refetch();
     void wallet.refetch();
     void positionReads.refetch();
-    void roundStart.refetch();
   }
 
   async function stake() {
@@ -152,7 +157,7 @@ export function RewardsDashboard() {
       call: { address: staking, abi: rewardStakingAbi, functionName: "stake", args: [amount, duration] },
     });
     if (hash) {
-      toast.show("NUSD staked", `${selectedLock.days}-day lock at ${selectedLock.multiplier}. 0xPoints start accruing now.`, "success");
+      toast.show("NUSD staked", `${selectedLock.days}-day lock at ${selectedLock.multiplier}. Rewards and 0xPoints start accruing now.`, "success");
       setAmountText("");
       refresh();
     }
@@ -171,16 +176,16 @@ export function RewardsDashboard() {
     if (!staking || !address || !claimable) return;
     const hash = await tx.execute({ call: { address: staking, abi: rewardStakingAbi, functionName: "claim", args: [address] } });
     if (hash) {
-      toast.show("Rewards claimed", `${formatAmount(claimable)} NUSD sent to your wallet.`, "success");
+      toast.show("Rewards claimed", "Your streamed NUSD was sent to your wallet.", "success");
       refresh();
     }
   }
 
-  async function trigger() {
-    if (!staking || !canTrigger) return;
-    const hash = await tx.execute({ call: { address: staking, abi: rewardStakingAbi, functionName: "trigger" } });
+  async function restake() {
+    if (!staking || !claimable) return;
+    const hash = await tx.execute({ call: { address: staking, abi: rewardStakingAbi, functionName: "claimAndStake", args: [duration] } });
     if (hash) {
-      toast.show("Round closed", "10,000 NUSD was allocated to this round's 0xPoints. Stakers can claim now.", "success");
+      toast.show("Rewards restaked", `Your rewards are now a ${selectedLock.days}-day lock at ${selectedLock.multiplier}.`, "success");
       refresh();
     }
   }
@@ -189,53 +194,49 @@ export function RewardsDashboard() {
 
   return (
     <section className="fi-earn" aria-label="NUSD staking and 0xPoints rewards">
-      <article className="fi-panel fi-round" aria-labelledby="rewards-round-title">
+      <article className="fi-panel fi-round" aria-labelledby="rewards-stream-title">
         <header className="fi-round-head">
           <div>
             <span className="fi-label">0xPoints rewards</span>
-            <h2 id="rewards-round-title">Round {currentRound === undefined ? "--" : currentRound + 1}</h2>
+            <h2 id="rewards-stream-title">Reward stream</h2>
           </div>
-          <span className="fi-status" data-state={canTrigger ? "live" : "warning"}>{canTrigger ? "Ready to close" : "Filling"}</span>
-          {canTrigger ? (
-            <button type="button" className="fi-button fi-button-primary" disabled={!isConnected || tx.pending} onClick={() => void trigger()}>
-              Close round
-            </button>
-          ) : null}
+          <span className="fi-status" data-state={streaming ? "live" : "warning"}>{streaming ? "Streaming" : "Waiting for fees"}</span>
         </header>
-        <div className="fi-pixel-progress" role="progressbar" aria-label="Reward pool toward 10,000 NUSD" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
-          <span style={{ width: `${progress * 100}%` }} />
+        <div className="fi-pixel-progress" role="progressbar" aria-label="Progress of the current 7-day stream" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(streamProgress * 100)}>
+          <span style={{ width: `${streamProgress * 100}%` }} />
         </div>
-        <p className="fi-round-caption">
-          <strong>{formatAmount(available, 18, 2)}</strong> / {formatAmount(roundReward, 18, 0)} NUSD · {closeHint}
-        </p>
-        <dl className="fi-round-stats" aria-label="Your 0xPoints overview">
+        <p className="fi-round-caption">{caption}</p>
+        <dl className="fi-round-stats" aria-label="Your rewards overview">
           <div>
             <dt>Your 0xPoints</dt>
-            <dd>{formatPoints(openPoints)}<small>{formatShare(openPoints, openRoundPoints)} of round</small></dd>
+            <dd>{formatPoints(points)}<small>{weight ? `+${formatAmount(weight, 18, 2)}/day` : "lifetime"}</small></dd>
           </div>
           <div>
-            <dt>If closed now</dt>
-            <dd>{formatAmount(estimatedReward, 18, 2)}<small>NUSD</small></dd>
+            <dt>Your rewards</dt>
+            <dd>{formatAmount(yourRate === undefined ? undefined : yourRate * SECONDS_PER_DAY, 18, 4)}<small>NUSD/day · APR {formatApr(yourRate, activePrincipal)}</small></dd>
           </div>
           <div>
             <dt>Claimable</dt>
-            <dd data-tone="positive">{formatAmount(claimable, 18, 4)}<small>NUSD</small></dd>
+            <dd data-tone="positive">{formatAmount(claimable, 18, 6)}<small>NUSD</small></dd>
             {claimable ? (
-              <button type="button" className="fi-round-claim" disabled={tx.pending} onClick={() => void claim()}>Claim</button>
+              <span className="fi-round-actions">
+                <button type="button" className="fi-round-claim" disabled={tx.pending} onClick={() => void claim()}>Claim</button>
+                <button type="button" className="fi-round-claim" disabled={tx.pending} onClick={() => void restake()}>Restake {selectedLock.days}d</button>
+              </span>
             ) : null}
           </div>
           <div>
             <dt>Total staked</dt>
-            <dd>{formatAmount(totalPrincipal, 18, 2)}<small>NUSD</small></dd>
+            <dd>{formatAmount(totalPrincipal, 18, 2)}<small>NUSD · APR {formatApr(rewardRate, totalWeight)} at 1x</small></dd>
           </div>
         </dl>
         <details className="fi-round-help">
-          <summary>How rounds work</summary>
+          <summary>How rewards work</summary>
           <ol>
-            <li>Half of the NUSD fees from 0xPump and 0xFi fill the pool.</li>
-            <li>0xPoints accrue every second: NUSD × lock multiplier. A last-minute stake earns almost nothing.</li>
-            <li>At 10,000 NUSD (and at least a day), anyone closes the round; it is split by 0xPoints and points restart.</li>
-            <li>Rewards never expire. Principal unlocks at maturity. Round opened {formatDate(roundStart.data)}.</li>
+            <li>70% of every NUSD fee (0xPump, 0xFi swaps, lending, synth mints) and 80% of each NUSD surplus release go to stakers.</li>
+            <li>New income streams out evenly over the next 7 days, split by lock weight: NUSD × 1, 1.2, 1.5 or 3.</li>
+            <li>Every stake and claim collects waiting fees first, so the stream runs without anyone in charge.</li>
+            <li>Rewards never expire and principal unlocks at maturity. 0xPoints count lock-weighted NUSD-days for life.</li>
           </ol>
         </details>
       </article>
@@ -252,7 +253,7 @@ export function RewardsDashboard() {
           </div>
           <AmountField id="rewards-stake-nusd" label="Amount" asset="NUSD" value={amountText} balance={formatAmount(walletNusd)} error={invalid} onChange={setAmountText} onMax={walletNusd && walletNusd > 0n ? () => setAmountText(formatUnits(walletNusd, 18)) : undefined} />
           <p className="fi-earn-estimate">
-            <span>{previewWeight === undefined ? "--" : formatAmount(previewWeight, 18, 2)} 0xPoints / day</span>
+            <span>{previewRate === undefined ? "--" : formatAmount(previewRate * SECONDS_PER_DAY, 18, 4)} NUSD/day now</span>
             <span>Unlocks {amount && nowSeconds ? formatDate(nowSeconds + duration).slice(0, 10) : "--"}</span>
           </p>
           {!isConnected ? <ConnectWalletButton /> : (

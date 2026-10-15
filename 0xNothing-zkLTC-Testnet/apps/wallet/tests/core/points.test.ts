@@ -12,7 +12,8 @@ interface PointsModule {
   POINTS_DISPLAY_DIGITS: number;
   formatPoints(points: bigint): string;
   formatPointsPerDay(weight: bigint): string;
-  roundShareBps(points: bigint, totalPoints: bigint): number;
+  rewardShareBps(weight: bigint, totalWeight: bigint): number;
+  dailyReward(rewardRate: bigint, weight: bigint, totalWeight: bigint): bigint;
   stakeWeight(amount: bigint, multiplierBps: number): bigint;
 }
 
@@ -32,7 +33,8 @@ runInNewContext(`${compiled}\nglobalThis.points = {
   POINTS_DISPLAY_DIGITS,
   formatPoints,
   formatPointsPerDay,
-  roundShareBps,
+  rewardShareBps,
+  dailyReward,
   stakeWeight,
 };`, sandbox);
 const {
@@ -41,7 +43,8 @@ const {
   POINTS_DISPLAY_DIGITS,
   formatPoints,
   formatPointsPerDay,
-  roundShareBps,
+  rewardShareBps,
+  dailyReward,
   stakeWeight,
 } = sandbox.points!;
 
@@ -69,9 +72,9 @@ test("the wallet ABI exposes every user operation of RewardStaking", () => {
     "accountState",
     "positionIdsOf",
     "getPosition",
-    "availableRewards",
-    "ROUND_REWARD",
-    "openRoundPoints",
+    "rewardRate",
+    "totalWeight",
+    "queuedRewards",
     "stake",
     "withdraw",
     "claim",
@@ -90,13 +93,18 @@ test("0xPoints are weighted NUSD-days with hundredth precision", () => {
   assert.equal(formatPointsPerDay(3n * WAD), "3 0xPoints");
 });
 
-test("stake weight and round share use integer contract units", () => {
+test("stake weight, stream share and daily reward use integer contract units", () => {
   assert.equal(stakeWeight(100n * WAD, 30_000), 300n * WAD);
   assert.equal(stakeWeight(100n * WAD, 12_000), 120n * WAD);
   assert.equal(stakeWeight(0n, 30_000), 0n);
-  assert.equal(roundShareBps(1n, 4n), 2_500);
-  assert.equal(roundShareBps(5n, 0n), 0);
-  assert.equal(roundShareBps(0n, 10n), 0);
+  assert.equal(rewardShareBps(1n, 4n), 2_500);
+  assert.equal(rewardShareBps(5n, 0n), 0);
+  assert.equal(rewardShareBps(0n, 10n), 0);
+  // 70 NUSD streamed over 7 days, a quarter of the weight: 2.5 NUSD a day.
+  const rate = 70n * WAD / (7n * DAY);
+  assert.equal(dailyReward(rate, 1n * WAD, 4n * WAD), rate * DAY / 4n);
+  assert.equal(dailyReward(0n, WAD, WAD), 0n);
+  assert.equal(dailyReward(rate, WAD, 0n), 0n);
 });
 
 test("position reads stay bounded to the newest 50", () => {
