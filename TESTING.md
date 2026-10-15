@@ -11,6 +11,7 @@ npm run verify
 - `apps/web/tests/` groups tests by `client`, `data`, `media`, and `server` boundaries.
 - `apps/wallet/tests/` groups tests by `config`, `core`, `extension`, `security`, and `ui` boundaries.
 - `0xFi/contracts/test/` separates `unit`, `integration`, `risk`, `invariant`, `fork`, shared `helpers`, and reusable `mocks`.
+- `0xNothing-zkLTC-Mainnet/` holds the mainnet preparation copy of the v3 contracts with its own `forge test` suites (`npm run test:contracts:mainnet`).
 - Core contracts keep `unit`, `fuzz`, `invariant`, `fork`, and `mocks` directories. Their common base contracts intentionally remain at the test root.
 - Pump subgraph tests remain flat because `mapping.test.ts` is the explicit AssemblyScript compile target and `event-builders.ts` is its local support module.
 - Root tooling tests cover cleanup boundaries, manifest rendering, and bounded HTTP JSON parsing.
