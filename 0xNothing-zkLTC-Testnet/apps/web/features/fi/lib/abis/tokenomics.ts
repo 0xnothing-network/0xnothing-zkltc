@@ -38,27 +38,6 @@ export const rewardLockOptions = [
   { duration: 365 * 86_400, days: 365, multiplier: "3x", multiplierBps: 30_000 },
 ] as const;
 
-/** NUSD reserve, surplus and emergency surface. */
-export const nusdReserveAbi = parseAbi([
-  "function totalSupply() view returns (uint256)",
-  "function totalCollateralWei() view returns (uint256)",
-  "function reserveValueNusd() view returns (uint256)",
-  "function backingRatioWad() view returns (uint256)",
-  "function supplyCeilingNusd() view returns (uint256)",
-  "function surplusFloorBps() view returns (uint16)",
-  "function surplusTriggerBps() view returns (uint16)",
-  "function surplusTreasuryBps() view returns (uint16)",
-  "function lastSurplusReleaseAt() view returns (uint40)",
-  "function SURPLUS_INTERVAL() view returns (uint256)",
-  "function surplusMintCapacity() view returns (uint256 amountNusd, bool ready)",
-  "function releaseSurplus() returns (uint256 amountNusd)",
-  "function oracleFailureReportedAt() view returns (uint256)",
-  "function ORACLE_FAILURE_GRACE() view returns (uint256)",
-  "function reportOracleFailure()",
-  "function clearOracleFailure()",
-  "function emergencyRedeem(uint256 amountNusd, uint256 minCollateralOutWei, address recipient) returns (uint256)",
-]);
-
 /** contracts/src/treasury/FeeSplitter.sol: the one inbox for every protocol fee. */
 export const feeSplitterAbi = parseAbi([
   "function harvest() returns (uint256 sourcesSucceeded)",

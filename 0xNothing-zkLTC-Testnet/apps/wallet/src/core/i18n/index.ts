@@ -67,10 +67,6 @@ function bootLocale(): LocaleCode {
 let current: LocaleCode = bootLocale();
 let active: Catalog = CATALOGS[current];
 
-export function getLocale(): LocaleCode {
-  return current;
-}
-
 export function localeInfo(code: LocaleCode): LocaleInfo {
   return LOCALES.find((entry) => entry.code === code) ?? LOCALES[0]!;
 }

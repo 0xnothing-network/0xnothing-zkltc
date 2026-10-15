@@ -104,34 +104,3 @@ export async function walletClientFor(
     transport: transportFor(network),
   });
 }
-
-const RATE_LIMIT_HINTS = [
-  "bandwidth limit",
-  "rate limit",
-  "429",
-  "limit exceeded",
-  "too many requests",
-];
-
-function isRateLimited(error: unknown): boolean {
-  const text = (error instanceof Error ? error.message : String(error)).toLowerCase();
-  return RATE_LIMIT_HINTS.some((hint) => text.includes(hint));
-}
-
-/**
- * Retries only throttling. A revert, a bad address or a malformed call is
- * deterministic — retrying it wastes the user's time and hides the real error.
- */
-export async function withRetry<T>(run: () => Promise<T>, attempts = 3): Promise<T> {
-  let lastError: unknown;
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    try {
-      return await run();
-    } catch (error) {
-      if (!isRateLimited(error)) throw error;
-      lastError = error;
-      await new Promise((resolve) => setTimeout(resolve, 250 * 2 ** attempt));
-    }
-  }
-  throw lastError;
-}

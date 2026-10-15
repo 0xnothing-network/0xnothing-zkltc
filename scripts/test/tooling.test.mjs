@@ -13,10 +13,6 @@ import {
 } from "../lib/generated-cleanup.mjs";
 import { readLimitedJsonResponse } from "../lib/http-json.mjs";
 import {
-  assertPumpSubgraphParity,
-  findPumpSubgraphDrift,
-} from "../lib/pump-subgraph-parity.mjs";
-import {
   renderSubgraphManifest,
   writeFileIfChanged,
 } from "../lib/subgraph-manifest.mjs";
@@ -238,24 +234,4 @@ test("JSON-RPC helper validates response identity and canonical ABI addresses", 
     }),
     /mismatched JSON-RPC response/,
   );
-});
-
-test("Pump subgraph parity reports source drift between testnet and mainnet", async (t) => {
-  const directory = await temporaryDirectory(t, "0xn-parity-");
-  const testnetRoot = path.join(directory, "testnet");
-  const mainnetRoot = path.join(directory, "mainnet");
-  await Promise.all([
-    mkdir(path.join(testnetRoot, "src"), { recursive: true }),
-    mkdir(path.join(mainnetRoot, "src"), { recursive: true }),
-  ]);
-  await Promise.all([
-    writeFile(path.join(testnetRoot, "src", "mapping.ts"), "same\n", "utf8"),
-    writeFile(path.join(mainnetRoot, "src", "mapping.ts"), "same\n", "utf8"),
-  ]);
-  const options = { testnetRoot, mainnetRoot, files: ["src/mapping.ts"] };
-  assert.equal(await assertPumpSubgraphParity(options), 1);
-
-  await writeFile(path.join(mainnetRoot, "src", "mapping.ts"), "drift\n", "utf8");
-  assert.deepEqual(await findPumpSubgraphDrift(options), ["src/mapping.ts"]);
-  await assert.rejects(assertPumpSubgraphParity(options), /Pump testnet\/mainnet mirror drift/);
 });

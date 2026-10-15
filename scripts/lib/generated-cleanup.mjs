@@ -8,10 +8,6 @@ const execFileAsync = promisify(execFile);
 // Keep this list explicit. In particular, generated Graph bindings committed to
 // Git are deliberately absent so a cleanup can never turn them into deletions.
 export const GENERATED_DIRECTORIES = Object.freeze([
-  "0xNothing-zkLTC-Mainnet/contracts/cache",
-  "0xNothing-zkLTC-Mainnet/contracts/out",
-  "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/build",
-  "0xNothing-zkLTC-Mainnet/subgraphs/0xpump/generated",
   "0xNothing-zkLTC-Testnet/0xFi/contracts/cache",
   "0xNothing-zkLTC-Testnet/0xFi/contracts/out",
   "0xNothing-zkLTC-Testnet/0xFi/subgraph/build",

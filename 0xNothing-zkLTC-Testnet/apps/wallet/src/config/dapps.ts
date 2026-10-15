@@ -1,9 +1,9 @@
 export const PUBLIC_APP_URL = "https://0xnothing.xyz";
 /** Public indexers used by the web app; the wallet falls back to them on API throttling. */
 export const PUMP_SUBGRAPH_URL =
-  "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxpump-testnet/staging/gn";
+  "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxpump-testnet/1.0.0/gn";
 export const FI_SUBGRAPH_URL =
-  "https://api.goldsky.com/api/public/project_cms8vgtcn6a6z01r5fo87d6im/subgraphs/zeroxfi-testnet/staging/gn";
+  "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.0.0/gn";
 
 export interface DappEntry {
   id: string;

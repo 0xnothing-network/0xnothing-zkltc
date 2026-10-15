@@ -44,4 +44,3 @@ export const PIXEL_COLLECTIONS = [
   { address: CONTRACTS.pixelClassicNft, name: "0xPixel Classic", startBlock: PIXEL_CLASSIC_START_BLOCK },
 ].filter((collection) => !/^0x0{40}$/iu.test(collection.address));
 
-export const IPFS_GATEWAY_URL = "https://dweb.link/ipfs/";

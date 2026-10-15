@@ -109,11 +109,6 @@ export const diaOracleAdapterAbi = parseAbi([
   "function readPriceWad() view returns (uint256 priceWad, uint256 updatedAt, uint80 roundId)",
 ]);
 
-export const wzkLtcAbi = parseAbi([
-  "function deposit() payable",
-  "function withdraw(uint256 amount)",
-]);
-
 export const pixelNftAbi = parseAbi([
   "function balanceOf(address owner) view returns (uint256)",
   "function userTokens(address owner, uint256 index) view returns (uint256)",

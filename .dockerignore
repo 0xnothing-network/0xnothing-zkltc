@@ -15,7 +15,6 @@ node_modules
 **/.env.*
 !**/.env.example
 
-0xNothing-zkLTC-Mainnet
 0xNothing-zkLTC-Testnet/0xFi
 0xNothing-zkLTC-Testnet/apps/wallet
 0xNothing-zkLTC-Testnet/contracts

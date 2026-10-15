@@ -47,8 +47,3 @@ function normalise(message: string): string {
   }
   return message.length > 160 ? `${message.slice(0, 157)}…` : message;
 }
-
-/** Errors that mean "the wallet is locked", so the UI can route to Unlock. */
-export function isLockedError(error: unknown): boolean {
-  return error instanceof Error && error.name === "WalletLockedError";
-}

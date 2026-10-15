@@ -110,7 +110,3 @@ export function Note({
 export function Empty({ children }: { children: ReactNode }): ReactNode {
   return <div className="w-empty">{children}</div>;
 }
-
-export function Label({ children }: { children: ReactNode }): ReactNode {
-  return <span className="w-label">{children}</span>;
-}

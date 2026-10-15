@@ -51,14 +51,6 @@ export function networkHex(chainId: number): string {
   return `0x${chainId.toString(16)}`;
 }
 
-export function txUrlFor(network: WalletNetwork, hash: string): string | undefined {
-  return network.explorerUrl ? `${network.explorerUrl}/tx/${hash}` : undefined;
-}
-
-export function addressUrlFor(network: WalletNetwork, address: string): string | undefined {
-  return network.explorerUrl ? `${network.explorerUrl}/address/${address}` : undefined;
-}
-
 export function isLitvmNetwork(network: WalletNetwork): boolean {
   return network.id === LITVM_NETWORK.id;
 }

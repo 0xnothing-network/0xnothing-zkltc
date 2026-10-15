@@ -45,6 +45,38 @@ function formatApr(perSecond: bigint | undefined, base: bigint | undefined): str
   return `${(Number((perSecond * SECONDS_PER_YEAR * 10_000n) / base) / 100).toFixed(2)}%`;
 }
 
+/**
+ * The claimable figure accrues every second between reads. It owns that one-second clock so the
+ * rest of the dashboard repaints only when its data or the slower page clock changes.
+ */
+function LiveClaimable({
+  atRead,
+  readAtMs,
+  perSecond,
+  periodFinish,
+}: {
+  atRead: bigint | undefined;
+  readAtMs: number;
+  perSecond: bigint | undefined;
+  periodFinish: bigint | undefined;
+}) {
+  const accruing = Boolean(atRead !== undefined && perSecond && periodFinish && readAtMs);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (!accruing) return undefined;
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
+  }, [accruing]);
+  let value = atRead;
+  if (accruing && atRead !== undefined && perSecond && periodFinish) {
+    const readAt = BigInt(Math.floor(readAtMs / 1000));
+    const now = BigInt(Math.floor(nowMs / 1000));
+    const end = now < periodFinish ? now : periodFinish;
+    if (end > readAt) value = atRead + perSecond * (end - readAt);
+  }
+  return formatAmount(value, 18, 6);
+}
+
 export function RewardsDashboard() {
   const { address, isConnected } = useAccount();
   const toast = useToast();
@@ -57,11 +89,12 @@ export function RewardsDashboard() {
   const amount = parseAmount(amountText);
   const selectedLock = rewardLockOptions.find((option) => option.duration === duration) ?? rewardLockOptions[0];
 
-  // One-second clock: claimable rewards visibly accrue between reads.
+  // Page clock for the stream state, maturities and the unlock preview; the claimable figure
+  // keeps its own one-second clock (LiveClaimable).
   useEffect(() => {
     const tick = () => setNowMs(Date.now());
     tick();
-    const timer = window.setInterval(tick, 1_000);
+    const timer = window.setInterval(tick, 15_000);
     return () => window.clearInterval(timer);
   }, []);
   const nowSeconds = nowMs === undefined ? undefined : Math.floor(nowMs / 1000);
@@ -114,15 +147,8 @@ export function RewardsDashboard() {
   const yourRate = rewardRate !== undefined && weight !== undefined && totalWeight
     ? (rewardRate * weight) / totalWeight
     : undefined;
-  // Accrual since the last read, capped at the end of the stream.
-  const claimable = useMemo(() => {
-    if (claimableAtRead === undefined) return undefined;
-    if (!yourRate || !periodFinish || nowMs === undefined || !wallet.dataUpdatedAt) return claimableAtRead;
-    const readAt = BigInt(Math.floor(wallet.dataUpdatedAt / 1000));
-    const now = BigInt(Math.floor(nowMs / 1000));
-    const end = now < periodFinish ? now : periodFinish;
-    return end > readAt ? claimableAtRead + yourRate * (end - readAt) : claimableAtRead;
-  }, [claimableAtRead, yourRate, periodFinish, nowMs, wallet.dataUpdatedAt]);
+  // Something to claim now, or accruing until the next read shows it.
+  const claimable = Boolean(claimableAtRead || (yourRate && streaming));
   const streamProgress = streaming && periodFinish && nowSeconds !== undefined
     ? Math.max(0, Math.min(1, 1 - Number(periodFinish - BigInt(nowSeconds)) / Number(STREAM_SECONDS)))
     : 0;
@@ -217,7 +243,7 @@ export function RewardsDashboard() {
           </div>
           <div>
             <dt>Claimable</dt>
-            <dd data-tone="positive">{formatAmount(claimable, 18, 6)}<small>NUSD</small></dd>
+            <dd data-tone="positive"><LiveClaimable atRead={claimableAtRead} readAtMs={wallet.dataUpdatedAt} perSecond={yourRate} periodFinish={periodFinish} /><small>NUSD</small></dd>
             {claimable ? (
               <span className="fi-round-actions">
                 <button type="button" className="fi-round-claim" disabled={tx.pending} onClick={() => void claim()}>Claim</button>

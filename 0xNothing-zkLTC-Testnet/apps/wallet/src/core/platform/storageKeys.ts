@@ -26,5 +26,3 @@ export const STORAGE_KEYS = {
   /** Auto-lock deadline, split from the key so an old touch cannot restore it. */
   sessionDeadline: "wallet.session.deadline.v1",
 } as const;
-
-export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

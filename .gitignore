@@ -3,7 +3,6 @@ out/
 cache/
 broadcast/
 0xNothing-zkLTC-Testnet/contracts/lib/
-0xNothing-zkLTC-Mainnet/contracts/lib/
 .gas-snapshot
 coverage/
 coverage.json
@@ -17,7 +16,6 @@ node_modules/
 # --- Generated subgraph bindings ---
 0xNothing-zkLTC-Testnet/0xFi/subgraph/generated/
 0xNothing-zkLTC-Testnet/subgraphs/*/generated/
-0xNothing-zkLTC-Mainnet/subgraphs/*/generated/
 
 # --- Testing & coverage ---
 coverage/
