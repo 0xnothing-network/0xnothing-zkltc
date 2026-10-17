@@ -7,7 +7,7 @@ import { getPixelImageUrl } from "@/lib/pixelImage";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { publicErrorMessage } from "@/lib/server/publicError";
 import { normalizeUint256TokenId } from "@/lib/tokenId";
-import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
+import { CDN_STALE_SECONDS, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
 export const runtime = "nodejs";
 export const revalidate = 30;
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
         headers: hasMissingMetadata ? { "Cache-Control": "no-store", "Cloudflare-CDN-Cache-Control": "no-store" } : publicCdnCacheHeaders(
           "public, s-maxage=30, stale-while-revalidate=30",
           30,
-          30,
+          CDN_STALE_SECONDS,
         ),
       },
     );

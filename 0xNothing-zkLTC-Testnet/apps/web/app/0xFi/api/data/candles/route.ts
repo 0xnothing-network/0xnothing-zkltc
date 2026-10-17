@@ -9,7 +9,7 @@ import { diaOracleAdapterAbi } from "@fi/lib/abis/dia";
 import { canonicalOracleMarketForIdentifier } from "@fi/lib/canonicalMarkets";
 import { decimal, isFactoryPair, loadPairTail, pairForTokens, pairTokenMetadata } from "@fi/lib/server/rpcTail";
 import { createBoundedCache } from "@/lib/boundedCache";
-import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
+import { CDN_STALE_SECONDS, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 import { PublicRouteError, publicErrorMessage } from "@/lib/server/publicError";
 
 const PERIODS = { "5m": 300, "1h": 3_600, "4h": 14_400, "1d": 86_400 } as const;
@@ -51,7 +51,7 @@ class CandleRouteError extends PublicRouteError {
 function candlesResponse(envelope: DataEnvelope<CandlePoint[]>, cacheStatus: string): NextResponse {
   return NextResponse.json(envelope, {
     headers: {
-      ...publicCdnCacheHeaders(CANDLES_CACHE_CONTROL, 10, 30),
+      ...publicCdnCacheHeaders(CANDLES_CACHE_CONTROL, 10, CDN_STALE_SECONDS),
       "X-0xFi-Cache": cacheStatus,
     },
   });

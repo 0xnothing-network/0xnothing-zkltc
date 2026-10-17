@@ -117,6 +117,14 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "public, max-age=86400, must-revalidate" },
         ],
       },
+      {
+        // Token logos repaint on every product page; without a lifetime each visit
+        // waits on one revalidation round trip per logo before it can paint.
+        source: "/:logo(ltc-logo.png|btc-logo.png|eth-logo.webp|NUSD_LOGO.jpg|0xNothing.jpg)",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400, must-revalidate" },
+        ],
+      },
     ];
   },
 };

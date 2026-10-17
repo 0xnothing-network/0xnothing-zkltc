@@ -3,7 +3,7 @@ import { getAddress, type Address } from "viem";
 import { getPumpHolders } from "@/features/pump/server/data";
 import { withPumpCache } from "@/features/pump/server/cache";
 import { boundedIntegerParam } from "@/features/pump/server/request";
-import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
+import { CDN_STALE_SECONDS, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
       headers: publicCdnCacheHeaders(
         "public, s-maxage=3, stale-while-revalidate=12",
         3,
-        12,
+        CDN_STALE_SECONDS,
       ),
     });
   } catch (error) {

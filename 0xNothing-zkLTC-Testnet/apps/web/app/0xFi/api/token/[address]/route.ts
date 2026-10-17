@@ -13,7 +13,7 @@ import { litvmTransport } from "@/lib/rpcTransport";
 import { deployment } from "@fi/config/deployment";
 import { erc20Abi } from "@fi/lib/abis/erc20";
 import { createBoundedCache } from "@/lib/boundedCache";
-import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
+import { CDN_STALE_SECONDS, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 import { trustedProxyClientKey } from "@/lib/server/clientIp";
 import { readLimitedBytes } from "@/lib/server/readLimitedBytes";
 import type {
@@ -327,7 +327,7 @@ function json(
   headers?: Record<string, string>,
 ) {
   const cacheHeaders = status === 200
-    ? publicCdnCacheHeaders(cacheControl, 60, 120)
+    ? publicCdnCacheHeaders(cacheControl, 60, CDN_STALE_SECONDS)
     : { "Cache-Control": cacheControl };
   return NextResponse.json(payload, {
     status,

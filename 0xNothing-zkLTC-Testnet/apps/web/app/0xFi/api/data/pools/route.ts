@@ -21,7 +21,7 @@ import { liveLogClient } from "@fi/lib/server/liveLogClient";
 import { tokenImageUrl } from "@fi/lib/tokenImage";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { hasPositiveBigInt, nonNegativeBigInt } from "@/lib/integer";
-import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
+import { CDN_STALE_SECONDS, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
 type PoolRow = Omit<PoolPoint, "id" | "token0" | "token1" | "totalSupply"> & {
   id: string;
@@ -742,8 +742,8 @@ function poolsResponse(envelope: DataEnvelope<PoolPoint[]>, cacheStatus: "HIT" |
   return NextResponse.json(envelope, {
     headers: {
       ...(cacheStatus === "STALE"
-        ? publicCdnCacheHeaders(POOLS_STALE_CACHE_CONTROL, 1, 5)
-        : publicCdnCacheHeaders(POOLS_CACHE_CONTROL, 10, 30)),
+        ? publicCdnCacheHeaders(POOLS_STALE_CACHE_CONTROL, 1, CDN_STALE_SECONDS)
+        : publicCdnCacheHeaders(POOLS_CACHE_CONTROL, 10, CDN_STALE_SECONDS)),
       "X-0xFi-Cache": cacheStatus,
     },
   });

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPumpStats } from "@/features/pump/server/data";
 import { withPumpCache } from "@/features/pump/server/cache";
-import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
+import { CDN_STALE_SECONDS, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ export async function GET() {
       headers: publicCdnCacheHeaders(
         "public, s-maxage=3, stale-while-revalidate=12",
         3,
-        12,
+        CDN_STALE_SECONDS,
       ),
     });
   } catch (error) {

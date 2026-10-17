@@ -163,8 +163,13 @@ Settings:
 
 Never choose **Ignore cache-control header** for this rule. Cacheable public
 success responses send explicit TTLs. The JSON routes also send
-`Cloudflare-CDN-Cache-Control` so Cloudflare can honor stale-while-revalidate
-without changing the existing platform/browser policy. Responses marked
+`Cloudflare-CDN-Cache-Control` (and `Vercel-CDN-Cache-Control` for the Vercel
+host) so each CDN can honor stale-while-revalidate without changing the
+browser policy. The read feeds that pages open with (markets, stats, pools,
+trades, candles, activity) keep a 10-minute CDN stale window
+(`CDN_STALE_SECONDS` in `apps/web/lib/server/cdnCache.ts`): a visitor after a
+quiet spell gets the last copy at once while the CDN refreshes it, and the page
+replaces it on its next poll. Responses marked
 `no-store` remain uncacheable, and the Edge TTL option above bypasses responses
 with no cache header. Overriding those safeguards can persist errors or private
 data at the edge. Cloudflare documents the behavior in

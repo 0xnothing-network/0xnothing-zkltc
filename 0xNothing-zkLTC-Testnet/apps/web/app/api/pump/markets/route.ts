@@ -4,7 +4,7 @@ import { getPumpMarkets } from "@/features/pump/server/data";
 import { withPumpCache } from "@/features/pump/server/cache";
 import { boundedIntegerParam } from "@/features/pump/server/request";
 import type { PumpMarketSort } from "@/features/pump/types";
-import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
+import { CDN_STALE_SECONDS, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
       headers: publicCdnCacheHeaders(
         "public, s-maxage=2, stale-while-revalidate=8",
         2,
-        8,
+        CDN_STALE_SECONDS,
       ),
     });
   } catch (error) {

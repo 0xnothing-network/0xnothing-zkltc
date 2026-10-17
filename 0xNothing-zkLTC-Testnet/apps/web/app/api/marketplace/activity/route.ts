@@ -1,7 +1,7 @@
 import { after, NextResponse } from "next/server";
 import { logsClient, publicClient } from "@/lib/contract";
 import { createBoundedCache } from "@/lib/boundedCache";
-import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
+import { CDN_STALE_SECONDS, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 import { NFT_NUSD_ADDRESS, NUSD_MARKETPLACE_ADDRESS, NUSD_SUBGRAPH_URL } from "@/lib/nusdMarketplaceConfig";
 import { PIXEL_COLLECTIONS } from "@/lib/pixelCollections";
 import deployment from "@/lib/nusdMarketplace.generated.json";
@@ -66,7 +66,7 @@ export async function GET(request: Request) {
     } else {
       payload = await activityCache.refresh(key, load);
     }
-    return NextResponse.json(payload, { headers: force ? { "Cache-Control": "private, no-store" } : publicCdnCacheHeaders("public, max-age=0, s-maxage=5, stale-while-revalidate=5", 5, 5) });
+    return NextResponse.json(payload, { headers: force ? { "Cache-Control": "private, no-store" } : publicCdnCacheHeaders("public, max-age=0, s-maxage=5, stale-while-revalidate=5", 5, CDN_STALE_SECONDS) });
   } catch {
     return NextResponse.json({ error: "NUSD marketplace activity is unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }

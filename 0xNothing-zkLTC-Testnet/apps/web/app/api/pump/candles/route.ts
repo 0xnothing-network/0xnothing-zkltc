@@ -3,7 +3,7 @@ import { getAddress } from "viem";
 import { getPumpCandles } from "@/features/pump/server/data";
 import { withPumpCache } from "@/features/pump/server/cache";
 import { boundedIntegerParam } from "@/features/pump/server/request";
-import { publicCdnCacheHeaders } from "@/lib/server/cdnCache";
+import { CDN_STALE_SECONDS, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 import {
   MAX_PUMP_CANDLE_LIMIT,
   normalizePumpCandlePeriod,
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
       headers: publicCdnCacheHeaders(
         "public, s-maxage=2, stale-while-revalidate=8",
         2,
-        8,
+        CDN_STALE_SECONDS,
       ),
     });
   } catch (error) {

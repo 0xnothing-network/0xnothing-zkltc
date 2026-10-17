@@ -6,3 +6,18 @@
 
 /favicon.svg
   Cache-Control: public, max-age=86400, must-revalidate
+
+/ltc-logo.png
+  Cache-Control: public, max-age=86400, must-revalidate
+
+/btc-logo.png
+  Cache-Control: public, max-age=86400, must-revalidate
+
+/eth-logo.webp
+  Cache-Control: public, max-age=86400, must-revalidate
+
+/NUSD_LOGO.jpg
+  Cache-Control: public, max-age=86400, must-revalidate
+
+/0xNothing.jpg
+  Cache-Control: public, max-age=86400, must-revalidate
