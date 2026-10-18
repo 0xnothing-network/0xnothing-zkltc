@@ -30,3 +30,5 @@ export const PUMP_GRADUATION_CONTROLLER_ADDRESS = testnet.pumpGraduationControll
 export const PUMP_START_BLOCK = BigInt(testnet.deploymentBlock);
 export const PUMP_SUBGRAPH_URL = testnet.pumpGoldskyEndpoint;
 export const IPFS_GATEWAY_URL = "https://dweb.link/ipfs/" as const;
+/** The project's Pinata gateway. Restricted to content pinned by the upload key, which every token logo is. */
+export const PINATA_GATEWAY_HOST = "pink-naval-dinosaur-397.mypinata.cloud" as const;

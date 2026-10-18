@@ -1,6 +1,7 @@
 import { PUMP_MAX_IMAGE_BYTES, validatePumpImage } from "@/features/pump/imageValidation";
 import { normalizePumpIpfsPath } from "@/features/pump/config";
 import { createBoundedCache } from "@/lib/boundedCache";
+import { PINATA_GATEWAY_HOST } from "@/lib/publicConfig";
 import { readLimitedBytes } from "@/lib/server/readLimitedBytes";
 import {
   hasSafeRasterDimensions,
@@ -28,11 +29,13 @@ interface PumpImage {
   contentType: string;
 }
 
-// Concurrent requests for one CID share a single gateway fetch. The zero ttl keeps
-// image bodies out of memory: only the in-flight promise is tracked.
+// A logo is immutable by CID, so its body is kept once fetched: public gateways take 4-8 s
+// per logo and rate-limit repeats, and without a CDN in front (Railway) every visitor paid
+// that wait. Concurrent requests for one CID share a single gateway fetch.
+// shortcut: bounded by entry count, not bytes (128 x 2 MB worst case, ~50 KB typical); move
+// to a byte budget if listed markets grow past a few hundred.
 const imageLoads = createBoundedCache<PumpImage>({
-  maxEntries: 1,
-  ttlMs: 0,
+  maxEntries: 128,
   maxInFlight: MAX_FAILURE_CACHE_ENTRIES,
 });
 // A CID that just failed every gateway is answered from the fallback for the backoff
@@ -57,7 +60,7 @@ export async function GET(request: Request) {
   if (imageFailures.get(cidPath)) return fallbackImage(symbol);
 
   try {
-    const image = await imageLoads.refresh(cidPath, () => loadPumpImage(cidPath));
+    const image = await imageLoads.load(cidPath, () => loadPumpImage(cidPath));
     imageFailures.delete(cidPath);
 
     return new Response(image.body, {
@@ -90,20 +93,13 @@ function gatewayUrls(cidPath: string): string[] {
   const [cid, ...pathSegments] = cidPath.split("/");
   const encodedPath = pathSegments.map(encodeURIComponent).join("/");
   const gatewayPath = encodedPath ? `/${encodedPath}` : "";
-  const pinataUrl = `https://gateway.pinata.cloud/ipfs/${cid}${gatewayPath}`;
-
-  // A dweb.link path request redirects to this same subdomain. Do not fetch
-  // both forms for every logo: a market grid would otherwise duplicate all
-  // dweb.link traffic and make cold IPFS retrievals more likely to time out.
-  if (cid.startsWith("b")) {
-    return [
-      `https://${cid}.ipfs.dweb.link${gatewayPath || "/"}`,
-      pinataUrl,
-    ];
-  }
+  // Logos are pinned to the project's Pinata account, so its gateway answers in about a
+  // second where the public ones take 4-8 s; dweb.link answers 429 to most requests. A
+  // dweb.link path request redirects to its subdomain form, so only that form is fetched.
   return [
-    `https://dweb.link/ipfs/${cid}${gatewayPath}`,
-    pinataUrl,
+    `https://${PINATA_GATEWAY_HOST}/ipfs/${cid}${gatewayPath}`,
+    `https://gateway.pinata.cloud/ipfs/${cid}${gatewayPath}`,
+    cid.startsWith("b") ? `https://${cid}.ipfs.dweb.link${gatewayPath || "/"}` : `https://dweb.link/ipfs/${cid}${gatewayPath}`,
   ];
 }
 
@@ -167,6 +163,7 @@ function assertAllowedGateway(url: URL): void {
   const hostname = url.hostname.toLowerCase();
   const allowed = hostname === "dweb.link"
     || hostname === "gateway.pinata.cloud"
+    || hostname === PINATA_GATEWAY_HOST
     || hostname.endsWith(".ipfs.dweb.link");
   if (
     url.protocol !== "https:"
