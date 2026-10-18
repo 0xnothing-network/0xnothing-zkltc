@@ -359,15 +359,15 @@ export function NusdOraclePanel() {
       <div className="pump-vault-oracle-strip">
         <div><span>zkLTC / USD</span><strong>{oracleChecking ? "..." : oracleReady ? `${displayWad(oraclePriceWad, false, 4)} USD` : "--"}</strong></div>
         <div><span>DIA updated</span><strong>{oracleUpdatedAt ? formatRelativeTime(oracleUpdatedAt) : "--"}</strong></div>
-        <div><span>Reserve value</span><strong>{displayUsdWad(reserveValue.data, reserveValue.isPending, 2)}</strong></div>
-        <div><span>Backing</span><strong>{displayBacking(backingRatio.data, backingRatio.isPending)}</strong></div>
+        <div><span>Reserve value</span><strong>{displayUsdWad(reserveValue.data, reserveValue.isLoading, 2)}</strong></div>
+        <div><span>Backing</span><strong>{displayBacking(backingRatio.data, backingRatio.isLoading)}</strong></div>
       </div>
 
       <div className="pump-vault-metrics">
-        <div><span>Your zkLTC</span><strong>{displayWad(nativeBalance.data?.value, nativeBalance.isPending, 4)} zkLTC</strong></div>
-        <div><span>Your NUSD</span><strong>{displayUsdWad(nusdBalance.data, nusdBalance.isPending, 2)}</strong></div>
-        <div><span>Protocol reserve</span><strong>{displayWad(reserve.data, reserve.isPending, 4)} zkLTC</strong></div>
-        <div><span>NUSD supply</span><strong>{displayUsdWad(totalSupply.data, totalSupply.isPending, 2)}</strong></div>
+        <div><span>Your zkLTC</span><strong>{displayWad(nativeBalance.data?.value, nativeBalance.isLoading, 4)} zkLTC</strong></div>
+        <div><span>Your NUSD</span><strong>{displayUsdWad(nusdBalance.data, nusdBalance.isLoading, 2)}</strong></div>
+        <div><span>Protocol reserve</span><strong>{displayWad(reserve.data, reserve.isLoading, 4)} zkLTC</strong></div>
+        <div><span>NUSD supply</span><strong>{displayUsdWad(totalSupply.data, totalSupply.isLoading, 2)}</strong></div>
       </div>
 
       {!configured ? <p className="pump-vault-alert">Direct mint and redeem activate after the NUSD deployment address is configured.</p> : null}
@@ -383,12 +383,12 @@ export function NusdOraclePanel() {
         <div className="pump-vault-form">
           {mode === "mint" ? (
             <div className="pump-field pump-vault-step">
-              <div className="pump-vault-field-head"><label htmlFor="nusd-mint-input"><span>01</span> zkLTC to deposit</label><small>Wallet {displayWad(nativeBalance.data?.value, nativeBalance.isPending, 4)} zkLTC</small></div>
+              <div className="pump-vault-field-head"><label htmlFor="nusd-mint-input"><span>01</span> zkLTC to deposit</label><small>Wallet {displayWad(nativeBalance.data?.value, nativeBalance.isLoading, 4)} zkLTC</small></div>
               <div className="pump-vault-token-field"><input id="nusd-mint-input" inputMode="decimal" value={mintAmount} onChange={(event) => setMintAmount(event.target.value)} placeholder="0.0" /><strong>zkLTC</strong></div>
             </div>
           ) : (
             <div className="pump-field pump-vault-step">
-              <div className="pump-vault-field-head"><label htmlFor="nusd-redeem-input"><span>01</span> NUSD to redeem</label><button type="button" disabled={!nusdBalance.data} onClick={() => setRedeemAmount(formatInputAmount(nusdBalance.data ?? 0n))}>MAX {displayUsdWad(nusdBalance.data, nusdBalance.isPending, 2)}</button></div>
+              <div className="pump-vault-field-head"><label htmlFor="nusd-redeem-input"><span>01</span> NUSD to redeem</label><button type="button" disabled={!nusdBalance.data} onClick={() => setRedeemAmount(formatInputAmount(nusdBalance.data ?? 0n))}>MAX {displayUsdWad(nusdBalance.data, nusdBalance.isLoading, 2)}</button></div>
               <div className="pump-vault-token-field"><input id="nusd-redeem-input" inputMode="decimal" value={redeemAmount} onChange={(event) => setRedeemAmount(event.target.value)} placeholder="0.0" /><strong>NUSD</strong></div>
             </div>
           )}

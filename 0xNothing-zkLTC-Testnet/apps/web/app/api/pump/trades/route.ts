@@ -3,13 +3,14 @@ import { getAddress, type Address } from "viem";
 import { getPumpTrades } from "@/features/pump/server/data";
 import { withPumpCache } from "@/features/pump/server/cache";
 import { boundedIntegerParam } from "@/features/pump/server/request";
-import { CDN_STALE_SECONDS, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
+import { CDN_STALE_SECONDS, isFreshRead, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
+  const fresh = isFreshRead(request);
   const rawToken = params.get("token");
   const rawTrader = params.get("trader");
   let token: Address | undefined;
@@ -38,13 +39,13 @@ export async function GET(request: Request) {
     const payload = await withPumpCache(
       key,
       () => getPumpTrades({ token, trader, limit, skip }),
-      { ttlMs: 1_000, staleMs: 5_000 },
+      { ttlMs: 1_000, staleMs: 5_000, fresh },
     );
     return NextResponse.json(payload, {
       headers: publicCdnCacheHeaders(
         "public, s-maxage=1, stale-while-revalidate=4",
         1,
-        CDN_STALE_SECONDS,
+        fresh ? 0 : CDN_STALE_SECONDS,
       ),
     });
   } catch (error) {

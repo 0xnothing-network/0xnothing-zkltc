@@ -7,6 +7,11 @@
  */
 export const CDN_STALE_SECONDS = 600;
 
+/** A page that already shows this route's data asks for current data (see lib/http.ts). */
+export function isFreshRead(request: Request): boolean {
+  return new URL(request.url).searchParams.get("fresh") === "1";
+}
+
 /**
  * `cacheControl` keeps its meaning for browsers. Vercel and Cloudflare each cache by
  * their own header, which browsers ignore, so a long CDN stale window never makes a

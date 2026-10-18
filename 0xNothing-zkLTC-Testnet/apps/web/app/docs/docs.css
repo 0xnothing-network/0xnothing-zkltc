@@ -363,23 +363,6 @@
   padding: 72px 0;
 }
 
-.ox-docs-section-heading {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  align-items: start;
-  gap: 14px;
-}
-
-.ox-docs-section-icon {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid var(--docs-line-strong);
-  background: var(--docs-panel);
-  color: var(--accent-text);
-}
-
 .ox-docs-section-heading h2 {
   margin: 0;
   color: var(--docs-text);
@@ -1275,16 +1258,6 @@
     padding-block: 11px;
   }
 
-  .ox-docs-section-heading {
-    grid-template-columns: 30px minmax(0, 1fr);
-    gap: 10px;
-  }
-
-  .ox-docs-section-icon {
-    width: 30px;
-    height: 30px;
-  }
-
   .ox-docs-section-heading h2 {
     font-size: 26px;
   }
@@ -1327,9 +1300,8 @@
 .ox-docs-hero p, .ox-docs-section-heading p, .ox-docs-copy { font-size: 14px; line-height: 1.8; max-width: 65ch; }
 .ox-docs-nav-group a { min-height: 44px; border-radius: var(--r-md); font-size: 13px; }
 .ox-docs-section-heading h2 { line-height: 1.2; }
-.ox-docs-section:target .ox-docs-section-icon { border-color: var(--docs-accent); background: var(--docs-panel-strong); }
 .ox-docs-topbar nav a, .ox-docs-hero-actions a, .ox-docs-footer-actions a,
-.ox-docs-section-icon, .ox-docs-universe-status { border-radius: var(--r-md); }
+.ox-docs-universe-status { border-radius: var(--r-md); }
 .ox-docs-topbar nav a:hover, .ox-docs-hero-actions a:hover, .ox-docs-footer-actions a:hover { transform: translateY(-1px); }
 .ox-docs-code, .ox-docs-disclosure, .ox-docs-mobile-nav, .ox-docs-fee-table-wrap,
 .ox-docs-warning, .ox-docs-facts, .ox-docs-flow, .ox-docs-lifecycle > div,

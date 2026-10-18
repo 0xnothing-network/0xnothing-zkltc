@@ -6,7 +6,7 @@ import { queryGoldsky, unconfiguredEnvelope } from "@fi/lib/server/goldsky";
 import { isFactoryPair, loadPairTail, pairForTokens, pairTokenMetadata } from "@fi/lib/server/rpcTail";
 import { deployment } from "@fi/config/deployment";
 import { createBoundedCache } from "@/lib/boundedCache";
-import { CDN_STALE_SECONDS, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
+import { CDN_STALE_SECONDS, isFreshRead, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
 const QUERY = `
   query Activity($pool: Bytes!, $first: Int!) {
@@ -27,10 +27,10 @@ type Result = { swaps?: SwapRow[]; liquidityEvents?: LiquidityRow[] };
 const CACHE_TTL_MS = 12_000;
 const STALE_TTL_MS = 60_000;
 const MAX_CACHE_ENTRIES = 128;
-const CACHE_HEADERS = publicCdnCacheHeaders(
+const cacheHeaders = (fresh: boolean) => publicCdnCacheHeaders(
   "public, s-maxage=10, stale-while-revalidate=30",
   10,
-  CDN_STALE_SECONDS,
+  fresh ? 0 : CDN_STALE_SECONDS,
 );
 
 type ActivityEnvelope = DataEnvelope<ActivityPoint[]>;
@@ -115,6 +115,7 @@ async function loadActivity(pair: string, dynamicPool?: Address): Promise<Activi
 
 export async function GET(request: NextRequest) {
   const pair = request.nextUrl.searchParams.get("pair")?.toLowerCase() || "";
+  const CACHE_HEADERS = cacheHeaders(isFreshRead(request));
   const validPairs = canonicalPairs.map(([a, b]) => pairSlug(a, b));
   const dynamicPool = isAddress(pair) ? getAddress(pair) : undefined;
   if (!dynamicPool && !validPairs.includes(pair)) {

@@ -6,6 +6,22 @@ function responseError(payload: unknown): string | undefined {
   return message ? message.slice(0, 240) : undefined;
 }
 
+// The first read of a live data route may take the CDN's last copy, so a page paints at once.
+// Every later read of the same URL is a poll or a chain-event refresh and asks for current
+// data, which the route then answers without any stale-while-revalidate layer.
+const LIVE_DATA_ROUTE = /^\/(?:api\/pump\/|0xFi\/api\/data\/)/;
+const readLiveUrls = new Set<string>();
+
+/** `url`, with `fresh=1` when this page has read that live data route before. */
+export function liveReadUrl(url: string): string {
+  if (!LIVE_DATA_ROUTE.test(url)) return url;
+  if (!readLiveUrls.has(url)) {
+    readLiveUrls.add(url);
+    return url;
+  }
+  return `${url}${url.includes("?") ? "&" : "?"}fresh=1`;
+}
+
 export async function fetchJson<T>(
   input: Parameters<typeof fetch>[0],
   init?: Parameters<typeof fetch>[1],
@@ -24,7 +40,8 @@ export async function fetchJson<T>(
   )), timeoutMs);
   try {
     controller.signal.throwIfAborted();
-    const response = await fetch(input, { ...init, signal: controller.signal });
+    const url = typeof input === "string" && (init?.method ?? "GET") === "GET" ? liveReadUrl(input) : input;
+    const response = await fetch(url, { ...init, signal: controller.signal });
     const payload = await response.json().catch((error: unknown) => {
       controller.signal.throwIfAborted();
       if (error instanceof SyntaxError) return undefined;

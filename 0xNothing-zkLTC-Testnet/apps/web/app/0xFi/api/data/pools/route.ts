@@ -21,7 +21,7 @@ import { liveLogClient } from "@fi/lib/server/liveLogClient";
 import { tokenImageUrl } from "@fi/lib/tokenImage";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { hasPositiveBigInt, nonNegativeBigInt } from "@/lib/integer";
-import { CDN_STALE_SECONDS, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
+import { CDN_STALE_SECONDS, isFreshRead, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
 type PoolRow = Omit<PoolPoint, "id" | "token0" | "token1" | "totalSupply"> & {
   id: string;
@@ -738,24 +738,26 @@ function loadPoolsOnce(): Promise<DataEnvelope<PoolPoint[]>> {
   return poolsCache.refresh(POOLS_CACHE_KEY, loadPoolsEnvelope);
 }
 
-function poolsResponse(envelope: DataEnvelope<PoolPoint[]>, cacheStatus: "HIT" | "MISS" | "COALESCED" | "STALE") {
+function poolsResponse(envelope: DataEnvelope<PoolPoint[]>, cacheStatus: "HIT" | "MISS" | "COALESCED" | "STALE", freshRead = false) {
+  const cdnStale = freshRead ? 0 : CDN_STALE_SECONDS;
   return NextResponse.json(envelope, {
     headers: {
       ...(cacheStatus === "STALE"
-        ? publicCdnCacheHeaders(POOLS_STALE_CACHE_CONTROL, 1, CDN_STALE_SECONDS)
-        : publicCdnCacheHeaders(POOLS_CACHE_CONTROL, 10, CDN_STALE_SECONDS)),
+        ? publicCdnCacheHeaders(POOLS_STALE_CACHE_CONTROL, 1, cdnStale)
+        : publicCdnCacheHeaders(POOLS_CACHE_CONTROL, 10, cdnStale)),
       "X-0xFi-Cache": cacheStatus,
     },
   });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const freshRead = isFreshRead(request);
   const cached = poolsCache.entry(POOLS_CACHE_KEY);
   if (cached && cached.ageMs < POOLS_CACHE_TTL_MS) {
-    return poolsResponse(cached.value, "HIT");
+    return poolsResponse(cached.value, "HIT", freshRead);
   }
 
-  if (cached && cached.ageMs < POOLS_CACHE_TTL_MS + POOLS_STALE_WHILE_REVALIDATE_MS) {
+  if (!freshRead && cached && cached.ageMs < POOLS_CACHE_TTL_MS + POOLS_STALE_WHILE_REVALIDATE_MS) {
     // Keep the serverless invocation alive until the shared background refresh settles.
     after(() => loadPoolsOnce().catch(() => { /* retain the last successful response during the stale window */ }));
     return poolsResponse(cached.value, "STALE");
@@ -765,7 +767,7 @@ export async function GET() {
 
   try {
     const envelope = await loadPoolsOnce();
-    return poolsResponse(envelope, joinedExistingRequest ? "COALESCED" : "MISS");
+    return poolsResponse(envelope, joinedExistingRequest ? "COALESCED" : "MISS", freshRead);
   } catch (error) {
     const stale = poolsCache.entry(POOLS_CACHE_KEY);
     if (stale) {

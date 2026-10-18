@@ -256,7 +256,7 @@ export function PoolDirectory({
             onClick={() => chooseSort(key)}
             key={key}
           >
-            {key === "change" ? "24h" : key.toUpperCase()}
+            {key === "change" ? "24h" : key === "tvl" ? "TVL" : "Price"}
             <CaretUpDown size={11} aria-hidden="true" />
           </button>
         ))}

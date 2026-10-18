@@ -6,6 +6,8 @@ import { createBoundedCache } from "@/lib/boundedCache";
 interface CachePolicy {
   ttlMs: number;
   staleMs?: number;
+  /** Wait for a reload instead of answering from an entry past its ttl. */
+  fresh?: boolean;
 }
 
 const MAX_ENTRIES = 512;
@@ -31,6 +33,7 @@ export async function withPumpCache<T>(
   const cached = cache.entry(key);
   if (cached?.fresh) {
     if (cached.ageMs < policy.ttlMs) return cached.value as T;
+    if (policy.fresh) return cache.refresh(key, load, retentionMs(policy)) as Promise<T>;
     after(() => cache.refresh(key, load, retentionMs(policy)).then(() => undefined).catch(() => undefined));
     return cached.value as T;
   }

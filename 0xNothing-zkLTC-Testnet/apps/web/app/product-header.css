@@ -116,7 +116,7 @@
   white-space: nowrap;
 }
 .ox-network-pill small { color: var(--text-3); font-family: var(--font-num); font-size: 12px; }
-.ox-network-pill i { width: 7px; height: 7px; border-radius: var(--r-pill); background: var(--positive); box-shadow: 0 0 0 3px color-mix(in srgb, var(--positive) 18%, transparent); }
+.ox-network-pill i { width: 7px; height: 7px; border-radius: var(--r-pill); background: var(--positive); }
 .ox-network-pill[data-state="wrong"] { border-color: color-mix(in srgb, var(--warning) 45%, transparent); color: var(--warning); cursor: pointer; }
 .ox-network-pill[data-state="wrong"] i { background: var(--warning); box-shadow: none; }
 

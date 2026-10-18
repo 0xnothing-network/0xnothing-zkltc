@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { memo, useMemo } from "react";
-import { formatDecimal, formatRelativeTime, formatWad } from "@/features/pump/format";
+import { formatDecimal, formatRelativeTime, formatStatus, formatWad } from "@/features/pump/format";
 import type { PumpMarket } from "@/features/pump/types";
 import { PumpTokenLogo } from "@/features/pump/components/PumpTokenLogo";
 
@@ -45,7 +45,7 @@ function TokenCardInner({ market, priority = false }: { market: PumpMarket; prio
           />
         </div>
         <span className={`pump-status pump-status-${market.status.toLowerCase()}`}>
-          {market.status}
+          {formatStatus(market.status)}
         </span>
       </div>
 

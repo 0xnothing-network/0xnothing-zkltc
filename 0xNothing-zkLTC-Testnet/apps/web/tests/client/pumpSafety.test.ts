@@ -369,7 +369,7 @@ function componentHarness(name: PumpComponent, changeAt?: "simulation" | "upload
       } }) },
       "@/features/pump/contentHash": { computePumpContentHash: async () => HASH },
       "@/features/pump/imageValidation": { PUMP_MAX_IMAGE_BYTES: 2_000_000, validatePumpImage: async () => null },
-      "@/features/pump/format": { formatCompactNumber: String, formatRelativeTime: String, formatWad: String, shortAddress: String, formatDecimal: String },
+      "@/features/pump/format": { formatCompactNumber: String, formatRelativeTime: String, formatStatus: String, formatWad: String, shortAddress: String, formatDecimal: String },
       "@/features/pump/hooks/usePumpData": { usePumpMarket: () => ({ data: { market: { ...market, status: "READY", metadataURI: "ipfs://metadata" } }, refetch: async () => ({}) }),
         usePumpStats: () => ({ refetch: async () => ({}) }), usePumpMarkets: () => ({ markets: [] }) },
       "@/features/pump/components/PumpStates": {},

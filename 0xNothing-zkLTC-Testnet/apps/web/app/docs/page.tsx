@@ -6,14 +6,11 @@ import {
   ArrowSquareOut,
   ArrowsLeftRight,
   BookOpenText,
-  BracketsCurly,
   CheckCircle,
   Coins,
-  Database,
   GlobeHemisphereWest,
   ImageSquare,
   RocketLaunch,
-  ShieldCheck,
   Warning,
 } from "@phosphor-icons/react/dist/ssr";
 import { DocsCodeBlock } from "./DocsCodeBlock";
@@ -22,6 +19,7 @@ import testnet from "@fi/config/testnet.generated.json";
 import { NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
 import {
   PIXEL_CLASSIC_ADDRESS,
+  PIXEL_NFT_ADDRESS,
   PUMP_FACTORY_ADDRESS,
   PUMP_GRADUATION_CONTROLLER_ADDRESS,
   PUMP_SUBGRAPH_URL,
@@ -30,7 +28,7 @@ import "./docs.css";
 
 export const metadata: Metadata = {
   title: "Developer Documentation | 0xNothing",
-  description: "Build with 0xPixel, 0xPump, and 0xFi on LitVM Testnet. Explore 0xUniverse for the mainnet roadmap.",
+  description: "Build with 0xPixel, 0xPump, NUSD, and 0xFi on LitVM Testnet. Explore 0xUniverse for the mainnet roadmap.",
   alternates: { canonical: "/docs" },
 };
 
@@ -48,6 +46,7 @@ const NAV_GROUPS = [
     items: [
       { href: "#0xpixel", label: "0xPixel" },
       { href: "#0xpump", label: "0xPump" },
+      { href: "#nusd", label: "NUSD" },
       { href: "#0xfi", label: "0xFi" },
       { href: "#0xuniverse", label: "0xUniverse" },
     ],
@@ -64,9 +63,11 @@ const NAV_GROUPS = [
 ] as const;
 
 const CORE_CONTRACTS = [
-  { name: "0xPixel NFT", address: PIXEL_CLASSIC_ADDRESS, use: "Fully onchain pixel art ERC-721" },
+  { name: "0xPixel", address: PIXEL_NFT_ADDRESS, use: "Fully onchain pixel art ERC-721; new art mints here" },
+  { name: "0xPixel Classic", address: PIXEL_CLASSIC_ADDRESS, use: "First collection, read-only in the app" },
   ...(NUSD_MARKETPLACE_ADDRESS ? [{ name: "0xPixel NUSD Marketplace", address: NUSD_MARKETPLACE_ADDRESS, use: "NUSD listings, escrowed offers and reusable credits" }] : []),
-  { name: "NUSD / OracleNUSD", address: testnet.nusd, use: "Oracle-priced settlement asset" },
+  { name: "NUSD", address: testnet.nusd, use: "zkLTC-backed stablecoin, oracle-priced mint and redeem" },
+  { name: "LTC price router", address: testnet.ltcOracle, use: "DIA zkLTC/USD feed behind NUSD and lending" },
   { name: "Fee Splitter", address: testnet.feeSplitter, use: "Single inbox for every protocol fee" },
   { name: "0xPoints Staking", address: testnet.rewardStaking, use: "NUSD locks and streaming rewards" },
   { name: "0xPump", address: PUMP_FACTORY_ADDRESS, use: "Bonding-curve token launchpad" },
@@ -103,7 +104,8 @@ export const publicClient = createPublicClient({
 });
 
 export const contracts = {
-  pixel: "${PIXEL_CLASSIC_ADDRESS}",
+  pixel: "${PIXEL_NFT_ADDRESS}",
+  pixelClassic: "${PIXEL_CLASSIC_ADDRESS}",
   pixelMarketplace: "${NUSD_MARKETPLACE_ADDRESS ?? "not-configured"}",
   nusd: "${testnet.nusd}",
   pump: "${PUMP_FACTORY_ADDRESS}",
@@ -117,19 +119,19 @@ export const contracts = {
 const PIXEL_CODE = `import { parseAbi } from "viem";
 
 export const pixelAbi = parseAbi([
-  "function checkOriginal(string pixelData, uint256 grid) view returns (bool)",
-  "function mint(string artName, uint256 grid, string pixelData) returns (uint256 tokenId)",
-  "function tokenData(uint256 tokenId) view returns (string artName, uint256 gridSize, string pixelData, address creator, uint256 mintedAt, bytes32 artworkHash)",
+  "function checkOriginalPacked(bytes pixels, uint256 grid) view returns (bool)",
+  "function mintPacked(string artName, string description, uint256 grid, bytes pixels) returns (uint256)",
+  "function tokenPackedData(uint256 tokenId) view returns (string artName, string description, uint256 grid, bytes pixels, address creator, uint256 mintedAt, bytes32 artworkHash)",
   "function tokenURI(uint256 tokenId) view returns (string)",
 ]);
 
-// Supported grids: 8, 16, 32, 64.
-// pixelData is packed horizontal runs: x, y, count, r, g, b.
+// Grids: 8, 16, 32, 64, 128, 256.
+// pixels: 6 bytes per horizontal run (x, y, width - 1, r, g, b), at most 4,096 runs.
 const isOriginal = await publicClient.readContract({
   address: contracts.pixel,
   abi: pixelAbi,
-  functionName: "checkOriginal",
-  args: [pixelData, 32n],
+  functionName: "checkOriginalPacked",
+  args: [pixels, 32n],
 });`;
 
 const SWAP_CODE = `import { parseAbi, type Address, type Hash, type PublicClient, type WalletClient } from "viem";
@@ -361,17 +363,14 @@ function ContractLink({ address }: { address: string }) {
 }
 
 function SectionHeading({
-  icon,
   title,
   description,
 }: {
-  icon: React.ReactNode;
   title: string;
   description: string;
 }) {
   return (
     <div className="ox-docs-section-heading">
-      <span className="ox-docs-section-icon">{icon}</span>
       <div><h2>{title}</h2><p>{description}</p></div>
     </div>
   );
@@ -426,7 +425,7 @@ export default function DocsPage() {
             <div>
               <span className="ox-docs-eyebrow"><BookOpenText size={15} aria-hidden="true" /> Developer documentation</span>
               <h1>Build across 0xNothing.</h1>
-              <p>One testnet stack for onchain art, token markets, DeFi, and the world arriving with mainnet.</p>
+              <p>One testnet stack for onchain art, token markets, a zkLTC-backed dollar, DeFi, and the world arriving with mainnet.</p>
               <div className="ox-docs-hero-actions">
                 <a href="#quick-start">Quick start <ArrowRight size={14} aria-hidden="true" /></a>
                 <a href="#vibe-code" className="secondary">Copy build prompt</a>
@@ -448,7 +447,6 @@ export default function DocsPage() {
           <article className="ox-docs-article">
             <section id="quick-start" className="ox-docs-section">
               <SectionHeading
-                icon={<BracketsCurly size={21} aria-hidden="true" />}
                 title="Quick start"
                 description="Connect to LitVM, pin the deployment, and keep all transaction decisions grounded in live RPC state."
               />
@@ -467,7 +465,6 @@ export default function DocsPage() {
 
             <section id="network" className="ox-docs-section">
               <SectionHeading
-                icon={<Database size={21} aria-hidden="true" />}
                 title="Network and contracts"
                 description="These public addresses are the checked LitVM testnet deployment used by the current web application."
               />
@@ -503,13 +500,13 @@ export default function DocsPage() {
 
             <section id="architecture" className="ox-docs-section">
               <SectionHeading
-                icon={<GlobeHemisphereWest size={21} aria-hidden="true" />}
                 title="Ecosystem architecture"
                 description="Each product is useful on its own. Together they form a path from creation to markets, liquidity, and persistent digital ownership."
               />
               <div className="ox-docs-ecosystem-map">
                 <div><ImageSquare size={20} aria-hidden="true" /><strong>0xPixel</strong><span>Create and trade fully onchain visual assets.</span></div>
                 <div><RocketLaunch size={20} aria-hidden="true" /><strong>0xPump</strong><span>Launch community tokens through a transparent curve.</span></div>
+                <div><Coins size={20} aria-hidden="true" /><strong>NUSD</strong><span>Mint a zkLTC-backed dollar and stake it for protocol fees.</span></div>
                 <div><ArrowsLeftRight size={20} aria-hidden="true" /><strong>0xFi</strong><span>Settle, swap, lend, borrow, and route liquidity.</span></div>
                 <div><GlobeHemisphereWest size={20} aria-hidden="true" /><strong>0xUniverse</strong><span>Bring assets and finance into a persistent game world.</span></div>
               </div>
@@ -517,18 +514,17 @@ export default function DocsPage() {
 
             <section id="0xpixel" className="ox-docs-section ox-docs-product-section">
               <SectionHeading
-                icon={<ImageSquare size={21} aria-hidden="true" />}
                 title="0xPixel"
                 description="A fully onchain pixel-art studio, ERC-721 collection, provenance registry, gallery, and NUSD NFT marketplace."
               />
               <div className="ox-docs-mechanism-grid">
-                <div><strong>Onchain art</strong><p>Pixel runs, artwork name, grid size, creator, mint time, and artwork hash live in contract storage.</p></div>
+                <div><strong>Onchain art</strong><p>Packed pixel runs, artwork name, description, grid size, creator, mint time, and artwork hash live in contract storage.</p></div>
                 <div><strong>Deterministic media</strong><p>The contract generates SVG and base64 JSON metadata. The collectible does not depend on an offchain image host.</p></div>
                 <div><strong>Originality</strong><p>The registry hashes packed pixel data with the grid size and rejects an artwork that was already registered.</p></div>
-                <div><strong>NUSD marketplace</strong><p>Listings and escrowed offers settle in NUSD. Each sale burns 0.1% of the price and pays 0.4% to the artwork&apos;s creator; there is no platform fee. Sale proceeds and refunds are reusable credits. zkLTC only pays gas.</p></div>
+                <div><strong>NUSD marketplace</strong><p>Listings and escrowed offers settle in NUSD. Each sale burns 0.1% of the price and pays 0.4% to the artwork&apos;s creator; there is no platform fee. Sale proceeds and refunds are reusable credits. zkLTC only pays gas. Other marketplaces read a 1% creator royalty through ERC-2981.</p></div>
               </div>
               <div className="ox-docs-spec-line">
-                <span>Supported grids</span><strong>8 x 8, 16 x 16, 32 x 32, 64 x 64</strong>
+                <span>Supported grids</span><strong>8 x 8 up to 256 x 256, at most 4,096 colour runs</strong>
               </div>
               <DocsCodeBlock code={PIXEL_CODE} label="pixel-read.ts" />
               <ProductLink href="/0xpixel">Open 0xPixel studio</ProductLink>
@@ -537,7 +533,6 @@ export default function DocsPage() {
 
             <section id="0xpump" className="ox-docs-section ox-docs-product-section">
               <SectionHeading
-                icon={<RocketLaunch size={21} aria-hidden="true" />}
                 title="0xPump"
                 description="A NUSD launchpad with reserved metadata, virtual constant-product pricing, explicit lifecycle states, and protected graduation."
               />
@@ -566,19 +561,35 @@ export default function DocsPage() {
               <ProductLink href="/0xPump">Open 0xPump markets</ProductLink>
             </section>
 
+            <section id="nusd" className="ox-docs-section ox-docs-product-section">
+              <SectionHeading
+                title="NUSD"
+                description="The dollar every 0xNothing product settles in: minted against native zkLTC at the DIA price, and staked for a share of protocol fees."
+              />
+              <div className="ox-docs-fi-surfaces">
+                <div><strong>Mint and redeem</strong><span>Mint against native zkLTC at the DIA price. Redeem pays the DIA value but never more than a holder&apos;s share of the reserve, so a short reserve cannot be drained by the first to leave. Redemption can never be paused. Mint and redeem fees are 0% today and capped at 0.5% by the contract.</span></div>
+                <div><strong>Oracle failure</strong><span>Once a DIA failure is reported on chain and the price is still unusable 7 days later, every holder can exit through emergency redeem for a pro-rata share of the reserve.</span></div>
+                <div><strong>Earn</strong><span>Stake NUSD for 0xPoints and streaming rewards. Every NUSD fee is split 70% to stakers, streamed over 7 days by lock weight, 20% burned and 10% to the treasury. Fees paid in zkLTC go 90% to the NUSD reserve and 10% to the treasury.</span></div>
+                <div><strong>Surplus</strong><span>When the zkLTC reserve reaches 3.3x the NUSD supply, anyone can mint the excess down to 3.0x, at most once a week: 80% to stakers, 20% to the treasury.</span></div>
+              </div>
+              <div className="ox-docs-method-list">
+                <div><code>quoteMint / mintAtOracle</code><span>Native zkLTC in, NUSD out.</span></div>
+                <div><code>quoteRedeem / redeemAtOracle</code><span>NUSD in, native zkLTC out. No approval needed.</span></div>
+              </div>
+              <ProductLink href="/nusd">Open NUSD</ProductLink>
+            </section>
+
             <section id="0xfi" className="ox-docs-section ox-docs-product-section">
               <SectionHeading
-                icon={<Coins size={21} aria-hidden="true" />}
                 title="0xFi"
-                description="The liquidity and risk layer for swaps, pools, LP farms, fixed-rate NUSD lending, borrowing, and DIA-priced synthetic assets."
+                description="The liquidity and risk layer for swaps, pools, LP farms, fixed-rate NUSD lending, borrowing, DIA-priced synthetic assets, and issuer-backed RWA markets."
               />
               <div className="ox-docs-fi-surfaces">
                 <div><strong>Swap and pools</strong><span>Constant-product pairs, one LP token per unordered pair, and router-protected liquidity operations.</span></div>
-                <div><strong>NUSD · Mint</strong><span>In the NUSD app. Oracle-priced mint and redeem against native zkLTC. Redeem pays the DIA value but never more than a holder&apos;s share of the reserve, and it can never be paused.</span></div>
-                <div><strong>NUSD · Earn</strong><span>Stake NUSD for 0xPoints and streaming rewards: 70% of every NUSD fee reaches stakers over 7 days by lock weight, 20% is burned and 10% goes to the treasury.</span></div>
-                <div><strong>NUSD · Surplus</strong><span>When the zkLTC reserve reaches 3.3× the NUSD supply, anyone can mint the excess down to 3.0×, at most weekly: 80% to stakers, 20% to the treasury.</span></div>
-                <div><strong>Lend and borrow</strong><span>Fixed 4.5% borrower rate, 4% lender rate, and 0.5% protocol spread on the active testnet pool.</span></div>
+                <div><strong>Farm</strong><span>Stake LP tokens of the canonical pools in their gauges. Rewards stream only while a gauge is funded.</span></div>
+                <div><strong>Lend and borrow</strong><span>Borrowers pay a fixed 4.5% APR. Lenders earn 4% on the share of the pool that is borrowed, and 0.5% is the protocol spread.</span></div>
                 <div><strong>Synths</strong><span>nBTC and nETH use DIA prices, isolated collateral accounting, reserve support rules, and stale-feed guards.</span></div>
+                <div><strong>RWA</strong><span>Issuer tokens trade against a published reserve with a 1% fee. No issuer market is listed on testnet yet.</span></div>
               </div>
               <div className="ox-docs-fee-table-wrap">
                 <table>
@@ -597,7 +608,6 @@ export default function DocsPage() {
             <section id="0xuniverse" className="ox-docs-section ox-docs-universe">
               <div className="ox-docs-universe-status">Coming with mainnet</div>
               <SectionHeading
-                icon={<GlobeHemisphereWest size={21} aria-hidden="true" />}
                 title="0xUniverse"
                 description="A persistent game world where Web3 finance and GameFi connect virtual property, creator economies, and compliant RWA representations."
               />
@@ -615,7 +625,6 @@ export default function DocsPage() {
 
             <section id="swap-integration" className="ox-docs-section">
               <SectionHeading
-                icon={<ArrowsLeftRight size={21} aria-hidden="true" />}
                 title="Integrate 0xFi swaps"
                 description="Choose the correct execution surface, quote against current state, simulate the exact request, then ask the wallet to sign."
               />
@@ -643,7 +652,6 @@ export default function DocsPage() {
 
             <section id="vibe-code" className="ox-docs-section">
               <SectionHeading
-                icon={<BracketsCurly size={21} aria-hidden="true" />}
                 title="Vibe-code command"
                 description="Paste this specification into a coding agent to generate a complete testnet swap integration without losing protocol constraints."
               />
@@ -656,7 +664,6 @@ export default function DocsPage() {
 
             <section id="indexed-data" className="ox-docs-section">
               <SectionHeading
-                icon={<Database size={21} aria-hidden="true" />}
                 title="Indexed data"
                 description="Goldsky powers discovery, history, charts, and activity. RPC remains authoritative for balances, quotes, allowances, and transaction preflight."
               />
@@ -670,7 +677,6 @@ export default function DocsPage() {
 
             <section id="safety" className="ox-docs-section">
               <SectionHeading
-                icon={<ShieldCheck size={21} aria-hidden="true" />}
                 title="Testnet safety"
                 description="This deployment is for integration testing. A successful transaction or build does not represent a security audit."
               />

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createServer } from "node:http";
 import { once } from "node:events";
-import { fetchJson } from "../../lib/http.ts";
+import { fetchJson, liveReadUrl } from "../../lib/http.ts";
 
 test("stalled headers and stalled JSON bodies time out, then the next live request recovers", async () => {
   const server = createServer((req, res) => {
@@ -58,4 +58,15 @@ test("JSON reads retain API errors and reject malformed successful responses", a
     server.closeAllConnections();
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   }
+});
+
+test("repeat reads of a live data route ask for current data; other URLs are untouched", () => {
+  assert.equal(liveReadUrl("/api/pump/markets?limit=3&sort=VOLUME"), "/api/pump/markets?limit=3&sort=VOLUME");
+  assert.equal(liveReadUrl("/api/pump/markets?limit=3&sort=VOLUME"), "/api/pump/markets?limit=3&sort=VOLUME&fresh=1");
+  assert.equal(liveReadUrl("/api/pump/stats"), "/api/pump/stats");
+  assert.equal(liveReadUrl("/api/pump/stats"), "/api/pump/stats?fresh=1");
+  assert.equal(liveReadUrl("/0xFi/api/data/pools"), "/0xFi/api/data/pools");
+  assert.equal(liveReadUrl("/0xFi/api/data/pools"), "/0xFi/api/data/pools?fresh=1");
+  assert.equal(liveReadUrl("/api/token-metadata?ids=1"), "/api/token-metadata?ids=1");
+  assert.equal(liveReadUrl("/api/token-metadata?ids=1"), "/api/token-metadata?ids=1");
 });

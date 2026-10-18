@@ -62,8 +62,6 @@
   color: var(--text-3);
   font-family: var(--font-brand);
   font-size: 12px;
-  letter-spacing: .14em;
-  text-transform: uppercase;
 }
 .nothing-title { margin: 0; display: grid; gap: 10px; font-weight: 400; line-height: .95; }
 .nothing-title span:first-child {
@@ -86,7 +84,7 @@
 
 /* Real artwork, square tiles, no rounding: it is pixel art. */
 .nothing-mosaic { margin: 0; display: grid; gap: 12px; }
-.nothing-mosaic figcaption { color: var(--text-3); font-family: var(--font-brand); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
+.nothing-mosaic figcaption { color: var(--text-3); font-family: var(--font-brand); font-size: 12px; }
 .nothing-mosaic-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .nothing-mosaic-tile {
   position: relative;
@@ -127,6 +125,7 @@
 .nothing-link[href="/0xPump"] { --product: var(--accent-pump); }
 .nothing-link[href="/0xFi"] { --product: var(--accent-fi); }
 .nothing-link[href="/0xpixel"] { --product: var(--accent-pixel); }
+.nothing-link[href="/nusd"] { --product: var(--accent-nusd); }
 .nothing-link-index { color: var(--text-3); font-family: var(--font-num); font-size: 13px; }
 .nothing-link-name { display: inline-flex; align-items: center; gap: 12px; font-size: clamp(20px, 2vw, 26px); font-weight: 600; letter-spacing: -.025em; }
 .nothing-link-name::before { content: ""; width: 10px; height: 10px; background: var(--product); }
@@ -165,12 +164,6 @@
 }
 @media (max-width: 350px) {
   .nothing-footer-inner { flex-wrap: wrap; gap: 4px; }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .nothing-copy, .nothing-mosaic, .nothing-nav { animation: home-enter 480ms var(--ease) both; }
-  .nothing-mosaic { animation-delay: 80ms; }
-  .nothing-nav { animation-delay: 140ms; }
-  @keyframes home-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 }
 @media (prefers-reduced-motion: reduce) {
   .nothing-link, .nothing-link-arrow, .nothing-link-name::before, .nothing-x, .nothing-footer-nav a { transition: none; }

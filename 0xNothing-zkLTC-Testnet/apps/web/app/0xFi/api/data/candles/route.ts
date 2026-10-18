@@ -9,7 +9,7 @@ import { diaOracleAdapterAbi } from "@fi/lib/abis/dia";
 import { canonicalOracleMarketForIdentifier } from "@fi/lib/canonicalMarkets";
 import { decimal, isFactoryPair, loadPairTail, pairForTokens, pairTokenMetadata } from "@fi/lib/server/rpcTail";
 import { createBoundedCache } from "@/lib/boundedCache";
-import { CDN_STALE_SECONDS, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
+import { CDN_STALE_SECONDS, isFreshRead, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 import { PublicRouteError, publicErrorMessage } from "@/lib/server/publicError";
 
 const PERIODS = { "5m": 300, "1h": 3_600, "4h": 14_400, "1d": 86_400 } as const;
@@ -48,10 +48,10 @@ class CandleRouteError extends PublicRouteError {
   }
 }
 
-function candlesResponse(envelope: DataEnvelope<CandlePoint[]>, cacheStatus: string): NextResponse {
+function candlesResponse(envelope: DataEnvelope<CandlePoint[]>, cacheStatus: string, freshRead: boolean): NextResponse {
   return NextResponse.json(envelope, {
     headers: {
-      ...publicCdnCacheHeaders(CANDLES_CACHE_CONTROL, 10, CDN_STALE_SECONDS),
+      ...publicCdnCacheHeaders(CANDLES_CACHE_CONTROL, 10, freshRead ? 0 : CDN_STALE_SECONDS),
       "X-0xFi-Cache": cacheStatus,
     },
   });
@@ -284,14 +284,16 @@ export async function GET(request: NextRequest) {
 
   const period = requestedPeriod as CandlePeriod;
   const cacheKey = `${pair}:${period}`;
+  const freshRead = isFreshRead(request);
   const fresh = candlesCache.get(cacheKey);
-  if (fresh) return candlesResponse(fresh, "HIT");
+  if (fresh) return candlesResponse(fresh, "HIT", freshRead);
 
   const coalesced = Boolean(candlesCache.pending(cacheKey));
   try {
     return candlesResponse(
       await candlesCache.load(cacheKey, () => loadCandles(pair, period, dynamicPool)),
       coalesced ? "COALESCED" : "MISS",
+      freshRead,
     );
   } catch (error) {
     const stale = candlesCache.entry(cacheKey);
@@ -305,7 +307,7 @@ export async function GET(request: NextRequest) {
         ...stale.value,
         meta: { ...stale.value.meta, generatedAt: new Date().toISOString() },
         warning: `${stale.value.warning ? `${stale.value.warning} ` : ""}Serving cached candles after refresh failed.`,
-      }, "STALE");
+      }, "STALE", freshRead);
     }
     const status = error instanceof CandleRouteError ? error.status : 502;
     if (!(error instanceof CandleRouteError)) {

@@ -149,7 +149,7 @@ function adaptivePriceFormat(points: ChartCandle[]) {
     .flatMap((point) => [point.open, point.high, point.low, point.close])
     .filter((point) => point > 0 && Number.isFinite(point));
   const reference = positivePrices.length ? Math.min(...positivePrices) : 1;
-  const precision = Math.min(18, Math.max(2, Math.ceil(-Math.log10(reference)) + 6));
+  const precision = Math.min(18, Math.max(2, Math.ceil(-Math.log10(reference)) + 4));
   return { type: "price" as const, precision, minMove: 10 ** -precision };
 }
 

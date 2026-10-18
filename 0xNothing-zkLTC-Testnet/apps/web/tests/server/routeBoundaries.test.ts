@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createBoundedCache } from "../../lib/boundedCache.ts";
-import { publicCdnCacheHeaders } from "../../lib/server/cdnCache.ts";
+import { isFreshRead, publicCdnCacheHeaders } from "../../lib/server/cdnCache.ts";
 import { PublicRouteError, publicErrorMessage } from "../../lib/server/publicError.ts";
 import { evaluateModule } from "../helpers/evaluateModule.ts";
 
@@ -11,7 +11,7 @@ const marketplace = `0x${"3".repeat(40)}`;
 
 function candleHarness() {
   const queriedPeriods: number[] = [];
-  const route = evaluateModule<{ GET: (request: { nextUrl: URL }) => Promise<Response> }>(
+  const route = evaluateModule<{ GET: (request: { url: string; nextUrl: URL }) => Promise<Response> }>(
     new URL("../../app/0xFi/api/data/candles/route.ts", import.meta.url),
     {
       "next/server": { NextResponse: Response },
@@ -37,12 +37,15 @@ function candleHarness() {
         pairTokenMetadata: async () => ({ token0: collection, token1: seller, decimals0: 18, decimals1: 18 }),
       },
       "@/lib/boundedCache": { createBoundedCache },
-      "@/lib/server/cdnCache": { publicCdnCacheHeaders },
+      "@/lib/server/cdnCache": { isFreshRead, publicCdnCacheHeaders },
       "@/lib/server/publicError": { PublicRouteError, publicErrorMessage },
     },
     { console: { warn() {}, error() {} } },
   );
-  return { queriedPeriods, get: (period: string) => route.GET({ nextUrl: new URL(`https://app.test/0xFi/api/data/candles?pair=token-nusd&period=${period}`) }) };
+  return { queriedPeriods, get: (period: string) => {
+    const url = `https://app.test/0xFi/api/data/candles?pair=token-nusd&period=${period}`;
+    return route.GET({ url, nextUrl: new URL(url) });
+  } };
 }
 
 test("candle API rejects inherited object keys before querying either data source", async () => {
@@ -93,7 +96,7 @@ test("marketplace hydrates listing metadata from verified RPC reads", async () =
       "@/lib/pixelImage": { getPixelImageUrl: (tokenId: string) => `/api/pixel-image?tokenId=${tokenId}` },
       "@/lib/erc721Metadata.server": { fetchValidatedErc721Metadata: async () => ({}) },
       "@/lib/boundedCache": { createBoundedCache },
-      "@/lib/server/cdnCache": { publicCdnCacheHeaders },
+      "@/lib/server/cdnCache": { isFreshRead, publicCdnCacheHeaders },
     },
     { URL, setTimeout, clearTimeout, console: { warn() {}, error() {} } },
   );

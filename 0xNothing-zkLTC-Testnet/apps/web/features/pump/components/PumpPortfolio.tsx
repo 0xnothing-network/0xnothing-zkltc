@@ -4,7 +4,7 @@ import { memo, useMemo } from "react";
 import Link from "next/link";
 import { parseUnits } from "viem";
 import { usePumpPortfolio } from "@/features/pump/hooks/usePumpData";
-import { formatRelativeTime, formatTokenAmount, formatWad } from "@/features/pump/format";
+import { formatRelativeTime, formatStatus, formatTokenAmount, formatWad } from "@/features/pump/format";
 import type { PumpMarket } from "@/features/pump/types";
 import { PumpConfigNotice, PumpErrorState, PumpLoadingRows } from "@/features/pump/components/PumpStates";
 import { PumpTokenLogo } from "@/features/pump/components/PumpTokenLogo";
@@ -50,7 +50,7 @@ const PortfolioRowInner = memo(function PortfolioRowInner({
           <span className="pump-portfolio-current-value">${currentValueLabel}</span>
         ) : null}
       </span>
-      <span className={`pump-status pump-status-${market.status.toLowerCase()}`}>{market.status}</span>
+      <span className={`pump-status pump-status-${market.status.toLowerCase()}`}>{formatStatus(market.status)}</span>
       <span className="pump-portfolio-arrow" aria-hidden="true">&rarr;</span>
     </Link>
   );

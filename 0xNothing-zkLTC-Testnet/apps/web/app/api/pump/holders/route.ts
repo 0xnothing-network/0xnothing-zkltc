@@ -3,13 +3,14 @@ import { getAddress, type Address } from "viem";
 import { getPumpHolders } from "@/features/pump/server/data";
 import { withPumpCache } from "@/features/pump/server/cache";
 import { boundedIntegerParam } from "@/features/pump/server/request";
-import { CDN_STALE_SECONDS, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
+import { CDN_STALE_SECONDS, isFreshRead, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
+  const fresh = isFreshRead(request);
   const rawToken = params.get("token");
   if (!rawToken) {
     return NextResponse.json({ error: "Token address is required" }, { status: 400 });
@@ -30,13 +31,13 @@ export async function GET(request: Request) {
     const payload = await withPumpCache(
       `holders:${token.toLowerCase()}:${limit}`,
       () => getPumpHolders({ token, limit }),
-      { ttlMs: 3_000, staleMs: 12_000 },
+      { ttlMs: 3_000, staleMs: 12_000, fresh },
     );
     return NextResponse.json(payload, {
       headers: publicCdnCacheHeaders(
         "public, s-maxage=3, stale-while-revalidate=12",
         3,
-        CDN_STALE_SECONDS,
+        fresh ? 0 : CDN_STALE_SECONDS,
       ),
     });
   } catch (error) {

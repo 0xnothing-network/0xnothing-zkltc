@@ -16,7 +16,7 @@ import {
   PUMP_GRADUATION_ROUTER_ADDRESS,
   ZERO_ADDRESS,
 } from "@/features/pump/config";
-import { formatDecimal, formatRelativeTime, formatWad, shortAddress } from "@/features/pump/format";
+import { formatDecimal, formatRelativeTime, formatStatus, formatWad, shortAddress } from "@/features/pump/format";
 import type { PumpMarket } from "@/features/pump/types";
 import { getAddressExplorerUrl } from "@/lib/explorer";
 import { LazyPumpChart } from "@/features/pump/components/LazyPumpChart";
@@ -265,7 +265,7 @@ export function TokenDetail({ token }: { token: Address }) {
           />
         </div>
         <div className="pump-token-identity-copy">
-          <div className="pump-token-heading-line"><h1>{market.name}</h1><span className={`pump-status pump-status-${market.status.toLowerCase()}`}>{market.status}</span></div>
+          <div className="pump-token-heading-line"><h1>{market.name}</h1><span className={`pump-status pump-status-${market.status.toLowerCase()}`}>{formatStatus(market.status)}</span></div>
           <p>${market.symbol}</p>
           <div className="pump-token-links">
             <button type="button" title="Copy token address" onClick={() => { void navigator.clipboard.writeText(market.tokenAddress); toast.success("Address copied", shortAddress(market.tokenAddress)); }}>{shortAddress(market.tokenAddress, 7, 6)}</button>

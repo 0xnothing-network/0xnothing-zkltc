@@ -115,6 +115,11 @@ export function formatRelativeTime(timestamp: number): string {
   return value;
 }
 
+/** TRADING -> Trading. */
+export function formatStatus(status: string): string {
+  return status.charAt(0) + status.slice(1).toLowerCase();
+}
+
 export function shortAddress(value: string, head = 5, tail = 4): string {
   if (value.length <= head + tail + 2) return value;
   return `${value.slice(0, head)}...${value.slice(-tail)}`;

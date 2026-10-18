@@ -150,7 +150,7 @@ function adaptivePriceFormat(points: CandlePoint[]) {
   const reference = positivePrices.length ? Math.min(...positivePrices) : 1;
   const precision = Math.min(
     18,
-    Math.max(2, Math.ceil(-Math.log10(reference)) + 6),
+    Math.max(2, Math.ceil(-Math.log10(reference)) + 4),
   );
   return {
     key: precision.toString(),

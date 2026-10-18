@@ -17,6 +17,7 @@ import {
 } from "@/features/pump/config";
 import {
   formatRelativeTime,
+  formatStatus,
   formatWad,
   shortAddress,
 } from "@/features/pump/format";
@@ -152,7 +153,7 @@ export function PumpStatsDashboard() {
                       <strong>{market.name}</strong>
                       <small>${market.symbol}</small>
                     </span>
-                    <span className={`pump-status pump-status-${market.status.toLowerCase()}`}>{market.status}</span>
+                    <span className={`pump-status pump-status-${market.status.toLowerCase()}`}>{formatStatus(market.status)}</span>
                     <span className="pump-stats-market-trades">{market.tradeCount.toLocaleString("en-US")} trades</span>
                     <strong className="pump-stats-market-volume">{usd(market.volumeNusd)}</strong>
                   </Link>

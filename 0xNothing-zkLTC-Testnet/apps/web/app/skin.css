@@ -21,10 +21,10 @@
 
 .pump-shell.pump-shell .pump-eyebrow {
   font-family: var(--font-brand);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--text-3);
 }
 .fi-root.fi-root :is(h1, h2, h3), .pump-shell.pump-shell :is(h1, h2, h3),
@@ -63,7 +63,7 @@
 .fi-root.fi-root :is(.fi-panel, .fi-market-list, .fi-metric-strip, .fi-points-stake-card, .fi-points-positions, .fi-points-redemption, .fi-empty-state),
 .pump-shell.pump-shell :is(.pump-panel, .pump-token-card, .pump-empty-state),
 .pixel-product.pixel-product :is(.pixel-panel, .pixel-tools-panel, .pixel-mint-panel, .pixel-generator-panel, .nft-card, .pixel-collection-empty),
-.ox-docs-root.ox-docs-root :is(.ox-docs-hero, .ox-docs-section-icon) {
+.ox-docs-root.ox-docs-root .ox-docs-hero {
   border: 1px solid var(--line) !important;
   border-radius: var(--r-lg) !important;
   background-color: var(--surface-1) !important;
@@ -179,30 +179,23 @@
 .fi-root.fi-root .fi-segmented button.active,
 .pump-shell.pump-shell .pump-segmented button.active { background: var(--surface-3); color: var(--text-1); box-shadow: var(--e-1); }
 
-/* Status badges: pill with a dot, coloured by meaning. */
+/* Status tags: coloured text in a hairline box. No tinted pill, no dot. */
 .fi-root.fi-root :is(.fi-swap-asset-badge, .fi-status),
 .pump-shell.pump-shell :is(.pump-status, .pump-fee-chip, .pump-holder-badge, .pump-dev-badge) {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 22px;
-  padding: 0 9px;
-  border: 0 !important;
-  border-radius: var(--r-pill);
-  background: color-mix(in srgb, currentColor 13%, transparent);
+  min-height: 20px;
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent) !important;
+  border-radius: var(--r-xs);
+  background: none;
   font-family: var(--font-ui);
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
 }
-.pump-shell.pump-shell .pump-status::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: var(--r-pill);
-  background: currentColor;
-}
+.fi-root.fi-root .fi-status::before { display: none; }
 .pump-shell.pump-shell .pump-status-graduated { color: var(--info); }
 
 /* Tables */
@@ -251,7 +244,6 @@
 .pump-shell.pump-shell .pump-progress span { position: relative; background: var(--accent); border-radius: 0; }
 
 /* Information pages */
-.ox-docs-root.ox-docs-root .ox-docs-section-icon { border-radius: var(--r-md) !important; }
 .ox-docs-root.ox-docs-root .ox-docs-section-heading,
 .ox-privacy.ox-privacy main > div:first-child { border-bottom: 1px solid var(--line); }
 .ox-docs-root.ox-docs-root .ox-docs-hero { padding: 28px; }
@@ -260,13 +252,9 @@
 @media (hover: hover) {
   :is(.pump-shell.pump-shell .pump-token-card, .pixel-product.pixel-product .nft-card):hover {
     border-color: var(--line-strong) !important;
-    transform: translateY(-2px);
   }
 }
 @media (max-width: 640px) {
   .ox-docs-root.ox-docs-root .ox-docs-hero { padding: 18px; }
   .fi-root.fi-root .fi-panel-heading, .pump-shell.pump-shell .pump-panel-heading { padding: 12px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  :is(.pump-shell.pump-shell .pump-token-card, .pixel-product.pixel-product .nft-card):hover { transform: none; }
 }

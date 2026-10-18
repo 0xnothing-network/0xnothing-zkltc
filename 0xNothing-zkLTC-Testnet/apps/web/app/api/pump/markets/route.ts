@@ -4,13 +4,14 @@ import { getPumpMarkets } from "@/features/pump/server/data";
 import { withPumpCache } from "@/features/pump/server/cache";
 import { boundedIntegerParam } from "@/features/pump/server/request";
 import type { PumpMarketSort } from "@/features/pump/types";
-import { CDN_STALE_SECONDS, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
+import { CDN_STALE_SECONDS, isFreshRead, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
+  const fresh = isFreshRead(request);
   const rawCreator = params.get("creator");
   const rawSort = params.get("sort");
   const sort: PumpMarketSort =
@@ -35,13 +36,13 @@ export async function GET(request: Request) {
     const payload = await withPumpCache(
       key,
       () => getPumpMarkets({ limit, skip, creator, sort }),
-      { ttlMs: 2_000, staleMs: 8_000 },
+      { ttlMs: 2_000, staleMs: 8_000, fresh },
     );
     return NextResponse.json(payload, {
       headers: publicCdnCacheHeaders(
         "public, s-maxage=2, stale-while-revalidate=8",
         2,
-        CDN_STALE_SECONDS,
+        fresh ? 0 : CDN_STALE_SECONDS,
       ),
     });
   } catch (error) {
