@@ -195,7 +195,11 @@ function initializeProvider(): void {
 
   // Tell the page which account and chain it already has, if any. The chain is
   // requested instead of assuming the built-in value so a saved custom network
-  // is reflected even before the first dapp request.
+  // is reflected even before the first dapp request. Only the top frame does this
+  // eagerly: this script runs in every frame of every site, and each ad iframe
+  // would otherwise wake the worker with two calls. A framed dapp gets both from
+  // its own eth_chainId / eth_accounts calls.
+  if (window.top !== window) return;
   void Promise.all([
     provider.request({ method: "eth_chainId" }),
     provider.request({ method: "eth_accounts" }),

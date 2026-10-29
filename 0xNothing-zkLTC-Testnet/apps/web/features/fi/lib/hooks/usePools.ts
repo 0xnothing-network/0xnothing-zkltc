@@ -12,27 +12,31 @@ export const FI_POOLS_QUERY_KEY = ["fi-pools"] as const;
 const SNAPSHOT_FRESH_MS = 20_000;
 const OLD_SNAPSHOT_RETRY_MS = 4_000;
 
-type PoolsResult = { pools: PoolPoint[]; warning?: string; generatedAt: number };
+type PoolsResult = { pools: PoolPoint[]; warning?: string; generatedAt: number; retrySoon: boolean };
 
-async function fetchPools(signal?: AbortSignal): Promise<PoolsResult> {
+async function fetchPools(signal: AbortSignal, previous: PoolsResult | undefined): Promise<PoolsResult> {
   const payload = await fetchJson<DataEnvelope<PoolPoint[]>>(
     fiPath("/api/data/pools"),
     { signal },
     "Pool request failed",
   );
-  return { pools: payload.data, warning: payload.warning, generatedAt: Date.parse(payload.meta.generatedAt) };
-}
-
-function isOldSnapshot(result: PoolsResult | undefined): boolean {
-  return Boolean(result && Number.isFinite(result.generatedAt) && Date.now() - result.generatedAt > SNAPSHOT_FRESH_MS);
+  const generatedAt = Date.parse(payload.meta.generatedAt);
+  // Only a snapshot not seen before earns the quick retry. Getting the same old one
+  // back means the server's refresh failed and it keeps serving its last snapshot, and
+  // a phone clock running ahead would otherwise call every snapshot old and poll every
+  // 4 s for the whole session.
+  const retrySoon = Number.isFinite(generatedAt)
+    && Date.now() - generatedAt > SNAPSHOT_FRESH_MS
+    && generatedAt !== previous?.generatedAt;
+  return { pools: payload.data, warning: payload.warning, generatedAt, retrySoon };
 }
 
 export function usePools() {
   const query = useQuery({
     queryKey: FI_POOLS_QUERY_KEY,
-    queryFn: ({ signal }) => fetchPools(signal),
+    queryFn: ({ signal, client }) => fetchPools(signal, client.getQueryData<PoolsResult>(FI_POOLS_QUERY_KEY)),
     staleTime: 12_000,
-    refetchInterval: (query) => isOldSnapshot(query.state.data) ? OLD_SNAPSHOT_RETRY_MS : fiPollInterval("pools"),
+    refetchInterval: (query) => query.state.data?.retrySoon ? OLD_SNAPSHOT_RETRY_MS : fiPollInterval("pools"),
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
   });

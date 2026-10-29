@@ -8,18 +8,19 @@ const code = ts.transpileModule(readFileSync(new URL("../../src/extension/inpage
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 
-function harness(existing?: object) {
+function harness(existing?: object, framed = false) {
   const events: string[] = [];
   const posts: unknown[] = [];
   const registrations: string[] = [];
   const ethereum = {};
-  const window = {
+  const window: Record<string, unknown> = {
     ethereum, location: { origin: "https://app.test" },
     addEventListener: (event: string) => registrations.push(event),
     dispatchEvent: (event: { type: string }) => events.push(event.type),
     postMessage: (message: unknown) => posts.push(message),
     setTimeout: () => 1, clearTimeout: () => {},
   };
+  window.top = framed ? {} : window;
   if (existing) Object.defineProperty(window, "zeroxnothing", { value: existing, configurable: false });
   const inject = () => runInNewContext(code, {
     window, exports: {},
@@ -40,6 +41,14 @@ test("duplicate inpage injection retains one provider and one set of listeners",
   assert.deepEqual(h.events, ["eip6963:announceProvider"]);
   assert.equal(h.posts.length, 2);
   assert.equal(h.window.ethereum, h.ethereum);
+});
+
+test("only the top frame syncs chain and accounts at load", () => {
+  const h = harness(undefined, true);
+  h.inject();
+  assert.ok(Object.getOwnPropertyDescriptor(h.window, "zeroxnothing")?.get?.());
+  assert.deepEqual(h.events, ["eip6963:announceProvider"]);
+  assert.equal(h.posts.length, 0);
 });
 
 test("an existing non-configurable namespace is preserved without requests or announcements", () => {

@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAccount, useBlockNumber } from "wagmi";
 import { litvm } from "@/config/wagmi";
 import { BLOCK_SYNC_MS, isBlockSyncedQueryKey, isLiveQueryKey, notifyLiveWave, setLiveSocketConnected } from "@/lib/liveData";
-import { createWaveScheduler, liveWatchAddresses, startLiveSocket, type LiveSocketSession } from "@/lib/liveEvents";
+import { createWaveScheduler, liveWatchAddresses, oncePerBlock, startLiveSocket, type LiveSocketSession } from "@/lib/liveEvents";
 import { LITVM_WS_URLS } from "@/lib/publicConfig";
 
 const BLOCK_POLL_MS = BLOCK_SYNC_MS + Math.floor(Math.random() * 2_001);
@@ -56,7 +56,14 @@ export function LiveSync() {
 
   useEffect(() => {
     const cache = queryClient.getQueryCache();
+    let missedWave = false;
     const waves = createWaveScheduler(() => {
+      // "active" refetches mounted queries even in a background tab, so a hidden
+      // page only remembers that it is behind and catches up once when shown.
+      if (document.visibilityState === "hidden") {
+        missedWave = true;
+        return;
+      }
       // In-flight reads finish; the follow-up wave picks up anything they missed.
       void queryClient.invalidateQueries(
         { predicate: (query) => isLiveQueryKey(query.queryKey), refetchType: "active" },
@@ -66,7 +73,7 @@ export function LiveSync() {
     }, { minGapMs: WAVE_MIN_GAP_MS, followUpMs: WAVE_FOLLOW_UP_MS });
     const session = startLiveSocket({
       urls: LITVM_WS_URLS,
-      onEvent: () => waves.trigger(),
+      onEvent: oncePerBlock(() => waves.trigger()),
       onStatus: (connected) => {
         setLiveSocketConnected(connected);
         setSocketLive(connected);
@@ -87,7 +94,12 @@ export function LiveSync() {
       if (filterTimer === undefined) filterTimer = window.setTimeout(refreshFilter, FILTER_DEBOUNCE_MS);
     });
     const wake = () => {
-      if (document.visibilityState === "visible") session.wake();
+      if (document.visibilityState !== "visible") return;
+      session.wake();
+      if (missedWave) {
+        missedWave = false;
+        waves.trigger();
+      }
     };
     document.addEventListener("visibilitychange", wake);
     window.addEventListener("online", wake);

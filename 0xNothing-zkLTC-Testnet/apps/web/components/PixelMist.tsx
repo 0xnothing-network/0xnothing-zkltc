@@ -206,6 +206,15 @@ function PixelMistComponent({ product }: { product: keyof typeof COLORS }) {
     };
 
     const resize = () => {
+      if (!enabled) {
+        // Touch phones never draw, and their URL bar fires a resize on every scroll;
+        // keep no viewport-sized backing store to reallocate each time.
+        width = 0;
+        height = 0;
+        canvas.width = 0;
+        canvas.height = 0;
+        return;
+      }
       width = window.innerWidth;
       height = window.innerHeight;
       const dpr = Math.min(window.devicePixelRatio || 1, DPR_LIMIT);
@@ -255,7 +264,7 @@ function PixelMistComponent({ product }: { product: keyof typeof COLORS }) {
         haloOpacity = 0;
         for (const particle of particles) particle.active = false;
       }
-      context.clearRect(0, 0, width, height);
+      resize();
     };
 
     resize();

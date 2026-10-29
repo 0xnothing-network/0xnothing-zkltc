@@ -89,6 +89,7 @@ function harness(options: { configured?: boolean; credit?: bigint; balance?: big
       useState: (initial: unknown) => { const index = stateIndex++; if (!(index in states)) states[index] = initial; return [states[index], (next: unknown) => { states[index] = typeof next === "function" ? next(states[index]) : next; }]; },
       useRef: (initial: unknown) => refs[refIndex++] ?? (refs[refIndex - 1] = { current: initial }),
       useEffect: () => {},
+      useMemo: (factory: () => unknown) => factory(),
     },
     "@tanstack/react-query": { useQueryClient: () => ({ invalidateQueries: async () => { invalidations += 1; } }), useQuery: (query: { enabled: boolean; queryKey: readonly unknown[] }) => {
       queryOptions.push(query);

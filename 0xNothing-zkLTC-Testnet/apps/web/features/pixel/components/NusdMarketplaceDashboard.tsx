@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUpRight, ArrowsClockwise, Clock, Coins, ImageSquare, MagnifyingGlass, Plus, ShieldCheck, Stack, Wallet } from "@phosphor-icons/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatUnits, parseAbi, type Address } from "viem";
@@ -105,7 +105,14 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
   useEffect(() => {
     if (state && !market.isPlaceholderData) setPagedCatalogue(!state.catalogueComplete);
   }, [state, market.isPlaceholderData]);
-  const artworkRequests = nusdArtworkRequests([...(state?.listings ?? []), ...offers], NUSD_CATALOGUE_LIMIT + NUSD_MARKET_PAGE_SIZE);
+  // The catalogue holds up to a thousand listings; filtering, sorting and grouping them
+  // must not rerun on every keystroke in the price and token fields.
+  const listings = state?.listings;
+  const offerRows = offerPage.data?.offers;
+  const artworkRequests = useMemo(
+    () => nusdArtworkRequests([...(listings ?? []), ...(offerRows ?? [])], NUSD_CATALOGUE_LIMIT + NUSD_MARKET_PAGE_SIZE),
+    [listings, offerRows],
+  );
   const artwork = useQuery({
     queryKey: ["pixel-nusd-artwork", artworkRequests.map((request) => request.url)],
     queryFn: ({ signal }) => readNusdArtwork(artworkRequests, (url) => fetchJson(url, { signal })),
@@ -124,7 +131,11 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
   const offerAsset = selectedListing ?? manualTarget;
   const listedPrice = parseNusdPrice(listPrice);
   const offeredPrice = parseNusdPrice(offerPrice);
-  const filteredListings = filterNusdListings(state?.listings ?? [], artwork.data?.tokens ?? {}, { search, collection, ownOnly, address, sort });
+  const artworkTokens = artwork.data?.tokens;
+  const filteredListings = useMemo(
+    () => filterNusdListings(listings ?? [], artworkTokens ?? {}, { search, collection, ownOnly, address, sort }),
+    [listings, artworkTokens, search, collection, ownOnly, address, sort],
+  );
   const listingCount = state?.catalogueComplete ? BigInt(filteredListings.length) : state?.listingCount ?? 0n;
   const offerCount = offerPage.data?.offerCount ?? state?.offerCount ?? 0n;
   const maxCount = listingCount > offerCount ? listingCount : offerCount;
@@ -135,7 +146,10 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
     if (state && safePage !== page) setPage(safePage);
   }, [state, page, safePage]);
   const visibleListings = state?.catalogueComplete ? filteredListings.slice(safePage * NUSD_MARKET_PAGE_SIZE, (safePage + 1) * NUSD_MARKET_PAGE_SIZE) : filteredListings;
-  const collections = Array.from(new Set([collection, ...(state?.listings.map((listing) => listing.collection.toLowerCase()) ?? [])])).filter(Boolean);
+  const collections = useMemo(
+    () => Array.from(new Set([collection, ...(listings?.map((listing) => listing.collection.toLowerCase()) ?? [])])).filter(Boolean),
+    [collection, listings],
+  );
   const filtered = Boolean(search.trim() || collection || ownOnly);
   const offerFunding = state && offeredPrice ? nusdFunding(offeredPrice, state.credit) : undefined;
   const tradeAsset = workflow === "sell" ? selectedToken : offerAsset
