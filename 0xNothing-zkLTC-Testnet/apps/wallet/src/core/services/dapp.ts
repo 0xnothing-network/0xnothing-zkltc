@@ -460,20 +460,36 @@ export async function dropPending(id: string): Promise<void> {
   });
 }
 
-/** Claims expired rows under the same lock as push/drop so startup cannot race a new request. */
-export async function takeExpiredPending(now = Date.now()): Promise<DappRequest[]> {
+/**
+ * Pure startup planner. Besides expired rows, a row queued before `orphanedBefore`
+ * (this worker's start) that no approval window has claimed is stale too: the restart
+ * closed the page's message channel, so its dapp already saw 4900 and nobody would
+ * receive the result. Re-presenting it would sign or send for no one, and a retry by
+ * the dapp would then do it twice.
+ */
+export function planStalePending(
+  queue: DappRequest[],
+  now: number,
+  orphanedBefore = Number.NEGATIVE_INFINITY,
+): { fresh: DappRequest[]; stale: DappRequest[] } {
+  const fresh: DappRequest[] = [];
+  const stale: DappRequest[] = [];
+  for (const entry of queue) {
+    const age = now - entry.at;
+    const orphaned = entry.approvalClaim === undefined && entry.at < orphanedBefore;
+    if (Number.isFinite(age) && age < DAPP_REQUEST_TIMEOUT_MS && !orphaned) fresh.push(entry);
+    else stale.push(entry);
+  }
+  return { fresh, stale };
+}
+
+/** Claims stale rows under the same lock as push/drop so startup cannot race a new request. */
+export async function takeExpiredPending(now = Date.now(), orphanedBefore?: number): Promise<DappRequest[]> {
   if (!hasChrome) return [];
   return withNamedLock(PENDING_LOCK, async () => {
-    const queue = await listPending();
-    const fresh: DappRequest[] = [];
-    const expired: DappRequest[] = [];
-    for (const entry of queue) {
-      const age = now - entry.at;
-      if (Number.isFinite(age) && age < DAPP_REQUEST_TIMEOUT_MS) fresh.push(entry);
-      else expired.push(entry);
-    }
-    if (expired.length > 0) await chromeSet("local", STORAGE_KEYS.pending, fresh);
-    return expired;
+    const { fresh, stale } = planStalePending(await listPending(), now, orphanedBefore);
+    if (stale.length > 0) await chromeSet("local", STORAGE_KEYS.pending, fresh);
+    return stale;
   });
 }
 

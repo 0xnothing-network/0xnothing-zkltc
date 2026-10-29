@@ -7,8 +7,9 @@ import {
   resolveNetwork,
   type WalletNetwork,
 } from "../../config/networks";
+import { isExtension } from "../platform/env";
 import { persistentStore, sessionStore } from "../platform/storage";
-import { STORAGE_KEYS } from "../platform/storageKeys";
+import { AUTOLOCK_ALARM, STORAGE_KEYS } from "../platform/storageKeys";
 import { withNamedLock } from "../platform/locks";
 import {
   decryptWithKey,
@@ -183,13 +184,21 @@ export async function hasVault(): Promise<boolean> {
   return (await readVaultBlob()) !== null;
 }
 
+/** The deadline is checked lazily here; the worker's alarm also drops the key on time once every wallet page is closed. */
+function scheduleAutoLock(deadline: number): void {
+  if (!isExtension || !chrome?.alarms) return;
+  void chrome.alarms.create(AUTOLOCK_ALARM, { when: deadline }).catch(() => undefined);
+}
+
 async function putSession(key: CryptoKey): Promise<void> {
   await withNamedLock(SESSION_LOCK, async () => {
     const { autoLockMinutes } = await readSettings();
+    const deadline = Date.now() + autoLockMinutes * 60_000;
     await sessionStore.setMany([
       [STORAGE_KEYS.session, { key: await exportKey(key) } satisfies SessionRecord],
-      [STORAGE_KEYS.sessionDeadline, Date.now() + autoLockMinutes * 60_000],
+      [STORAGE_KEYS.sessionDeadline, deadline],
     ]);
+    scheduleAutoLock(deadline);
   });
 }
 
@@ -242,10 +251,9 @@ export async function touchSession(): Promise<void> {
     const { autoLockMinutes } = await readSettings();
     // Only the deadline is written. A stale activity task can therefore never
     // put an AES key back after lock() removed it.
-    await sessionStore.set(
-      STORAGE_KEYS.sessionDeadline,
-      Date.now() + autoLockMinutes * 60_000,
-    );
+    const next = Date.now() + autoLockMinutes * 60_000;
+    await sessionStore.set(STORAGE_KEYS.sessionDeadline, next);
+    scheduleAutoLock(next);
   });
 }
 

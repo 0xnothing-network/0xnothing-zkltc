@@ -26,3 +26,6 @@ export const STORAGE_KEYS = {
   /** Auto-lock deadline, split from the key so an old touch cannot restore it. */
   sessionDeadline: "wallet.session.deadline.v1",
 } as const;
+
+/** Alarm the UI sets at the auto-lock deadline so the worker can drop the session key. */
+export const AUTOLOCK_ALARM = "wallet.autolock";

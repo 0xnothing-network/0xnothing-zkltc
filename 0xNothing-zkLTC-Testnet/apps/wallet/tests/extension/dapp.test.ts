@@ -9,6 +9,7 @@ import {
   planPendingAdmission,
   planPendingClaim,
   planPendingClaimRelease,
+  planStalePending,
   sanitizePendingRequests,
 } from "../../src/core/services/dapp.ts";
 
@@ -63,6 +64,19 @@ test("an expired orphan is pruned before a fresh request is queued", () => {
   if (!result.accepted) return;
   assert.deepEqual(result.expiredIds, [expired.id]);
   assert.deepEqual(result.queue, [fresh]);
+});
+
+test("a restarted worker drops unclaimed rows from its previous life", () => {
+  const bootedAt = 2_000_000;
+  const orphan = request("orphan", "https://old.example", "transaction", bootedAt - 1);
+  const claimed = { ...request("claimed", "https://old.example", "sign", bootedAt - 1), approvalClaim: "7d1f7a7e-1c4b-4e8a-9a51-3c2b1d0e9f8a" };
+  const arrived = request("arrived", "https://new.example", "sign", bootedAt);
+  const expired = request("expired", "https://old.example", "sign", bootedAt - DAPP_REQUEST_TIMEOUT_MS);
+  const { fresh, stale } = planStalePending([orphan, claimed, arrived, expired], bootedAt + 5, bootedAt);
+  assert.deepEqual(fresh.map((entry) => entry.id), ["claimed", "arrived"]);
+  assert.deepEqual(stale.map((entry) => entry.id), ["orphan", "expired"]);
+  // Without a boot time only expiry counts, as before.
+  assert.deepEqual(planStalePending([orphan, expired], bootedAt + 5).stale.map((entry) => entry.id), ["expired"]);
 });
 
 test("only one approval window can claim a persisted request", () => {

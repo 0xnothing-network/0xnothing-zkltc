@@ -15,7 +15,6 @@ const CACHE_SECONDS = 31_536_000;
 // stalled rather than slow. The old 25 s budget held a market grid's connections
 // open long after the browser had anything to paint.
 const GATEWAY_TIMEOUT_MS = 10_000;
-const HEDGE_DELAY_MS = 650;
 const MAX_REDIRECTS = 2;
 const MAX_IMAGE_DIMENSION = 4_096;
 const MAX_IMAGE_PIXELS = 4_194_304;
@@ -29,9 +28,9 @@ interface PumpImage {
   contentType: string;
 }
 
-// A logo is immutable by CID, so its body is kept once fetched: public gateways take 4-8 s
-// per logo and rate-limit repeats, and without a CDN in front (Railway) every visitor paid
-// that wait. Concurrent requests for one CID share a single gateway fetch.
+// A logo is immutable by CID, so its body is kept once fetched: without a CDN in front
+// (Railway) every visitor paid the gateway wait. Concurrent requests for one CID share a
+// single gateway fetch.
 // shortcut: bounded by entry count, not bytes (128 x 2 MB worst case, ~50 KB typical); move
 // to a byte budget if listed markets grow past a few hundred.
 const imageLoads = createBoundedCache<PumpImage>({
@@ -52,7 +51,7 @@ export async function GET(request: Request) {
   if (!cidPath) return imageError("Invalid IPFS image CID", 400, 60);
   const symbol = normalizeFallbackSymbol(searchParams.get("symbol") ?? "");
 
-  const etag = `"pump-${cidPath.replace(/[^a-zA-Z0-9._~-]/g, "-")}"`;
+  const etag = `"pump-256-${cidPath.replace(/[^a-zA-Z0-9._~-]/g, "-")}"`;
   if (matchesEtag(request.headers.get("if-none-match"), etag)) {
     return new Response(null, { status: 304, headers: imageHeaders(etag) });
   }
@@ -77,38 +76,27 @@ export async function GET(request: Request) {
 }
 
 async function loadPumpImage(cidPath: string): Promise<PumpImage> {
-  const gateways = gatewayUrls(cidPath);
-  const controllers = gateways.map(() => new AbortController());
+  const controller = new AbortController();
   try {
-    const attempts = gateways.map((url, index) =>
-      fetchPumpImage(url, index * HEDGE_DELAY_MS, controllers[index]),
-    );
-    return await Promise.any(attempts);
+    return await fetchPumpImage(gatewayUrl(cidPath), controller);
   } finally {
-    controllers.forEach((controller) => controller.abort());
+    controller.abort();
   }
 }
 
-function gatewayUrls(cidPath: string): string[] {
+function gatewayUrl(cidPath: string): string {
   const [cid, ...pathSegments] = cidPath.split("/");
   const encodedPath = pathSegments.map(encodeURIComponent).join("/");
   const gatewayPath = encodedPath ? `/${encodedPath}` : "";
-  // Logos are pinned to the project's Pinata account, so its gateway answers in about a
-  // second where the public ones take 4-8 s; dweb.link answers 429 to most requests. A
-  // dweb.link path request redirects to its subdomain form, so only that form is fetched.
-  return [
-    `https://${PINATA_GATEWAY_HOST}/ipfs/${cid}${gatewayPath}`,
-    `https://gateway.pinata.cloud/ipfs/${cid}${gatewayPath}`,
-    cid.startsWith("b") ? `https://${cid}.ipfs.dweb.link${gatewayPath || "/"}` : `https://dweb.link/ipfs/${cid}${gatewayPath}`,
-  ];
+  // Only the project gateway: it serves just what the upload key pinned (every logo
+  // created through /api/ipfs/upload) and 403s any other CID. A public gateway here
+  // would turn this route into an open, year-cached image host for any IPFS content.
+  // It also resizes: logos show at 96 px at most and uploads run up to 2 MB, so a
+  // 256 px WebP is 2-18 KB where the original was up to 675 KB.
+  return `https://${PINATA_GATEWAY_HOST}/ipfs/${cid}${gatewayPath}?img-width=256&img-format=webp`;
 }
 
-async function fetchPumpImage(
-  url: string,
-  delayMs: number,
-  controller: AbortController,
-): Promise<PumpImage> {
-  if (delayMs > 0) await abortableDelay(delayMs, controller.signal);
+async function fetchPumpImage(url: string, controller: AbortController): Promise<PumpImage> {
   const timeout = setTimeout(() => controller.abort(), GATEWAY_TIMEOUT_MS);
   try {
     const response = await fetchAllowedGateway(url, controller.signal);
@@ -160,14 +148,9 @@ async function fetchAllowedGateway(initialUrl: string, signal: AbortSignal): Pro
 }
 
 function assertAllowedGateway(url: URL): void {
-  const hostname = url.hostname.toLowerCase();
-  const allowed = hostname === "dweb.link"
-    || hostname === "gateway.pinata.cloud"
-    || hostname === PINATA_GATEWAY_HOST
-    || hostname.endsWith(".ipfs.dweb.link");
   if (
     url.protocol !== "https:"
-    || !allowed
+    || url.hostname.toLowerCase() !== PINATA_GATEWAY_HOST
     || url.username
     || url.password
     || (url.port && url.port !== "443")
@@ -181,20 +164,6 @@ function validateImageDimensions(body: ArrayBuffer, contentType: string): void {
   if (!hasSafeRasterDimensions(metadata, MAX_IMAGE_DIMENSION, MAX_IMAGE_PIXELS)) {
     throw new Error("IPFS image dimensions are unsafe");
   }
-}
-
-function abortableDelay(delayMs: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal.aborted) {
-      reject(new DOMException("Aborted", "AbortError"));
-      return;
-    }
-    const timer = setTimeout(resolve, delayMs);
-    signal.addEventListener("abort", () => {
-      clearTimeout(timer);
-      reject(new DOMException("Aborted", "AbortError"));
-    }, { once: true });
-  });
 }
 
 function imageHeaders(etag: string): Record<string, string> {
@@ -239,7 +208,7 @@ function normalizeFallbackSymbol(value: string): string {
 /**
  * Keep a temporarily unavailable immutable asset from becoming a failed
  * browser resource. This response is intentionally not cached so a later
- * request can replace it as soon as either IPFS gateway has the content.
+ * request can replace it as soon as the gateway has the content.
  */
 function fallbackImage(symbol: string): Response {
   const svg = [

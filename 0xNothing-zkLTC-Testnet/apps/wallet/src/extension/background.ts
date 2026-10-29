@@ -8,8 +8,9 @@ import {
   type WalletNetwork,
 } from "../config/networks";
 import type { AccountsState } from "../core/keyring/vault";
-import { chromeGet, chromeSet } from "../core/platform/chromeStore";
-import { STORAGE_KEYS } from "../core/platform/storageKeys";
+import { chromeGet, chromeRemove, chromeSet } from "../core/platform/chromeStore";
+import { withNamedLock } from "../core/platform/locks";
+import { AUTOLOCK_ALARM, STORAGE_KEYS } from "../core/platform/storageKeys";
 import {
   awaitResolution,
   connectedAccounts,
@@ -72,6 +73,9 @@ interface Answer {
 }
 
 const providerIngress = createRpcIngressGate({ maxGlobal: 64, maxPerOrigin: 16 });
+// Every frame is its own origin, so per-origin limits alone let one tab that frames
+// many subdomains hold all 64 global slots and leave every other site "busy".
+const tabIngress = createRpcIngressGate({ maxGlobal: 64, maxPerOrigin: 16 });
 
 interface StoredNetworkSettings {
   networkId?: unknown;
@@ -235,6 +239,7 @@ function validateTransaction(value: unknown): value is {
   value?: string;
   data?: string;
   gas?: string;
+  chainId?: string | number;
 } {
   if (!isRecord(value)) return false;
   if (value.from !== undefined && !isAddress(value.from)) return false;
@@ -242,6 +247,8 @@ function validateTransaction(value: unknown): value is {
   if (value.value !== undefined && !isQuantity(value.value)) return false;
   if (value.gas !== undefined && !isQuantity(value.gas)) return false;
   if (value.data !== undefined && !isData(value.data)) return false;
+  // Libraries send a hex quantity; some send a plain number.
+  if (value.chainId !== undefined && !isQuantity(value.chainId) && !Number.isSafeInteger(value.chainId)) return false;
   return true;
 }
 
@@ -319,7 +326,30 @@ async function syncKeepAlive(): Promise<void> {
   if ((await listPending()).length > 0) await keepAlive();
 }
 
+/**
+ * The vault checks its auto-lock deadline only when a wallet page reads the key, so
+ * with every page closed the AES key would stay in session storage until the browser
+ * exits. Its alarm drops the key on time; a deadline pushed out since re-arms it.
+ */
+async function expireSession(): Promise<void> {
+  await withNamedLock("session", async () => {
+    const deadline = await chromeGet<number>("session", STORAGE_KEYS.sessionDeadline);
+    if (typeof deadline === "number" && Number.isSafeInteger(deadline) && deadline > Date.now()) {
+      await chrome.alarms.create(AUTOLOCK_ALARM, { when: deadline });
+      return;
+    }
+    await Promise.all([
+      chromeRemove("session", STORAGE_KEYS.session),
+      chromeRemove("session", STORAGE_KEYS.sessionDeadline),
+    ]);
+  });
+}
+
 chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === AUTOLOCK_ALARM) {
+    void expireSession().catch(() => undefined);
+    return;
+  }
   if (alarm.name !== KEEPALIVE_ALARM) return;
   void listPending().then((queue) => {
     if (queue.length === 0) void chrome.alarms.clear(KEEPALIVE_ALARM);
@@ -395,24 +425,28 @@ async function savedNetworkForChain(requestedChainId: string): Promise<WalletNet
 }
 
 async function switchNetwork(requestedChainId: string): Promise<Answer> {
-  const saved = await chromeGet<StoredNetworkSettings>("local", STORAGE_KEYS.settings);
-  const custom = normalizeCustomNetworks(saved?.customNetworks);
-  const network = [...BUILTIN_NETWORKS, ...custom].find(
-    (entry) => networkHex(entry.chainId).toLowerCase() === requestedChainId,
-  );
-  if (!network) return fail(4902, "This network is not saved in the wallet");
-  if (saved?.networkId === network.id) return { result: null };
-  await chromeSet("local", STORAGE_KEYS.settings, {
-    ...(saved ?? {}),
-    networkId: network.id,
-    customNetworks: custom,
+  // The wallet UI writes settings under this same lock; an unlocked read-modify-write
+  // here could drop a custom network or theme saved at the same moment.
+  return withNamedLock("settings", async () => {
+    const saved = await chromeGet<StoredNetworkSettings>("local", STORAGE_KEYS.settings);
+    const custom = normalizeCustomNetworks(saved?.customNetworks);
+    const network = [...BUILTIN_NETWORKS, ...custom].find(
+      (entry) => networkHex(entry.chainId).toLowerCase() === requestedChainId,
+    );
+    if (!network) return fail(4902, "This network is not saved in the wallet");
+    if (saved?.networkId === network.id) return { result: null };
+    await chromeSet("local", STORAGE_KEYS.settings, {
+      ...(saved ?? {}),
+      networkId: network.id,
+      customNetworks: custom,
+    });
+    void listConnections().then((connections) => broadcast(
+      "chainChanged",
+      networkHex(network.chainId),
+      connections.map((entry) => entry.origin),
+    ));
+    return { result: null };
   });
-  void listConnections().then((connections) => broadcast(
-    "chainChanged",
-    networkHex(network.chainId),
-    connections.map((entry) => entry.origin),
-  ));
-  return { result: null };
 }
 
 /**
@@ -541,6 +575,11 @@ async function handle(call: RpcCall, origin: string, title?: string): Promise<An
     if (raw.from && !sameAccount(raw.from, account)) {
       return fail(4100, "The from address does not match the connected account");
     }
+    // The signer uses the active network, so a call built for another chain would
+    // hit whatever sits at the same address here.
+    if (raw.chainId !== undefined && BigInt(raw.chainId) !== BigInt(network.chainId)) {
+      return fail(-32602, "The transaction chainId does not match the active network");
+    }
     return askUser({
       kind: "transaction",
       origin,
@@ -606,15 +645,22 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
       sendResponse(fail(4100, "Unsupported origin"));
       return false;
     }
-    const release = providerIngress.tryAcquire(origin);
-    if (!release) {
+    const releaseTab = tabIngress.tryAcquire(String(sender.tab?.id ?? origin));
+    const release = releaseTab ? providerIngress.tryAcquire(origin) : null;
+    if (!releaseTab || !release) {
+      releaseTab?.();
       sendResponse(fail(-32005, "The wallet request queue is busy"));
       return false;
     }
-    void handle(request.call, origin, sender.tab?.title)
+    // The tab title belongs to the top page; an embedded frame asking to connect or
+    // sign must be shown by its own origin, not under the host site's name.
+    void handle(request.call, origin, sender.frameId === 0 ? sender.tab?.title : undefined)
       .catch((error: unknown) => fail(-32603, error instanceof Error ? error.message : "Wallet request failed"))
       .then(sendResponse)
-      .finally(release);
+      .finally(() => {
+        release();
+        releaseTab();
+      });
     return true;
   }
 
@@ -650,10 +696,12 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
   return false;
 });
 
-// A queue left behind by a previous worker life still needs its window. Claim
-// expired rows under the queue lock first so a newly arriving request cannot be
-// mistaken for stale bootstrap state.
-void takeExpiredPending().then(async (expired) => {
+// Rows queued before this worker started that no approval window claimed lost their
+// page's reply channel with the old worker, so they are rejected rather than shown
+// again; a claimed row is still finishing and keeps its window. Stale rows are taken
+// under the queue lock so a request arriving now cannot be mistaken for one of them.
+const WORKER_STARTED_AT = Date.now();
+void takeExpiredPending(Date.now(), WORKER_STARTED_AT).then(async (expired) => {
   await Promise.allSettled(expired.map((request) => rejectRequest(request.id, "Request expired")));
   const first = (await listPending())[0];
   if (!first) {
