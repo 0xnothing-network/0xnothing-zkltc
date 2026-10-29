@@ -262,7 +262,7 @@ export default function PrivacyPage() {
       <footer className="relative z-10 border-t border-white/10 px-5 py-6 sm:px-6">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 text-xs uppercase tracking-[0.28em] text-white/30">
           <span>0xWallet · LitVM LiteForge Testnet</span>
-          <Link href="/" className="inline-flex min-h-11 items-center transition-colors hover:text-white/70">
+          <Link href="/" className="inline-flex min-h-11 items-center transition-colors hover:text-(--text-1)">
             Back to 0xNothing
           </Link>
         </div>

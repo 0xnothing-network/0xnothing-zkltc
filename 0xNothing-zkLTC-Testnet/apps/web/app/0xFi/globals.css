@@ -29,7 +29,6 @@
   isolation: isolate;
   background-color: var(--fi-bg);
   color: var(--fi-text);
-  color-scheme: dark;
   font-family: var(--font-ui);
   font-size: 13px;
   font-synthesis: none;
@@ -218,7 +217,7 @@
 
 .fi-button:hover:not(:disabled),
 .fi-icon-button:hover:not(:disabled) {
-  border-color: rgba(237, 245, 240, 0.72);
+  border-color: color-mix(in srgb, var(--text-1) 72%, transparent);
   background: var(--line);
 }
 
@@ -794,7 +793,7 @@
 
 .fi-amount-input .fi-max-button:hover,
 .fi-amount-input .fi-max-button:focus-visible {
-  background: rgba(155, 231, 189, 0.1);
+  background: var(--hover);
   color: var(--fi-green-hover);
 }
 
@@ -866,7 +865,7 @@
 
 .fi-amount-input .fi-swap-asset-trigger:hover,
 .fi-amount-input .fi-swap-asset-trigger[aria-expanded="true"] {
-  background: rgba(155, 231, 189, 0.07);
+  background: var(--hover);
 }
 
 .fi-amount-input .fi-swap-asset-trigger[aria-expanded="true"] {
@@ -1065,7 +1064,7 @@
 }
 
 .fi-inline-retry:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--hover);
 }
 
 .fi-inline-warning {
@@ -1598,7 +1597,7 @@
   flex: none;
   place-items: center;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid color-mix(in srgb, var(--text-1) 16%, transparent);
   border-radius: var(--r-md);
   background: var(--surface-2);
   color: var(--fi-text);

@@ -127,6 +127,21 @@ export function createWaveScheduler(
   };
 }
 
+/**
+ * One transaction emits several logs (a Pump trade: two Transfers and a Trade), and each
+ * would start its own refresh wave; one call per block covers them all. A call without a
+ * log (a reconnect) always passes.
+ */
+export function oncePerBlock(callback: () => void): (log?: unknown) => void {
+  let lastBlock: unknown;
+  return (log) => {
+    const block = (log as { blockNumber?: unknown } | undefined)?.blockNumber;
+    if (block !== undefined && block === lastBlock) return;
+    lastBlock = block;
+    callback();
+  };
+}
+
 type Subscription = { unsubscribe: () => Promise<unknown> };
 type LogFilter = { address?: string[]; topics?: (Hex | null)[] };
 
@@ -288,7 +303,7 @@ export function startLiveSocket({
   timers = defaultTimers,
 }: {
   urls: readonly string[];
-  onEvent: () => void;
+  onEvent: (log?: unknown) => void;
   onStatus: (connected: boolean) => void;
   open?: (url: string) => LiveTransport;
   timers?: Timers;

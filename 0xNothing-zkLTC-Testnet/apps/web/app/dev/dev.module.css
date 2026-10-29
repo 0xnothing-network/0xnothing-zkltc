@@ -96,8 +96,8 @@
   align-items: center;
   gap: 7px;
   padding: 8px 10px;
-  border: 1px solid rgba(215, 224, 235, 0.13);
-  color: rgba(215, 224, 235, 0.72);
+  border: 1px solid var(--line);
+  color: var(--text-2);
   font-size: 12px;
   letter-spacing: 0;
 }
@@ -162,9 +162,9 @@
   gap: 12px;
   padding: 14px 16px;
   margin-bottom: 26px;
-  border: 1px solid rgba(211, 220, 231, 0.16);
-  background: rgba(211, 220, 231, 0.04);
-  color: rgba(220, 227, 238, 0.76);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text-2);
   font-size: 12px;
   line-height: 1.7;
 }
@@ -283,7 +283,7 @@
   align-items: center;
   gap: 7px;
   margin-top: 15px;
-  color: rgba(215, 224, 235, 0.7);
+  color: var(--text-2);
   font-size: 12px;
   letter-spacing: 0;
 }
@@ -358,7 +358,7 @@
   display: flex;
   align-items: flex-start;
   gap: 9px;
-  color: rgba(215, 224, 235, 0.62);
+  color: var(--text-2);
   font-size: 12px;
   line-height: 1.55;
 }
@@ -415,8 +415,8 @@
   place-items: start;
   min-height: 150px;
   padding: 21px;
-  border: 1px dashed rgba(215, 224, 235, 0.17);
-  color: rgba(215, 224, 235, 0.58);
+  border: 1px dashed var(--line-strong);
+  color: var(--text-2);
 }
 
 .empty strong {
@@ -443,7 +443,7 @@
   width: 74%;
   height: 24px;
   margin-top: 18px;
-  background: linear-gradient(90deg, rgba(215, 224, 235, 0.07), rgba(215, 224, 235, 0.16), rgba(215, 224, 235, 0.07));
+  background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2));
   background-size: 200% 100%;
   animation: shimmer 1.5s steps(6, end) infinite;
 }
@@ -530,7 +530,7 @@
 }
 
 /* Operator surfaces: readable explanations, stable numeric alignment, clear form boundaries. */
-.shell { font-family: var(--font-ui), monospace; color-scheme: dark; }
+.shell { font-family: var(--font-ui), monospace; }
 .brandText span, .eyebrow, .meta, .network, .cardTop, .value, .subvalue, .address,
 .status, .field input, .field select, .monoLink { font-family: var(--font-ui), monospace; font-variant-numeric: tabular-nums; }
 .brandMark, .network { border-radius: var(--r-md); }

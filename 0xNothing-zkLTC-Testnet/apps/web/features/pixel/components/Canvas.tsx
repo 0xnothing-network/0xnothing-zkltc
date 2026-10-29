@@ -927,7 +927,7 @@ function ExportMenu({ pixelData, gridSize }: { pixelData: string[][]; gridSize: 
         <>
           <div
             ref={menuRef}
-            className="hidden sm:block fixed z-[90] w-[184px] rounded-lg border border-(--line) bg-(--surface-1) shadow-[4px_4px_0_0_#060614]"
+            className="hidden sm:block fixed z-[90] w-[184px] rounded-lg border border-(--line) bg-(--surface-1) shadow-(--e-1)"
             style={{
               top: menuPosition.top,
               right: menuPosition.right,

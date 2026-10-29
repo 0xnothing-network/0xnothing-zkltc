@@ -19,7 +19,7 @@ import { fiPath } from "@fi/config/paths";
 import type { CandlePoint, DataEnvelope } from "@fi/lib/data";
 import { fiPollInterval } from "@fi/lib/hooks/useFiPolling";
 import { subscribeLiveWaves } from "@/lib/liveData";
-import { chartFontFamily } from "@/lib/chartTheme";
+import { chartFontFamily, chartPalette, useThemeName, type ChartPalette } from "@/lib/chartTheme";
 import { fetchJson } from "@/lib/http";
 
 type Period = "5m" | "1h" | "4h" | "1d";
@@ -81,7 +81,7 @@ function formatLocalCrosshairTime(time: Time): string {
   return `${padTimePart(date.getDate())}/${padTimePart(date.getMonth() + 1)} ${padTimePart(date.getHours())}:${padTimePart(date.getMinutes())}`;
 }
 
-function buildChartPoints(source: CandlePoint[]): { candles: ChartCandle[]; volumes: ChartVolume[] } {
+function buildChartPoints(source: CandlePoint[], palette: ChartPalette): { candles: ChartCandle[]; volumes: ChartVolume[] } {
   const normalized = source
     .map((point) => {
       const time = Number(point.time);
@@ -137,9 +137,7 @@ function buildChartPoints(source: CandlePoint[]): { candles: ChartCandle[]; volu
     volumes: visible.map((point) => ({
       time: point.candle.time,
       value: point.volume,
-      color: point.candle.close >= point.candle.open
-        ? "rgba(119,255,177,.28)"
-        : "rgba(255,102,125,.28)",
+      color: point.candle.close >= point.candle.open ? palette.upVolume : palette.downVolume,
     })),
   };
 }
@@ -234,7 +232,11 @@ export function MarketChart({
   const [hover, setHover] = useState<Readout | null>(null);
   const [priceSource, setPriceSource] = useState<"oracle" | "dex">();
   const [oracleUpdatedAt, setOracleUpdatedAt] = useState<number>();
-  const chartPoints = useMemo(() => buildChartPoints(candles), [candles]);
+  const theme = useThemeName();
+  // theme is the cache key: chartPalette reads the tokens that theme just switched.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const palette = useMemo(() => chartPalette(), [theme]);
+  const chartPoints = useMemo(() => buildChartPoints(candles, palette), [candles, palette]);
   const hasChartData = chartPoints.candles.length > 0;
 
   const load = useCallback(async (background = false) => {
@@ -326,22 +328,22 @@ export function MarketChart({
       width: host.clientWidth,
       height: host.clientHeight,
       layout: {
-        background: { type: ColorType.Solid, color: "#0c0e10" },
-        textColor: "#9299a1",
+        background: { type: ColorType.Solid, color: palette.background },
+        textColor: palette.text,
         fontFamily: chartFontFamily(),
         attributionLogo: false,
       },
       grid: {
-        vertLines: { color: "rgba(255,255,255,.04)" },
-        horzLines: { color: "rgba(255,255,255,.06)" },
+        vertLines: { color: palette.grid },
+        horzLines: { color: palette.grid },
       },
       localization: { timeFormatter: formatLocalCrosshairTime },
       rightPriceScale: {
-        borderColor: "rgba(255,255,255,.12)",
+        borderColor: palette.border,
         scaleMargins: { top: 0.08, bottom: 0.24 },
       },
       timeScale: {
-        borderColor: "rgba(255,255,255,.12)",
+        borderColor: palette.border,
         minBarSpacing: 2,
         rightOffset: 3,
         shiftVisibleRangeOnNewBar: true,
@@ -350,15 +352,17 @@ export function MarketChart({
         tickMarkFormatter: formatLocalTick,
       },
       kineticScroll: { mouse: true, touch: true },
-      crosshair: { vertLine: { color: "#687078" }, horzLine: { color: "#687078" } },
+      crosshair: { vertLine: { color: palette.crosshair }, horzLine: { color: palette.crosshair } },
       handleScroll: true,
       handleScale: true,
     });
     let onMove: Parameters<IChartApi["subscribeCrosshairMove"]>[0] | undefined;
+    // The readout changes per bar, not per pixel: skip moves inside the bar already shown.
+    let hoveredTime: unknown;
 
     if (priceSource === "oracle") {
       const series = chart.addLineSeries({
-        color: "#77ffb1",
+        color: palette.up,
         lineWidth: 2,
         lineVisible: false,
         pointMarkersVisible: true,
@@ -368,6 +372,8 @@ export function MarketChart({
       });
       oracleSeriesRef.current = series;
       onMove = (param) => {
+        if (param.time === hoveredTime) return;
+        hoveredTime = param.time;
         const point = param.time && param.point
           ? (param.seriesData.get(series as ISeriesApi<"Line">) as { value: number } | undefined)
           : undefined;
@@ -377,10 +383,10 @@ export function MarketChart({
       };
     } else {
       const series = chart.addCandlestickSeries({
-        upColor: "#77ffb1",
-        downColor: "#ff667d",
-        wickUpColor: "#77ffb1",
-        wickDownColor: "#ff667d",
+        upColor: palette.up,
+        downColor: palette.down,
+        wickUpColor: palette.up,
+        wickDownColor: palette.down,
         borderVisible: false,
         priceLineVisible: false,
         priceFormat: { type: "price", precision: 8, minMove: 0.00000001 },
@@ -395,6 +401,8 @@ export function MarketChart({
       candleSeriesRef.current = series;
       volumeSeriesRef.current = volumeSeries;
       onMove = (param) => {
+        if (param.time === hoveredTime) return;
+        hoveredTime = param.time;
         const bar = param.time && param.point
           ? (param.seriesData.get(series as ISeriesApi<"Candlestick">) as
               { open: number; high: number; low: number; close: number } | undefined)
@@ -427,7 +435,7 @@ export function MarketChart({
       fitFrameRef.current = null;
       setHover(null);
     };
-  }, [hasChartData, priceSource]);
+  }, [hasChartData, palette, priceSource]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -449,7 +457,7 @@ export function MarketChart({
       } else {
         oraclePriceLineRef.current = series.createPriceLine({
           price: snapshot.close,
-          color: "#77ffb1",
+          color: palette.up,
           lineWidth: 1,
           lineStyle: LineStyle.Solid,
           axisLabelVisible: true,
@@ -516,7 +524,7 @@ export function MarketChart({
         fitFrameRef.current = null;
       });
     }
-  }, [candles, chartPoints, pair, period, priceSource]);
+  }, [candles, chartPoints, palette.up, pair, period, priceSource]);
 
   const latest = candles.at(-1);
   const oldest = candles.at(0);

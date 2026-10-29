@@ -256,3 +256,17 @@ test("failed connects back off exponentially and wake() retries immediately", as
   await settle();
   assert.equal(urls.length, 4);
 });
+
+test("oncePerBlock collapses the logs of one block and passes reconnects", () => {
+  let calls = 0;
+  const onEvent = live.oncePerBlock(() => { calls += 1; });
+  onEvent({ blockNumber: "0x10" });
+  onEvent({ blockNumber: "0x10" });
+  onEvent({ blockNumber: "0x10" });
+  assert.equal(calls, 1);
+  onEvent({ blockNumber: "0x11" });
+  assert.equal(calls, 2);
+  onEvent();
+  onEvent();
+  assert.equal(calls, 4);
+});

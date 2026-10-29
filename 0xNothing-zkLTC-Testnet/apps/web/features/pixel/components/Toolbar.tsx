@@ -147,7 +147,7 @@ export const Toolbar = memo(function Toolbar({
                     className="w-6 h-6 rounded-md transition-all duration-100 hover:scale-110"
                     style={{
                       backgroundColor: color,
-                      outline: selectedColor === color ? "2px solid white" : "2px solid transparent",
+                      outline: selectedColor === color ? "2px solid var(--text-1)" : "2px solid transparent",
                       outlineOffset: "1px",
                     }}
                     title={color}
@@ -173,7 +173,7 @@ export const Toolbar = memo(function Toolbar({
                   className={
                     "flex-1 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-all " +
                     (gridSize === size
-                      ? "bg-(--accent) text-(--text-1)"
+                      ? "bg-(--accent) text-(--accent-ink)"
                       : "bg-(--surface-2) border border-(--line) text-(--text-3) hover:bg-(--surface-1) hover:text-(--text-1)")
                   }
                   style={{ fontFamily: "var(--font-ui)" }}
@@ -226,7 +226,7 @@ function ColorButton({
       className="pixel-color-button aspect-square min-h-8 rounded sm:min-h-0"
       style={{
         backgroundColor: color,
-        outline: isSelected ? "2px solid white" : "2px solid transparent",
+        outline: isSelected ? "2px solid var(--text-1)" : "2px solid transparent",
         outlineOffset: "1px",
       }}
       title={color}

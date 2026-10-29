@@ -26,6 +26,7 @@ import {
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { createPumpWalletGuard } from "@/features/pump/walletSession";
 import { waitForProtocolReceipt } from "@/lib/transactionReceipt";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 type OracleMode = "mint" | "redeem";
 
@@ -85,6 +86,8 @@ export function NusdOraclePanel() {
   const wrongChain = isConnected && chainId !== PUMP_CHAIN_ID;
   const collateralWei = useMemo(() => parseAmount(mintAmount), [mintAmount]);
   const nusdWei = useMemo(() => parseAmount(redeemAmount), [redeemAmount]);
+  const { value: quotedCollateralWei, pending: collateralSettling } = useDebouncedValue(collateralWei);
+  const { value: quotedNusdWei, pending: nusdSettling } = useDebouncedValue(nusdWei);
 
   const nativeBalance = useBalance({
     address,
@@ -164,17 +167,17 @@ export function NusdOraclePanel() {
     address: PUMP_NUSD_ADDRESS,
     abi: nusdAbi,
     functionName: "quoteMint",
-    args: [collateralWei],
+    args: [quotedCollateralWei],
     chainId: PUMP_CHAIN_ID,
-    query: { enabled: configured && collateralWei > 0n },
+    query: { enabled: configured && quotedCollateralWei > 0n },
   });
   const redeemQuote = useReadContract({
     address: PUMP_NUSD_ADDRESS,
     abi: nusdAbi,
     functionName: "quoteRedeem",
-    args: [nusdWei],
+    args: [quotedNusdWei],
     chainId: PUMP_CHAIN_ID,
-    query: { enabled: configured && nusdWei > 0n },
+    query: { enabled: configured && quotedNusdWei > 0n },
   });
 
   const oraclePriceWad = oraclePrice.data?.[0];
@@ -199,8 +202,10 @@ export function NusdOraclePanel() {
 
   const amountIn = mode === "mint" ? collateralWei : nusdWei;
   const quote = mode === "mint" ? mintQuote.data : redeemQuote.data;
-  const quotePending = amountIn > 0n
-    && (mode === "mint" ? mintQuote.isPending : redeemQuote.isPending);
+  // While the amount settles, the quote on screen belongs to the previous amount.
+  const quotePending = amountIn > 0n && (mode === "mint"
+    ? collateralSettling || mintQuote.isPending
+    : nusdSettling || redeemQuote.isPending);
   const quoteError = mode === "mint" ? mintQuote.error : redeemQuote.error;
   const minOut = minimumOutput(quote ?? 0n);
   const metricsReadFailed = Boolean(
@@ -267,7 +272,7 @@ export function NusdOraclePanel() {
   };
 
   const submit = async () => {
-    if (!guard() || !address || !publicClient || amountIn === 0n || quote === undefined || actionError) {
+    if (!guard() || !address || !publicClient || amountIn === 0n || quote === undefined || quotePending || actionError) {
       return;
     }
     if (!tryAcquireAction(submitLockRef)) return;

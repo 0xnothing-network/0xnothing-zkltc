@@ -24,6 +24,7 @@ import { formatAmount, formatUnlockTime, minimumAfterSlippage, parseAmount, perc
 import { useActiveDexRouter } from "@fi/lib/hooks/useActiveDexRouter";
 import { formatFeeBps, useDexFeeSchedule } from "@fi/lib/hooks/useDexFeeSchedule";
 import { useProtocolTransaction } from "@fi/lib/hooks/useProtocolTransaction";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 function integerSquareRoot(value: bigint): bigint {
   if (value < 2n) return value;
@@ -273,6 +274,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   const swapImageIn = swapInputIndex === 0 ? imageA : imageB;
   const swapImageOut = swapInputIndex === 0 ? imageB : imageA;
   const swapAmountIn = parseAmount(swapAmountText, swapDecimalsIn);
+  const { value: quotedSwapAmountIn, pending: swapAmountSettling } = useDebouncedValue(swapAmountIn);
   const reserveRead = useReadContract({
     address: dexRouter,
     abi: dexRouterAbi,
@@ -317,11 +319,11 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
     address: dexRouter,
     abi: dexRouterAbi,
     functionName: "getAmountsOut",
-    args: swapTokenIn && swapTokenOut && swapAmountIn
-      ? [swapAmountIn, [swapTokenIn, swapTokenOut]]
+    args: swapTokenIn && swapTokenOut && quotedSwapAmountIn
+      ? [quotedSwapAmountIn, [swapTokenIn, swapTokenOut]]
       : undefined,
     query: {
-      enabled: Boolean(mode === "swap" && dexRouter && validation.data && swapTokenIn && swapTokenOut && swapAmountIn),
+      enabled: Boolean(mode === "swap" && dexRouter && validation.data && swapTokenIn && swapTokenOut && quotedSwapAmountIn),
     },
   });
   const swapsPaused = useReadContract({
@@ -439,7 +441,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
   }
 
   async function submitSwap() {
-    if (!swapAmountIn || !swapAmountOut || !address || !swapTokenIn || !swapTokenOut) return;
+    if (!swapAmountIn || !swapAmountOut || swapAmountSettling || !address || !swapTokenIn || !swapTokenOut) return;
     const hash = await tx.execute({
       approval: {
         token: swapTokenIn,
@@ -747,7 +749,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
               <button
                 type="button"
                 className={`fi-button fi-button-block ${mode === "remove" ? "fi-button-muted" : "fi-button-primary"}`}
-                disabled={!poolReady || Boolean(error) || tx.pending || (mode === "swap" ? !poolHasLiquidity || !swapStateReady || Boolean(swapsPaused.data) || swapQuote.isLoading || !swapAmountIn || !swapAmountOut : mode === "add" ? !amountA || !amountB || !expectedLiquidity : !poolHasLiquidity || !liquidity || removeAmountA === undefined || removeAmountB === undefined)}
+                disabled={!poolReady || Boolean(error) || tx.pending || (mode === "swap" ? !poolHasLiquidity || !swapStateReady || Boolean(swapsPaused.data) || swapAmountSettling || swapQuote.isLoading || !swapAmountIn || !swapAmountOut : mode === "add" ? !amountA || !amountB || !expectedLiquidity : !poolHasLiquidity || !liquidity || removeAmountA === undefined || removeAmountB === undefined)}
                 onClick={() => void (mode === "swap" ? submitSwap() : mode === "add" ? submitAdd() : submitRemove())}
               >
                 {!poolReady ? poolLoading ? "Loading pool" : "Pool unavailable" : tx.pending ? "Processing" : mode === "swap" ? !poolHasLiquidity ? "No liquidity" : routeReadError ? "Route unavailable" : !swapStateReady ? "Checking route" : swapsPaused.data ? "Swaps paused" : "Swap" : mode === "add" ? "Add liquidity" : !poolHasLiquidity ? "No liquidity" : "Remove liquidity"}

@@ -203,7 +203,7 @@
 .tradeSteps li { display: flex; align-items: center; gap: 9px; padding: 13px 20px; min-width: 0; color: var(--text-2); font-size: 12px; line-height: 1.4; }
 .tradeSteps li > span { display: inline-grid; place-items: center; width: 24px; height: 24px; flex-shrink: 0; border: 1px solid var(--line-strong); font-size: 12px; }
 .tradeSteps li[aria-current='step'] { color: var(--accent-text); }
-.tradeSteps li[aria-current='step'] > span { color: var(--text-3); background: var(--market-accent); border-color: var(--market-accent); }
+.tradeSteps li[aria-current='step'] > span { color: var(--accent-ink); background: var(--market-accent); border-color: var(--market-accent); }
 .tradeSteps li[data-complete='true'] > span { color: var(--accent-text); border-color: var(--text-2); }
 .form { display: grid; gap: 14px; padding: 26px 28px 20px; scroll-margin-top: 110px; }
 .form[hidden] { display: none; }

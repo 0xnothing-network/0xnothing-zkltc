@@ -60,7 +60,7 @@
   inset: 66px 0 0;
   display: grid;
   place-items: center;
-  background: rgba(9, 10, 12, 0.9);
+  background: color-mix(in srgb, var(--pump-panel) 90%, transparent);
 }
 
 .pump-chart-loading .pump-inline-loading {
@@ -260,7 +260,6 @@
   outline: 0;
   background: var(--pump-input);
   color: var(--pump-text);
-  color-scheme: dark;
   font: inherit;
   font-size: 12px;
 }
@@ -452,7 +451,7 @@
 .pump-chart-heading .pump-eyebrow { margin-bottom: 4px; }
 .pump-periods { margin: 0; }
 .pump-chart { width: 100%; height: 400px; }
-.pump-chart-message { position: absolute; z-index: 2; inset: 66px 0 0; display: grid; margin: 0; place-content: center; gap: 12px; padding: 24px; background: rgba(9, 10, 12, 0.82); color: var(--pump-muted); font-size: 12px; text-align: center; }
+.pump-chart-message { position: absolute; z-index: 2; inset: 66px 0 0; display: grid; margin: 0; place-content: center; gap: 12px; padding: 24px; background: color-mix(in srgb, var(--pump-panel) 82%, transparent); color: var(--pump-muted); font-size: 12px; text-align: center; }
 .pump-chart-message button { min-height: 36px; border: 1px solid var(--pump-line-strong); padding: 0 14px; color: var(--pump-text); font: inherit; font-size: 12px; }
 .pump-trade-panel { position: sticky; top: 80px; width: 100%; }
 .pump-trade-tabs { width: 100%; margin: 0 0 20px; }
@@ -519,7 +518,7 @@
 .pump-history > .pump-panel-heading { min-height: 72px; padding: 0 20px; border-bottom: 1px solid var(--pump-line); }
 .pump-source-label { color: var(--pump-muted); font-size: 12px; }
 .pump-table-wrap { overflow-x: auto; }
-.pump-table-wrap:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+.pump-table-wrap:focus-visible { outline: 1px solid var(--accent-text); outline-offset: -1px; }
 .pump-table { width: 100%; min-width: 720px; border-collapse: collapse; }
 .pump-table th,
 .pump-table td { height: 48px; border-bottom: 1px solid var(--pump-line); padding: 0 14px; font-size: 12px; text-align: right; white-space: nowrap; }
@@ -638,7 +637,7 @@
   border-top: 1px solid var(--pump-line);
   color: var(--pump-text);
 }
-.pump-stats-market-list > a:hover { background: rgba(255, 255, 255, 0.025); }
+.pump-stats-market-list > a:hover { background: var(--hover); }
 .pump-stats-rank { color: var(--accent-text); font-size: 12px; }
 .pump-stats-market-name { display: block; min-width: 0; }
 .pump-stats-market-name strong,
@@ -702,7 +701,7 @@
 .pump-stats-loading .pump-stats-detail-grid > div { min-height: 230px; }
 
 .pump-shell :where(a, button, input:not(.fi-root input), select:not(.fi-root select), textarea):focus-visible {
-  outline: 1px solid var(--accent) !important;
+  outline: 1px solid var(--accent-text) !important;
   outline-offset: 2px;
 }
 .pump-search:focus-within,
@@ -2025,7 +2024,7 @@
 .pump-shell .pump-field em { color: var(--pump-muted); font-size: 12px; }
 .pump-shell .pump-logo-drop { min-height: 104px; padding: 16px; background: var(--pump-input); transition: border-color 160ms ease, background-color 160ms ease; }
 .pump-shell .pump-logo-drop:hover, .pump-shell .pump-logo-drop:focus-within { border-color: var(--accent); background: var(--pump-panel-2); }
-.pump-shell .pump-logo-drop:focus-within { outline: 2px solid var(--accent); outline-offset: 3px; }
+.pump-shell .pump-logo-drop:focus-within { outline: 2px solid var(--accent-text); outline-offset: 3px; }
 .pump-shell .pump-logo-drop .pump-logo-preview { width: 56px; height: 56px; }
 .pump-create-preview { position: sticky; top: 106px; min-width: 0; border: 1px solid var(--pump-line); border-top: 1px solid var(--line-strong); padding: 24px; background: var(--pump-panel); box-shadow: var(--pixel-ui-shadow); }
 .pump-create-preview-identity { display: flex; align-items: center; gap: 14px; margin-top: 24px; }

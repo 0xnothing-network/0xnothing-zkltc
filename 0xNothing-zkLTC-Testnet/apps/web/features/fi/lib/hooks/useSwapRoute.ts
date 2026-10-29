@@ -378,9 +378,10 @@ export function useSwapRoute({
     return candidate.amountOut > winner.amountOut ? candidate : winner;
   }, undefined);
   const amountOut = best?.amountOut;
-  // A cached quote may remain visible during a background refresh, but it is
-  // never executable until the selected candidate has settled for this key.
-  const candidateQuoteRefreshing = Boolean(best?.fetching);
+  // Each quote read is keyed on amountIn, so a quote on screen always belongs to the
+  // amount in the field. Gating on its background refresh (every block, poll and
+  // live wave) disabled Swap for a round trip every few seconds; the slippage floor
+  // already bounds a price that moved since, as in the 0xPump TradePanel.
   const quoteError = amountOut === undefined && discoveryPath
     ? directQuote.error
       ?? bridgeQuote.error
@@ -392,7 +393,7 @@ export function useSwapRoute({
     : undefined;
 
   return {
-    amountInQuoted: amountOut === undefined || candidateQuoteRefreshing ? undefined : amountIn,
+    amountInQuoted: amountOut === undefined ? undefined : amountIn,
     amountOut,
     bridgeAmount: best?.bridgeAmount,
     bridgeLive,

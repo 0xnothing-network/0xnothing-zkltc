@@ -60,11 +60,11 @@ export function ImageImporter({ gridSize, onApply, onClose }: ImageImporterProps
         </button>
         <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => chooseFile(event.target.files?.[0])} />
         <div className="mt-4 flex gap-2">
-          {(["fit", "fill"] as const).map((value) => <button key={value} onClick={() => setMode(value)} className={`flex-1 rounded-lg px-3 py-2 text-xs uppercase tracking-wider ${mode === value ? "bg-(--accent) text-(--text-1)" : "bg-(--surface-1) text-(--text-3)"}`}>{value}</button>)}
+          {(["fit", "fill"] as const).map((value) => <button key={value} onClick={() => setMode(value)} className={`flex-1 rounded-lg px-3 py-2 text-xs uppercase tracking-wider ${mode === value ? "bg-(--accent) text-(--accent-ink)" : "bg-(--surface-1) text-(--text-3)"}`}>{value}</button>)}
         </div>
         <p className="mt-3 text-xs text-(--text-3)">{mode === "fit" ? "Keeps the full image with transparent padding." : "Fills the grid and crops the edges."}</p>
         {error && <p className="mt-3 text-xs text-(--negative)">{error}</p>}
-        <div className="mt-5 flex justify-end gap-2"><button onClick={onClose} className="rounded-lg px-4 py-2 text-xs text-(--text-2)">Cancel</button><button disabled={!file || busy} onClick={apply} className="rounded-lg bg-(--accent) px-4 py-2 text-xs font-bold text-(--text-1) disabled:cursor-not-allowed disabled:opacity-40">{busy ? "Converting…" : "Apply to artwork"}</button></div>
+        <div className="mt-5 flex justify-end gap-2"><button onClick={onClose} className="rounded-lg px-4 py-2 text-xs text-(--text-2)">Cancel</button><button disabled={!file || busy} onClick={apply} className="rounded-lg bg-(--accent) px-4 py-2 text-xs font-bold text-(--accent-ink) disabled:cursor-not-allowed disabled:opacity-40">{busy ? "Converting…" : "Apply to artwork"}</button></div>
       </div>
     </div>
   );

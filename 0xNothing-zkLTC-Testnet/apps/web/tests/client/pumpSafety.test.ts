@@ -361,6 +361,7 @@ function componentHarness(name: PumpComponent, changeAt?: "simulation" | "upload
       },
       "@/features/pump/walletSession": guardModule,
       "@/lib/transactionReceipt": { waitForProtocolReceipt },
+      "@/lib/useDebouncedValue": { useDebouncedValue: (value: unknown) => ({ value, pending: false }) },
       "@/features/pump/config": pumpConfig,
       "@/features/pump/abis": { zeroXPumpAbi: [], nusdAbi: [], diaOracleAdapterAbi: [], pumpGraduationControllerAbi: [], pumpGraduationRouterAbi: [] },
       "@/features/pump/hooks/useIpfsUpload": { useIpfsUpload: () => ({ upload: async () => {

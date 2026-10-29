@@ -2,7 +2,6 @@
   background: var(--surface-1);
   color: var(--text-1);
   font-family: var(--font-ui), monospace;
-  color-scheme: dark;
 }
 .ox-privacy > [aria-hidden="true"] { opacity: .12; }
 .ox-privacy header { background: var(--surface-1); border-color: var(--line); }

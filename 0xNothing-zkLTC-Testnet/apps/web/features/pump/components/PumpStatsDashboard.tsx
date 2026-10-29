@@ -305,7 +305,7 @@ function ProtocolFeePanel({
           </div>
           <div>
             <dt>Split</dt>
-            <dd>50% pool / 50% treasury</dd>
+            <dd>70% stakers / 20% burned / 10% treasury</dd>
           </div>
           <div>
             <dt>Distributed lifetime</dt>

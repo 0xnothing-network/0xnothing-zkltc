@@ -11,13 +11,12 @@
   --docs-accent-ink: var(--accent-ink);
   min-height: 100dvh;
   background:
-    linear-gradient(rgba(211, 220, 231, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(211, 220, 231, 0.025) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--text-1) 2.5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--text-1) 2.5%, transparent) 1px, transparent 1px),
     var(--docs-bg);
   background-size: 40px 40px;
   color: var(--docs-text);
   font-family: var(--font-ui), monospace;
-  color-scheme: dark;
 }
 
 .ox-docs-root *,
@@ -156,7 +155,7 @@
   gap: 32px;
   border-right: 1px solid var(--docs-line);
   padding: 34px 22px 26px 24px;
-  background: rgba(16, 17, 19, 0.76);
+  background: color-mix(in srgb, var(--docs-bg) 76%, transparent);
 }
 
 .ox-docs-nav-group + .ox-docs-nav-group {
@@ -188,7 +187,7 @@
 .ox-docs-nav-group a:hover,
 .ox-docs-nav-group a:focus-visible {
   border-left-color: var(--docs-accent);
-  background: rgba(211, 220, 231, 0.045);
+  background: color-mix(in srgb, var(--text-1) 4.5%, transparent);
   color: var(--docs-text);
 }
 
@@ -466,7 +465,7 @@
 }
 
 .ox-docs-code button:hover {
-  background: rgba(211, 220, 231, 0.07);
+  background: color-mix(in srgb, var(--text-1) 7%, transparent);
   color: var(--accent-text);
 }
 
@@ -778,7 +777,7 @@
   border-left: 1px solid var(--line-strong);
   margin-top: 22px;
   padding: 13px 15px;
-  background: rgba(211, 220, 231, 0.045);
+  background: color-mix(in srgb, var(--text-1) 4.5%, transparent);
 }
 
 .ox-docs-note strong {
@@ -912,7 +911,7 @@
   border-top: 1px solid var(--line-strong);
   margin-top: 18px;
   padding-inline: 24px;
-  background: rgba(211, 220, 231, 0.025);
+  background: color-mix(in srgb, var(--text-1) 2.5%, transparent);
 }
 
 .ox-docs-universe-status {

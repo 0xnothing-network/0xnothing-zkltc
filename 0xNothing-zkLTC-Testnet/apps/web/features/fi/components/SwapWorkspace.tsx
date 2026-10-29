@@ -346,7 +346,7 @@ export function SwapWorkspace() {
   const activeOracleQuote = isMintRoute ? mintQuote : redeemQuote;
   const oracleQuoteExecutable = Boolean(
     !isOracleNusdRoute
-    || amountIn && amountOut !== undefined && !activeOracleQuote.isFetching && !activeOracleQuote.error,
+    || amountIn && amountOut !== undefined && !activeOracleQuote.error,
   );
   // A quote for the previous amount is never executable for the amount now in
   // the field, which is what the amountInQuoted comparison already says once the

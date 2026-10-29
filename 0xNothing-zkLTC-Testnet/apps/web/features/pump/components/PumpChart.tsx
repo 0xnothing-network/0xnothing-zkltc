@@ -12,7 +12,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import type { Address } from "viem";
-import { chartFontFamily } from "@/lib/chartTheme";
+import { chartFontFamily, chartPalette, useThemeName, type ChartPalette } from "@/lib/chartTheme";
 import { usePumpCandles } from "@/features/pump/hooks/usePumpData";
 import { PumpInlineLoading } from "@/features/pump/components/PumpStates";
 import {
@@ -77,7 +77,7 @@ function formatLocalCrosshairTime(time: Time) {
   return `${padTimePart(date.getDate())}/${padTimePart(date.getMonth() + 1)} ${padTimePart(date.getHours())}:${padTimePart(date.getMinutes())}`;
 }
 
-function buildChartPoints(candles: PumpCandle[]): ChartPoints {
+function buildChartPoints(candles: PumpCandle[], palette: ChartPalette): ChartPoints {
   const normalized = candles
     .map((candle) => {
       const time = Number(candle.timestamp);
@@ -136,9 +136,7 @@ function buildChartPoints(candles: PumpCandle[]): ChartPoints {
     volumes: visible.map((point) => ({
       time: point.candle.time,
       value: point.volume,
-      color: point.candle.close >= point.candle.open
-        ? "rgba(119,255,177,0.28)"
-        : "rgba(255,102,125,0.28)",
+      color: point.candle.close >= point.candle.open ? palette.upVolume : palette.downVolume,
     })),
   };
 }
@@ -227,31 +225,33 @@ export function PumpChart({ token, tokenName }: { token: Address; tokenName: str
   const fitFrameRef = useRef<number | null>(null);
   const [period, setPeriod] = useState<PumpCandlePeriod>(DEFAULT_PUMP_CANDLE_PERIOD);
   const query = usePumpCandles(token, period);
+  const theme = useThemeName();
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    const palette = chartPalette();
     const chart = createChart(container, {
       autoSize: true,
       height: container.clientHeight || 400,
       layout: {
-        background: { type: ColorType.Solid, color: "#090a0c" },
-        textColor: "#7f8791",
+        background: { type: ColorType.Solid, color: palette.background },
+        textColor: palette.text,
         fontFamily: chartFontFamily(),
         fontSize: 10,
         attributionLogo: false,
       },
       grid: {
-        vertLines: { color: "rgba(255,255,255,0.035)" },
-        horzLines: { color: "rgba(255,255,255,0.035)" },
+        vertLines: { color: palette.grid },
+        horzLines: { color: palette.grid },
       },
       localization: { timeFormatter: formatLocalCrosshairTime },
       rightPriceScale: {
-        borderColor: "rgba(255,255,255,0.1)",
+        borderColor: palette.border,
         scaleMargins: { top: 0.08, bottom: 0.24 },
       },
       timeScale: {
-        borderColor: "rgba(255,255,255,0.1)",
+        borderColor: palette.border,
         minBarSpacing: 2,
         rightOffset: 3,
         shiftVisibleRangeOnNewBar: true,
@@ -261,13 +261,13 @@ export function PumpChart({ token, tokenName }: { token: Address; tokenName: str
       },
       kineticScroll: { mouse: true, touch: true },
       crosshair: {
-        vertLine: { color: "rgba(119,255,177,0.4)" },
-        horzLine: { color: "rgba(119,255,177,0.4)" },
+        vertLine: { color: palette.crosshair },
+        horzLine: { color: palette.crosshair },
       },
     });
     chartRef.current = chart;
     const volumeSeries = chart.addHistogramSeries({
-      color: "rgba(119,255,177,0.28)",
+      color: palette.upVolume,
       priceFormat: { type: "volume" },
       priceLineVisible: false,
       lastValueVisible: false,
@@ -277,10 +277,10 @@ export function PumpChart({ token, tokenName }: { token: Address; tokenName: str
       scaleMargins: { top: 0.82, bottom: 0 },
     });
     const candleSeries = chart.addCandlestickSeries({
-      upColor: "#77ffb1",
-      downColor: "#ff667d",
-      wickUpColor: "#77ffb1",
-      wickDownColor: "#ff667d",
+      upColor: palette.up,
+      downColor: palette.down,
+      wickUpColor: palette.up,
+      wickDownColor: palette.down,
       borderVisible: false,
       priceLineVisible: false,
       priceFormat: { type: "price", precision: 8, minMove: 0.00000001 },
@@ -297,7 +297,7 @@ export function PumpChart({ token, tokenName }: { token: Address; tokenName: str
       dataRef.current = { context: "", candles: [], volumes: [] };
       priceFormatKeyRef.current = "";
     };
-  }, []);
+  }, [theme]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -306,7 +306,7 @@ export function PumpChart({ token, tokenName }: { token: Address; tokenName: str
     const candles = query.data?.candles;
     if (!chart || !candleSeries || !volumeSeries || !candles) return;
 
-    const points = buildChartPoints(candles);
+    const points = buildChartPoints(candles, chartPalette());
     const context = `${token.toLowerCase()}:${period}`;
     const previous = dataRef.current;
     const priceFormat = adaptivePriceFormat(points.candles);
@@ -351,7 +351,7 @@ export function PumpChart({ token, tokenName }: { token: Address; tokenName: str
         fitFrameRef.current = null;
       });
     }
-  }, [period, query.data?.candles, token]);
+  }, [period, query.data?.candles, theme, token]);
 
   return (
     <section className="pump-panel pump-chart-panel">
