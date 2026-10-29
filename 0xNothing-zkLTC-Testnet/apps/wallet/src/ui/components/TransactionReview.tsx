@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useId } from "react";
 import { t } from "../../core/i18n";
-import { Button, Note } from "./kit";
+import { Button, Icon, Note } from "./kit";
 
 export function TransactionReview({
   title,
@@ -55,7 +55,7 @@ export function TransactionReview({
             aria-label={t("common.close")}
             onClick={onClose}
           >
-            ✕
+            <Icon name="close" size={16} />
           </button>
         </header>
         {hero}

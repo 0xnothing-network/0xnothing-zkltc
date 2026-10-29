@@ -46,7 +46,7 @@ export const fr: Catalog = {
   "home.send": "Envoyer",
   "home.receive": "Recevoir",
   "home.history": "Historique",
-  "home.mint": "Frapper des NUSD",
+  "home.mint": "Obtenir des NUSD",
   "home.total": "Solde total",
   "home.copyAria": "Copier l'adresse",
   "home.settingsAria": "Réglages",

@@ -1,0 +1,70 @@
+<!doctype html>
+<!--
+  1280x800 Chrome Web Store screenshot. Open through the wallet dev server
+  (http://localhost:5180/store-assets/source/shot-portfolio.html) so the iframe
+  is same-origin and shows the real popup; capture at 1280x800, then flatten to RGB.
+-->
+<html lang="en" translate="no">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="google" content="notranslate" />
+    <title>0xWallet store shot</title>
+    <style>
+      @font-face {
+        font-family: "Departure Mono";
+        src: url("/fonts/DepartureMono-Regular.woff2") format("woff2");
+      }
+      html, body { margin: 0; width: 1280px; height: 800px; overflow: hidden; }
+      body {
+        display: grid;
+        grid-template-columns: 1fr 432px;
+        gap: 96px;
+        align-items: center;
+        box-sizing: border-box;
+        padding: 0 120px 0 112px;
+        background: #0b0c0e;
+        color: #f2f4f6;
+        font-family: "Geist", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+      }
+      .brand { display: flex; align-items: center; gap: 14px; margin-bottom: 56px; }
+      .brand img { width: 44px; height: 44px; border-radius: 50%; box-shadow: 0 0 0 1px #2f353c; }
+      .brand span { font-family: "Departure Mono", monospace; font-size: 20px; color: #c9cdd2; }
+      h1 {
+        margin: 0 0 28px;
+        font-size: 46px;
+        font-weight: 600;
+        line-height: 1.08;
+        letter-spacing: -0.025em;
+        background: linear-gradient(180deg, #eef1f4, #a6a9aa);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      ul { margin: 0; padding: 0; list-style: none; border-top: 1px solid #23272d; }
+      li { padding: 15px 0; border-bottom: 1px solid #23272d; color: #a9b0b9; font-size: 18px; line-height: 1.4; }
+      li b { color: #f2f4f6; font-weight: 500; }
+      .net { margin-top: 30px; font-family: "Departure Mono", monospace; font-size: 14px; color: #7d8590; }
+      .device {
+        width: 432px;
+        height: 720px;
+        overflow: hidden;
+        border-radius: 18px;
+        box-shadow: 0 0 0 1px #2f353c, inset 0 1px 0 rgba(238,241,244,.06), 0 40px 90px -30px rgba(0,0,0,.9);
+      }
+      iframe { width: 360px; height: 600px; border: 0; transform: scale(1.2); transform-origin: 0 0; }
+    </style>
+  </head>
+  <body>
+    <section>
+      <div class="brand"><img src="/icons/icon-128.png" alt="" /><span>0xWallet</span></div>
+      <h1>The wallet for LitVM,<br />kept on your device.</h1>
+      <ul>
+        <li><b>Swap, get NUSD, stake and lend</b> without leaving the popup.</li>
+        <li><b>Keys sealed locally</b> with your password. No account, no server.</li>
+        <li><b>Every transaction reviewed</b> in plain terms before you sign.</li>
+      </ul>
+      <p class="net">LitVM LiteForge testnet · zkLTC</p>
+    </section>
+    <div class="device"><iframe src="/" title="0xWallet" onload="this.contentDocument.documentElement.setAttribute('translate', 'no')"></iframe></div>
+  </body>
+</html>

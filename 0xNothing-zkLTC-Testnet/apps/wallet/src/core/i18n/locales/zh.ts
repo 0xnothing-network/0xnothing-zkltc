@@ -48,7 +48,7 @@ export const zh: Catalog = {
   "home.receive": "接收",
   "home.history": "历史",
   "home.stake": "质押",
-  "home.mint": "铸造 NUSD",
+  "home.mint": "获取 NUSD",
   "home.total": "总资产",
   "home.copyAria": "复制地址",
   "home.settingsAria": "设置",

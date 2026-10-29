@@ -44,7 +44,7 @@ export const de: Catalog = {
   "home.send": "Senden",
   "home.receive": "Empfangen",
   "home.history": "Verlauf",
-  "home.mint": "NUSD prägen",
+  "home.mint": "NUSD holen",
   "home.total": "Gesamtguthaben",
   "home.copyAria": "Adresse kopieren",
   "home.settingsAria": "Einstellungen",

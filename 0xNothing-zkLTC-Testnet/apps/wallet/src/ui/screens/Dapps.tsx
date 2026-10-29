@@ -8,7 +8,7 @@ import { persistentStore } from "../../core/platform/storage";
 import { STORAGE_KEYS } from "../../core/platform/storageKeys";
 import { listConnections, revokeConnection } from "../../core/services/dapp";
 import { announceToPages } from "../../core/services/walletEvents";
-import { Button, Note, Panel, PanelBody } from "../components/kit";
+import { Button, Icon, Note, Panel, PanelBody } from "../components/kit";
 import { Screen } from "../components/Screen";
 import { useActionGate } from "../hooks/useActionGate";
 import { useLiveRead } from "../hooks/useLiveRead";
@@ -75,7 +75,7 @@ export function Dapps(): ReactNode {
               <span className="w-asset-sub">{entry.subtitle}</span>
             </span>
             <span className="w-asset-side">
-              <span className="w-asset-usd" aria-hidden="true">↗</span>
+              <span className="w-asset-usd" aria-hidden="true"><Icon name="external" size={15} /></span>
             </span>
           </button>
         ))}

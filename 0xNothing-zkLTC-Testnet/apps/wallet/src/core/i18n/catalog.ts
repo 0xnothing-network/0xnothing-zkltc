@@ -102,7 +102,7 @@ export const EN = {
   "home.receive": "Receive",
   "home.history": "History",
   "home.stake": "Stake",
-  "home.mint": "Mint NUSD",
+  "home.mint": "Get NUSD",
   "home.delta24h": "24h",
   "home.total": "Total balance",
   "home.copyAria": "Copy the address",

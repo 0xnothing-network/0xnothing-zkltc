@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { t } from "../../core/i18n";
+import { Icon } from "./kit";
 
 /**
  * Header plus scrolling body. Every screen except HOME uses the back arrow, so
@@ -22,7 +23,7 @@ export function Screen({
       <header className="w-head">
         {onBack ? (
           <button type="button" className="w-back" onClick={onBack} aria-label={t("screen.backAria")}>
-            ←
+            <Icon name="back" />
           </button>
         ) : null}
         <div className="w-head-main">

@@ -45,7 +45,7 @@ export const es: Catalog = {
   "home.send": "Enviar",
   "home.receive": "Recibir",
   "home.history": "Historial",
-  "home.mint": "Acuñar NUSD",
+  "home.mint": "Obtener NUSD",
   "home.total": "Saldo total",
   "home.copyAria": "Copiar la dirección",
   "home.settingsAria": "Ajustes",

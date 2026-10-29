@@ -48,7 +48,7 @@ export const ja: Catalog = {
   "home.receive": "受け取る",
   "home.history": "履歴",
   "home.stake": "ステーク",
-  "home.mint": "NUSD を発行",
+  "home.mint": "NUSD を入手",
   "home.total": "合計残高",
   "home.copyAria": "アドレスをコピー",
   "home.settingsAria": "設定",

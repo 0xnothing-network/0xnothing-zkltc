@@ -13,7 +13,7 @@ import {
 import { loadLendState, supplyNusd, withdrawNusd } from "../../core/services/lend";
 import { loadPortfolio } from "../../core/services/portfolio";
 import { AmountField } from "../components/AmountField";
-import { Button, Note, Panel, Row, Rows } from "../components/kit";
+import { Button, Icon, Note, Panel, Row, Rows } from "../components/kit";
 import { Screen } from "../components/Screen";
 import { useActionGate } from "../hooks/useActionGate";
 import { useLiveRead } from "../hooks/useLiveRead";
@@ -288,7 +288,7 @@ export function Lend(): ReactNode {
                 aria-label={t("common.close")}
                 onClick={() => setReviewOpen(false)}
               >
-                ✕
+                <Icon name="close" size={16} />
               </button>
             </header>
             <div className="w-panel-body">

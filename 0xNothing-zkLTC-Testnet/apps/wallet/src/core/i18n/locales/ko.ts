@@ -48,7 +48,7 @@ export const ko: Catalog = {
   "home.receive": "받기",
   "home.history": "기록",
   "home.stake": "스테이킹",
-  "home.mint": "NUSD 발행",
+  "home.mint": "NUSD 받기",
   "home.total": "총 잔액",
   "home.copyAria": "주소 복사",
   "home.settingsAria": "설정",

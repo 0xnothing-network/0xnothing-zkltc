@@ -47,7 +47,7 @@ export const ru: Catalog = {
   "home.receive": "Получить",
   "home.history": "История",
   "home.stake": "Стейкинг",
-  "home.mint": "Выпустить NUSD",
+  "home.mint": "Получить NUSD",
   "home.total": "Общий баланс",
   "home.copyAria": "Копировать адрес",
   "home.settingsAria": "Настройки",

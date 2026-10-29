@@ -22,7 +22,7 @@ import {
 import { executeSwap, quoteSwap, routeLabel, type SwapRoute } from "../../core/services/swap";
 import { addCustomToken } from "../../core/services/tokens";
 import { AmountField } from "../components/AmountField";
-import { Button, Note, Panel, Row, Rows } from "../components/kit";
+import { Button, Icon, Note, Panel, Row, Rows } from "../components/kit";
 import { Screen } from "../components/Screen";
 import {
   SwapTokenPicker,
@@ -353,7 +353,7 @@ export function Swap(): ReactNode {
               disabled={busy || tokenBusy}
               onClick={flip}
             >
-              ↑↓
+              <Icon name="swap" size={16} />
             </Button>
           </div>
 
@@ -478,7 +478,7 @@ export function Swap(): ReactNode {
                 aria-label={t("common.close")}
                 onClick={() => setReviewOpen(false)}
               >
-                ✕
+                <Icon name="close" size={16} />
               </button>
             </header>
 
@@ -487,7 +487,7 @@ export function Swap(): ReactNode {
                 <TokenLogo token={tokenIn} size={34} />
                 <strong>{formatAmount(parsed, tokenIn.decimals, 6)} {tokenIn.symbol}</strong>
               </div>
-              <span className="w-review-arrow" aria-hidden="true">→</span>
+              <span className="w-review-arrow" aria-hidden="true"><Icon name="arrow" /></span>
               <div>
                 <TokenLogo token={tokenOut} size={34} />
                 <strong>

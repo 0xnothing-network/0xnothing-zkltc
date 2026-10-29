@@ -4,7 +4,7 @@ import { checkMnemonic, completeWord, newMnemonic } from "../../core/keyring/mne
 import { createVault, MIN_WALLET_PASSWORD_LENGTH } from "../../core/keyring/vault";
 import { describeError } from "../../core/lib/errors";
 import { copyText } from "../../core/platform/env";
-import { Button, Note } from "../components/kit";
+import { Brand, Button, Note } from "../components/kit";
 import { useActionGate } from "../hooks/useActionGate";
 import { Screen } from "../components/Screen";
 import { useWallet } from "../state/WalletContext";
@@ -108,7 +108,8 @@ export function Onboarding(): ReactNode {
   if (step === "choose") {
     return (
       <Screen title={t("onb.title")}>
-        <div className="w-stack">
+        <div className="w-stack w-welcome">
+          <Brand />
           <Note>{t("onb.intro")}</Note>
           <Button variant="primary" block onClick={startCreate}>
             {t("onb.create")}

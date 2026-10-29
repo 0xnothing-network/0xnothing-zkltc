@@ -1851,3 +1851,314 @@ textarea.w-input {
 .w-root :is(.w-amount, .w-input):focus-within { border-color: var(--accent); box-shadow: var(--ring); }
 .w-root :is(.w-asset-amount, .w-asset-usd, .w-total, .w-summary-value, .w-address, .w-code) { font-family: var(--font-num); }
 .w-head-title { font-family: var(--font-brand); font-weight: 400; letter-spacing: .02em; }
+
+/* ------------------------------------------------------------ icons / home */
+
+.w-icon {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.w-back {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-md);
+}
+
+.w-head-caret {
+  display: inline-flex;
+}
+
+.w-verified-mark .w-icon {
+  stroke-width: 3.5;
+}
+
+/* The total sits on its own raised card instead of a ruled strip. */
+.w-total-block {
+  gap: 12px;
+  margin: 12px var(--w-gutter) 4px;
+  border: 1px solid var(--fi-line);
+  padding: 18px 16px 14px;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+}
+
+.w-total {
+  font-size: 34px;
+  letter-spacing: -0.02em;
+}
+
+/* Actions are round tiles over their label, the way every wallet reads them. */
+.w-actions {
+  gap: 6px;
+  border-bottom: 0;
+  padding: 12px var(--w-gutter) 14px;
+}
+
+.w-action {
+  min-height: 0;
+  gap: 7px;
+  border-right: 0;
+  padding: 2px;
+  color: var(--fi-muted);
+}
+
+.w-action:hover,
+.w-action:focus-visible {
+  background: transparent;
+}
+
+.w-action-glyph {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border: 1px solid var(--fi-line-strong);
+  border-radius: 50%;
+  background: var(--surface-2);
+  box-shadow: var(--edge-highlight);
+  color: var(--fi-text);
+  transition: background-color 120ms var(--ease), border-color 120ms var(--ease), transform 80ms var(--ease);
+}
+
+.w-action:hover .w-action-glyph,
+.w-action:focus-visible .w-action-glyph {
+  border-color: color-mix(in srgb, var(--text-1) 40%, transparent);
+  background: var(--surface-3);
+}
+
+.w-action:active .w-action-glyph {
+  transform: scale(0.96);
+}
+
+/* The active destination gets the accent underline, drawn along the bar's top edge. */
+.w-nav-item {
+  position: relative;
+  border-radius: 0;
+}
+
+.w-nav-item[aria-current="page"] {
+  color: var(--fi-text);
+}
+
+.w-nav-item[aria-current="page"]::before {
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  width: 28px;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: var(--accent);
+  content: "";
+  transform: translateX(-50%);
+}
+
+/* Tabs keep a straight underline; a rounded tab bent it at the corners. */
+.w-tab {
+  border-radius: 0;
+}
+
+/* Asset rows float inside the gutter instead of running edge to edge. */
+.w-list:has(> .w-asset) {
+  gap: 2px;
+  padding: 8px calc(var(--w-gutter) - 8px);
+}
+
+.w-asset {
+  border-bottom: 0;
+  padding: 0 8px;
+}
+
+.w-asset:hover {
+  background: var(--hover);
+}
+
+/* ------------------------------------------------------------- polish pass */
+
+/* The wallet mark opening the first-run and unlock screens. */
+.w-brand {
+  display: flex;
+  justify-content: center;
+  padding: 28px 0 8px;
+}
+
+.w-brand img {
+  display: block;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--fi-line-strong), 0 18px 40px -16px rgba(0, 0, 0, .7);
+}
+
+.w-welcome {
+  min-height: 100%;
+}
+
+.w-welcome > .w-hint {
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.w-head {
+  border-bottom-color: var(--fi-line);
+}
+
+/* Native selects lose the platform arrow for one drawn in the dim text tone. */
+.w-select {
+  appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237d8590' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3C/svg%3E");
+  background-position: right 11px center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  transition: border-color 100ms var(--ease);
+}
+
+.w-select:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--text-1) 35%, transparent);
+}
+
+.w-input:focus,
+.w-select:focus-visible {
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+  outline: none;
+}
+
+.w-input[aria-invalid="true"]:focus {
+  border-color: var(--fi-red);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--negative) 22%, transparent);
+}
+
+/* Keyboard focus is always visible, never the browser's default box. */
+.w-root :is(button, a, [role="tab"]):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+/* The pinned action bar fades the form out under it instead of a hard rule. */
+.w-flow-actions {
+  border-top: 0;
+  padding-top: 18px;
+  background: linear-gradient(to bottom, transparent, var(--fi-bg) 14px);
+}
+
+/* Sheets rise from the bottom with a rounded top and a grab handle. */
+.w-sheet {
+  animation: w-fade-in 160ms var(--ease);
+}
+
+.w-sheet-body {
+  position: relative;
+  border: 1px solid var(--fi-line-strong);
+  border-bottom: 0;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  padding-top: 8px;
+  box-shadow: var(--e-3);
+  animation: w-sheet-up 220ms var(--ease);
+}
+
+.w-sheet-body::before {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 36px;
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--fi-line-strong);
+  content: "";
+  transform: translateX(-50%);
+}
+
+.w-sheet-head {
+  border-bottom-color: transparent;
+  padding: 10px var(--w-gutter);
+  color: var(--fi-text);
+  font-size: var(--fi-text-body);
+  font-weight: 500;
+}
+
+@keyframes w-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes w-sheet-up {
+  from { transform: translateY(24px); opacity: .4; }
+}
+
+.w-toast {
+  border-radius: var(--r-md);
+  padding: 11px 14px;
+  box-shadow: var(--e-2);
+  letter-spacing: 0;
+  animation: w-toast-in 200ms var(--ease);
+}
+
+@keyframes w-toast-in {
+  from { transform: translateY(8px); opacity: 0; }
+}
+
+.w-empty {
+  padding: 44px var(--w-gutter) 28px;
+  letter-spacing: 0;
+}
+
+.w-hint {
+  letter-spacing: 0;
+}
+
+/* Dapp rows match the inset asset rows; their mark is a filled tile. */
+.w-list:has(> .w-dapp) {
+  gap: 2px;
+  padding: 8px calc(var(--w-gutter) - 8px);
+}
+
+.w-dapp {
+  border-bottom: 0;
+  border-radius: var(--r-md);
+  padding: 9px 8px;
+}
+
+.w-dapp:hover {
+  background: var(--hover);
+}
+
+.w-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  box-shadow: var(--edge-highlight);
+  color: var(--fi-text);
+  font-family: var(--font-num);
+  letter-spacing: 0;
+}
+
+.w-dapp .w-asset-usd {
+  color: var(--fi-dim);
+  transition: color 120ms var(--ease), transform 120ms var(--ease);
+}
+
+.w-dapp:hover .w-asset-usd {
+  color: var(--fi-text);
+  transform: translate(1px, -1px);
+}
+
+.w-review-arrow {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--fi-line-strong);
+  border-radius: 50%;
+  color: var(--fi-muted);
+}
+
+.w-token-trigger-caret {
+  color: var(--fi-dim);
+}
+
+/* Disabled primary reads as waiting, not as a broken grey slab. */
+.w-btn[data-variant="primary"]:disabled {
+  border-color: var(--fi-line-strong);
+  background: var(--surface-2);
+  color: var(--fi-dim);
+  opacity: 1;
+}

@@ -19,7 +19,7 @@ import {
 } from "../../core/services/oracle";
 import { loadPortfolio } from "../../core/services/portfolio";
 import { AmountField } from "../components/AmountField";
-import { Button, Note, Panel, Row, Rows } from "../components/kit";
+import { Button, Icon, Note, Panel, Row, Rows } from "../components/kit";
 import { Screen } from "../components/Screen";
 import { TokenLogo } from "../components/TokenLogo";
 import { TransactionReview } from "../components/TransactionReview";
@@ -363,7 +363,7 @@ export function MintNusd(): ReactNode {
                 <TokenLogo token={inputToken} size={34} />
                 <strong>{formatAmount(parsed, inputToken.decimals, 6)} {inputToken.symbol}</strong>
               </div>
-              <span className="w-review-arrow" aria-hidden="true">→</span>
+              <span className="w-review-arrow" aria-hidden="true"><Icon name="arrow" /></span>
               <div>
                 <TokenLogo token={outputToken} size={34} />
                 <strong>

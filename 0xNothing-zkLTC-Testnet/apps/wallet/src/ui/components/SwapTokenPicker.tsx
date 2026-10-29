@@ -6,6 +6,7 @@ import { shortenAddress } from "../../core/lib/format";
 import type { SwapMarketSource } from "../../core/services/marketCatalog";
 import { useActionGate } from "../hooks/useActionGate";
 import { TokenLogo } from "./TokenLogo";
+import { Icon } from "./kit";
 import { VerifiedMark } from "./VerifiedMark";
 
 export interface SwapTokenOption {
@@ -128,7 +129,7 @@ export function SwapTokenPicker({
           </strong>
           <span>{value.name}</span>
         </span>
-        <span className="w-token-trigger-caret" aria-hidden="true">⌄</span>
+        <span className="w-token-trigger-caret" aria-hidden="true"><Icon name="caret" size={16} /></span>
       </button>
 
       {open ? (
@@ -155,7 +156,7 @@ export function SwapTokenPicker({
                 aria-label={t("common.close")}
                 onClick={() => setOpen(false)}
               >
-                ✕
+                <Icon name="close" size={16} />
               </button>
             </header>
             <div className="w-token-search">

@@ -2,7 +2,7 @@ import { type ReactNode, useState } from "react";
 import { t } from "../../core/i18n";
 import { unlock, wipeWallet, WrongPasswordError } from "../../core/keyring/vault";
 import { describeError } from "../../core/lib/errors";
-import { Button, Note } from "../components/kit";
+import { Brand, Button, Note } from "../components/kit";
 import { useActionGate } from "../hooks/useActionGate";
 import { Screen } from "../components/Screen";
 import { useWallet } from "../state/WalletContext";
@@ -79,6 +79,7 @@ export function Unlock(): ReactNode {
     <Screen title={t("unlock.title")}>
       <div className="w-flow" aria-busy={busy}>
         <div className="w-flow-main">
+          {resetting ? null : <Brand />}
           {resetting ? (
             <>
             <Note tone="warn">{t("unlock.wipeWarning", { word: wipeWord })}</Note>

@@ -7,7 +7,7 @@ import {
   shortenAddress,
 } from "../../core/lib/format";
 import { AccountSheet } from "../components/AccountSheet";
-import { Button, Note } from "../components/kit";
+import { Button, Icon, type IconName, Note } from "../components/kit";
 import { useCopy } from "../hooks/useCopy";
 import { usePortfolio } from "../hooks/usePortfolio";
 import { navigate } from "../router";
@@ -24,11 +24,11 @@ import { RwaList } from "./home/RwaList";
  */
 type Tab = "token" | "nft" | "rwa";
 
-const ACTIONS: readonly { label: MessageKey; glyph: string; path: string }[] = [
-  { label: "home.send", glyph: "↑", path: "#/send" },
-  { label: "home.receive", glyph: "↓", path: "#/receive" },
-  { label: "home.history", glyph: "≡", path: "#/history" },
-  { label: "home.stake", glyph: "◇", path: "#/earn" },
+const ACTIONS: readonly { label: MessageKey; icon: IconName; path: string }[] = [
+  { label: "home.send", icon: "send", path: "#/send" },
+  { label: "home.receive", icon: "receive", path: "#/receive" },
+  { label: "home.history", icon: "history", path: "#/history" },
+  { label: "home.stake", icon: "stake", path: "#/earn" },
 ];
 
 export function Home(): ReactNode {
@@ -58,7 +58,7 @@ export function Home(): ReactNode {
           >
             {active ? accountLabel(active) : t("account.main")}
             <span className="w-head-caret" aria-hidden="true">
-              ▾
+              <Icon name="caret" size={14} />
             </span>
           </button>
           <button
@@ -74,12 +74,12 @@ export function Home(): ReactNode {
             }}
           >
             {address ? shortenAddress(address, 8, 6) : "—"}
-            <span aria-hidden="true">{copied ? "✓" : "⧉"}</span>
+            <Icon name={copied ? "check" : "copy"} size={13} />
           </button>
         </div>
-        <Button size="sm" aria-label={t("home.settingsAria")} onClick={() => navigate("#/settings")}>
-          ⚙
-        </Button>
+        <button type="button" className="w-back" aria-label={t("home.settingsAria")} onClick={() => navigate("#/settings")}>
+          <Icon name="settings" size={17} />
+        </button>
       </header>
 
       <div className="w-body">
@@ -111,7 +111,7 @@ export function Home(): ReactNode {
               href={action.path}
             >
               <span className="w-action-glyph" aria-hidden="true">
-                {action.glyph}
+                <Icon name={action.icon} size={19} />
               </span>
               {t(action.label)}
             </a>

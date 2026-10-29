@@ -6,7 +6,7 @@ import { describeError } from "../../core/lib/errors";
 import { shortenAddress } from "../../core/lib/format";
 import { useActionGate } from "../hooks/useActionGate";
 import { useWallet } from "../state/WalletContext";
-import { Button } from "./kit";
+import { Button, Icon } from "./kit";
 
 /**
  * The account switcher behind the header title. Sits over the current screen
@@ -124,7 +124,7 @@ export function AccountSheet({ onClose }: { onClose: () => void }): ReactNode {
             onClick={onClose}
             aria-label={t("common.close")}
           >
-            ✕
+            <Icon name="close" size={16} />
           </button>
         </header>
 

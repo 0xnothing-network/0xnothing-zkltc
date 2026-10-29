@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { type MessageKey, t } from "../../core/i18n";
 import type { RouteName } from "../router";
+import { Icon, type IconName } from "./kit";
 
 /**
  * The three-way bottom bar from the wireframe. HOME is also the parent of the
@@ -17,10 +18,10 @@ const HOME_FAMILY = new Set<RouteName>([
   "settings",
 ]);
 
-const ITEMS: readonly { name: RouteName; label: MessageKey; glyph: string; path: string }[] = [
-  { name: "home", label: "nav.home", glyph: "▣", path: "#/home" },
-  { name: "swap", label: "nav.swap", glyph: "⇄", path: "#/swap" },
-  { name: "dapps", label: "nav.dapp", glyph: "◎", path: "#/dapps" },
+const ITEMS: readonly { name: RouteName; label: MessageKey; icon: IconName; path: string }[] = [
+  { name: "home", label: "nav.home", icon: "home", path: "#/home" },
+  { name: "swap", label: "nav.swap", icon: "swap", path: "#/swap" },
+  { name: "dapps", label: "nav.dapp", icon: "dapp", path: "#/dapps" },
 ];
 
 export function BottomNav({ current }: { current: RouteName }): ReactNode {
@@ -36,7 +37,7 @@ export function BottomNav({ current }: { current: RouteName }): ReactNode {
             aria-current={active ? "page" : undefined}
           >
             <span className="w-nav-glyph" aria-hidden="true">
-              {item.glyph}
+              <Icon name={item.icon} size={20} />
             </span>
             {t(item.label)}
           </a>
