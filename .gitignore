@@ -32,6 +32,8 @@ build/
 dist/
 
 # --- Misc ---
+__pycache__/
+*.rehearsal.json
 .DS_Store
 *.log
 *.tmp
