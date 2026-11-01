@@ -21,6 +21,10 @@ const CACHE_MAX_ENTRIES = 1024;
 // Viem batches by calldata bytes, which do not account for large art returned
 // by these getters. Bound the token count too, including the 256 x 256 grids.
 const NFT_DETAILS_BATCH_SIZE = 20;
+// Any address can be asked for, and each token costs a full art read.
+// shortcut: a holder past 1,000 per collection sees the first 1,000; page the
+// route if a real wallet gets there.
+const MAX_TOKENS_PER_COLLECTION = 1_000;
 const nftCache = createBoundedCache<NativeNft[]>({
   maxEntries: CACHE_MAX_ENTRIES,
   ttlMs: CACHE_TTL,
@@ -64,7 +68,7 @@ async function loadNativeNfts(address: string, fresh: boolean): Promise<NativeNf
 
 async function loadCollectionNfts(address: string, fresh: boolean, collection: `0x${string}`): Promise<NativeNft[]> {
   // Get token IDs first
-  const tokenIds = await getUserTokenIds(address, collection, fresh);
+  const tokenIds = (await getUserTokenIds(address, collection, fresh)).slice(0, MAX_TOKENS_PER_COLLECTION);
   if (tokenIds.length === 0) {
     return [];
   }

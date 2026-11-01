@@ -5,7 +5,9 @@
   "compatibility_date": "2026-08-31",
   "compatibility_flags": ["nodejs_compat"],
   "keep_vars": true,
-  "workers_dev": true,
+  // The custom domain is the only public host: a workers.dev twin skips the zone's
+  // WAF, rate limits and cache, and cannot sign uploads (UPLOAD_SIGNING_DOMAIN).
+  "workers_dev": false,
   "routes": [
     {
       "pattern": "0xnothing.app",

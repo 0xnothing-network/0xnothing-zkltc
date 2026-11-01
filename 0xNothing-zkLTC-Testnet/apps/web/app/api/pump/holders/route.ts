@@ -28,12 +28,14 @@ export async function GET(request: Request) {
     if (limit === undefined) {
       return NextResponse.json({ error: "Invalid limit parameter" }, { status: 400 });
     }
+    // One entry per token: every limit is a slice of the same top 50, so varying it
+    // cannot multiply holder loads (a full transfer-log scan while the index is down).
     const payload = await withPumpCache(
-      `holders:${token.toLowerCase()}:${limit}`,
-      () => getPumpHolders({ token, limit }),
+      `holders:${token.toLowerCase()}`,
+      () => getPumpHolders({ token, limit: 50 }),
       { ttlMs: 3_000, staleMs: 12_000, fresh },
     );
-    return NextResponse.json(payload, {
+    return NextResponse.json({ ...payload, holders: payload.holders.slice(0, limit) }, {
       headers: publicCdnCacheHeaders(
         "public, s-maxage=3, stale-while-revalidate=12",
         3,

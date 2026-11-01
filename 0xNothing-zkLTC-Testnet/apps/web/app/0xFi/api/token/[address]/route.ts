@@ -14,7 +14,7 @@ import { deployment } from "@fi/config/deployment";
 import { erc20Abi } from "@fi/lib/abis/erc20";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { CDN_STALE_SECONDS, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
-import { trustedProxyClientKey } from "@/lib/server/clientIp";
+import { trustedClientRateLimitKey, trustedProxyClientKey } from "@/lib/server/clientIp";
 import { readLimitedBytes } from "@/lib/server/readLimitedBytes";
 import type {
   ImportedTokenApiResponse,
@@ -111,9 +111,13 @@ function pruneRateLimitBuckets(now: number): void {
 }
 
 function consumeLookupToken(request: Request): { allowed: true } | { allowed: false; retryAfter: number } {
+  // Without a trusted client identity (Railway before its proxy header is set) every
+  // visitor would share one bucket that one script keeps empty; the lookup cache and
+  // MAX_ACTIVE_LOOKUPS still bound the work.
+  const key = trustedClientRateLimitKey(trustedClientKey(request));
+  if (key === null) return { allowed: true };
   const now = Date.now();
   pruneRateLimitBuckets(now);
-  const key = trustedClientKey(request);
   const current = rateLimitBuckets.get(key);
   const elapsed = current ? Math.max(0, now - current.updatedAt) : 0;
   const tokens = current

@@ -38,7 +38,8 @@ export function parsePumpUploadMessage(message: string): UploadMessageFields | n
   const timestamp = lines[5].replace(/^Timestamp: /, "").trim();
   const nonce = lines[6].replace(/^Nonce: /, "").trim();
 
-  if (!domain || !/^0x[0-9a-fA-F]{40}$/.test(address)) return null;
+  // The route names a rejected domain in its log and reply, so it must be host-shaped.
+  if (!/^[a-zA-Z0-9.:[\]-]{1,255}$/.test(domain) || !/^0x[0-9a-fA-F]{40}$/.test(address)) return null;
   if (!Number.isSafeInteger(chainId) || chainId <= 0) return null;
   if (!/^0x[0-9a-fA-F]{64}$/.test(contentHash)) return null;
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(timestamp)) return null;

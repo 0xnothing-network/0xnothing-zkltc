@@ -459,7 +459,9 @@ export async function getPumpCandles(options: {
           warning: "The candle index reported an error; chart data is using live RPC trades.",
         };
       }
-      if (period === 60 && payload.candles.length === 0) {
+      // Only a market the index knows: any address reaches this route, and the RPC
+      // fallback is a multi-chunk log scan.
+      if (period === 60 && payload.candles.length === 0 && payload.market) {
         const rpcTrades = await getRpcTrades(
           options.token,
           Math.min(500, Math.max(limit, 200)),

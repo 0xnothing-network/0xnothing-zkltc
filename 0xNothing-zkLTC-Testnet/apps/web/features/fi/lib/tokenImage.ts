@@ -52,9 +52,11 @@ export function tokenImageUrl(uri: string | undefined, symbol = ""): string | un
       return undefined;
     }
 
+    // Only an immutable CID is shown, and only through the proxy: any other URL on
+    // these hosts (an IPNS name, a creator's own *.mypinata.cloud gateway) would let
+    // the creator change the logo or see who views it.
     const gatewayIpfsPath = gatewayCidPath(parsed);
-    if (gatewayIpfsPath) return proxyImageUrl(gatewayIpfsPath, symbol);
-    return parsed.toString();
+    return gatewayIpfsPath ? proxyImageUrl(gatewayIpfsPath, symbol) : undefined;
   } catch {
     return undefined;
   }
@@ -80,8 +82,6 @@ function proxyCidPath(value: string): string {
 }
 
 function gatewayCidPath(url: URL): string {
-  if (url.search || url.hash) return "";
-
   const hostname = url.hostname.toLowerCase();
   const subdomainMarker = hostname.indexOf(".ipfs.");
   if (subdomainMarker > 0) {

@@ -5,7 +5,6 @@ import { litvmTransport } from "@/lib/rpcTransport";
 import { litvm } from "@/config/wagmi";
 import { marketplaceNftKey } from "@/lib/nftKey";
 import { createBoundedCache } from "@/lib/boundedCache";
-import { isUnsafeRemoteHostname } from "@/lib/server/networkAddress";
 import { readLimitedBytes } from "@/lib/server/readLimitedBytes";
 import { normalizeUint256TokenId } from "@/lib/tokenId";
 
@@ -192,25 +191,17 @@ function normalizeAssetUri(value: string): string {
   if (/^data:image\/(?:svg\+xml|png|jpe?g|webp|gif)(?:;|,)/i.test(value)) {
     return Buffer.byteLength(value, "utf8") <= MAX_METADATA_BYTES * 2 ? value : "";
   }
-  if (value.startsWith("ipfs://")) {
-    const path = value.slice("ipfs://".length).replace(/^ipfs\//, "");
-    return path ? `https://ipfs.io/ipfs/${path}` : "";
-  }
-  if (value.startsWith("ar://")) {
-    const path = value.slice("ar://".length);
-    return path ? `https://arweave.net/${path}` : "";
-  }
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" && !isUnsafeRemoteHostname(url.hostname)
-      ? url.toString()
-      : "";
-  } catch {
-    return "";
-  }
+  // Viewers' browsers load the image, so a creator-chosen host would see who looks.
+  return metadataFetchUrl(value) ?? "";
 }
 
-function metadataFetchUrl(value: string): string | null {
+// The server contacts only these hosts: a tokenURI host is chosen by the collection, and a
+// hostname check cannot see a public name whose DNS points at 10.x or 169.254.169.254.
+// shortcut: other https metadata APIs read as unavailable; add their host here when the
+// marketplace allows a collection that serves metadata from its own API.
+const METADATA_HOSTS = new Set(["ipfs.io", "arweave.net"]);
+
+export function metadataFetchUrl(value: string): string | null {
   let candidate = value;
   if (value.startsWith("ipfs://")) {
     const path = value.slice("ipfs://".length).replace(/^ipfs\//, "");
@@ -222,7 +213,10 @@ function metadataFetchUrl(value: string): string | null {
   try {
     const url = new URL(candidate);
     if (url.protocol !== "https:" || url.username || url.password) return null;
-    return isUnsafeRemoteHostname(url.hostname) ? null : url.toString();
+    if (METADATA_HOSTS.has(url.hostname)) return url.toString();
+    // A CID path on any other gateway is read through ipfs.io instead of that host.
+    const cidPath = /^\/ipfs\/(.+)$/.exec(url.pathname)?.[1];
+    return cidPath ? `https://ipfs.io/ipfs/${cidPath}${url.search}` : null;
   } catch {
     return null;
   }
