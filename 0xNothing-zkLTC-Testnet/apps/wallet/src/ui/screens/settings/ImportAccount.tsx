@@ -27,7 +27,9 @@ export function ImportAccount(): ReactNode {
   const actionGate = useActionGate();
   const [error, setError] = useState<string | null>(null);
 
-  const trimmed = key.trim();
+  // Other wallets export the key as 64 hex digits without the 0x prefix.
+  const bare = key.trim();
+  const trimmed = /^[0-9a-fA-F]{64}$/u.test(bare) ? `0x${bare}` : bare;
   const valid = isHex(trimmed) && trimmed.length === KEY_LENGTH;
   const ready = valid && password.length > 0;
 

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { typedSummary } from "../../src/ui/lib/typedData.ts";
+import { stringToHex } from "viem";
+import { readableSignMessage, typedSummary } from "../../src/ui/lib/typedData.ts";
 
 test("typed-data approval renders only validated text and chain identifiers", () => {
   for (const chainId of [4441, "4441", "0x1159"]) {
@@ -26,4 +27,15 @@ test("malformed dapp display fields fail closed instead of crashing the approval
     assert.equal(typedSummary(JSON.stringify(payload)), null, JSON.stringify(payload));
   }
   assert.equal(typedSummary("{"), null);
+});
+
+test("sign messages show as text only when nothing in them can hide or reorder text", () => {
+  const siwe = "app.test wants you to sign in:\nURI: https://app.test/?a=1&b=2\nAmount: $5 + fee ✓";
+  assert.equal(readableSignMessage(stringToHex(siwe)), siwe);
+  assert.equal(readableSignMessage("Sign in to app.test"), "Sign in to app.test");
+  for (const hidden of ["Sign in‮ sdnuf lla refsnart", "ok​ok", "line break", "bell\u0007"]) {
+    assert.equal(readableSignMessage(hidden), stringToHex(hidden), JSON.stringify(hidden));
+    assert.equal(readableSignMessage(stringToHex(hidden)), stringToHex(hidden), JSON.stringify(hidden));
+  }
+  assert.equal(readableSignMessage("0xdeadbeef"), "0xdeadbeef");
 });

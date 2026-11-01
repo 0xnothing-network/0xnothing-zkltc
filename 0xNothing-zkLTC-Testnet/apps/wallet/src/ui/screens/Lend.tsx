@@ -11,7 +11,7 @@ import {
   parseAmount,
 } from "../../core/lib/format";
 import { loadLendState, supplyNusd, withdrawNusd } from "../../core/services/lend";
-import { loadPortfolio } from "../../core/services/portfolio";
+import { loadPortfolio, rowBalance } from "../../core/services/portfolio";
 import { AmountField } from "../components/AmountField";
 import { Button, Icon, Note, Panel, Row, Rows } from "../components/kit";
 import { Screen } from "../components/Screen";
@@ -53,8 +53,7 @@ export function Lend(): ReactNode {
     { identity: [address, network.id, network.rpcUrl, tokens] },
   );
   const state = read.data?.state ?? null;
-  const walletNusd =
-    read.data?.portfolio.rows.find((row) => row.token.id === NUSD_TOKEN.id)?.balance ?? null;
+  const walletNusd = rowBalance(read.data?.portfolio.rows, NUSD_TOKEN.id);
   const supply = mode === "supply";
   // Supplying is capped by the wallet, withdrawing by what borrowers left behind.
   const cap = supply ? walletNusd : (state?.maxWithdraw ?? null);

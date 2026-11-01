@@ -3,7 +3,6 @@ import { type MessageKey, t } from "../../../core/i18n";
 import { describeError } from "../../../core/lib/errors";
 import { revealMnemonic, revealPrivateKey } from "../../../core/keyring/vault";
 import { Button, Note, Panel, PanelBody } from "../../components/kit";
-import { useCopy } from "../../hooks/useCopy";
 import { useWallet } from "../../state/WalletContext";
 
 /**
@@ -12,7 +11,10 @@ import { useWallet } from "../../state/WalletContext";
  * hand over the seed to whoever walks past it.
  *
  * The secret is held in component state only, cleared on every close, and never
- * written anywhere: no toast, no history record, no storage key.
+ * written anywhere: no toast, no history record, no storage key, no clipboard.
+ * Every app can read the clipboard, and Windows clipboard history and cloud sync
+ * keep a copy that no timed clear reaches. The text stays selectable, so a copy
+ * by hand remains possible as a deliberate act.
  */
 type Target = "mnemonic" | "key";
 
@@ -22,14 +24,13 @@ const TITLE: Record<Target, MessageKey> = {
 };
 
 export function RevealSecrets(): ReactNode {
-  const { address, notify } = useWallet();
+  const { address } = useWallet();
   const [target, setTarget] = useState<Target | null>(null);
   const [password, setPassword] = useState("");
   const [secret, setSecret] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
-  const { copied, copy } = useCopy();
 
   // Switching accounts or unmounting invalidates an in-progress decrypt. A
   // late result must never appear under a different account/secret heading.
@@ -155,14 +156,6 @@ export function RevealSecrets(): ReactNode {
                   <p className="w-code w-mono-break">{secret}</p>
                 )}
                 <div className="w-btn-row">
-                  <Button
-                    data-copied={copied ? "true" : "false"}
-                    onClick={() => void copy(secret).then((ok) => {
-                      if (!ok) notify(t("common.copyFailed"), "error");
-                    })}
-                  >
-                    {copied ? `${t("common.copied")} ✓` : t("common.copy")}
-                  </Button>
                   <Button variant="primary" block onClick={close}>
                     {t("reveal.hide")}
                   </Button>

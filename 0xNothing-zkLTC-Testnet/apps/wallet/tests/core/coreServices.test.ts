@@ -22,7 +22,10 @@ test("the shared block clock remains non-overlapping, adaptive and visibility-aw
 });
 
 test("partial RPC reads cannot become complete zero-value portfolio snapshots", () => {
-  assert.match(portfolio, /if \(failedBalance !== undefined\) throw failedBalance\.error;/u);
+  // A lone failed leg becomes an unread row (see portfolioPartial.test.ts); it must
+  // still keep the whole read incomplete so it never enters the 24h snapshot book.
+  assert.match(portfolio, /stale: readError !== null \|\|/u);
+  assert.match(portfolio, /complete: !suppliedFailed && rows\.every\(\(row\) => !row\.stale\)/u);
   assert.match(prices, /const hasPrice = priceCall\.status === "success" && priceCall\.result\[0\] > 0n;/u);
   assert.match(prices, /priceSource === "none"[\s\S]*stale: false/u);
 });

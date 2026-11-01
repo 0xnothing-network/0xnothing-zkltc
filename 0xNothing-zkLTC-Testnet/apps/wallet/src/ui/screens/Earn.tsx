@@ -18,7 +18,7 @@ import {
   type PointsPosition,
   withdrawPointsStake,
 } from "../../core/services/points";
-import { loadPortfolio } from "../../core/services/portfolio";
+import { loadPortfolio, rowBalance } from "../../core/services/portfolio";
 import { AmountField } from "../components/AmountField";
 import { TransactionReview } from "../components/TransactionReview";
 import { Button, Empty, Note, Panel, PanelBody, Row, Rows } from "../components/kit";
@@ -93,8 +93,7 @@ export function Earn(): ReactNode {
     { identity: [address, network.id, network.rpcUrl, tokens] },
   );
   const state = read.data?.state ?? null;
-  const walletNusd =
-    read.data?.portfolio.rows.find((row) => row.token.id === NUSD_TOKEN.id)?.balance ?? null;
+  const walletNusd = rowBalance(read.data?.portfolio.rows, NUSD_TOKEN.id);
 
   const parsed = parseAmount(amount, NUSD_TOKEN.decimals);
   const positive = parsed !== null && parsed > 0n;

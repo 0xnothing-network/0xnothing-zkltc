@@ -97,13 +97,15 @@ everywhere at once. Signing clients retain public metadata while preparing
 nonce, gas and fees, then resolve a fresh signer at the signature boundary.
 Locking or changing the active account or RPC invalidates the pending action.
 Revealing a seed phrase or a private key re-asks for the
-password even while unlocked.
+password even while unlocked. Neither has a copy button, and neither does a new
+phrase: every app can read the clipboard, and Windows clipboard history and cloud
+sync keep a copy that no timed clear reaches.
 
 **The service worker holds no key material and cannot sign.** Anything needing a
 signature is written to `chrome.storage.local` and handed to a separate approval
 window (`index.html#/approve?id=…`, 380×660) — a window rather than a panel in
 the popup, because a popup closes on a stray click and a signing prompt that
-vanishes is a way to lose track of what was approved. Unanswered after 300 s it
+vanishes is a way to lose track of what was approved. Unanswered after 240 s it
 resolves as a 4001 rejection. A `chrome.alarms` keepalive holds the worker up
 while the queue is non-empty, and a queue left behind by an evicted worker
 re-opens its window on startup.
@@ -123,9 +125,12 @@ rather than forwarded. `wallet_switchEthereumChain` and
 `wallet_watchAsset` returns false.
 
 **Hex quantities from a page are parsed in exactly one place** — the approval
-window. It re-estimates gas even when the page dictates a limit, names the four
-selectors worth naming (`transfer`, `approve`, `transferFrom`,
-`safeTransferFrom`) and shows raw calldata for everything else, flags a
+window. It re-estimates gas even when the page dictates a limit, decodes token
+transfers and approvals (`transfer`, `approve`, `increaseAllowance`,
+`transferFrom`, both `safeTransferFrom`s, `setApprovalForAll`) and EIP-2612, DAI
+and Permit2 signatures into recipient, spender, allowance and deadline (an
+unlimited grant or a permit that never lapses reads in red), shows raw calldata
+for everything else, flags a
 typed-data `chainId` that differs from the selected network, flags a request belonging to an account
 other than the one on screen, and disables Approve when a parameter does not
 parse.
@@ -210,7 +215,7 @@ surface at once, and the choice is remembered per device.
 key cannot be rendered. The eight files in `locales/` are `Partial` overlays: a
 key they omit falls back to English rather than breaking the build. That fallback
 is used deliberately for terms that carry no language (`NFT`, `Dapp`, `Swap`,
-`{amount} {symbol}`, the four ERC-20 selector names) instead of restating them
+`{amount} {symbol}`, the token selector names) instead of restating them
 nine times. `tests/ui/i18n.test.ts` keeps every gap declared, so an accidental
 omission fails a test while an intentional one is a line in a list.
 

@@ -10,7 +10,7 @@ import {
 } from "react";
 import type { Address } from "viem";
 import type { WalletToken } from "../../config/assets";
-import { LITVM_NETWORK, resolveNetwork, type WalletNetwork } from "../../config/networks";
+import { LITVM_NETWORK, networkHex, resolveNetwork, type WalletNetwork } from "../../config/networks";
 import { setLocale, t } from "../../core/i18n";
 import { describeError } from "../../core/lib/errors";
 import { persistentStore } from "../../core/platform/storage";
@@ -288,8 +288,14 @@ export function WalletProvider({ children }: { children: ReactNode }): ReactNode
     const revision = ++settingsRevisionRef.current;
     const generation = ++reloadGenerationRef.current;
     const task = settingsQueueRef.current.then(async () => {
+      const before = patch.networkId === undefined ? null : (await readSettings()).networkId;
       const next = await writeSettings(patch);
       const selected = resolveNetwork(next.networkId, next.customNetworks);
+      // The worker announces the switches dapps ask for; a network picked here would
+      // otherwise leave connected pages reading and signing for a stale chainId.
+      if (before !== null && before !== next.networkId) {
+        void announceToPages("chainChanged", networkHex(selected.chainId));
+      }
       const list = await listTokens(selected);
       // Writes run in this queue, so successful results are applied in the
       // exact same order in which the controls produced them.

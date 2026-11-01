@@ -1,5 +1,5 @@
-import { type ReactNode, useEffect, useState } from "react";
-import { hexToString, isHex } from "viem";
+import { Fragment, type ReactNode, useEffect, useState } from "react";
+import type { Address } from "viem";
 import { nativeTokenFor } from "../../config/assets";
 import { txUrl } from "../../config/chain";
 import { BUILTIN_NETWORKS, LITVM_NETWORK, networkIdentity } from "../../config/networks";
@@ -16,12 +16,21 @@ import {
   watchPending,
 } from "../../core/services/dapp";
 import { executeDappRequest } from "../../core/services/dappExecution";
+import { lookupToken, type TokenMetadata } from "../../core/services/tokens";
 import { previewRaw } from "../../core/services/tx";
 import { Button, Note, Panel, PanelBody, Row, Rows } from "../components/kit";
 import { Screen } from "../components/Screen";
 import { useActionGate } from "../hooks/useActionGate";
 import { useLiveRead } from "../hooks/useLiveRead";
-import { typedSummary } from "../lib/typedData";
+import {
+  callEffect,
+  deadlineDate,
+  effectTokens,
+  type RequestEffect,
+  typedEffect,
+  UNLIMITED,
+} from "../lib/requestEffect";
+import { readableSignMessage, typedSummary } from "../lib/typedData";
 import { useRoute } from "../router";
 import { useWallet } from "../state/WalletContext";
 
@@ -43,13 +52,104 @@ const KIND_TITLE: Record<DappRequest["kind"], MessageKey> = {
   "switch-network": "apr.titleNetwork",
 };
 
-/** The four selectors worth naming: everything else is shown as raw calldata. */
+/** The selectors worth naming: everything else is shown as raw calldata. */
 const SELECTORS: Record<string, MessageKey> = {
   "0xa9059cbb": "apr.selTransfer",
   "0x095ea7b3": "apr.selApprove",
+  "0x39509351": "apr.selIncreaseAllowance",
   "0x23b872dd": "apr.selTransferFrom",
   "0x42842e0e": "apr.selSafeTransferFrom",
+  "0xb88d4fde": "apr.selSafeTransferFrom",
+  "0xa22cb465": "apr.selSetApprovalForAll",
 };
+
+/** Token reads per request: a hostile batch permit could name hundreds of tokens. */
+const MAX_TOKEN_READS = 16;
+
+/** `undefined` while the token is still being read, `null` once it proved unreadable. */
+type TokenMeta = TokenMetadata | null | undefined;
+
+function amountText(amount: bigint, meta: TokenMeta): string {
+  if (meta === undefined) return "…";
+  if (meta === null) return t("apr.rawAmount", { value: amount.toString() });
+  return t("common.amountWithSymbol", {
+    amount: formatAmount(amount, meta.decimals, 6),
+    symbol: meta.symbol,
+  });
+}
+
+/** Who gets what, decoded from the request; rendered inside the panel's rows. */
+function EffectRows({
+  effect,
+  metaOf,
+}: {
+  effect: RequestEffect;
+  metaOf: (token: Address) => TokenMeta;
+}): ReactNode {
+  switch (effect.kind) {
+    case "transfer":
+      return (
+        <>
+          {effect.from !== null ? (
+            <Row label={t("apr.from")} value={shortenAddress(effect.from, 10, 6)} />
+          ) : null}
+          <Row label={t("send.recipient")} value={shortenAddress(effect.to, 10, 6)} />
+          <Row label={t("common.amount")} value={amountText(effect.amount, metaOf(effect.token))} />
+        </>
+      );
+    case "nft-transfer":
+      return (
+        <>
+          <Row label={t("apr.from")} value={shortenAddress(effect.from, 10, 6)} />
+          <Row label={t("send.recipient")} value={shortenAddress(effect.to, 10, 6)} />
+          <Row label={t("apr.tokenId")} value={`#${effect.tokenId.toString()}`} />
+        </>
+      );
+    case "approve": {
+      const until = deadlineDate(effect.validUntil);
+      return (
+        <>
+          <Row label={t("apr.spender")} value={shortenAddress(effect.spender, 10, 6)} />
+          {effect.grants.map((grant, index) => {
+            const meta = metaOf(grant.token);
+            const unlimited = grant.amount >= UNLIMITED;
+            return (
+              <Fragment key={index}>
+                <Row
+                  label={t("common.token")}
+                  value={meta ? `${meta.symbol} · ${shortenAddress(grant.token)}` : shortenAddress(grant.token, 10, 6)}
+                />
+                <Row
+                  label={t("apr.allowance")}
+                  value={unlimited ? t("apr.unlimited") : amountText(grant.amount, meta)}
+                  tone={unlimited ? "red" : grant.amount === 0n ? "green" : undefined}
+                />
+              </Fragment>
+            );
+          })}
+          {effect.signed ? (
+            <Row
+              label={t("apr.validUntil")}
+              value={until ?? t("apr.never")}
+              tone={until === null ? "red" : undefined}
+            />
+          ) : null}
+        </>
+      );
+    }
+    case "approve-all":
+      return (
+        <>
+          <Row label={t("apr.operator")} value={shortenAddress(effect.operator, 10, 6)} />
+          <Row
+            label={t("apr.allowance")}
+            value={effect.approved ? t("apr.allNfts") : t("apr.revoked")}
+            tone={effect.approved ? "red" : "green"}
+          />
+        </>
+      );
+  }
+}
 
 function selectorLabel(selector: string): string | null {
   const key = SELECTORS[selector];
@@ -74,16 +174,6 @@ function safeQuantity(value: string | undefined): bigint | null {
   }
 }
 
-/** personal_sign carries hex-encoded UTF-8 far more often than plain text. */
-function readable(message: string): string {
-  if (!isHex(message)) return message;
-  try {
-    const text = hexToString(message);
-    return /^[\p{L}\p{N}\p{P}\p{Zs}\n\r\t]*$/u.test(text) ? text : message;
-  } catch {
-    return message;
-  }
-}
 function hostOf(origin: string): string {
   try {
     return new URL(origin).host;
@@ -146,6 +236,27 @@ export function Approve(): ReactNode {
       ) ?? null
     : null;
   const tx = request?.kind === "transaction" ? (request.tx ?? {}) : null;
+  const effect = request === null
+    ? null
+    : tx !== null
+      ? callEffect(tx.to, tx.data)
+      : request.kind === "sign-typed"
+        ? typedEffect(request.message ?? "")
+        : null;
+  // Past the cap a token shows raw units: `metaOf` answers null for it.
+  const tokens = effectTokens(effect).slice(0, MAX_TOKEN_READS);
+  const tokenMeta = useLiveRead(
+    tokens.length > 0
+      ? () => Promise.all(tokens.map((token) => lookupToken(token, network).catch(() => null)))
+      : null,
+    [request?.id ?? "", network.id, network.rpcUrl, tokens.join(",")],
+    { live: false },
+  );
+  const metaOf = (token: Address): TokenMeta => {
+    const index = tokens.indexOf(token);
+    if (index < 0) return null;
+    return tokenMeta.data === null ? undefined : (tokenMeta.data[index] ?? null);
+  };
 
   const preview = useLiveRead(
     tx !== null && signer !== null
@@ -281,6 +392,11 @@ export function Approve(): ReactNode {
   const selector = tx?.data !== undefined && tx.data.length >= 10 ? tx.data.slice(0, 10) : null;
   const typed = request.kind === "sign-typed" ? typedSummary(request.message ?? "") : null;
   const wrongChain = typed !== null && typed.chainId !== null && typed.chainId !== network.chainId;
+  const grantNote: MessageKey | null = effect?.kind === "approve" && effect.grants.some((grant) => grant.amount > 0n)
+    ? (effect.signed ? "apr.permitNote" : "apr.approveNote")
+    : effect?.kind === "approve-all" && effect.approved
+      ? "apr.approveAllNote"
+      : null;
   const unreadable = (tx !== null && valueWei === null)
     || (tx !== null && tx.gas !== undefined && gasGiven === null)
     || (request.kind === "sign-typed" && typed === null)
@@ -365,6 +481,7 @@ export function Approve(): ReactNode {
                       : (selectorLabel(selector) ?? t("apr.contractCall", { selector }))
                   }
                 />
+                {effect !== null ? <EffectRows effect={effect} metaOf={metaOf} /> : null}
                 <Row
                   label={t("apr.gas")}
                   value={(preview.data?.gas ?? gasGiven)?.toString() ?? "…"}
@@ -381,6 +498,7 @@ export function Approve(): ReactNode {
                   }
                 />
               </Rows>
+              {grantNote !== null ? <Note tone="warn">{t(grantNote)}</Note> : null}
               {tx.data !== undefined && tx.data !== "0x" ? (
                 <p className="w-code w-mono-break">{tx.data}</p>
               ) : null}
@@ -390,7 +508,7 @@ export function Approve(): ReactNode {
         {request.kind === "sign" ? (
           <Panel title={t("apr.signTitle")}>
             <PanelBody>
-              <p className="w-code w-mono-break">{readable(request.message ?? "")}</p>
+              <p className="w-code w-mono-break">{readableSignMessage(request.message ?? "")}</p>
               <Note>{t("apr.signNote")}</Note>
             </PanelBody>
           </Panel>
@@ -406,7 +524,9 @@ export function Approve(): ReactNode {
                   value={typed?.chainId === null || typed === null ? "—" : typed.chainId.toString()}
                   tone={wrongChain ? "red" : undefined}
                 />
+                {effect !== null ? <EffectRows effect={effect} metaOf={metaOf} /> : null}
               </Rows>
+              {grantNote !== null ? <Note tone="warn">{t(grantNote)}</Note> : null}
               <p className="w-code w-mono-break">{request.message ?? ""}</p>
               <Note>{t("apr.typedNote")}</Note>
             </PanelBody>

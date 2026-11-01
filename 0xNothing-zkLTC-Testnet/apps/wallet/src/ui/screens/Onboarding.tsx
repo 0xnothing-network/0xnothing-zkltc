@@ -3,7 +3,6 @@ import { t } from "../../core/i18n";
 import { checkMnemonic, completeWord, newMnemonic } from "../../core/keyring/mnemonic";
 import { createVault, MIN_WALLET_PASSWORD_LENGTH } from "../../core/keyring/vault";
 import { describeError } from "../../core/lib/errors";
-import { copyText } from "../../core/platform/env";
 import { Brand, Button, Note } from "../components/kit";
 import { useActionGate } from "../hooks/useActionGate";
 import { Screen } from "../components/Screen";
@@ -16,11 +15,13 @@ import { useWallet } from "../state/WalletContext";
  *
  * The phrase is checked against the BIP-39 checksum before it is accepted, so a
  * mistyped word is refused here instead of quietly restoring an empty account.
+ * A new phrase has no copy button, for the reason RevealSecrets gives: the
+ * clipboard keeps it long after this screen is gone.
  */
 type Step = "choose" | "create" | "import" | "password";
 
 export function Onboarding(): ReactNode {
-  const { openWallet, notify } = useWallet();
+  const { openWallet } = useWallet();
   const [step, setStep] = useState<Step>("choose");
   const [phrase, setPhrase] = useState("");
   const [typed, setTyped] = useState("");
@@ -102,7 +103,9 @@ export function Onboarding(): ReactNode {
 
   const back = (): void => {
     setError(null);
-    setStep(typed.trim().length > 0 ? "import" : "choose");
+    // A created phrase goes back to its own words: from "choose", Create would show a
+    // new phrase while the user's paper backup still holds the old one.
+    setStep(typed.trim().length > 0 ? "import" : phrase.length > 0 ? "create" : "choose");
   };
 
   if (step === "choose") {
@@ -149,18 +152,6 @@ export function Onboarding(): ReactNode {
               ))}
             </div>
             <div className="w-btn-row">
-              <Button
-                onClick={() => {
-                  void copyText(phrase).then((ok) =>
-                    notify(
-                      ok ? t("onb.phraseCopied") : t("common.copyFailed"),
-                      ok ? "ok" : "error",
-                    ),
-                  );
-                }}
-              >
-                {t("common.copy")}
-              </Button>
               <Button onClick={startCreate}>{t("onb.regenerate")}</Button>
             </div>
             <label className="w-split">

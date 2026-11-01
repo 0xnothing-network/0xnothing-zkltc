@@ -1,4 +1,5 @@
 import {
+  isBoundedRpcCall,
   isContentMessage,
   PROVIDER_CHAIN_ID_HEX,
   PROVIDER_ICON,
@@ -120,7 +121,13 @@ function initializeProvider(): void {
       if (!args || typeof args.method !== "string") {
         throw new ProviderRpcError({ code: -32600, message: "Invalid request" });
       }
-      const result = await send({ method: args.method, params: args.params ?? [] });
+      const call = { method: args.method, params: args.params ?? [] };
+      // The relay drops what it cannot forward as bounded JSON (object params,
+      // undefined fields, BigInt); failing here spares the page a 250 s timeout.
+      if (!isBoundedRpcCall(call)) {
+        throw new ProviderRpcError({ code: -32602, message: "Invalid params" });
+      }
+      const result = await send(call);
       if (args.method === "eth_requestAccounts" || args.method === "eth_accounts") {
         accounts = (result as string[] | null) ?? [];
       }

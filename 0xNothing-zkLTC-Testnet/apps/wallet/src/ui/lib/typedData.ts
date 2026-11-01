@@ -1,3 +1,5 @@
+import { hexToBytes, isHex, stringToHex } from "viem";
+
 export interface TypedDataSummary {
   domain: string;
   primaryType: string;
@@ -33,5 +35,21 @@ export function typedSummary(message: string): TypedDataSummary | null {
     return { domain: name ?? "—", primaryType: primaryType ?? "—", chainId };
   } catch {
     return null;
+  }
+}
+
+// Visible text only: bidi overrides, zero-width and other format or control
+// characters could reorder or hide part of what the user is asked to sign.
+const SHOWN_AS_TEXT = /^[\p{L}\p{M}\p{N}\p{P}\p{S}\p{Zs}\n\r\t]*$/u;
+
+/** personal_sign carries hex-encoded UTF-8 far more often than plain text. */
+export function readableSignMessage(message: string): string {
+  if (!isHex(message)) return SHOWN_AS_TEXT.test(message) ? message : stringToHex(message);
+  try {
+    // Fatal decoding: bytes that are not UTF-8 stay hex instead of becoming U+FFFD.
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(hexToBytes(message));
+    return SHOWN_AS_TEXT.test(text) ? text : message;
+  } catch {
+    return message;
   }
 }

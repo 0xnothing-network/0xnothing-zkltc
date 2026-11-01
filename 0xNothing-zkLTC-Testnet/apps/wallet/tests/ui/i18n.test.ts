@@ -38,6 +38,8 @@ const NEUTRAL: readonly MessageKey[] = [
   "apr.selApprove",
   "apr.selTransferFrom",
   "apr.selSafeTransferFrom",
+  "apr.selIncreaseAllowance",
+  "apr.selSetApprovalForAll",
 ];
 
 /**

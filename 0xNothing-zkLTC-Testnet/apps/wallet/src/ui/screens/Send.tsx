@@ -6,7 +6,7 @@ import { t } from "../../core/i18n";
 import { describeError } from "../../core/lib/errors";
 import { formatAmount, formatBalance, parseAmount, shortenAddress } from "../../core/lib/format";
 import { NATIVE_GAS_RESERVE_WEI, spendableForSwap } from "../../core/lib/swapMath";
-import { loadPortfolio } from "../../core/services/portfolio";
+import { loadPortfolio, rowBalance, rowReadError } from "../../core/services/portfolio";
 import { quoteSend, sendToken, validateRecipient } from "../../core/services/transfer";
 import { AmountField } from "../components/AmountField";
 import { Button, Note, Panel, Row, Rows } from "../components/kit";
@@ -55,9 +55,9 @@ function SendToken({ initial }: { initial: string | null }): ReactNode {
   );
   const token = tokens.find((entry) => entry.id === tokenId) ?? nativeToken;
   const native = token.address === undefined;
-  const balance = read.data?.rows.find((row) => row.token.id === token.id)?.balance ?? null;
-  const nativeBalance = read.data?.rows.find((row) => row.token.id === nativeToken.id)?.balance
-    ?? null;
+  const balance = rowBalance(read.data?.rows, token.id);
+  const nativeBalance = rowBalance(read.data?.rows, nativeToken.id);
+  const readError = read.error ?? rowReadError(read.data?.rows, token.id);
 
   const recipient = validateRecipient(to);
   const parsed = parseAmount(amount, token.decimals);
@@ -231,7 +231,7 @@ function SendToken({ initial }: { initial: string | null }): ReactNode {
               : t("send.overBalance")}
           </Note>
         ) : null}
-        {read.error !== null ? <Note tone="error">{read.error}</Note> : null}
+        {readError !== null ? <Note tone="error">{readError}</Note> : null}
 
         <label className="w-field">
           <span className="w-label">{t("send.recipient")}</span>

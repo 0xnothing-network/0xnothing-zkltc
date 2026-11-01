@@ -17,7 +17,7 @@ import {
   quoteRedeem,
   redeemNusd,
 } from "../../core/services/oracle";
-import { loadPortfolio } from "../../core/services/portfolio";
+import { loadPortfolio, rowBalance } from "../../core/services/portfolio";
 import { AmountField } from "../components/AmountField";
 import { Button, Icon, Note, Panel, Row, Rows } from "../components/kit";
 import { Screen } from "../components/Screen";
@@ -70,7 +70,7 @@ export function MintNusd(): ReactNode {
   const mint = mode === "mint";
   const inputToken = mint ? NATIVE_TOKEN : NUSD_TOKEN;
   const outputToken = mint ? NUSD_TOKEN : NATIVE_TOKEN;
-  const balance = rows.find((row) => row.token.id === inputToken.id)?.balance ?? null;
+  const balance = rowBalance(rows, inputToken.id);
 
   const parsed = parseAmount(amount, inputToken.decimals);
   const positive = parsed !== null && parsed > 0n;

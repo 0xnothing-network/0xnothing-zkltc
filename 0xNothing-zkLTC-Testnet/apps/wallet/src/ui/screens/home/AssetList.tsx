@@ -55,7 +55,7 @@ export function AssetList({
             </span>
             <span className="w-asset-side">
               <span className="w-asset-amount">
-                {formatBalance(row.balance, row.token.decimals)}
+                {row.readError !== null ? "--" : formatBalance(row.balance, row.token.decimals)}
               </span>
               <span className="w-asset-usd">
                 {row.priceWad === 0n

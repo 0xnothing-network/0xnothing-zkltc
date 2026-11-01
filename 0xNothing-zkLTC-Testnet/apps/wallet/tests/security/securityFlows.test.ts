@@ -16,6 +16,7 @@ const swap = source("../../src/ui/screens/Swap.tsx");
 const dapps = source("../../src/ui/screens/Dapps.tsx");
 const settings = source("../../src/ui/screens/Settings.tsx");
 const revealSecrets = source("../../src/ui/screens/settings/RevealSecrets.tsx");
+const onboarding = source("../../src/ui/screens/Onboarding.tsx");
 
 test("every wallet-initiated transfer path requires an explicit review", () => {
   assert.match(send, /<TransactionReview/u);
@@ -70,7 +71,9 @@ test("custom RPC permissions are rechecked and cleaned up from settings", () => 
   assert.match(settings, /nativeDecimals: event\.target\.value/u);
 });
 
-test("clipboard failures are visible even on the secret-reveal surface", () => {
-  assert.match(revealSecrets, /copy\(secret\)\.then/u);
-  assert.match(revealSecrets, /common\.copyFailed/u);
+test("the seed phrase and private key never reach the clipboard", () => {
+  // Windows clipboard history and cloud sync keep what a timed clear cannot remove.
+  for (const screen of [revealSecrets, onboarding]) {
+    assert.doesNotMatch(screen, /\buseCopy\b|\bcopyText\b|navigator\.clipboard/u);
+  }
 });

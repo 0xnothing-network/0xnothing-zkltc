@@ -14,7 +14,7 @@ import {
   NATIVE_GAS_RESERVE_WEI,
   spendableForSwap,
 } from "../../core/lib/swapMath";
-import { loadPortfolio } from "../../core/services/portfolio";
+import { loadPortfolio, rowBalance, rowReadError } from "../../core/services/portfolio";
 import {
   loadSwapCatalog,
   type SwapCatalogEntry,
@@ -121,7 +121,8 @@ export function Swap(): ReactNode {
     [address, tokens, tick],
     { identity: [address, tokens] },
   );
-  const balance = read.data?.rows.find((row) => row.token.id === tokenIn.id)?.balance ?? null;
+  const balance = rowBalance(read.data?.rows, tokenIn.id);
+  const readError = read.error ?? rowReadError(read.data?.rows, tokenIn.id);
   const parsed = parseAmount(amount, tokenIn.decimals);
   const positive = parsed !== null && parsed > 0n;
   const spendable = balance === null ? null : spendableForSwap(balance, native);
@@ -443,7 +444,7 @@ export function Swap(): ReactNode {
             </Note>
           ) : null}
           {quote.error !== null ? <Note tone="warn">{quote.error}</Note> : null}
-          {read.error !== null ? <Note tone="error">{read.error}</Note> : null}
+          {readError !== null ? <Note tone="error">{readError}</Note> : null}
         </div>
 
         <div className="w-flow-actions">

@@ -3,6 +3,7 @@ import { erc20Abi, lendingPoolAbi } from "../../abis";
 import type { WalletToken } from "../../config/assets";
 import { networkIdentity, type WalletNetwork } from "../../config/networks";
 import { CONTRACTS } from "../../config/contracts";
+import { describeError } from "../lib/errors";
 import { usdValueWad } from "../lib/format";
 import { persistentStore } from "../platform/storage";
 import { STORAGE_KEYS } from "../platform/storageKeys";
@@ -20,6 +21,8 @@ import { loadPrices, type PriceMap } from "./prices";
 export interface AssetRow {
   token: WalletToken;
   balance: bigint;
+  /** Why the balance read failed; `balance` is then a placeholder, not a reading. */
+  readError: string | null;
   priceWad: bigint;
   valueWad: bigint;
   stale: boolean;
@@ -166,8 +169,12 @@ async function fetchPortfolio(
   // lending pool that stops answering — used to blank every other balance the
   // wallet had already fetched, leaving HOME with no asset list at all. A lone
   // failure now degrades to an unpriced row instead.
+  // Screens that spend a balance read it through `rowBalance`, which turns an unread
+  // row into "unknown" rather than a 0 the user could act on.
   const failedBalance = balances.find((entry) => entry.status === "failure");
-  if (failedBalance !== undefined) throw failedBalance.error;
+  if (failedBalance !== undefined && balances.every((entry) => entry.status === "failure")) {
+    throw failedBalance.error;
+  }
 
   const suppliedCall = includeLending ? balances[balances.length - 1] : undefined;
   const suppliedFailed = suppliedCall !== undefined && suppliedCall.status !== "success";
@@ -179,25 +186,26 @@ async function fetchPortfolio(
   for (const token of tokens) {
     const price = prices.get(token.id);
     let balance = 0n;
-    let unread = false;
+    let readError: string | null = null;
     if (!token.address) {
       balance = nativeBalance;
     } else {
       const index = balanceIndex.get(token.id);
       const call = index === undefined ? undefined : balances[index];
-      unread = call?.status !== "success";
-      balance = call?.status === "success" ? (call.result as bigint) : 0n;
+      if (call?.status === "success") balance = call.result as bigint;
+      else readError = describeError(call?.error);
     }
     // An unread balance has no honest dollar value behind it, so it takes the
     // zero price the list already renders as "--" rather than a confident $0.00
     // that reads as "you hold none of this".
-    const priceWad = unread ? 0n : (price?.priceWad ?? 0n);
+    const priceWad = readError !== null ? 0n : (price?.priceWad ?? 0n);
     rows.push({
       token,
       balance,
+      readError,
       priceWad,
       valueWad: usdValueWad(balance, token.decimals, priceWad),
-      stale: unread || (price?.stale ?? true),
+      stale: readError !== null || (price?.stale ?? true),
     });
   }
 
@@ -213,6 +221,17 @@ async function fetchPortfolio(
     at: Date.now(),
     prices,
   };
+}
+
+/** The balance of `tokenId`, or null while it is unknown (absent or unread). */
+export function rowBalance(rows: readonly AssetRow[] | undefined, tokenId: string): bigint | null {
+  const row = rows?.find((entry) => entry.token.id === tokenId);
+  return row === undefined || row.readError !== null ? null : row.balance;
+}
+
+/** Why `tokenId`'s balance is unknown, for the screen's read-error note. */
+export function rowReadError(rows: readonly AssetRow[] | undefined, tokenId: string): string | null {
+  return rows?.find((entry) => entry.token.id === tokenId)?.readError ?? null;
 }
 
 /** Rows worth listing: pinned built-ins, anything with a balance, all imports. */

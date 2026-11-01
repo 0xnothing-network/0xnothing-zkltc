@@ -65,12 +65,13 @@ function cacheMetadata(key: string, value: TokenMetadata): void {
   metadataCache.set(key, { value, expiresAt: now + METADATA_TTL_MS });
 }
 
+/** Bidi controls go with the control characters: they can reorder the amount a symbol sits beside. */
 function cleanText(value: unknown, max: number): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0
     && trimmed.length <= max
-    && !/[\u0000-\u001f\u007f]/u.test(trimmed)
+    && !/[\u0000-\u001f\u007f؜‎‏‪-‮⁦-⁩]/u.test(trimmed)
     ? trimmed
     : null;
 }

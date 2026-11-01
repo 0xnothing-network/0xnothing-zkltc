@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { createActionGate } from "../../src/ui/lib/actionGate.ts";
 import { normalizeDecimalInput } from "../../src/ui/lib/decimalInput.ts";
@@ -78,4 +79,9 @@ test("RPC host permissions preserve explicit ports and reject wildcard hosts", (
   assert.equal(rpcPermissionPattern("https://*.example.test"), null);
   assert.equal(rpcPermissionPattern("ftp://rpc.example.test"), null);
   assert.equal(rpcPermissionPattern("not a url"), null);
+});
+
+test("going back from the password step keeps a created phrase instead of minting a new one", () => {
+  const onboarding = readFileSync(new URL("../../src/ui/screens/Onboarding.tsx", import.meta.url), "utf8");
+  assert.match(onboarding, /setStep\(typed\.trim\(\)\.length > 0 \? "import" : phrase\.length > 0 \? "create" : "choose"\)/u);
 });
