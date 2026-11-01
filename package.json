@@ -26,7 +26,6 @@
     "check:nusd-subgraph": "npm --prefix 0xNothing-zkLTC-Testnet/subgraphs/0xpixel-nusd-market run check",
     "check:fi:scripts": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi run check:scripts",
     "check:fi": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi run build",
-    "audit:fi:report": "npm --prefix 0xNothing-zkLTC-Testnet/0xFi run audit:live:report",
     "verify": "npm run test:tooling && npm run test:web && npm run test:contracts && npm run check:nusd-subgraph && npm run check:pump-subgraphs && npm run check:fi && npm run verify:wallet"
   }
 }

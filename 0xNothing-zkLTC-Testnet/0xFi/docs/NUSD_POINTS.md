@@ -95,25 +95,15 @@ file. Prefer a dedicated signing service or HSM/KMS boundary before mainnet.
 
 ## Testnet runbook
 
-Do not broadcast if any general key has appeared in logs. Rotate that key first,
-then generate the new auxiliary signer outside logs.
+The staking contract was deployed against the v1 suite: its address and
+transaction evidence are in `contracts/deployments/latest.json`
+(`nusdPointsStaking`), with redemption disabled. Its deploy script was removed
+with the other v1 scripts on 2026-11-02; git history keeps it. Do not broadcast
+if any general key has appeared in logs. Rotate that key first, then generate
+the new auxiliary signer outside logs.
 
-```text
-cd 0xNothing-zkLTC-Testnet/0xFi
-npm run check:contracts
-npm run points:deploy:check
-npm run points:deploy:testnet
-npm run dev
-```
-
-`points:deploy:check` simulates construction, verifies chain and bindings,
-requires a fresh unfunded signer, and checks deployer gas with a 20% buffer. It
-does not broadcast. `points:deploy:testnet` persists the address and transaction
-evidence to the deployment manifests and web configuration. It does not enable
-redemption.
-
-After independently verifying bytecode and constructor arguments, use `/dev`
-in this fail-closed order:
+To enable redemption, after independently verifying bytecode and constructor
+arguments, use `/dev` in this fail-closed order:
 
 1. Fund the isolated NUSD redemption reserve.
 2. Set a non-zero `NUSD per xPoints` rate while redemption remains disabled.

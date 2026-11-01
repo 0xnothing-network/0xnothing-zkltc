@@ -41,18 +41,20 @@ route through NUSD is nominally 1.2%.
 
 ## Commands
 
+Since 2026-10-15 the live suite is v3 (`contracts/deployments/v3-fi.json`, rules and
+runbook in `../docs/TOKENOMICS.md`). It is already broadcast: check it with
+`npm.cmd run deploy:v3:status` and never rerun `deploy:v3`. The v1 deploy,
+activation, migration, liquidity, points and keeper scripts and `audit:live` were
+removed on 2026-11-02 (git history keeps them); the v1 record stays in
+`contracts/deployments/latest.json`.
+
 ```powershell
 npm.cmd install
 npm.cmd run check:scripts
 npm.cmd run check:contracts
 npm.cmd run check:subgraph
 npm.cmd run check:web
-npm.cmd run deploy:dry
-npm.cmd run activate:check
-npm.cmd run audit:live
-npm.cmd run liquidity:bootstrap:check
-npm.cmd run pump:controller:check
-npm.cmd run pump:keeper:check
+npm.cmd run deploy:v3:status
 ```
 
 The 0xFi frontend is part of the unified app at `../apps/web` and is served at
@@ -62,42 +64,14 @@ Next.js service.
 The public earn route is `/0xFi/earn`, and `/0xFi/farm` permanently redirects
 there. The legacy zkLTC/NUSD gauge route and controls are no longer exposed;
 nBTC/NUSD and nETH/NUSD remain available as separate LP programs. See
-`docs/NUSD_POINTS.md` for xPoints units, security boundaries, key separation,
-tests, and the non-broadcast deployment check.
+`docs/NUSD_POINTS.md` for xPoints units, security boundaries, key separation
+and tests.
 
-Only run `npm.cmd run deploy:testnet` after every local gate passes and the
-printed chain, deployer, existing NUSD, DIA oracle, and Pump addresses are exact.
-Signing commands use `DEPLOYER_PRIVATE_KEY`. The legacy `API_KEY` alias remains
-temporarily supported with a deprecation warning, but an explicit deployer key
-always takes precedence and no command prints either credential.
-If a broadcast is interrupted, use `deploy:resume`; if transactions landed but
-local finalization failed, use `deploy:finalize`. Testnet core contracts keep the
-recorded deployer as direct owner and guardian. The Pump router still enforces
-its own 48-hour adapter/enable delay. Once `activate:check` reports ready, run
-`activate:testnet` to activate the route and hand Pump/router administration to
-the pinned graduation controller. The controller governance remains the direct
-testnet deployer. Production must replace this EOA model with reviewed multisig
-and delayed governance.
-
-The keeper requires `KEEPER_PRIVATE_KEY`; it never falls back to the deployer
-key. Anyone can call the same controller function if that gas-only process is
-offline.
-
-The active testnet lending pool is
-`0x7CB638F8e10f1bd200A3c5C3fD014C3FD97BA914`. It uses the fixed
+The live v3 lending pool is `0x6Cc96c044321b3205Ac108107Fc6d2d47e0B3E44`. The
+retired v1 pool `0x7CB638F8e10f1bd200A3c5C3fD014C3FD97BA914` uses the fixed
 4.5% borrower / 4% lender / 0.5% protocol spread and isolated 80/85/90 risk
-parameters for WzkLTC, nBTC, and nETH. The replacement synth vaults, fee gauges,
-and lending risk actions were activated in the fail-closed order documented in
-`docs/DEPLOYMENT.md`; `npm.cmd run audit:live` verifies that topology directly
-from chain state. The migration and activation commands remain idempotent
-recovery tools, not routine deploy steps. A stale DIA feed still blocks every
+parameters for WzkLTC, nBTC, and nETH. A stale DIA feed still blocks every
 debt-increasing action.
-
-The three canonical pools contain deliberately small testnet bootstrap
-liquidity. Run `npm.cmd run liquidity:bootstrap:check` to verify it without
-sending transactions. `npm.cmd run liquidity:bootstrap` is receipt-aware and
-idempotent, but it spends deployer assets and must only be used for an explicit
-testnet liquidity operation.
 
 See `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, and `docs/DEPLOYMENT.md` before
 changing risk parameters or enabling 0xPump graduation.

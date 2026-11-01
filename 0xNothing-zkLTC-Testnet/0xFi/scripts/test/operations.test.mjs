@@ -5,7 +5,6 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { governanceAddress, governanceMode } from "../lib/graduation-runtime.mjs";
-import { keeperScanFailed, parseBoundedInteger } from "../lib/graduation-keeper-policy.mjs";
 import {
   creationInputMatchesArtifact,
   CURRENT_LENDING_COLLATERAL_RISK,
@@ -19,8 +18,6 @@ import {
   lendingRuntimeState,
   synthActivationLendingSafety,
 } from "../lib/lending-implementation.mjs";
-import { projectMainPumpGraduation } from "../lib/main-pump-publication.mjs";
-import { pumpAdministrationTopology } from "../lib/preflight-topology.mjs";
 import { resolvePrivateKey } from "../lib/private-key.mjs";
 import {
   mergeEnvironment,
@@ -83,24 +80,6 @@ test("keeper key resolution never falls back to deployment or generic API creden
   assert.throws(() => resolvePrivateKey({ env: { DEPLOYER_PRIVATE_KEY: "invalid" } }), /DEPLOYER_PRIVATE_KEY/);
 });
 
-test("keeper policy strictly validates decimal configuration and reports partial scan failure", () => {
-  assert.equal(parseBoundedInteger(undefined, {
-    name: "LIMIT", defaultValue: 3, min: 1, max: 20,
-  }), 3);
-  assert.equal(parseBoundedInteger(" 20 ", {
-    name: "LIMIT", defaultValue: 3, min: 1, max: 20,
-  }), 20);
-  for (const value of ["3junk", "1.5", "-1", "21"]) {
-    assert.throws(() => parseBoundedInteger(value, {
-      name: "LIMIT", defaultValue: 3, min: 1, max: 20,
-    }), /LIMIT must be an integer between 1 and 20/);
-  }
-  assert.equal(keeperScanFailed({ operational: true, statusReadFailures: [], graduationFailures: [] }), false);
-  assert.equal(keeperScanFailed({ operational: true, statusReadFailures: [{}], graduationFailures: [] }), true);
-  assert.equal(keeperScanFailed({ operational: true, statusReadFailures: [], graduationFailures: [{}] }), true);
-  assert.equal(keeperScanFailed({ operational: false, statusReadFailures: [], graduationFailures: [] }), true);
-});
-
 test("governance mode resolves explicit direct governance without using a stale timelock", () => {
   const deployment = {
     governanceMode: "direct-deployer-no-timelock",
@@ -126,73 +105,6 @@ test("governance transition uses the effective deployer without claiming complet
   };
   assert.equal(governanceMode(deployment), "transition");
   assert.equal(governanceAddress(deployment), addresses[0]);
-});
-
-test("preflight accepts only a fully bound controller-admin topology", () => {
-  const deployment = {
-    pumpAdministrationStatus: "controller-admin-active",
-    governance: addresses[0],
-    guardian: addresses[1],
-    contracts: {
-      pumpGraduationController: addresses[2],
-      pumpGraduationAdapter: addresses[3],
-    },
-  };
-  const input = {
-    account: addresses[0],
-    pump: addresses[4],
-    router: addresses[5],
-    pumpAdmin: addresses[2],
-    routerAdmin: addresses[2],
-    deployment,
-    controllerState: {
-      pump: addresses[4],
-      router: addresses[5],
-      adapter: addresses[3],
-      governance: addresses[0],
-      guardian: addresses[1],
-    },
-  };
-  assert.deepEqual(pumpAdministrationTopology(input), {
-    mode: "controller",
-    status: "controller-admin-active",
-    expectedAdmin: addresses[2],
-  });
-
-  assert.throws(
-    () => pumpAdministrationTopology({ ...input, routerAdmin: addresses[0] }),
-    /manifest does not match the live Pump and GraduationRouter admins/,
-  );
-  assert.throws(
-    () => pumpAdministrationTopology({
-      ...input,
-      controllerState: { ...input.controllerState, router: addresses[6] },
-    }),
-    /controller graduation router binding mismatch/i,
-  );
-  assert.throws(
-    () => pumpAdministrationTopology({ ...input, account: addresses[7] }),
-    /configured deployer is not the active graduation controller governance/i,
-  );
-});
-
-test("preflight preserves direct-admin support and rejects unknown manifest states", () => {
-  assert.equal(pumpAdministrationTopology({
-    account: addresses[0],
-    pump: addresses[1],
-    router: addresses[2],
-    pumpAdmin: addresses[0],
-    routerAdmin: addresses[0],
-  }).mode, "direct-eoa");
-
-  assert.throws(() => pumpAdministrationTopology({
-    account: addresses[0],
-    pump: addresses[1],
-    router: addresses[2],
-    pumpAdmin: addresses[0],
-    routerAdmin: addresses[0],
-    deployment: { pumpAdministrationStatus: "transitioning" },
-  }), /unsupported Pump administration status/i);
 });
 
 test("environment merge preserves unmanaged lines and removes stale aliases", () => {
@@ -373,47 +285,6 @@ test("fresh deployment and direct-governance migration use distinct artifacts", 
   assert.doesNotMatch(deploySource, /\.\/deployments\/direct-governance\.json/);
 });
 
-test("fixed-rate lending migration preserves the historical V2 artifact", () => {
-  const source = fs.readFileSync(
-    path.join(root, "contracts", "script", "MigrateLendingFixedRate.s.sol"),
-    "utf8",
-  );
-  const finalizer = fs.readFileSync(
-    path.join(root, "scripts", "finalize-lending-fixed-rate.mjs"),
-    "utf8",
-  );
-  const activator = fs.readFileSync(
-    path.join(root, "scripts", "activate-lending-fixed-rate.mjs"),
-    "utf8",
-  );
-  assert.match(source, /\.\/deployments\/lending-fixed-rate\.json/);
-  assert.doesNotMatch(source, /\.\/deployments\/lending-v2\.json/);
-  assert.match(finalizer, /"lending-fixed-rate\.json"/);
-  assert.match(finalizer, /"MigrateLendingFixedRate\.s\.sol"/);
-  assert.match(finalizer, /requireRecoverablePoolReference/);
-  assert.match(finalizer, /pending-owner-activation/);
-  assert.match(activator, /event MarketActivated\(\)/);
-  assert.match(activator, /getTransactionReceipt/);
-  assert.match(activator, /activationRequired: false/);
-  assert.match(activator, /writePublicEnvironment/);
-  assert.match(activator, /Synth migration must be finalized and activated before lending activation/);
-  assert.match(activator, /collateral count is not exactly/);
-  assert.match(activator, /receipt-backed MarketActivated event evidence/);
-});
-
-test("synth activation rechecks empty pair and gauge accounting before opening markets", () => {
-  const activator = fs.readFileSync(
-    path.join(root, "scripts", "activate-synth-safety-reserve.mjs"),
-    "utf8",
-  );
-  assert.match(activator, /progressKey === "0000"/);
-  assert.match(activator, /pair\/gauge changed after staged finalization/);
-  assert.match(activator, /gaugeRewardAccumulator/);
-  assert.match(activator, /gaugeNusdBalance/);
-  assert.match(activator, /lendingSafety\.requiresEmptyAccounting && deposited !== 0n/);
-  assert.match(activator, /receipt-backed event evidence/);
-});
-
 test("synth activation lending safety permits healthy debt only after both markets and lending are active", () => {
   const staged = synthActivationLendingSafety({
     allSynthActive: false,
@@ -481,39 +352,6 @@ test("synth activation lending safety permits healthy debt only after both marke
     totalBadDebt: 0n,
     collateralAssetCount: 4n,
   }).collateralCountSafe, false);
-});
-
-test("deployment finalizers bind journal transactions to receipt senders and targets", () => {
-  for (const script of [
-    "deploy.mjs",
-    "finalize-lending-fixed-rate.mjs",
-    "finalize-synth-safety-reserve.mjs",
-  ]) {
-    const source = fs.readFileSync(path.join(root, "scripts", script), "utf8");
-    assert.match(source, /receipt sender/);
-    assert.match(source, /receipt target/);
-    assert.match(source, /CREATE receipt address/);
-  }
-});
-
-test("direct-governance resume bypasses the initial topology preflight", () => {
-  const source = fs.readFileSync(path.join(root, "scripts", "direct-governance.mjs"), "utf8");
-  assert.match(
-    source,
-    /if \(mode !== "--resume"\) \{\s+await run\(process\.execPath, \[path\.join\(root, "scripts", "preflight\.mjs"\)\]\);/,
-  );
-});
-
-test("points deployment freshness cannot be denial-of-serviced after submission", () => {
-  const source = fs.readFileSync(path.join(root, "scripts", "deploy-nusd-points.mjs"), "utf8");
-  assert.match(source, /verifySignerSafety\(\{ requireFresh: !existing && !pendingHash \}\)/);
-  assert.match(source, /Recorded NUSD points deployment transaction hash is invalid/);
-  assert.match(source, /Recorded NUSD points staking address is invalid/);
-  assert.match(source, /if \(requireFresh && \(balance !== 0n \|\| transactionCount !== 0\)\)/);
-  const existingBranch = source.indexOf("if (existing) {");
-  const persistSigner = source.indexOf("persistSignerEnvironment();", existingBranch);
-  const deployTransaction = source.indexOf("const hash = await walletClient.deployContract", persistSigner);
-  assert.ok(existingBranch > -1 && persistSigner > existingBranch && deployTransaction > persistSigner);
 });
 
 test("lending implementation health fails closed for legacy or unrecorded deployments", () => {
@@ -643,59 +481,4 @@ test("lending creation input must contain the exact current creation artifact", 
   assert.equal(creationInputMatchesArtifact("0x60026002aabb", "0x60016002"), false);
   assert.equal(creationInputMatchesArtifact("", "0x60016002"), false);
   assert.equal(creationInputMatchesArtifact("0x6001", "not-bytecode"), false);
-});
-
-test("direct-governance finalization publishes the active controller to the main Pump manifest", () => {
-  const manifest = {
-    chainId: 4441,
-    pump: {
-      launchpad: addresses[0],
-      graduationRouter: addresses[1],
-      graduation: { adapter: addresses[2], controller: addresses[3], operational: false },
-    },
-  };
-  const projected = projectMainPumpGraduation({
-    manifest,
-    chainId: 4441,
-    pump: addresses[0],
-    router: addresses[1],
-    adapter: addresses[2],
-    controller: addresses[4],
-    governance: addresses[5],
-    guardian: addresses[6],
-    controllerDeploymentBlock: 456,
-    controllerDeploymentHash: `0x${"ab".repeat(32)}`,
-    verificationBlock: 789,
-    activatedAt: "2026-08-03T00:00:00.000Z",
-  });
-  assert.equal(projected.pump.graduation.controller, addresses[4]);
-  assert.equal(projected.pump.graduation.operational, true);
-  assert.equal(projected.pump.graduation.controllerOwnsPumpAdmin, true);
-  assert.equal(projected.pump.graduation.controllerOwnsRouterAdmin, true);
-  assert.equal(projected.pump.graduation.lastVerifiedBlock, 789);
-  assert.equal(manifest.pump.graduation.operational, false);
-});
-
-test("main Pump publication rejects a cross-deployment topology", () => {
-  assert.throws(() => projectMainPumpGraduation({
-    manifest: {
-      chainId: 4441,
-      pump: {
-        launchpad: addresses[0],
-        graduationRouter: addresses[1],
-        graduation: { adapter: addresses[2] },
-      },
-    },
-    chainId: 4441,
-    pump: addresses[0],
-    router: addresses[7],
-    adapter: addresses[2],
-    controller: addresses[4],
-    governance: addresses[5],
-    guardian: addresses[6],
-    controllerDeploymentBlock: 456,
-    controllerDeploymentHash: `0x${"ab".repeat(32)}`,
-    verificationBlock: 789,
-    activatedAt: "2026-08-03T00:00:00.000Z",
-  }), /router.*does not match/i);
 });

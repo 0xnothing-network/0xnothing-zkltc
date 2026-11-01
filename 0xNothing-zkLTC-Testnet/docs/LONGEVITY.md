@@ -51,7 +51,7 @@ Ví `0x58633401dCc383F010688e950878000000000000` đang là owner, guardian và t
 4. **Pinata:** đảm bảo gói/khóa `PINATA_JWT` còn hiệu lực trong 2 năm, hoặc chấp nhận tạm dừng tạo token mới.
 5. **Farm v2:** ba gauge LP mới (WzkLTC, nBTC, nETH với NUSD) chưa có thưởng. Nạp NUSD qua `GaugeFactory.fundGauge` nếu muốn farm; nếu không, UI ghi "Unfunded".
 6. **Bộ cũ:** web không còn dùng v1 và v2. Ai còn stake ở `NusdPointsStaking` v1 hoặc `RewardStaking` v2 (`0x735D…CaE4`) rút gốc qua explorer khi đáo hạn; NUSD v2 vẫn redeem trực tiếp trên contract v2.
-7. **Merge và deploy** branch `feat/tokenomics-v2` (đang chứa v3) lên hosting. Ba subgraph trên Goldsky đã chuyển sang địa chỉ v3 với tên cũ, nên bản web cũ đang chạy sẽ thấy dữ liệu v3 cho tới khi deploy bản mới.
+7. **Hosting chạy v3:** đã xong. Từ 15/10/2026 `main` chứa v3; Vercel, Railway và Cloudflare build từ `main`, và ba subgraph trên Goldsky đã trỏ vào địa chỉ v3.
 8. **Goldsky:** giữ tài khoản hoạt động; nếu subgraph bị xóa, web tự dùng RPC.
 9. **Thưởng khởi động (tùy chọn):** muốn người stake có thưởng sớm hơn phí thật thì chuyển NUSD từ quỹ vào `RewardStaking`. Contract tự nhận phần đó là thu nhập và rải đều trong 7 ngày.
 
@@ -61,9 +61,7 @@ Ví `0x58633401dCc383F010688e950878000000000000` đang là owner, guardian và t
 npm run verify
 ```
 
-```bash
-npm --prefix 0xNothing-zkLTC-Testnet/0xFi run audit:live:report
-```
+Các script của bộ 0xFi v1 đã nghỉ, kể cả `audit:live:report` (`npm run audit:fi:report` ở gốc), đã được xoá ngày 2026-11-02; bản ghi v1 vẫn nằm ở `0xFi/contracts/deployments/latest.json`. Bộ v3 đang chạy được kiểm bằng `deploy:v3:status` bên dưới.
 
 Fork smoke test của bộ v3 (cần `LITVM_RPC_URL`, không gửi giao dịch):
 
