@@ -12,10 +12,11 @@ This code is a testnet implementation, not an audit report.
 ## Oracle and stablecoin controls
 
 - Reject non-positive, incomplete, future-dated, and stale DIA rounds.
-- Mint and redeem use the current DIA price with integer rounding and no protocol fee. Invalid oracle data stops both operations.
-- `mintPaused` and `redeemPaused` are independent incident controls. `coverReserve` and quote views remain available while paused.
+- Mint and redeem price through the asset's `OracleRouter` with integer rounding. Mint and redeem fees default to 0 and are capped at 0.5% (`MAX_FEE_BPS = 50`); fees stay in the reserve.
+- Redeem pays `min(oracle price, pro-rata share of the reserve)`, so an under-backed reserve is shared evenly instead of raced.
+- Only minting can be paused (`mintPaused`). No role can pause redeem. If the oracle stays unusable for 7 days after anyone reports it, `emergencyRedeem` pays the pro-rata zkLTC share without a price.
 - The supply ceiling limits NUSD issuance, but it does not guarantee solvency. A zkLTC/USD price decline can make the native reserve worth less than outstanding NUSD, and redemptions can then exhaust the reserve.
-- There are no user debt positions, collateral ratios, liquidations, or administrator reserve sweep. Before mainnet, the zero-fee oracle-priced reserve model needs independent economic review, oracle manipulation analysis, and an explicit reserve-deficit policy.
+- There are no user debt positions, collateral ratios, liquidations, or administrator reserve sweep. Before mainnet, the oracle-priced reserve model needs independent economic review, oracle manipulation analysis, and an explicit reserve-deficit policy.
 - The new OracleNUSD does not inherit balances or backing from the old testnet NUSD and NativeCollateralVault. Legacy addresses are recovery-only and must not be presented as current protocol backing.
 
 ## Graduation controls
@@ -46,6 +47,8 @@ This code is a testnet implementation, not an audit report.
 - Production deployments must set `UPLOAD_SIGNING_DOMAIN` to the public host used by wallet signatures; the request `Host` header is not trusted as a production fallback.
 
 ## NUSD staking and xPoints controls
+
+The v3 suite stakes NUSD in `RewardStaking` (30/90/180/365-day locks, rewards streamed over 7 days, no owner powers); see `TOKENOMICS.md`. The rest of this section describes the retired v1 `NusdPointsStaking`, kept for holders who still withdraw from it.
 
 - Fixed-duration NUSD positions, xPoints accounting, withdrawals, voucher nonces, conversion rate versions, and redemption settlement are enforced by `NusdPointsStaking` on-chain.
 - Locked user principal and the redemption reserve are accounted separately. Owner reserve withdrawals and excess recovery cannot consume locked principal, while matured user withdrawals remain available during pauses.

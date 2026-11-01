@@ -175,5 +175,6 @@ npm run deploy:check
 npm run deploy
 ```
 
-The deployment script targets `zeroxpump-testnet/0.1.3` with the stable
-`staging` tag. Each redeploy must use a new immutable version.
+The deployment script targets `zeroxpump-testnet/1.0.0` (`subgraph.config.json`,
+no tag), the name the web reads since v3. A redeploy that must not disturb the
+live endpoint uses a new immutable version.

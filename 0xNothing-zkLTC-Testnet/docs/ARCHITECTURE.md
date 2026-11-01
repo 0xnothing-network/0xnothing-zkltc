@@ -2,7 +2,7 @@
 
 ## Product boundary
 
-0xPixel remains the existing onchain pixel-art NFT and native-zkLTC marketplace. Its deployed contracts, routes, public addresses, marketplace subgraph, and RPC fallbacks are preserved.
+0xPixel remains the existing onchain pixel-art NFT collection, traded on the NUSD marketplace (`NUSD_NFT_MARKETPLACE.md`). The retired native-zkLTC marketplace is paused (`deployments/liteforge-testnet/legacy-marketplace-pause.json`); sellers there can only revoke approval.
 
 0xPump is a separate NUSD launchpad. It does not depend on the removed legacy DEX.
 
