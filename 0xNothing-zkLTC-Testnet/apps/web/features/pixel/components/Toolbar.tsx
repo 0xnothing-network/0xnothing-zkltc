@@ -143,6 +143,8 @@ export const Toolbar = memo(function Toolbar({
                 {recentColors.map((color, i) => (
                   <button
                     key={`${color}-${i}`}
+                    type="button"
+                    aria-pressed={selectedColor === color}
                     onClick={() => handleColorSelect(color)}
                     className="w-6 h-6 rounded-md transition-all duration-100 hover:scale-110"
                     style={{
@@ -169,6 +171,8 @@ export const Toolbar = memo(function Toolbar({
               {GRID_OPTIONS.map((size) => (
                 <button
                   key={size}
+                  type="button"
+                  aria-pressed={gridSize === size}
                   onClick={() => onGridSizeChange(size)}
                   className={
                     "flex-1 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-all " +
@@ -222,6 +226,8 @@ function ColorButton({
 }) {
   return (
     <button
+      type="button"
+      aria-pressed={isSelected}
       onClick={onClick}
       className="pixel-color-button aspect-square min-h-8 rounded sm:min-h-0"
       style={{

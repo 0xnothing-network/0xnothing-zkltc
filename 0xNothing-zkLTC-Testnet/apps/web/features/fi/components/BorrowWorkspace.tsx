@@ -292,6 +292,8 @@ export function BorrowWorkspace() {
                 label="Collateral asset"
                 value={collateral}
                 entries={COLLATERAL_ENTRIES}
+                // A pending deposit or withdrawal keeps the asset it was sent for.
+                disabled={tx.pending}
                 onChange={(value) => {
                   setCollateral(value);
                   setAmountText("");

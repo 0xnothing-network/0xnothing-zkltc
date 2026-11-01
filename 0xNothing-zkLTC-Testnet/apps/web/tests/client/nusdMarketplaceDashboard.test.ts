@@ -100,7 +100,7 @@ function harness(options: { configured?: boolean; credit?: bigint; balance?: big
     } },
     wagmi: { useAccount: () => ({ ...account }), useConfig: () => ({}), usePublicClient: () => client, useConnect: () => ({}), useSwitchChain: () => ({}) },
     viem, "@fi/lib/hooks/useProtocolTransaction": { useProtocolTransaction: () => transaction },
-    "@/lib/contract": { getAddressExplorerUrl: (address: string) => `/address/${address}`, getMarketplaceTxUrl: () => "", getTokenExplorerUrl: () => "", shortenAddress: (address: string) => address },
+    "@/lib/contract": { getAddressExplorerUrl: (address: string) => `/address/${address}`, getTransactionExplorerUrl: () => "", getTokenExplorerUrl: () => "", shortenAddress: (address: string) => address },
     "@/lib/nusdMarketplaceConfig": { NFT_NUSD_ADDRESS: NUSD, NUSD_MARKETPLACE_ADDRESS: options.configured === false ? undefined : MARKET },
     "@/lib/nusdMarketplace": marketplace, "@/lib/nusdMarketplaceView": marketplaceView, "@/lib/pixelImage": { getPixelImageUrl }, "@/lib/pixelCollections": { PIXEL_COLLECTIONS: [{ address: OTHER, version: 1 }, { address: NFT, version: 2 }] }, "@/lib/http": {}, "@/lib/walletSession": { createWalletSessionGuard }, "./NusdMarketplaceDashboard.module.css": { default: {} }, "./NusdMarketplaceActivity": { NusdMarketplaceActivity: "activity" },
   }, { Error });

@@ -6,6 +6,7 @@ import { useAccount, useConfig, usePublicClient, useReadContract, useReadContrac
 import { useToast } from "@/components/Toast";
 import { NUSD_CONFIGURED, PUMP_CHAIN_ID, PUMP_NUSD_ADDRESS } from "@/features/pump/config";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
+import { decimalInput } from "@/lib/decimalInput";
 import { createPumpWalletGuard } from "@/features/pump/walletSession";
 import { waitForProtocolReceipt } from "@/lib/transactionReceipt";
 
@@ -30,7 +31,8 @@ function wad(value: bigint | undefined, digits = 4): string {
 
 function parseNusd(value: string): bigint {
   try {
-    return value.trim() ? parseUnits(value.trim(), 18) : 0n;
+    const amount = decimalInput(value);
+    return amount ? parseUnits(amount, 18) : 0n;
   } catch {
     return 0n;
   }

@@ -19,6 +19,7 @@ export function AssetSelect<T extends string = AssetSymbol>({
   options,
   entries,
   onChange,
+  disabled = false,
 }: {
   id: string;
   label: string;
@@ -26,6 +27,7 @@ export function AssetSelect<T extends string = AssetSymbol>({
   options?: readonly T[];
   entries?: readonly AssetSelectOption<T>[];
   onChange: (value: T) => void;
+  disabled?: boolean;
 }) {
   const allowed: readonly AssetSelectOption<T>[] = entries ?? assetList
     .filter((asset) => !options || options.includes(asset.symbol as T))
@@ -34,7 +36,7 @@ export function AssetSelect<T extends string = AssetSymbol>({
   return (
     <label className="fi-select-field" htmlFor={id}>
       <span>{label}</span>
-      <select id={id} value={value} onChange={(event) => onChange(event.target.value as T)}>
+      <select id={id} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value as T)}>
         {allowed.map((asset) => (
           <option value={asset.value} key={asset.value}>
             {asset.symbol} - {asset.name}{asset.badge ? ` · ${asset.badge}` : ""}

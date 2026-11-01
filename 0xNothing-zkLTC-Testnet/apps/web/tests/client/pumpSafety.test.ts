@@ -5,6 +5,7 @@ import { QueryClient, QueryObserver, type QueryObserverOptions } from "@tanstack
 import * as viem from "viem";
 import { evaluateModule } from "../helpers/evaluateModule.ts";
 import { waitForProtocolReceipt } from "../../lib/transactionReceipt.ts";
+import { decimalInput } from "../../lib/decimalInput.ts";
 
 const ACCOUNT = `0x${"1".repeat(40)}` as const;
 const OTHER = `0x${"2".repeat(40)}` as const;
@@ -210,6 +211,7 @@ function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect",
       "@/components/Toast": { useToast: () => ({ info() {}, success() { successes += 1; }, warning() {}, error() {}, handleError: (error: Error) => errors.push(error) }) },
       "@/lib/liveData": { invalidateAfterPumpTrade: async () => {} },
       "@/lib/actionLock": { tryAcquireAction: (ref: { current: boolean }) => ref.current ? false : (ref.current = true), releaseAction: (ref: { current: boolean }) => { ref.current = false; } },
+      "@/lib/decimalInput": { decimalInput },
       // A settled pass-through, which is what the real hook returns once the
       // field stops changing — the only state a trade is ever submitted from.
       // Loading it for real would also claim a fifth `useState` slot, and this
@@ -380,6 +382,7 @@ function componentHarness(name: PumpComponent, changeAt?: "simulation" | "upload
       "@/lib/contract": { publicClient, getTransactionExplorerUrl: String },
       "@/components/Toast": { useToast: () => toast },
       "@/lib/actionLock": { tryAcquireAction: (ref: { current: boolean }) => ref.current ? false : (ref.current = true), releaseAction: (ref: { current: boolean }) => { ref.current = false; } },
+      "@/lib/decimalInput": { decimalInput },
     },
     { TextEncoder, window: { location: { host: "www.0xnothing.xyz" } }, fetch: async () => ({ ok: true, headers: { get: () => null }, json: async () => metadataValue ?? { configured: true } }) },
   );

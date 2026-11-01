@@ -27,13 +27,15 @@ import type { PumpMarket } from "@/features/pump/types";
 import { useToast } from "@/components/Toast";
 import { invalidateAfterPumpTrade } from "@/lib/liveData";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
+import { decimalInput } from "@/lib/decimalInput";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 type TradeMode = "buy" | "sell";
 
 function parseTradeAmount(value: string): bigint {
   try {
-    return value && Number(value) > 0 ? parseUnits(value, 18) : 0n;
+    const amount = decimalInput(value);
+    return amount && Number(amount) > 0 ? parseUnits(amount, 18) : 0n;
   } catch {
     return 0n;
   }

@@ -1,4 +1,15 @@
+import { BaseError, ContractFunctionRevertedError } from "viem";
+
 export function readableError(error: unknown): string {
+  // 0xFi reverts with custom errors; viem decodes the name apart from the message
+  // text, whose first line only says the function reverted.
+  if (error instanceof BaseError) {
+    const reverted = error.walk((cause) => cause instanceof ContractFunctionRevertedError);
+    const reason = reverted instanceof ContractFunctionRevertedError
+      ? reverted.data?.errorName ?? reverted.reason
+      : undefined;
+    if (reason) return `Contract reverted: ${reason}`;
+  }
   const message = error instanceof Error ? error.message : String(error);
   if (/user rejected|user denied|rejected the request/i.test(message)) {
     return "The wallet request was rejected.";

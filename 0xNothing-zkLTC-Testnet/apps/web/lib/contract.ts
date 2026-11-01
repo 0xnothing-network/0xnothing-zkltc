@@ -6,7 +6,6 @@ import { createBoundedCache } from "@/lib/boundedCache";
 import {
   PIXEL_CLASSIC_ADDRESS,
 } from "@/lib/publicConfig";
-import { getTransactionExplorerUrl } from "./explorer";
 
 export {
   LITVM_EXPLORER_URL,
@@ -16,10 +15,6 @@ export {
 } from "./explorer";
 
 export const PIXEL_CLASSIC_CONTRACT_ADDRESS = PIXEL_CLASSIC_ADDRESS;
-
-export function getMarketplaceTxUrl(txHash: string): string {
-  return getTransactionExplorerUrl(txHash);
-}
 
 export function shortenAddress(addr: string, head = 6, tail = 4): string {
   if (!addr) return "";

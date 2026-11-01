@@ -26,6 +26,7 @@ import {
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { createPumpWalletGuard } from "@/features/pump/walletSession";
 import { waitForProtocolReceipt } from "@/lib/transactionReceipt";
+import { decimalInput } from "@/lib/decimalInput";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 type OracleMode = "mint" | "redeem";
@@ -35,7 +36,7 @@ const SLIPPAGE_BPS = 50n;
 
 function parseAmount(value: string): bigint {
   try {
-    const parsed = parseUnits(value.trim(), 18);
+    const parsed = parseUnits(decimalInput(value), 18);
     return parsed > 0n ? parsed : 0n;
   } catch {
     return 0n;

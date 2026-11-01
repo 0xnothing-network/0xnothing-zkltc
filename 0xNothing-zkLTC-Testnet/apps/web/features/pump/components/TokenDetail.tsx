@@ -225,7 +225,9 @@ export function TokenDetail({ token }: { token: Address }) {
   if (query.isLoading) {
     return <main className="pump-page"><PumpInlineLoading label="Loading token market" /></main>;
   }
-  if (query.error) {
+  // A failed background refresh keeps the last market on screen: replacing the page
+  // would unmount the trade panel mid-entry or mid-transaction.
+  if (query.error && !market) {
     return <main className="pump-page"><PumpErrorState message={query.error.message} onRetry={() => void query.refetch()} /></main>;
   }
   if (!market) {
@@ -268,7 +270,12 @@ export function TokenDetail({ token }: { token: Address }) {
           <div className="pump-token-heading-line"><h1>{market.name}</h1><span className={`pump-status pump-status-${market.status.toLowerCase()}`}>{formatStatus(market.status)}</span></div>
           <p>${market.symbol}</p>
           <div className="pump-token-links">
-            <button type="button" title="Copy token address" onClick={() => { void navigator.clipboard.writeText(market.tokenAddress); toast.success("Address copied", shortAddress(market.tokenAddress)); }}>{shortAddress(market.tokenAddress, 7, 6)}</button>
+            <button type="button" title="Copy token address" onClick={() => {
+              void Promise.resolve().then(() => navigator.clipboard.writeText(market.tokenAddress)).then(
+                () => toast.success("Address copied", shortAddress(market.tokenAddress)),
+                () => toast.error("Copy blocked", "The browser denied clipboard access."),
+              );
+            }}>{shortAddress(market.tokenAddress, 7, 6)}</button>
             <a href={getAddressExplorerUrl(market.tokenAddress)} target="_blank" rel="noopener noreferrer">Explorer</a>
             {links.map((item) => <a href={item.href} key={item.href} target="_blank" rel="noopener noreferrer">{item.label}</a>)}
           </div>

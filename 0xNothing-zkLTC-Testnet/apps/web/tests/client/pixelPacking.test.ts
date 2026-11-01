@@ -97,7 +97,7 @@ test("mint preflight passes immutable description and packed bytes to the estima
     },
     "@/lib/useProtocolReceipt": { useProtocolReceipt: () => ({}) },
     viem: { encodeFunctionData: (call: typeof encoded[number]) => { encoded.push(call); return "0xcalldata"; } },
-    "@/lib/contract": { publicClient: client, getMarketplaceTxUrl: () => "tx" }, "@/lib/pixelNftAbi": { PixelNFTABI: [] },
+    "@/lib/contract": { publicClient: client, getTransactionExplorerUrl: () => "tx" }, "@/lib/pixelNftAbi": { PixelNFTABI: [] },
     "@/lib/pixelPacking": { pixelDataToPackedBytes },
     "@/lib/pixelCollections": { PIXEL_MINT_ADDRESS: current, PIXEL_MINT_ENABLED: true, pixelUtf8Bytes: (value: string) => new TextEncoder().encode(value).length },
     "@/lib/gridParser": { pixelDataToPNG: () => "png" }, "@/features/pixel/components/PixelButton": { PixelButton: "mint-button" },

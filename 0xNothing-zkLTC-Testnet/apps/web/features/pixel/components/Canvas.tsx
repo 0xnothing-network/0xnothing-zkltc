@@ -742,6 +742,8 @@ export function Canvas({
 function ToolButton({ children, active, onClick, title }: { children: React.ReactNode; active: boolean; onClick: () => void; title: string }) {
   return (
     <button
+      type="button"
+      aria-pressed={active}
       onClick={onClick}
       title={title}
       className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-100 ${
@@ -756,6 +758,8 @@ function ToolButton({ children, active, onClick, title }: { children: React.Reac
 function SymmetryButton({ children, active, onClick, title }: { children: React.ReactNode; active: boolean; onClick: () => void; title: string }) {
   return (
     <button
+      type="button"
+      aria-pressed={active}
       onClick={onClick}
       title={title}
       className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-100 ${

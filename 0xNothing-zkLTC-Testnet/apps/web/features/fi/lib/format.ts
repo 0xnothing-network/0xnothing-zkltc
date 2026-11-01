@@ -1,7 +1,8 @@
 import { formatUnits, parseUnits, type Address } from "viem";
+import { decimalInput } from "../../../lib/decimalInput.ts";
 
 export function parseAmount(value: string, decimals = 18): bigint | undefined {
-  const normalized = value.trim();
+  const normalized = decimalInput(value);
   if (!Number.isInteger(decimals) || decimals < 0 || decimals > 255) return undefined;
   if (!/^(?:\d+|\d*\.\d+)$/.test(normalized)) return undefined;
   // parseUnits rounds excess precision. A wallet action must spend the exact

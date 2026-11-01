@@ -12,7 +12,7 @@ import {
   useSwitchChain,
 } from "wagmi";
 import { decodeEventLog, encodeFunctionData } from "viem";
-import { publicClient, getMarketplaceTxUrl } from "@/lib/contract";
+import { publicClient, getTransactionExplorerUrl } from "@/lib/contract";
 import { PixelNFTABI } from "@/lib/pixelNftAbi";
 import { pixelDataToPackedBytes } from "@/lib/pixelPacking";
 import { PIXEL_MINT_ADDRESS, PIXEL_MINT_ENABLED, pixelUtf8Bytes } from "@/lib/pixelCollections";
@@ -63,6 +63,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const preparedPixelDataRef = useRef<string[][] | null>(null);
   const toastIdsRef = useRef<{ submitted?: string; confirmed?: string }>({});
+  const reportedFailureRef = useRef<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -188,8 +189,15 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
   }, [mintReceipt, txHash, onMintSuccess, toast]);
 
   useEffect(() => {
-    if (mintReceiptError) releaseAction(mintLockRef);
-  }, [mintReceiptError]);
+    if (!mintReceiptError) return;
+    releaseAction(mintLockRef);
+    // A cancelled, replaced or lost transaction would otherwise leave "submitted" up
+    // and then nothing at all. The hook builds a new error per render: report once.
+    if (!txHash || reportedFailureRef.current === txHash) return;
+    reportedFailureRef.current = txHash;
+    if (toastIdsRef.current.submitted) toast.dismiss(toastIdsRef.current.submitted);
+    toast.handleError(mintReceiptError, "Mint failed");
+  }, [mintReceiptError, toast, txHash]);
 
   const handleMint = useCallback(async () => {
     if (!isConnected || !address) {
@@ -286,7 +294,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
         description: "Waiting for confirmation on LitVM…",
         kind: "info",
         duration: TX_TOAST_DURATION,
-        href: getMarketplaceTxUrl(hash),
+        href: getTransactionExplorerUrl(hash),
         hrefLabel: "View on Explorer",
       });
     } catch (err: unknown) {

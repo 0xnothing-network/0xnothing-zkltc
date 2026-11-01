@@ -390,16 +390,18 @@ export function CreateTokenForm() {
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
+                disabled={busy}
                 onChange={(event) => handleFile(event.target.files?.[0])}
               />
             </span>
           </label>
 
-          <label className="pump-field"><span>Name</span><input value={name} maxLength={64} onChange={(event) => setName(event.target.value)} placeholder="Nothing Coin" /></label>
-          <label className="pump-field"><span>Ticker</span><input value={symbol} maxLength={12} onChange={(event) => setSymbol(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} placeholder="NOTHING" /></label>
-          <label className="pump-field pump-field-wide"><span>Description</span><textarea value={description} maxLength={500} rows={5} onChange={(event) => setDescription(event.target.value)} placeholder="What is this token about?" /><small>{description.length}/500</small></label>
-          <label className="pump-field"><span>Website <em>optional</em></span><input type="url" value={website} onChange={(event) => setWebsite(event.target.value)} placeholder="https://" /></label>
-          <label className="pump-field"><span>Social <em>optional</em></span><input type="url" value={twitter} onChange={(event) => setTwitter(event.target.value)} placeholder="https://x.com/" /></label>
+          {/* Fields lock while a creation runs: the paid reservation is bound to their content hash. */}
+          <label className="pump-field"><span>Name</span><input value={name} maxLength={64} readOnly={busy} onChange={(event) => setName(event.target.value)} placeholder="Nothing Coin" /></label>
+          <label className="pump-field"><span>Ticker</span><input value={symbol} maxLength={12} readOnly={busy} onChange={(event) => setSymbol(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} placeholder="NOTHING" /></label>
+          <label className="pump-field pump-field-wide"><span>Description</span><textarea value={description} maxLength={500} rows={5} readOnly={busy} onChange={(event) => setDescription(event.target.value)} placeholder="What is this token about?" /><small>{description.length}/500</small></label>
+          <label className="pump-field"><span>Website <em>optional</em></span><input type="url" value={website} readOnly={busy} onChange={(event) => setWebsite(event.target.value)} placeholder="https://" /></label>
+          <label className="pump-field"><span>Social <em>optional</em></span><input type="url" value={twitter} readOnly={busy} onChange={(event) => setTwitter(event.target.value)} placeholder="https://x.com/" /></label>
         </div>
 
         {validation ? <p className="pump-form-hint">{validation}</p> : null}

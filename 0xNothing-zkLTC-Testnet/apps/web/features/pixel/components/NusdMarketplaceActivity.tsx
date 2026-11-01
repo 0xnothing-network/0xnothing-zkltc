@@ -6,7 +6,7 @@ import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUpRight, ArrowsClockwise } from "@phosphor-icons/react";
 import { formatUnits } from "viem";
 import { fetchJson } from "@/lib/http";
-import { getMarketplaceTxUrl, getTokenExplorerUrl, shortenAddress } from "@/lib/contract";
+import { getTokenExplorerUrl, getTransactionExplorerUrl, shortenAddress } from "@/lib/contract";
 import { getPixelImageUrl } from "@/lib/pixelImage";
 import { NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
 import type { NusdActivityFilter, NusdActivityPage, NusdActivityEvent } from "@/lib/nusdMarketplaceActivity";
@@ -55,7 +55,7 @@ export function NusdMarketplaceActivity() {
       : <div className={styles.activityList}>{events.map((event) => <article className={styles.activityRow} key={event.id}>
           <a className={styles.thumbnail} href={getTokenExplorerUrl(event.collection, event.tokenId)} target="_blank" rel="noopener noreferrer" aria-label={`View NFT #${event.tokenId}`}><Image src={getPixelImageUrl(event.tokenId, event.collection)} alt={`0xPixel #${event.tokenId}`} width={56} height={56} unoptimized className={styles.artImage} /></a>
           <div className={styles.activityInfo}><span className={styles.activityBadge} data-kind={event.type}>{labels[event.type]}</span><a href={getTokenExplorerUrl(event.collection, event.tokenId)} target="_blank" rel="noopener noreferrer">NFT #{event.tokenId}</a><p>{shortenAddress(event.collection)} · {shortenAddress(event.actor)}{event.other ? ` → ${shortenAddress(event.other)}` : ""}</p></div>
-          <div className={styles.activityValue}><strong>{event.price === null ? "—" : `${formatUnits(BigInt(event.price), 18)} NUSD`}</strong><time dateTime={new Date(Number(event.timestamp) * 1000).toISOString()}>{new Date(Number(event.timestamp) * 1000).toLocaleString("en-US")}</time><a href={getMarketplaceTxUrl(event.transactionHash)} target="_blank" rel="noopener noreferrer">View transaction<ArrowUpRight size={13} aria-hidden="true" /></a></div>
+          <div className={styles.activityValue}><strong>{event.price === null ? "—" : `${formatUnits(BigInt(event.price), 18)} NUSD`}</strong><time dateTime={new Date(Number(event.timestamp) * 1000).toISOString()}>{new Date(Number(event.timestamp) * 1000).toLocaleString("en-US")}</time><a href={getTransactionExplorerUrl(event.transactionHash)} target="_blank" rel="noopener noreferrer">View transaction<ArrowUpRight size={13} aria-hidden="true" /></a></div>
         </article>)}</div>}
     {activity.hasNextPage && <div className={styles.activityPagination}><button className={styles.secondaryButton} disabled={activity.isFetching} onClick={() => void loadMore()}>{activity.isFetchingNextPage ? "Loading…" : "Load more activity"}</button><p className={styles.small}>Earlier blocks are read in bounded pages; empty pages can still have older history.</p></div>}
   </section>;

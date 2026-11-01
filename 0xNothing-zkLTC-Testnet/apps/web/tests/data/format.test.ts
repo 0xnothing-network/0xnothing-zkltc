@@ -26,3 +26,12 @@ test("transaction amounts reject invalid scales and uint256 overflow", () => {
   assert.equal(parseAmount(((1n << 256n) - 1n).toString(), 0), (1n << 256n) - 1n);
   assert.equal(parseAmount((1n << 256n).toString(), 0), undefined);
 });
+
+test("a lone decimal comma parses like a dot, but a thousands-shaped comma stays invalid", () => {
+  assert.equal(parseAmount("1,5", 18), 1_500_000_000_000_000_000n);
+  assert.equal(parseAmount("0,125", 3), 125n);
+  assert.equal(parseAmount(",5", 1), 5n);
+  for (const value of ["1,000", "12,500", "1,2,3", "1.000,5"]) {
+    assert.equal(parseAmount(value, 18), undefined, value);
+  }
+});

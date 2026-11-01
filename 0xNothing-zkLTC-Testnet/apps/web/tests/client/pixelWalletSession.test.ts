@@ -55,7 +55,7 @@ test("Pixel mint stays on LitVM and aborts when wallet changes during gas estima
           useSendTransaction: () => ({ sendTransactionAsync: async (options: unknown) => { sends.push(options); return "0xtx"; } }),
         }, "@/lib/useProtocolReceipt": { useProtocolReceipt: (options: Record<string, unknown>) => { receipts.push(options); return {}; } },
         viem: { encodeFunctionData: () => "0xcalldata" },
-        "@/lib/contract": { publicClient: client, getMarketplaceTxUrl: () => "tx" }, "@/lib/pixelNftAbi": {},
+        "@/lib/contract": { publicClient: client, getTransactionExplorerUrl: () => "tx" }, "@/lib/pixelNftAbi": {},
         "@/lib/pixelPacking": { pixelDataToPackedBytes: () => "0x000007ffffff" },
         "@/lib/pixelCollections": { PIXEL_MINT_ADDRESS: collection, PIXEL_MINT_ENABLED: true, pixelUtf8Bytes: (value: string) => value.length },
         "@/lib/gridParser": { pixelDataToPNG: () => "png" }, "@/features/pixel/components/PixelButton": { PixelButton: "mint-button" },

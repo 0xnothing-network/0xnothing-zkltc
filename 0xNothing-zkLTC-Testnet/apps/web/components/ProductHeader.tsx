@@ -6,6 +6,7 @@ import { ArrowSquareOut, CaretDown, Copy, List, SignOut, Wallet, X } from "@phos
 import { formatUnits } from "viem";
 import { useAccount, useBalance, useConnect, useDisconnect, useReadContract, useSwitchChain } from "wagmi";
 import { getAddressExplorerUrl, shortenAddress } from "@/lib/contract";
+import { normalizeError } from "@/lib/errors";
 import { PUMP_NUSD_ADDRESS } from "@/lib/publicConfig";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -86,13 +87,22 @@ export function ProductHeader({ product, nav, isActive, notify, className = "" }
     };
   }, [closeWallet, menuOpen, walletOpen]);
 
+  // viem's message runs on with "Details:" and "Version:" lines, and a prompt the
+  // user closed is not a failure worth a toast.
+  const walletError = (title: string) => (error: Error) => {
+    const normalized = normalizeError(error);
+    if (normalized.kind === "info") return;
+    if (normalized.reason) notify("error", title, normalized.reason);
+    else notify(normalized.kind === "error" ? "error" : "warning", normalized.title, normalized.description);
+  };
+
   const connectWallet = () => {
     const connector = connectors.find((candidate) => candidate.type === "injected") ?? connectors[0];
     if (!connector) {
       notify("warning", "No wallet detected", "Install or enable an EVM wallet in this browser, then try again.");
       return;
     }
-    connect({ connector }, { onError: (error) => notify("error", "Could not connect wallet", error.message) });
+    connect({ connector }, { onError: walletError("Could not connect wallet") });
   };
 
   const copyAddress = async () => {
@@ -133,7 +143,7 @@ export function ProductHeader({ product, nav, isActive, notify, className = "" }
         <nav className="ox-nav" aria-label={`0x${current.name} navigation`}>{navLinks(false)}</nav>
         <div className="ox-header-actions">
           {mounted && wrongChain ? (
-            <button type="button" className="ox-network-pill" data-state="wrong" disabled={switching} onClick={() => switchChain({ chainId: CHAIN_ID }, { onError: (error) => notify("error", "Network switch failed", error.message) })}>
+            <button type="button" className="ox-network-pill" data-state="wrong" disabled={switching} onClick={() => switchChain({ chainId: CHAIN_ID }, { onError: walletError("Network switch failed") })}>
               <i aria-hidden="true" />{switching ? "Switching" : "Switch to LiteForge"}
             </button>
           ) : (

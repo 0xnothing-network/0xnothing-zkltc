@@ -117,10 +117,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         const normalized = normalizeError(err);
         // The description promises details in the console, so they must be there.
         if (normalized.kind === "error") console.error(fallbackTitle ?? normalized.title, err);
+        // A caller's title names a failure; a canceled request keeps its calm title.
+        const title = normalized.kind === "error" ? fallbackTitle : undefined;
         return show({
-          title: fallbackTitle ?? normalized.title,
+          title: title ?? normalized.title,
           // A caller's own title would otherwise replace the only specific reason.
-          description: fallbackTitle && normalized.reason ? normalized.reason : normalized.description,
+          description: title && normalized.reason ? normalized.reason : normalized.description,
           kind: normalized.kind,
         });
       },

@@ -295,7 +295,7 @@ export function RewardsDashboard() {
             <h2 id="rewards-positions-title" className="fi-earn-title">Your locks</h2>
             <span>{allPositionIds === undefined ? "--" : allPositionIds.length}{weight ? ` · ${formatAmount(weight, 18, 2)} 0xPoints/day` : ""}</span>
           </header>
-          {!isConnected ? <p className="fi-earn-empty">Connect a wallet to see your locks and rewards.</p> : positions.length === 0 ? (
+          {!isConnected ? <p className="fi-earn-empty">Connect a wallet to see your locks and rewards.</p> : allPositionIds?.length === 0 ? (
             <p className="fi-earn-empty">No NUSD locks yet. New stakes appear here without a refresh.</p>
           ) : (
             <ul className="fi-lock-list">

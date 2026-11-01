@@ -8,7 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatUnits, parseAbi, type Address } from "viem";
 import { useAccount, useConfig, useConnect, usePublicClient, useSwitchChain } from "wagmi";
 import { useProtocolTransaction, type ProtocolCall, type ProtocolStage } from "@fi/lib/hooks/useProtocolTransaction";
-import { getAddressExplorerUrl, getMarketplaceTxUrl, getTokenExplorerUrl, shortenAddress } from "@/lib/contract";
+import { getAddressExplorerUrl, getTokenExplorerUrl, getTransactionExplorerUrl, shortenAddress } from "@/lib/contract";
 import { NFT_NUSD_ADDRESS, NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
 import { NUSD_CATALOGUE_LIMIT, NUSD_MARKET_PAGE_SIZE, NusdMarketplaceAbi, nusdFunding, nusdNftSelection, offerExpiry, parseNusdPrice, readNusdListing, readNusdMarket, readNusdOffer, requireFreshNusdMarket } from "@/lib/nusdMarketplace";
 import { fetchJson } from "@/lib/http";
@@ -254,7 +254,7 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
       {(busy || message || transaction.message) && <div className={styles.transactionNotice} role={message || transaction.phase === "error" ? "alert" : "status"} aria-live="polite">
         <span className={styles.eyebrow}>NUSD transaction</span>
         <p>{message || transaction.message || "Reading fresh state and preparing your transaction…"}</p>
-        {transaction.hash && <a href={getMarketplaceTxUrl(transaction.hash)} target="_blank" rel="noopener noreferrer">View transaction<ArrowUpRight size={15} aria-hidden="true" /></a>}
+        {transaction.hash && <a href={getTransactionExplorerUrl(transaction.hash)} target="_blank" rel="noopener noreferrer">View transaction<ArrowUpRight size={15} aria-hidden="true" /></a>}
       </div>}
 
       <dl className={styles.marketStats}>
