@@ -21,6 +21,21 @@ Tham số kinh tế giữ nguyên như testnet (`../0xNothing-zkLTC-Testnet/docs
 
 Muốn đổi thì sửa hằng số trong `contracts/script/DeployMainnetCore.s.sol`.
 
+## Khác testnet: chống khai thác độ trễ oracle
+
+Giữa hai lần cập nhật giá, giá DIA đứng yên còn giá thị trường vẫn chạy. Kẻ khai thác có thể mint NUSD ở giá cũ còn cao, rồi bán NUSD trên pool hoặc redeem sau khi giá cập nhật, để rút phần chênh từ dự trữ. Bản mainnet của `OracleNUSDv2` thêm ba lớp chặn (testnet đang chạy chưa có):
+
+| Lớp | Cách hoạt động |
+| --- | --- |
+| Giá phải mới khi mint | `mint` và `releaseSurplus` từ chối giá cũ hơn `mintMaxPriceAge` (owner chỉnh trong khoảng 1 phút – 1 ngày). Redeem không bị chặn, vẫn luôn mở. |
+| Hạn mức mint mỗi giờ | Mỗi giờ chỉ mint được tối đa `mintLimitPerWindow` NUSD. Kể cả khi oracle sai, số bị rút cũng có giới hạn. |
+| Phí tới 2% | Trần phí mint và phí redeem nâng từ 0,5% lên 2%. Một vòng mint rồi redeem không có lời khi giá lệch nhỏ hơn khoảng hai lần phí (có fuzz test chứng minh). Nên đặt mỗi chiều phí ≥ một nửa ngưỡng lệch giá của feed. |
+
+Ba giá trị này và tuổi giá tối đa của adapter đọc từ biến môi trường lúc deploy (`MAINNET_ORACLE_MAX_AGE_SECONDS`, `MAINNET_MINT_MAX_PRICE_AGE_SECONDS`, `MAINNET_MINT_LIMIT_PER_HOUR_NUSD`, `MAINNET_MINT_FEE_BPS`, `MAINNET_REDEEM_FEE_BPS`). Cách đặt theo feed thật:
+- tuổi giá của adapter cao hơn heartbeat một chút;
+- tuổi giá khi mint ≤ heartbeat;
+- mỗi chiều phí ≥ một nửa ngưỡng lệch giá của feed.
+
 ## Kiểm thử
 
 ```bash

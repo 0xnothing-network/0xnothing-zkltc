@@ -44,7 +44,6 @@ contract DeployMainnetCore {
 
     /// @dev The LiteForge testnet; a mainnet run must never land there.
     uint256 private constant TESTNET_CHAIN_ID = 4441;
-    uint256 private constant MAX_PRICE_AGE = 90 minutes;
     // Sanity bounds of each feed, in USD with 18 decimals; a price outside them reads as dead.
     uint256 private constant LTC_MIN_PRICE = 10 ether;
     uint256 private constant LTC_MAX_PRICE = 1_000 ether;
@@ -61,6 +60,17 @@ contract DeployMainnetCore {
     uint256 private constant GRADUATION_MARKET_CAP_TARGET_NUSD = 6_000 ether;
     uint256 private constant PUMP_CREATE_FEE_NUSD = 1 ether;
     uint256 private constant PUMP_TRADE_FEE_BPS = 10;
+
+    /// @dev Oracle-lag settings come from the environment because they depend on the mainnet
+    ///      feed's heartbeat and deviation threshold: set the adapter age just above the heartbeat,
+    ///      the mint age at or below it, and each fee at or above half the deviation threshold.
+    struct Guards {
+        uint256 oracleMaxAge;
+        uint256 mintMaxPriceAge;
+        uint256 mintLimitPerHour;
+        uint256 mintFeeBps;
+        uint256 redeemFeeBps;
+    }
 
     struct Config {
         address deployer;
@@ -102,12 +112,20 @@ contract DeployMainnetCore {
             ethFeed: vm.envAddress("MAINNET_DIA_ETH_USD")
         });
         if (c.wzkltc.code.length == 0) revert UnexpectedConfiguration("wrapped zkLTC");
+        Guards memory g = Guards({
+            oracleMaxAge: vm.envUint("MAINNET_ORACLE_MAX_AGE_SECONDS"),
+            mintMaxPriceAge: vm.envUint("MAINNET_MINT_MAX_PRICE_AGE_SECONDS"),
+            mintLimitPerHour: vm.envUint("MAINNET_MINT_LIMIT_PER_HOUR_NUSD") * 1 ether,
+            mintFeeBps: vm.envUint("MAINNET_MINT_FEE_BPS"),
+            redeemFeeBps: vm.envUint("MAINNET_REDEEM_FEE_BPS")
+        });
+        if (g.mintMaxPriceAge > g.oracleMaxAge) revert UnexpectedConfiguration("mint price age above oracle age");
 
         vm.startBroadcast(privateKey);
 
-        d.ltcAdapter = new DIAOracleAdapter(c.ltcFeed, "LTC/USD", MAX_PRICE_AGE, LTC_MIN_PRICE, LTC_MAX_PRICE);
-        d.btcAdapter = new DIAOracleAdapter(c.btcFeed, "BTC/USD", MAX_PRICE_AGE, BTC_MIN_PRICE, BTC_MAX_PRICE);
-        d.ethAdapter = new DIAOracleAdapter(c.ethFeed, "ETH/USD", MAX_PRICE_AGE, ETH_MIN_PRICE, ETH_MAX_PRICE);
+        d.ltcAdapter = new DIAOracleAdapter(c.ltcFeed, "LTC/USD", g.oracleMaxAge, LTC_MIN_PRICE, LTC_MAX_PRICE);
+        d.btcAdapter = new DIAOracleAdapter(c.btcFeed, "BTC/USD", g.oracleMaxAge, BTC_MIN_PRICE, BTC_MAX_PRICE);
+        d.ethAdapter = new DIAOracleAdapter(c.ethFeed, "ETH/USD", g.oracleMaxAge, ETH_MIN_PRICE, ETH_MAX_PRICE);
         d.ltcOracle = new OracleRouter("LTC/USD", address(d.ltcAdapter), c.deployer);
         d.btcOracle = new OracleRouter("BTC/USD", address(d.btcAdapter), c.deployer);
         d.ethOracle = new OracleRouter("ETH/USD", address(d.ethAdapter), c.deployer);
@@ -119,6 +137,8 @@ contract DeployMainnetCore {
         d.feeSplitter.setRecipients(address(d.rewardStaking), address(d.treasury));
         d.rewardStaking.bindHarvester(address(d.feeSplitter));
         d.nusd.setSurplusRecipients(address(d.rewardStaking), address(d.treasury), SURPLUS_TREASURY_BPS);
+        d.nusd.setMintGuards(g.mintMaxPriceAge, g.mintLimitPerHour);
+        d.nusd.setFees(g.mintFeeBps, g.redeemFeeBps);
 
         d.locker = new PermanentLiquidityLocker(c.deployer);
         d.graduationRouter = new GraduationRouter(c.deployer, GRADUATION_DELAY, address(d.locker));
@@ -144,11 +164,11 @@ contract DeployMainnetCore {
         d.marketplace = new NusdNftMarketplaceV2(address(d.nusd), c.deployer, collections);
 
         vm.stopBroadcast();
-        _validate(d, c);
+        _validate(d, c, g);
         _writeManifest(d, c);
     }
 
-    function _validate(Deployment memory d, Config memory c) private view {
+    function _validate(Deployment memory d, Config memory c, Guards memory g) private view {
         if (
             address(d.ltcOracle.source()) != address(d.ltcAdapter) || address(d.btcOracle.source()) != address(d.btcAdapter)
                 || address(d.ethOracle.source()) != address(d.ethAdapter) || d.ltcOracle.admin() != c.deployer
@@ -159,6 +179,11 @@ contract DeployMainnetCore {
                 || d.nusd.surplusTreasuryBps() != SURPLUS_TREASURY_BPS || d.nusd.mintPaused()
                 || !d.nusd.hasRole(d.nusd.DEFAULT_ADMIN_ROLE(), c.deployer)
         ) revert UnexpectedConfiguration("nusd");
+        if (
+            d.nusd.mintMaxPriceAge() != g.mintMaxPriceAge || d.nusd.mintLimitPerWindow() != g.mintLimitPerHour
+                || d.nusd.mintFeeBps() != g.mintFeeBps || d.nusd.redeemFeeBps() != g.redeemFeeBps
+                || d.ltcAdapter.maxPriceAge() != g.oracleMaxAge
+        ) revert UnexpectedConfiguration("oracle-lag guards");
         if (
             d.rewardStaking.harvester() != address(d.feeSplitter) || d.feeSplitter.staking() != address(d.rewardStaking)
                 || d.feeSplitter.treasury() != address(d.treasury) || address(d.feeSplitter.wrappedNative()) != c.wzkltc
