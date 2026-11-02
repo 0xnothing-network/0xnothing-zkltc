@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { stringToHex } from "viem";
-import { readableSignMessage, typedSummary } from "../../src/ui/lib/typedData.ts";
+import { readableSignMessage, readableTypedData, typedSummary } from "../../src/ui/lib/typedData.ts";
 
 test("typed-data approval renders only validated text and chain identifiers", () => {
   for (const chainId of [4441, "4441", "0x1159"]) {
@@ -38,4 +38,13 @@ test("sign messages show as text only when nothing in them can hide or reorder t
     assert.equal(readableSignMessage(stringToHex(hidden)), stringToHex(hidden), JSON.stringify(hidden));
   }
   assert.equal(readableSignMessage("0xdeadbeef"), "0xdeadbeef");
+});
+
+test("typed data is shown as signed: duplicate keys collapse, invisible characters are escaped", () => {
+  const shown = readableTypedData('{"price":"1000","taker":"0xabc\u202e","price":"0"}');
+  assert.equal(shown.includes('"1000"'), false, "the shadowed first value must not be shown");
+  assert.match(shown, /"price": "0"/u);
+  assert.match(shown, /\\u202e/u);
+  assert.equal(/[\u202e]/u.test(shown), false);
+  assert.equal(readableTypedData("not json \u200b"), "not json \\u200b");
 });

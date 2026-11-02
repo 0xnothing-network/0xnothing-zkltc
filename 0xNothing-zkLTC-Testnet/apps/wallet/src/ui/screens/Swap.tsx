@@ -326,7 +326,15 @@ export function Swap(): ReactNode {
     }
   };
   return (
-    <Screen title={t("swap.title")}>
+    <Screen
+      title={t("swap.title")}
+      right={(
+        <a className="w-slip-chip" href="#/settings" aria-label={t("swap.maxSlippage")}>
+          {(settings.slippageBps / 100).toFixed(2)}%
+          <Icon name="sliders" size={12} />
+        </a>
+      )}
+    >
       <form
         className="w-flow w-swap-flow"
         aria-busy={busy || tokenBusy || loading}
@@ -336,15 +344,38 @@ export function Swap(): ReactNode {
         }}
       >
         <div className="w-flow-main">
-          <SwapTokenPicker
+          <AmountField
             label={t("swap.from")}
-            options={pickerOptions}
-            value={tokenIn}
+            inset
+            value={amount}
+            invalid={amountInvalid}
             disabled={busy || tokenBusy}
-            catalogLoading={catalog.loading}
-            catalogUnavailable={catalog.error !== null || catalog.data?.degraded === true}
-            onSelect={(option) => choose("in", option)}
-            onImport={(candidate) => importFor("in", candidate)}
+            onChange={(next) => {
+              setAmount(next);
+              setError(null);
+            }}
+            symbol={(
+              <SwapTokenPicker
+                label={t("swap.from")}
+                compact
+                options={pickerOptions}
+                value={tokenIn}
+                disabled={busy || tokenBusy}
+                catalogLoading={catalog.loading}
+                catalogUnavailable={catalog.error !== null || catalog.data?.degraded === true}
+                onSelect={(option) => choose("in", option)}
+                onImport={(candidate) => importFor("in", candidate)}
+              />
+            )}
+            onMax={balance === null ? undefined : fillMax}
+            hint={
+              balance === null
+                ? t("send.readingBalance")
+                : t("send.balanceHint", {
+                  amount: formatBalance(balance, tokenIn.decimals),
+                  symbol: tokenIn.symbol,
+                })
+            }
           />
 
           <div className="w-swap-flip">
@@ -358,65 +389,53 @@ export function Swap(): ReactNode {
             </Button>
           </div>
 
-          <SwapTokenPicker
-            label={t("swap.to")}
-            options={pickerOptions}
-            value={tokenOut}
-            disabled={busy || tokenBusy}
-            catalogLoading={catalog.loading}
-            catalogUnavailable={catalog.error !== null || catalog.data?.degraded === true}
-            onSelect={(option) => choose("out", option)}
-            onImport={(candidate) => importFor("out", candidate)}
-          />
+          <div className="w-field" data-inset="true">
+            <div className="w-amount" data-static="true">
+              <span className="w-amount-label">{t("swap.to")}</span>
+              <output className="w-amount-value" aria-live="polite">
+                {route === null || route.amountOut === 0n
+                  ? "0.0"
+                  : formatAmount(route.amountOut, tokenOut.decimals, 6)}
+              </output>
+              <span className="w-amount-side">
+                <SwapTokenPicker
+                  label={t("swap.to")}
+                  compact
+                  options={pickerOptions}
+                  value={tokenOut}
+                  disabled={busy || tokenBusy}
+                  catalogLoading={catalog.loading}
+                  catalogUnavailable={catalog.error !== null || catalog.data?.degraded === true}
+                  onSelect={(option) => choose("out", option)}
+                  onImport={(candidate) => importFor("out", candidate)}
+                />
+              </span>
+            </div>
+          </div>
 
           {tokenError !== null ? <Note tone="error">{tokenError}</Note> : null}
 
-          <AmountField
-            label={t("swap.amountIn")}
-            value={amount}
-            invalid={amountInvalid}
-            disabled={busy || tokenBusy}
-            onChange={(next) => {
-              setAmount(next);
-              setError(null);
-            }}
-            symbol={tokenIn.symbol}
-            onMax={balance === null ? undefined : fillMax}
-            hint={
-              balance === null
-                ? t("send.readingBalance")
-                : t("send.balanceHint", {
-                  amount: formatBalance(balance, tokenIn.decimals),
-                  symbol: tokenIn.symbol,
-                })
-            }
-          />
-
           {route !== null ? (
-            <>
-              <div className="w-summary w-swap-summary">
-                <span className="w-summary-label">{t("swap.receive")}</span>
-                <span className="w-summary-value">
-                  {route.amountOut === 0n
-                    ? "--"
-                    : `${formatAmount(route.amountOut, tokenOut.decimals, 6)} ${tokenOut.symbol}`}
-                </span>
-                <span className="w-summary-meta">
-                  {t("swap.minReceive")}: {minOut === null
+            <Panel>
+              <Rows>
+                <Row
+                  label={t("swap.minReceive")}
+                  value={minOut === null
                     ? "--"
                     : `${formatAmount(minOut, tokenOut.decimals, 6)} ${tokenOut.symbol}`}
-                </span>
-              </div>
-              <div className="w-swap-route">
-                <span>{label ?? "--"}</span>
-                <span>
-                  {t("swap.poolFee")} {route.feeBps === null
-                    ? "--"
-                    : `${(route.feeBps / 100).toFixed(2)}%`}
-                </span>
-                <span>{t("swap.confirmations")} {route.stages}</span>
-              </div>
-            </>
+                />
+                <Row label={t("swap.route")} value={label ?? "--"} />
+                <Row
+                  label={t("swap.poolFee")}
+                  value={route.feeBps === null ? "--" : `${(route.feeBps / 100).toFixed(2)}%`}
+                />
+                <Row label={t("swap.confirmations")} value={String(route.stages)} />
+                <Row
+                  label={t("swap.maxSlippage")}
+                  value={`${(settings.slippageBps / 100).toFixed(2)}%`}
+                />
+              </Rows>
+            </Panel>
           ) : null}
 
           {same ? <Note tone="warn">{t("swap.samePair")}</Note> : null}

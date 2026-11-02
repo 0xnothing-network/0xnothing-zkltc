@@ -7,7 +7,7 @@ import { describeError } from "../../../core/lib/errors";
 import { shortenAddress } from "../../../core/lib/format";
 import { findPixelNft, loadPixelNfts, transferPixelNft } from "../../../core/services/nfts";
 import { validateRecipient } from "../../../core/services/transfer";
-import { Button, Empty, Note, Panel, Row, Rows } from "../../components/kit";
+import { Button, Empty, Icon, Note, Panel, Row, Rows } from "../../components/kit";
 import { Screen } from "../../components/Screen";
 import { TransactionReview } from "../../components/TransactionReview";
 import { useActionGate } from "../../hooks/useActionGate";
@@ -122,7 +122,7 @@ export function SendNft({ tokenId, collection }: { tokenId: string; collection: 
         <Empty>{t("nft.notFound")}</Empty>
       ) : (
         <form
-          className="w-flow"
+          className="w-flow w-send-flow w-send-nft"
           aria-busy={busy || read.loading}
           onSubmit={(event) => {
             event.preventDefault();
@@ -131,58 +131,61 @@ export function SendNft({ tokenId, collection }: { tokenId: string; collection: 
         >
           <div className="w-flow-main">
             {nft ? (
-            <div className="w-split">
-              <span className="w-mono-break">
-                {nft.name}
-                <br />
-                <span className="w-nft-id">
-                  {nft.collectionName} #{nft.tokenId.toString()} · {nft.gridSize}×{nft.gridSize}
+              <div className="w-split w-nft-card">
+                <img
+                  className="w-logo"
+                  data-pixel="true"
+                  data-size="lg"
+                  src={nft.image || FALLBACK_TOKEN_LOGO}
+                  alt={nft.name}
+                  loading="lazy"
+                  decoding="async"
+                  onError={(event) => {
+                    if (event.currentTarget.dataset.fallback === "true") return;
+                    event.currentTarget.dataset.fallback = "true";
+                    event.currentTarget.src = FALLBACK_TOKEN_LOGO;
+                  }}
+                />
+                <span className="w-mono-break">
+                  {nft.name}
+                  <br />
+                  <span className="w-nft-id">
+                    {nft.collectionName} #{nft.tokenId.toString()} · {nft.gridSize}×{nft.gridSize}
+                  </span>
                 </span>
-              </span>
-              <img
-                className="w-logo"
-                data-pixel="true"
-                data-size="lg"
-                src={nft.image || FALLBACK_TOKEN_LOGO}
-                alt={nft.name}
-                loading="lazy"
-                decoding="async"
-                onError={(event) => {
-                  if (event.currentTarget.dataset.fallback === "true") return;
-                  event.currentTarget.dataset.fallback = "true";
-                  event.currentTarget.src = FALLBACK_TOKEN_LOGO;
+              </div>
+            ) : read.error !== null ? (
+              <Note tone="error">{read.error}</Note>
+            ) : (
+              <Note>{t("nft.reading")}</Note>
+            )}
+
+            <label className="w-field">
+              <span className="w-label">{t("send.recipient")}</span>
+              <input
+                className="w-input"
+                value={to}
+                placeholder="0x…"
+                disabled={busy}
+                autoFocus
+                spellCheck={false}
+                autoComplete="off"
+                aria-label={t("send.recipient")}
+                aria-invalid={to.length > 0 && recipient === null}
+                onChange={(event) => {
+                  setTo(event.target.value);
+                  setError(null);
                 }}
               />
-            </div>
-          ) : read.error !== null ? (
-            <Note tone="error">{read.error}</Note>
-          ) : (
-            <Note>{t("nft.reading")}</Note>
-          )}
-
-          <label className="w-field">
-            <span className="w-label">{t("send.recipient")}</span>
-            <input
-              className="w-input"
-              value={to}
-              placeholder="0x…"
-              disabled={busy}
-              autoFocus
-              spellCheck={false}
-              autoComplete="off"
-              aria-label={t("send.recipient")}
-              aria-invalid={to.length > 0 && recipient === null}
-              onChange={(event) => {
-                setTo(event.target.value);
-                setError(null);
-              }}
-            />
-          </label>
-          {to.length > 0 && recipient === null ? (
-            <Note tone="error">{t("send.badAddress")}</Note>
-          ) : null}
+            </label>
+            {to.length > 0 && recipient === null ? (
+              <Note tone="error">{t("send.badAddress")}</Note>
+            ) : null}
             {self ? <Note tone="warn">{t("send.selfAddress")}</Note> : null}
-            <Note>{t("nft.irreversible")}</Note>
+            <p className="w-hint w-flow-note">
+              <Icon name="info" size={14} />
+              <span>{t("nft.irreversible")}</span>
+            </p>
           </div>
           <div className="w-flow-actions">
             {error ? <Note tone="error">{error}</Note> : null}
@@ -204,6 +207,7 @@ export function SendNft({ tokenId, collection }: { tokenId: string; collection: 
           ready={address !== null && reviewCurrent}
           onClose={() => setReviewOpen(false)}
           onConfirm={() => void confirm()}
+          error={error}
         >
           <div className="w-summary">
             <span className="w-summary-label">{nft.name}</span>

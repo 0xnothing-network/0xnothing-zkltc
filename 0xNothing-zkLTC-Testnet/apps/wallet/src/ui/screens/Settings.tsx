@@ -3,7 +3,7 @@ import { LITVM_NETWORK, sanitizeCustomNetwork } from "../../config/networks";
 import { isLocaleCode, LOCALES, t } from "../../core/i18n";
 import type { WalletSettings } from "../../core/keyring/vault";
 import { isExtension, platform } from "../../core/platform/env";
-import { Button, Note, Panel, PanelBody, Row, Rows } from "../components/kit";
+import { Button, Icon, Note, Panel, PanelBody, Row, Rows } from "../components/kit";
 import { useActionGate } from "../hooks/useActionGate";
 import { rpcPermissionPattern } from "../lib/rpcPermission";
 import { Screen } from "../components/Screen";
@@ -179,7 +179,7 @@ export function Settings(): ReactNode {
 
   return (
     <Screen title={t("set.title")} onBack={goHome}>
-      <div className="w-stack">
+      <div className="w-stack w-settings">
         <Panel title={t("set.language")}>
           <PanelBody>
             <label className="w-field">
@@ -207,21 +207,25 @@ export function Settings(): ReactNode {
 
         <Panel title={t("set.appearance")}>
           <PanelBody>
-            <label className="w-field">
-              <span className="w-label">{t("set.background")}</span>
-              <select
-                className="w-select"
-                value={settings.theme}
-                disabled={saving}
-                aria-busy={saving}
-                onChange={(event) => {
-                  void persist({ theme: themeValue(event.target.value) });
-                }}
-              >
-                <option value="dark">{t("set.black")}</option>
-                <option value="light">{t("set.white")}</option>
-              </select>
-            </label>
+            <div className="w-field w-set-row">
+              <span className="w-label" id="set-background">{t("set.background")}</span>
+              <div className="w-seg" role="group" aria-labelledby="set-background" aria-busy={saving}>
+                {(["dark", "light"] as const).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className="w-seg-item"
+                    aria-pressed={themeValue(settings.theme) === value}
+                    disabled={saving}
+                    onClick={() => {
+                      if (themeValue(settings.theme) !== value) void persist({ theme: value });
+                    }}
+                  >
+                    {value === "dark" ? t("set.black") : t("set.white")}
+                  </button>
+                ))}
+              </div>
+            </div>
           </PanelBody>
         </Panel>
 
@@ -247,10 +251,14 @@ export function Settings(): ReactNode {
             </label>
             <Button block disabled={saving} onClick={() => void lockWallet()}>
               {t("set.lockNow")}
+              <Icon name="lock" size={16} />
             </Button>
             <Note>{t("set.lockNote")}</Note>
           </PanelBody>
         </Panel>
+
+        <ChangePassword />
+        <RevealSecrets />
 
         <Panel title={t("set.trading")}>
           <PanelBody>
@@ -276,6 +284,16 @@ export function Settings(): ReactNode {
           </PanelBody>
         </Panel>
 
+        <Panel title={t("common.network")}>
+          <PanelBody>
+            <Rows>
+              <Row label={t("common.network")} value={network.name} />
+              <Row label="Chain ID" value={network.chainId.toString()} />
+              <Row label="RPC" value={new URL(network.rpcUrl).host} />
+            </Rows>
+          </PanelBody>
+        </Panel>
+
         <Panel title={t("set.customNetworks")}>
           <PanelBody>
             <label className="w-field">
@@ -295,10 +313,8 @@ export function Settings(): ReactNode {
                     {entry.name} · {entry.chainId}
                   </option>
                 ))}
-            </select>
+              </select>
             </label>
-            <Note>{t("set.networkNote")}</Note>
-            <Note tone="warn">{t("set.customNetworkNote")}</Note>
             {settings.customNetworks.map((entry) => (
               <div key={entry.id} className="w-split w-network-row">
                 <span className="w-asset-main">
@@ -417,31 +433,20 @@ export function Settings(): ReactNode {
                 </form>
               </div>
             </details>
+            <Note>{t("set.networkNote")}</Note>
+            <Note tone="warn">{t("set.customNetworkNote")}</Note>
           </PanelBody>
         </Panel>
 
-        <ImportAccount />
         <TokenManager />
-        <RevealSecrets />
-        <ChangePassword />
-
-        <Panel title={t("common.network")}>
-          <PanelBody>
-            <Rows>
-              <Row label={t("common.network")} value={network.name} />
-              <Row label="Chain ID" value={network.chainId.toString()} />
-              <Row label="RPC" value={new URL(network.rpcUrl).host} />
-              <Row
-                label={t("set.build")}
-                value={`${__WALLET_VERSION__} · ${
-                  platform === "extension" ? "Extension" : platform === "android" ? "Android" : "Web"
-                }`}
-              />
-            </Rows>
-          </PanelBody>
-        </Panel>
+        <ImportAccount />
 
         <DangerZone />
+
+        <p className="w-set-version">
+          {t("set.build")} {__WALLET_VERSION__} ·{" "}
+          {platform === "extension" ? "Extension" : platform === "android" ? "Android" : "Web"}
+        </p>
       </div>
     </Screen>
   );

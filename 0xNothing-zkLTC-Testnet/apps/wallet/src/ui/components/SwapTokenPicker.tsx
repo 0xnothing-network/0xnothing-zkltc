@@ -36,6 +36,7 @@ export function SwapTokenPicker({
   disabled = false,
   catalogLoading = false,
   catalogUnavailable = false,
+  compact = false,
   onSelect,
   onImport,
 }: {
@@ -45,6 +46,8 @@ export function SwapTokenPicker({
   disabled?: boolean;
   catalogLoading?: boolean;
   catalogUnavailable?: boolean;
+  /** A small chip trigger, for use inside an amount card. */
+  compact?: boolean;
   onSelect: (option: SwapTokenOption) => Promise<boolean>;
   onImport: (address: Address) => Promise<boolean>;
 }): ReactNode {
@@ -108,8 +111,29 @@ export function SwapTokenPicker({
   };
 
   return (
-    <div className="w-field">
-      <span className="w-label">{label}</span>
+    <div className={compact ? "w-token-chip-wrap" : "w-field"}>
+      {compact ? null : <span className="w-label">{label}</span>}
+      {compact ? (
+        <button
+          type="button"
+          className="w-token-chip"
+          disabled={disabled}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          aria-label={`${label}: ${value.symbol}`}
+          onClick={() => {
+            setQuery("");
+            setOpen(true);
+          }}
+        >
+          <TokenLogo token={value} size={16} />
+          <span className="w-token-symbol">
+            {value.symbol}
+            <VerifiedMark verified={value.verified} />
+          </span>
+          <Icon name="caret" size={14} />
+        </button>
+      ) : (
       <button
         type="button"
         className="w-token-trigger"
@@ -131,6 +155,7 @@ export function SwapTokenPicker({
         </span>
         <span className="w-token-trigger-caret" aria-hidden="true"><Icon name="caret" size={16} /></span>
       </button>
+      )}
 
       {open ? (
         <div

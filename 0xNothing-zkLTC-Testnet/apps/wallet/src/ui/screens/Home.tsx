@@ -32,7 +32,7 @@ const ACTIONS: readonly { label: MessageKey; icon: IconName; path: string }[] = 
 ];
 
 export function Home(): ReactNode {
-  const { active, address, notify } = useWallet();
+  const { active, address, network, notify } = useWallet();
   const { copied, copy } = useCopy();
   const { portfolio, change, changeLoading, error, loading } = usePortfolio();
   const [tab, setTab] = useState<Tab>("token");
@@ -46,8 +46,11 @@ export function Home(): ReactNode {
   const tone = change === null || change === 0 ? undefined : change > 0 ? "up" : "down";
 
   return (
-    <div className="w-screen">
+    <div className="w-screen w-home">
       <header className="w-head">
+        <span className="w-avatar" aria-hidden="true">
+          {(active ? accountLabel(active) : t("account.main")).slice(0, 1).toUpperCase()}
+        </span>
         <div className="w-head-main">
           <button
             type="button"
@@ -74,11 +77,15 @@ export function Home(): ReactNode {
             }}
           >
             {address ? shortenAddress(address, 8, 6) : "—"}
-            <Icon name={copied ? "check" : "copy"} size={13} />
+            <Icon name={copied ? "check" : "copy"} size={12} />
           </button>
         </div>
+        <span className="w-net-chip">
+          <i className="w-dot" aria-hidden="true" />
+          {network.name}
+        </span>
         <button type="button" className="w-back" aria-label={t("home.settingsAria")} onClick={() => navigate("#/settings")}>
-          <Icon name="settings" size={17} />
+          <Icon name="settings" size={16} />
         </button>
       </header>
 
@@ -88,11 +95,11 @@ export function Home(): ReactNode {
             <span className="w-total">
               {portfolio ? formatUsdWad(portfolio.totalWad) : loading ? "…" : "—"}
             </span>
-            <span className="w-delta" data-tone={tone}>
-              {t("home.delta24h")} {change === null
-                ? changeLoading ? "…" : "--"
-                : formatSignedPercent(change)}
-            </span>
+            {change !== null || changeLoading ? (
+              <span className="w-delta" data-tone={tone}>
+                {change === null ? "…" : formatSignedPercent(change)} {t("home.delta24h")}
+              </span>
+            ) : null}
           </div>
           <div className="w-total-foot">
             <span className="w-total-note">{t("home.total")}</span>
@@ -111,7 +118,7 @@ export function Home(): ReactNode {
               href={action.path}
             >
               <span className="w-action-glyph" aria-hidden="true">
-                <Icon name={action.icon} size={19} />
+                <Icon name={action.icon} size={16} />
               </span>
               {t(action.label)}
             </a>

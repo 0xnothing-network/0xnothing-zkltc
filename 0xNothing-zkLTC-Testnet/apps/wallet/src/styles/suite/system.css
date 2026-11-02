@@ -1,0 +1,596 @@
+/* 0xWallet suite: system screens. Loaded after wallet.css, so it overrides it. */
+
+/* ------------------------------------------------------------------ dapp */
+
+/* One body: the hairline list, the connected sites, the closing caption. */
+.w-root .w-dapps {
+  gap: 10px;
+  padding: 10px var(--w-gutter);
+}
+
+.w-root .w-dapps > .w-list:has(> .w-dapp) {
+  gap: 0;
+  padding: 0;
+}
+
+/* 52px rows under a hairline: a 36px lettered tile, two lines, the exit glyph. */
+.w-root .w-dapps .w-dapp {
+  min-height: 52px;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+  border-radius: var(--r-xs);
+  padding: 4px;
+}
+
+/* Title and subtitle stack tight, as one two-line block. */
+.w-root .w-dapps .w-dapp .w-asset-main {
+  gap: 0;
+}
+
+.w-root .w-dapps .w-dapp:last-child {
+  border-bottom: 0;
+}
+
+.w-root .w-dapps .w-dapp:hover {
+  background: color-mix(in srgb, var(--surface-1) 50%, transparent);
+}
+
+.w-root .w-dapps .w-mark {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  box-shadow: none;
+  color: var(--text-1);
+  font-family: var(--font-num);
+  font-size: 12px;
+}
+
+.w-root .w-dapps .w-dapp .w-asset-usd {
+  color: var(--text-2);
+}
+
+/* Connected sites: a 12px label, then each origin on a 10px card. */
+.w-dapp-sites {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.w-root .w-dapp-sites-label {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+}
+
+.w-root .w-dapp-site {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 10px;
+  background: var(--surface-1);
+  box-shadow: var(--w-card-shadow);
+}
+
+.w-root .w-dapp-site .w-asset-main {
+  gap: 0;
+}
+
+/* The origin wraps rather than clips: a cut-off host hides a lookalike. */
+.w-root .w-dapp-site .w-asset-symbol {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  color: var(--text-1);
+  font-family: var(--font-num);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  white-space: normal;
+}
+
+.w-root .w-dapp-site .w-asset-sub {
+  color: var(--text-3);
+  font-size: 10px;
+  line-height: 15px;
+}
+
+.w-root .w-dapp-site > .w-hint {
+  font-size: 12px;
+}
+
+/* Revoke: a quiet 11px chip, not a red button. */
+.w-root .w-dapp-site > .w-btn[data-size="sm"] {
+  min-height: 0;
+  border-color: var(--line);
+  border-radius: var(--r-xs);
+  padding: 4px 8px;
+  background: var(--surface-2);
+  box-shadow: none;
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 16px;
+}
+
+.w-root .w-dapp-site > .w-btn[data-size="sm"]:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  background: var(--surface-2);
+  color: var(--text-1);
+}
+
+.w-root .w-dapp-site > .w-btn[data-size="sm"]:disabled {
+  color: var(--text-3);
+}
+
+.w-root .w-dapps > .w-hint:not([data-tone]) {
+  padding-top: 4px;
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 15px;
+}
+
+/* -------------------------------------------------------------- settings */
+
+.w-root .w-settings {
+  gap: 12px;
+  padding: 8px var(--w-gutter) 14px;
+}
+
+/*
+ * The card has no inset of its own: every row carries its 12px, so the hairlines
+ * between rows run from edge to edge of the card, as in the grouped list.
+ */
+.w-root .w-settings .w-panel > .w-panel-body {
+  padding: 0;
+}
+
+.w-root .w-settings .w-panel > .w-panel-body > :is(.w-field, .w-btn, .w-hint, .w-split, .w-set-form, [role="alert"]) {
+  padding-right: 12px;
+  padding-left: 12px;
+}
+
+/* Label/value rows and the disclosure's own summary take the inset themselves. */
+.w-root .w-settings .w-panel > .w-panel-body > .w-rows .w-row {
+  padding: 0 12px;
+}
+
+.w-root .w-settings .w-panel > .w-panel-body > .w-disclosure > summary {
+  padding: 0 12px;
+}
+
+.w-root .w-settings .w-panel > .w-panel-body > .w-disclosure .w-disclosure-body {
+  padding: 12px;
+}
+
+/* A disabled row reads dim, as every other disabled control does. */
+.w-root .w-settings .w-panel-body > .w-btn:disabled {
+  color: var(--text-3);
+}
+
+.w-root .w-settings .w-panel-body > .w-btn:disabled::after {
+  background: var(--text-3);
+}
+
+.w-root .w-settings .w-panel-body > .w-btn:disabled > .w-icon {
+  color: var(--text-3);
+}
+
+/* A caption under its own row, not floating a row's height below it. */
+.w-root .w-settings .w-panel-body > :is(.w-btn, .w-field, details) + .w-hint:not([data-tone]) {
+  margin-top: -6px;
+}
+
+/* Toned notes and alerts inside a card stand on surface-2, with no divider. */
+.w-root .w-settings .w-panel-body > .w-hint[data-tone],
+.w-root .w-settings .w-set-form > .w-hint[data-tone],
+.w-root .w-settings .w-set-form > [role="alert"] > .w-hint {
+  border-top: 0;
+  background: var(--surface-2);
+}
+
+.w-root .w-settings .w-panel-body > .w-hint[data-tone] {
+  margin: 2px 12px 12px;
+}
+
+.w-root .w-settings .w-panel-body > [role="alert"] {
+  border-top: 0;
+  padding: 2px 12px 12px;
+}
+
+/* Appearance: the label left, a Black / White switch right. */
+.w-root .w-settings .w-panel-body > .w-set-row {
+  min-height: 44px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0;
+}
+
+.w-root .w-settings .w-set-row > .w-label {
+  color: var(--text-1);
+  font-size: 13px;
+}
+
+.w-seg {
+  display: inline-flex;
+  flex: 0 0 auto;
+  border-radius: var(--r-xs);
+  padding: 2px;
+  background: var(--surface-2);
+}
+
+.w-root .w-seg-item {
+  border: 0;
+  border-radius: var(--r-xs);
+  padding: 2px 8px;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 16px;
+  transition: background-color 120ms var(--ease), color 120ms var(--ease);
+}
+
+.w-root .w-seg-item[aria-pressed="true"] {
+  background: var(--surface-3);
+  color: var(--text-1);
+}
+
+.w-root .w-seg-item:hover:not(:disabled, [aria-pressed="true"]) {
+  color: var(--text-2);
+}
+
+/* A save takes a moment; the switch should not flash half-transparent on each tap. */
+.w-root .w-seg-item:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.w-root .w-seg-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Lock now carries its own lock glyph in place of the chevron. */
+.w-root .w-settings .w-panel-body > .w-btn:has(> .w-icon)::after {
+  content: none;
+}
+
+.w-root .w-settings .w-panel-body > .w-btn > .w-icon {
+  flex: 0 0 auto;
+  color: var(--text-2);
+}
+
+/* Label/value rows are 44px rows too: label in text-1, value in text-2. */
+.w-root .w-settings .w-panel-body .w-rows .w-row {
+  min-height: 44px;
+  align-items: center;
+  padding: 0;
+}
+
+.w-root .w-settings .w-row dt {
+  color: var(--text-1);
+  font-size: 13px;
+}
+
+.w-root .w-settings .w-row dd:not([data-tone]) {
+  color: var(--text-2);
+}
+
+.w-root .w-settings .w-row dd {
+  font-size: 13px;
+}
+
+/* Saved networks and imported tokens: two-line rows with a compact Remove. */
+.w-root .w-settings .w-panel-body > .w-split {
+  min-height: 52px;
+  padding: 8px 0;
+}
+
+.w-root .w-settings .w-split > .w-btn[data-size="sm"] {
+  min-height: 24px;
+  border-radius: var(--r-xs);
+  padding: 0 8px;
+  box-shadow: none;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* Add custom network opens under its own row, the form flush in the card. */
+.w-root .w-settings .w-disclosure-body {
+  padding: 12px 0;
+}
+
+.w-root .w-settings .w-disclosure[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+
+/* An opened sub-panel: its fields stacked in the card, no row dividers. */
+.w-root .w-settings .w-set-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 0;
+}
+
+.w-root .w-settings .w-set-form > .w-label {
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.w-root .w-settings .w-set-form > .w-hint:not([data-tone]) {
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.w-root .w-settings .w-set-form .w-rows {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 0 12px;
+  background: var(--surface-2);
+}
+
+.w-root .w-settings .w-set-form :is(.w-seed, .w-code) {
+  background: var(--surface-2);
+}
+
+/* Danger zone: the red action and its caption share one padded card. */
+.w-root .w-settings .w-panel[data-tone="danger"] > .w-panel-body {
+  box-shadow: none;
+}
+
+.w-root .w-settings .w-panel[data-tone="danger"] > .w-panel-body > .w-btn {
+  min-height: 0;
+  padding: 12px 12px 0;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.w-root .w-settings .w-panel[data-tone="danger"] > .w-panel-body > .w-btn + .w-hint:not([data-tone]) {
+  margin-top: 0;
+  padding: 4px 12px 12px;
+}
+
+/* The build, as the suite's closing version caption. */
+.w-root .w-set-version {
+  margin: 0;
+  padding: 4px 0;
+  color: var(--text-3);
+  font-family: var(--font-num);
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* -------------------------------------------------------------- approval */
+
+.w-root .w-approve-flow .w-flow-main {
+  gap: 10px;
+}
+
+/* The window bar: mark and host left, the waiting count right, 42px tall. */
+.w-root .w-approve-bar {
+  min-height: 42px;
+  gap: 8px;
+  padding: 6px var(--w-gutter);
+}
+
+.w-approve-mark {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: var(--r-xs);
+}
+
+.w-root .w-approve-bar > .w-approve-origin {
+  gap: 0;
+}
+
+.w-root .w-approve-origin .w-asset-symbol {
+  color: var(--text-2);
+  font-family: var(--font-num);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+}
+
+.w-root .w-approve-origin .w-asset-sub {
+  color: var(--text-3);
+  font-size: 10px;
+  line-height: 14px;
+}
+
+.w-root .w-approve-bar > .w-queue {
+  max-width: 48%;
+  margin: 0;
+  border-radius: var(--r-xs);
+  padding: 2px 8px;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: right;
+}
+
+.w-root .w-approve-title {
+  margin-bottom: 2px;
+}
+
+/* Request cards: the title inside at 12px/500, rows at 12px with no inset. */
+.w-root .w-approve-flow .w-panel {
+  padding: 12px;
+}
+
+.w-root .w-approve-flow .w-panel-head {
+  border: 0;
+  padding: 0 0 8px;
+  color: var(--text-1);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.w-root .w-approve-flow .w-panel-body {
+  gap: 10px;
+  padding: 0;
+}
+
+.w-root .w-approve-flow .w-row {
+  padding: 6px 0;
+}
+
+.w-root .w-approve-flow .w-row dt {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.w-root .w-approve-flow .w-row dd {
+  font-size: 12px;
+}
+
+.w-root .w-approve-flow .w-row dd[data-tone="red"] {
+  font-weight: 600;
+}
+
+/* The grant warning: a red-edged strip, 11px, between the card and the fee. */
+.w-root .w-approve-risk > .w-hint {
+  border-left: 2px solid var(--negative);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  padding: 10px;
+  background: var(--surface-1);
+  color: var(--text-2);
+  font-size: 11px;
+  line-height: 15px;
+}
+
+/* The fee card: gas limit left, max fee right, each a caption over a figure. */
+.w-approve-fee {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 12px;
+  background: var(--surface-1);
+  box-shadow: var(--w-card-shadow);
+}
+
+.w-approve-fee > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0;
+}
+
+.w-approve-fee > div:last-child {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.w-approve-fee dt {
+  color: var(--text-2);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.w-approve-fee dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-1);
+  font-family: var(--font-num);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* A message or typed payload inside a card reads as a well, a step darker. */
+.w-root .w-approve-flow .w-panel .w-code {
+  background: var(--surface-2);
+}
+
+/* Raw calldata: a dim mono row on its own 10px card. */
+.w-root .w-approve-raw {
+  max-height: 96px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 8px 12px;
+  background: var(--surface-1);
+  box-shadow: var(--w-card-shadow);
+  color: var(--text-3);
+  font-family: var(--font-num);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+/* Reject / Approve pinned at the foot, no rule above, the chain caption under. */
+.w-root .w-approve-flow .w-flow-actions {
+  gap: 8px;
+  border-top: 0;
+  padding: 14px var(--w-gutter) calc(14px + env(safe-area-inset-bottom));
+}
+
+.w-root .w-approve-flow .w-flow-actions > .w-btn-row {
+  gap: 10px;
+}
+
+.w-root .w-approve-flow .w-flow-actions > .w-hint:last-child {
+  padding-top: 4px;
+}
+
+/* The erase row leads with its trash glyph in red, in place of the chevron. */
+.w-root .w-settings .w-panel[data-tone="danger"] .w-panel-body > .w-btn > .w-icon {
+  color: var(--negative);
+}
+
+/*
+ * Settings selects draw one chevron at the right edge. A later “background”
+ * shorthand reset the repeat, so the 16px chevron tiled under the value and
+ * read as doubled, garbled text.
+ */
+.w-root .w-settings .w-field > .w-select {
+  background-position: right 0 center;
+  background-repeat: no-repeat;
+  background-size: 16px 16px;
+}
+
+/*
+ * Touch (the Android build): the suite's compact controls keep their look but
+ * grow a 44px hit area, the smallest target a thumb lands on reliably.
+ */
+@media (pointer: coarse) {
+  .w-root :is(
+    .w-back,
+    .w-btn[data-variant="ghost"],
+    .w-token-chip,
+    .w-seg-item,
+    .w-slip-chip,
+    .w-earn-lock-option,
+    .w-tab
+  ) {
+    min-height: 44px;
+  }
+
+  /* Inline text controls grow an invisible hit area instead of a taller line. */
+  .w-root :is(.w-max, .w-address) {
+    position: relative;
+  }
+
+  .w-root :is(.w-max, .w-address)::before {
+    position: absolute;
+    inset: -12px -8px;
+    content: "";
+  }
+
+  .w-root :is(.w-back, .w-secret-toggle) {
+    min-width: 44px;
+  }
+}
+
+/* A plain-http origin keeps its scheme and reads in the danger tone. */
+.w-root .w-approve-origin[data-insecure="true"] .w-asset-symbol {
+  color: var(--negative);
+}

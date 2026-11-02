@@ -108,7 +108,7 @@ export function AccountSheet({ onClose }: { onClose: () => void }): ReactNode {
       }}
     >
       <div
-        className="w-sheet-body"
+        className="w-sheet-body w-account-sheet"
         role="dialog"
         aria-modal="true"
         aria-label={t("account.title")}
@@ -139,10 +139,16 @@ export function AccountSheet({ onClose }: { onClose: () => void }): ReactNode {
                 autoFocus={meta.address === address}
                 onClick={() => void pick(meta.address)}
               >
-                <span className="w-asset-symbol">{accountLabel(meta)}</span>
-                <span className="w-asset-sub">
-                  {shortenAddress(meta.address)}
-                  {meta.source === "imported" ? t("account.imported") : ""}
+                {/* The same initial the home header leads with. */}
+                <span className="w-avatar" aria-hidden="true">
+                  {accountLabel(meta).slice(0, 1).toUpperCase()}
+                </span>
+                <span className="w-account-text">
+                  <span className="w-asset-symbol">{accountLabel(meta)}</span>
+                  <span className="w-asset-sub">
+                    {shortenAddress(meta.address)}
+                    {meta.source === "imported" ? t("account.imported") : ""}
+                  </span>
                 </span>
               </button>
               <Button

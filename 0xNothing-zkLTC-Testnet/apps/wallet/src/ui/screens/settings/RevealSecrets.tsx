@@ -89,18 +89,16 @@ export function RevealSecrets(): ReactNode {
       <PanelBody>
         {target === null ? (
           <>
-            <div className="w-btn-row">
-              <Button block disabled={address === null} onClick={() => open("mnemonic")}>
-                {t("reveal.showMnemonic")}
-              </Button>
-              <Button block disabled={address === null} onClick={() => open("key")}>
-                {t("reveal.showKey")}
-              </Button>
-            </div>
+            <Button block disabled={address === null} onClick={() => open("mnemonic")}>
+              {t("reveal.showMnemonic")}
+            </Button>
+            <Button block disabled={address === null} onClick={() => open("key")}>
+              {t("reveal.showKey")}
+            </Button>
             <Note>{t("reveal.note")}</Note>
           </>
         ) : (
-          <>
+          <div className="w-set-form">
             <span className="w-label">{t(TITLE[target])}</span>
             {secret === null ? (
               <>
@@ -163,7 +161,7 @@ export function RevealSecrets(): ReactNode {
                 <Note tone="warn">{t("reveal.warning")}</Note>
               </>
             )}
-          </>
+          </div>
         )}
       </PanelBody>
     </Panel>

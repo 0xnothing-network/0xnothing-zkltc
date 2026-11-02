@@ -9,7 +9,7 @@ const policyNames = ["wallet_backup_rules.xml", "wallet_data_extraction_rules.xm
 function applicationAttribute(tag: string, name: string, value: string): string {
   const attribute = new RegExp(`\\s+android:${name}\\s*=\\s*["'][^"']*["']`, "u");
   const replacement = ` android:${name}="${value}"`;
-  return attribute.test(tag) ? tag.replace(attribute, replacement) : tag.replace(/>$/u, `${replacement}>`);
+  return attribute.test(tag) ? tag.replace(attribute, replacement) : tag.replace(/(\s*\/?)>$/u, `${replacement}$1>`);
 }
 
 /** Apply source-controlled policy after Capacitor recreates its ignored shell. */
@@ -37,7 +37,11 @@ export async function configureAndroid(rootDir: string, appId: string): Promise<
     await mkdir(dirname(destination), { recursive: true });
     await writeFile(destination, policy);
   }
-  if (configured !== manifest) await writeFile(manifestPath, configured);
+  // An empty task affinity keeps another app's activity from being slotted into
+  // the wallet's task (task hijacking), which the OS only blocks from API 30.
+  const hardened = configured.replace(/<activity\b[^>]*android:name="\.MainActivity"[^>]*>/u, (tag) =>
+    applicationAttribute(tag, "taskAffinity", ""));
+  if (hardened !== manifest) await writeFile(manifestPath, hardened);
 
   // Capacitor's example keeps a generic package assertion after cap add. Only
   // patch that scaffold file; application code and other tests are untouched.

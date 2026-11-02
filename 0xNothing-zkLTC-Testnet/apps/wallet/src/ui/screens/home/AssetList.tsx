@@ -66,9 +66,10 @@ export function AssetList({
           </a>
         ))}
       </div>
+      {/* A footnote under the list, not an alarm: the balances are exact. */}
       {anyStale ? (
-        <div className="w-stack">
-          <Note tone="warn">{t("asset.staleNote")}</Note>
+        <div className="w-asset-note">
+          <Note>{t("asset.staleNote")}</Note>
         </div>
       ) : null}
     </>

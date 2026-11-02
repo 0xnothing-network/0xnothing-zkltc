@@ -236,7 +236,7 @@ export function MintNusd(): ReactNode {
         ))}
       </div>
       <form
-        className="w-flow"
+        className="w-flow w-mint-flow"
         aria-busy={busy || loading}
         onSubmit={(event) => {
           event.preventDefault();
@@ -245,37 +245,49 @@ export function MintNusd(): ReactNode {
       >
         <div className="w-flow-main">
           <AmountField
-          label={t(mint ? "mint.payWith" : "mint.redeemFrom", { symbol: inputToken.symbol })}
-          value={amount}
-          invalid={amountInvalid}
-          disabled={busy}
-          onChange={(next) => {
-            setAmount(next);
-            setError(null);
-          }}
-          symbol={inputToken.symbol}
-          onMax={balance === null ? undefined : fillMax}
-          hint={
-            balance === null
-              ? t("send.readingBalance")
-              : t("send.balanceHint", {
-                amount: formatBalance(balance, inputToken.decimals),
-                symbol: inputToken.symbol,
-              })
-          }
-        />
-          <div className="w-summary">
-            <span className="w-summary-label">{t("swap.receive")}</span>
-            <span className="w-summary-value">
-              {quoted === null
-                ? "--"
-                : `${formatAmount(quoted, outputToken.decimals, mint ? 2 : 6)} ${outputToken.symbol}`}
-            </span>
-            <span className="w-summary-meta">
-              {t("swap.minReceive")}: {minOut === null
-                ? "--"
-                : `${formatAmount(minOut, outputToken.decimals, mint ? 2 : 6)} ${outputToken.symbol}`}
-            </span>
+            label={t(mint ? "mint.payWith" : "mint.redeemFrom", { symbol: inputToken.symbol })}
+            inset
+            value={amount}
+            invalid={amountInvalid}
+            disabled={busy}
+            onChange={(next) => {
+              setAmount(next);
+              setError(null);
+            }}
+            symbol={(
+              <>
+                <TokenLogo token={inputToken} size={16} />
+                {inputToken.symbol}
+              </>
+            )}
+            onMax={balance === null ? undefined : fillMax}
+            hint={
+              balance === null
+                ? t("send.readingBalance")
+                : t("send.balanceHint", {
+                  amount: formatBalance(balance, inputToken.decimals),
+                  symbol: inputToken.symbol,
+                })
+            }
+          />
+          <div className="w-flow-arrow" aria-hidden="true">
+            <Icon name="arrowDown" size={16} />
+          </div>
+          <div className="w-summary w-receive-out">
+            <div className="w-receive-out-main">
+              <span className="w-summary-label">{t("swap.receive")}</span>
+              <span className="w-summary-value">
+                {quoted === null
+                  ? "--"
+                  : `${formatAmount(quoted, outputToken.decimals, mint ? 2 : 6)} ${outputToken.symbol}`}
+              </span>
+              <span className="w-summary-meta">
+                {t("swap.minReceive")}: {minOut === null
+                  ? "--"
+                  : `${formatAmount(minOut, outputToken.decimals, mint ? 2 : 6)} ${outputToken.symbol}`}
+              </span>
+            </div>
+            <TokenLogo token={outputToken} size={28} />
           </div>
           <Panel>
             <Rows>
@@ -285,10 +297,6 @@ export function MintNusd(): ReactNode {
                   state === null ? "…" : `${fresh ? "" : "~"}${formatUsdWad(state.priceWad)}`
                 }
                 tone={state !== null && !fresh ? "dim" : undefined}
-              />
-              <Row
-                label={t("swap.maxSlippage")}
-                value={`${(settings.slippageBps / 100).toFixed(2)}%`}
               />
               {mint ? (
                 <Row
@@ -315,29 +323,37 @@ export function MintNusd(): ReactNode {
                   }
                 />
               )}
+              {/* The suite lists price and pool figures first; slippage is the user's own setting. */}
+              <Row
+                label={t("swap.maxSlippage")}
+                value={`${(settings.slippageBps / 100).toFixed(2)}%`}
+              />
             </Rows>
           </Panel>
-        {over ? (
-          <Note tone="error">
-            {reserveBlocked
-              ? t("send.gasShort", {
-                  amount: formatAmount(NATIVE_GAS_RESERVE_WEI, NATIVE_TOKEN.decimals),
-                  symbol: NATIVE_TOKEN.symbol,
-                })
-              : t("send.overBalance")}
-          </Note>
-        ) : null}
-        {state !== null && paused ? (
-          <Note tone="error">{t(mint ? "mint.pausedMint" : "mint.pausedRedeem")}</Note>
-        ) : null}
-        {state !== null && !fresh ? <Note tone="warn">{t("mint.stalePrice")}</Note> : null}
-        {overHeadroom ? <Note tone="error">{t("mint.overHeadroom")}</Note> : null}
-        {overCollateral ? (
-          <Note tone="error">{t("mint.overCollateral", { symbol: NATIVE_TOKEN.symbol })}</Note>
-        ) : null}
-        {quote.error !== null ? <Note tone="warn">{quote.error}</Note> : null}
+          {over ? (
+            <Note tone="error">
+              {reserveBlocked
+                ? t("send.gasShort", {
+                    amount: formatAmount(NATIVE_GAS_RESERVE_WEI, NATIVE_TOKEN.decimals),
+                    symbol: NATIVE_TOKEN.symbol,
+                  })
+                : t("send.overBalance")}
+            </Note>
+          ) : null}
+          {state !== null && paused ? (
+            <Note tone="error">{t(mint ? "mint.pausedMint" : "mint.pausedRedeem")}</Note>
+          ) : null}
+          {state !== null && !fresh ? <Note tone="warn">{t("mint.stalePrice")}</Note> : null}
+          {overHeadroom ? <Note tone="error">{t("mint.overHeadroom")}</Note> : null}
+          {overCollateral ? (
+            <Note tone="error">{t("mint.overCollateral", { symbol: NATIVE_TOKEN.symbol })}</Note>
+          ) : null}
+          {quote.error !== null ? <Note tone="warn">{quote.error}</Note> : null}
           {read.error !== null ? <Note tone="error">{read.error}</Note> : null}
-          <Note>{t("mint.note")}</Note>
+          <p className="w-hint w-flow-note">
+            <Icon name="info" size={14} />
+            <span>{t("mint.note")}</span>
+          </p>
         </div>
         <div className="w-flow-actions">
           {error !== null ? <Note tone="error">{error}</Note> : null}
@@ -357,6 +373,7 @@ export function MintNusd(): ReactNode {
           ready={ready && reviewCurrent}
           onClose={() => setReviewOpen(false)}
           onConfirm={() => void confirm()}
+          error={error}
           hero={(
             <div className="w-swap-review-hero">
               <div>

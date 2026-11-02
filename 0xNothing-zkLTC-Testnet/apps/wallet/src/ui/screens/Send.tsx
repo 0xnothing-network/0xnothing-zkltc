@@ -11,6 +11,7 @@ import { quoteSend, sendToken, validateRecipient } from "../../core/services/tra
 import { AmountField } from "../components/AmountField";
 import { Button, Note, Panel, Row, Rows } from "../components/kit";
 import { Screen } from "../components/Screen";
+import { TokenLogo } from "../components/TokenLogo";
 import { TokenSelect } from "../components/TokenSelect";
 import { TransactionReview } from "../components/TransactionReview";
 import { useActionGate } from "../hooks/useActionGate";
@@ -181,7 +182,7 @@ function SendToken({ initial }: { initial: string | null }): ReactNode {
   return (
     <Screen title={t("send.title")} onBack={goHome}>
       <form
-        className="w-flow"
+        className="w-flow w-send-flow"
         aria-busy={busy || loading}
         onSubmit={(event) => {
           event.preventDefault();
@@ -189,90 +190,96 @@ function SendToken({ initial }: { initial: string | null }): ReactNode {
         }}
       >
         <div className="w-flow-main">
+          {/* The balance rides on the asset row, as in the suite's send screen. */}
           <TokenSelect
-          label={t("send.asset")}
-          tokens={tokens}
-          value={token}
-          disabled={busy}
-          onChange={(next) => {
-            setTokenId(next.id);
-            setAmount("");
-            setError(null);
-          }}
-        />
-
-        <AmountField
-          label={t("common.amount")}
-          value={amount}
-          invalid={amountInvalid}
-          disabled={busy}
-          onChange={(next) => {
-            setAmount(next);
-            setError(null);
-          }}
-          symbol={token.symbol}
-          onMax={balance === null ? undefined : fillMax}
-          hint={
-            balance === null
-              ? t("send.readingBalance")
-              : t("send.balanceHint", {
-                amount: formatBalance(balance, token.decimals),
-                symbol: token.symbol,
-              })
-          }
-        />
-        {over ? (
-          <Note tone="error">
-            {reserveBlocked
-              ? t("send.gasShort", {
-                  amount: formatAmount(NATIVE_GAS_RESERVE_WEI, nativeToken.decimals),
-                  symbol: nativeToken.symbol,
-                })
-              : t("send.overBalance")}
-          </Note>
-        ) : null}
-        {readError !== null ? <Note tone="error">{readError}</Note> : null}
-
-        <label className="w-field">
-          <span className="w-label">{t("send.recipient")}</span>
-          <input
-            className="w-input"
-            value={to}
-            placeholder="0x…"
+            label={t("send.asset")}
+            tokens={tokens}
+            value={token}
             disabled={busy}
-            spellCheck={false}
-            autoComplete="off"
-            aria-label={t("send.recipient")}
-            aria-invalid={to.length > 0 && recipient === null}
-            onChange={(event) => {
-              setTo(event.target.value);
+            meta={
+              balance === null
+                ? t("send.readingBalance")
+                : t("send.balanceHint", {
+                  amount: formatBalance(balance, token.decimals),
+                  symbol: token.symbol,
+                })
+            }
+            onChange={(next) => {
+              setTokenId(next.id);
+              setAmount("");
               setError(null);
             }}
           />
-        </label>
 
-        {to.length > 0 && recipient === null ? (
-          <Note tone="error">{t("send.badAddress")}</Note>
-        ) : null}
-        {self ? <Note tone="warn">{t("send.selfAddress")}</Note> : null}
-        {feeWei !== null ? (
-          <Panel>
-            <Rows>
-              <Row
-                label={t("send.gasFee")}
-                value={`${formatAmount(feeWei, nativeToken.decimals)} ${nativeToken.symbol}`}
-              />
-            </Rows>
-          </Panel>
-        ) : null}
-        {shortOnGas ? (
-          <Note tone="warn">
-            {t("send.gasShort", {
-              amount: formatAmount(NATIVE_GAS_RESERVE_WEI, nativeToken.decimals),
-              symbol: nativeToken.symbol,
-            })}
-          </Note>
-        ) : null}
+          <label className="w-field">
+            <span className="w-label">{t("send.recipient")}</span>
+            <input
+              className="w-input"
+              value={to}
+              placeholder="0x…"
+              disabled={busy}
+              spellCheck={false}
+              autoComplete="off"
+              aria-label={t("send.recipient")}
+              aria-invalid={to.length > 0 && recipient === null}
+              onChange={(event) => {
+                setTo(event.target.value);
+                setError(null);
+              }}
+            />
+          </label>
+
+          {to.length > 0 && recipient === null ? (
+            <Note tone="error">{t("send.badAddress")}</Note>
+          ) : null}
+          {self ? <Note tone="warn">{t("send.selfAddress")}</Note> : null}
+
+          <AmountField
+            label={t("common.amount")}
+            value={amount}
+            invalid={amountInvalid}
+            disabled={busy}
+            onChange={(next) => {
+              setAmount(next);
+              setError(null);
+            }}
+            symbol={(
+              <>
+                <TokenLogo token={token} size={16} />
+                {token.symbol}
+              </>
+            )}
+            onMax={balance === null ? undefined : fillMax}
+          />
+          {over ? (
+            <Note tone="error">
+              {reserveBlocked
+                ? t("send.gasShort", {
+                    amount: formatAmount(NATIVE_GAS_RESERVE_WEI, nativeToken.decimals),
+                    symbol: nativeToken.symbol,
+                  })
+                : t("send.overBalance")}
+            </Note>
+          ) : null}
+          {readError !== null ? <Note tone="error">{readError}</Note> : null}
+          {feeWei !== null ? (
+            <Panel>
+              <Rows>
+                <Row
+                  label={t("send.gasFee")}
+                  value={`${formatAmount(feeWei, nativeToken.decimals)} ${nativeToken.symbol}`}
+                />
+              </Rows>
+            </Panel>
+          ) : null}
+          {shortOnGas ? (
+            <Note tone="warn">
+              {t("send.gasShort", {
+                amount: formatAmount(NATIVE_GAS_RESERVE_WEI, nativeToken.decimals),
+                symbol: nativeToken.symbol,
+              })}
+            </Note>
+          ) : null}
           {quote.error !== null ? <Note tone="warn">{quote.error}</Note> : null}
         </div>
         <div className="w-flow-actions">
@@ -294,6 +301,7 @@ function SendToken({ initial }: { initial: string | null }): ReactNode {
           ready={!shortOnGas && reviewCurrent}
           onClose={() => setReviewOpen(false)}
           onConfirm={() => void confirm()}
+          error={error}
         >
           <div className="w-summary">
             <span className="w-summary-label">{t("send.asset")}</span>

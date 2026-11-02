@@ -1,0 +1,497 @@
+/* 0xWallet suite: home screens. Loaded after wallet.css, so it overrides it. */
+
+/*
+ * HOME, RECEIVE and HISTORY as the suite draws them, plus the NFT and RWA tabs,
+ * the account sheet and the bottom bar in the same language. Every rule sits
+ * under one of this file's screen classes (.w-home, .w-recv, .w-hist,
+ * .w-account-sheet) or the bar, so no other screen moves.
+ */
+
+/* ------------------------------------------------------------------ home */
+
+/* 12px under the last block, as over the first. */
+.w-root .w-home > .w-body {
+  padding-bottom: 12px;
+}
+
+/* Header: initial, name over the mono address, the chip, then a bare 16px gear. */
+.w-root .w-home .w-head {
+  gap: 8px;
+}
+
+.w-root .w-home .w-head-main {
+  gap: 0;
+}
+
+/* The account name sets at its natural spacing, no display tracking. */
+.w-root .w-home .w-head-main > .w-head-title {
+  letter-spacing: 0;
+}
+
+.w-root .w-home .w-address {
+  gap: 4px;
+  line-height: 16px;
+}
+
+.w-root .w-home .w-head > .w-back {
+  width: 24px;
+  height: 24px;
+  margin-right: -4px;
+}
+
+.w-root .w-home .w-head > .w-back:hover {
+  background: transparent;
+}
+
+/* The figure sets untracked, as the suite draws it; Get NUSD sits flat. */
+.w-root .w-home .w-total {
+  letter-spacing: 0;
+}
+
+.w-root .w-home .w-total-foot > .w-btn {
+  box-shadow: none;
+}
+
+/* The four actions: the card's 10px padding insets the hairline dividers. */
+.w-root .w-home .w-actions {
+  margin: 12px var(--w-gutter);
+  border-radius: var(--r-lg);
+  padding: 10px 0;
+}
+
+.w-root .w-home .w-action {
+  min-height: 0;
+  gap: 4px;
+  border-radius: 0;
+  padding: 0 4px;
+  line-height: 16px;
+}
+
+.w-root .w-home .w-action:hover,
+.w-root .w-home .w-action:focus-visible {
+  background: transparent;
+  color: var(--text-1);
+}
+
+/* Token rows start 12px under the tab rule. */
+.w-root .w-home .w-list:has(> .w-asset) {
+  padding: 12px var(--w-gutter) 0;
+}
+
+.w-root .w-home .w-asset .w-logo {
+  border-color: var(--line);
+  background: var(--surface-2);
+}
+
+/* An imported token's initials: a filled tile, no ring, in the mono face. */
+.w-root .w-home .w-asset .w-logo[data-fallback="true"] {
+  border-color: transparent;
+  background: var(--surface-3);
+  color: var(--text-2);
+  font-family: var(--font-num);
+  font-size: 10px;
+  letter-spacing: 0;
+}
+
+.w-root .w-home .w-asset-side {
+  gap: 2px;
+}
+
+/* The stale-price footnote: an 11px caption under the list. */
+.w-root .w-home .w-asset-note {
+  padding: 16px var(--w-gutter) 0;
+}
+
+.w-root .w-home .w-asset-note > .w-hint {
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 15px;
+}
+
+/* NFT tab: two columns of the same 14px cards, art over a mono id. */
+.w-root .w-home .w-nft-grid {
+  gap: 8px;
+  padding: 12px var(--w-gutter) 0;
+}
+
+.w-root .w-home .w-nft {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface-1);
+  box-shadow: var(--w-card-shadow);
+}
+
+.w-root .w-home .w-nft:hover {
+  border-color: var(--line-strong);
+}
+
+.w-root .w-home .w-nft img {
+  border-bottom-color: var(--line);
+  background: var(--surface-2);
+}
+
+.w-root .w-home .w-nft-meta {
+  gap: 2px;
+  padding: 8px 10px 10px;
+}
+
+.w-root .w-home .w-nft-name {
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.w-root .w-home .w-nft-id {
+  color: var(--text-3);
+  font-family: var(--font-num);
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+/* RWA tab: the policy caption, then each market as one card. */
+.w-root .w-home .w-rwa {
+  gap: 12px;
+  padding: 12px var(--w-gutter) 0;
+}
+
+.w-root .w-home .w-rwa .w-panel-head > span + span {
+  color: var(--text-3);
+  font-family: var(--font-num);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.w-root .w-home .w-rwa .w-panel-body {
+  padding: 12px;
+  background: transparent;
+}
+
+.w-root .w-home .w-rwa .w-panel-body > .w-stack {
+  gap: 10px;
+  padding: 0;
+}
+
+/* Figures sit in a sunken well inside the card. */
+.w-root .w-home .w-rwa .w-rows {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+
+.w-root .w-home .w-rwa .w-tabs {
+  margin: 0;
+}
+
+.w-root .w-home .w-rwa-link {
+  align-self: flex-start;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.w-root .w-home .w-rwa-link:hover {
+  color: var(--text-1);
+}
+
+.w-root .w-home .w-rwa-sources {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.w-root .w-home .w-rwa-sources > summary {
+  cursor: pointer;
+}
+
+.w-root .w-home .w-rwa-sources p {
+  margin: 6px 0 0;
+}
+
+/* ----------------------------------------------------------- bottom bar */
+
+/* surface-1 over a hairline; the active item in text-1, a 32px rule at its foot. */
+.w-root .w-nav {
+  border-top: 1px solid var(--line);
+  background: var(--surface-1);
+}
+
+.w-root .w-nav-item {
+  gap: 2px;
+  border-radius: 0;
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.w-root .w-nav-item:hover:not([aria-current="page"]) {
+  background: transparent;
+  color: var(--text-2);
+}
+
+.w-root .w-nav-item[aria-current="page"] {
+  color: var(--text-1);
+}
+
+.w-root .w-nav-item[aria-current="page"]::before {
+  top: auto;
+  bottom: 0;
+  width: 32px;
+  height: 2px;
+  border-radius: 0;
+  background: var(--accent);
+}
+
+/* --------------------------------------------------------------- receive */
+
+/* Account, white code, address, two actions, the link; the warning at the foot. */
+.w-root .w-recv {
+  min-height: 100%;
+  gap: 12px;
+  padding: 12px var(--w-gutter) 18px;
+}
+
+.w-root .w-recv .w-receive-card {
+  gap: 12px;
+  overflow: visible;
+}
+
+.w-root .w-recv .w-receive-account {
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* The network rides on the account line, one step quieter. */
+.w-root .w-recv .w-receive-network {
+  display: inline;
+  border: 0;
+  padding: 0;
+  color: var(--text-3);
+  font-family: var(--font-ui);
+  font-size: 12px;
+}
+
+.w-root .w-recv .w-receive-qr {
+  min-height: 0;
+  margin: 0 auto;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.w-root .w-recv .w-receive-qr img {
+  width: 156px;
+  height: 156px;
+}
+
+.w-root .w-recv .w-receive-loading {
+  width: 180px;
+  min-height: 180px;
+  margin: 0 auto;
+  border-radius: 12px;
+}
+
+/* Two 8-character groups a row, a one-character gap drawn by the stylesheet. */
+.w-root .w-recv .w-addr-block {
+  gap: 0;
+  padding: 0;
+  color: var(--text-1);
+  font-size: 13px;
+  letter-spacing: 0;
+  line-height: 18px;
+}
+
+.w-root .w-recv .w-addr-row {
+  display: flex;
+  justify-content: center;
+  gap: 0 1ch;
+}
+
+.w-root .w-recv .w-btn-row {
+  gap: 8px;
+}
+
+.w-root .w-recv .w-btn-row > .w-btn {
+  min-height: 40px;
+  box-shadow: none;
+  color: var(--text-1);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* Flat secondaries: hover lifts the fill only, the hairline stays. */
+.w-root .w-recv .w-btn-row > .w-btn:hover:not(:disabled) {
+  border-color: var(--line);
+}
+
+/* "Open in the explorer": a 12px text link 8px under the buttons; the 24px
+   hit area overhangs the text by 4px each way. */
+.w-root .w-recv > .w-btn[data-variant="ghost"] {
+  min-height: 24px;
+  margin-top: -8px;
+  line-height: 16px;
+}
+
+.w-root .w-recv > .w-hint[data-tone="warn"] {
+  margin-top: auto;
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  padding: 10px;
+  color: var(--text-2);
+  font-size: 11px;
+  line-height: 15px;
+}
+
+/* --------------------------------------------------------------- history */
+
+/* Entries from the top; the explanatory caption pinned to the foot. */
+.w-root .w-hist {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+}
+
+.w-root .w-hist .w-list:has(> .w-tx) {
+  gap: 4px;
+  padding: 10px var(--w-gutter) 0;
+}
+
+.w-root .w-hist .w-tx {
+  min-height: 54px;
+  gap: 10px;
+  border-radius: var(--r-md);
+  padding: 8px 10px;
+}
+
+.w-root .w-hist .w-tx-main {
+  gap: 2px;
+}
+
+.w-root .w-hist .w-tx-summary {
+  color: var(--text-1);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+/* "Kind · detail · time": the detail truncates, the time always shows. */
+.w-root .w-hist .w-tx-detail {
+  display: flex;
+  min-width: 0;
+  gap: 1ch;
+  color: var(--text-3);
+  font-family: var(--font-num);
+  font-size: 10px;
+  line-height: 14px;
+}
+
+.w-root .w-hist .w-tx-what {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.w-root .w-hist .w-tx-when {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.w-root .w-hist .w-tx-side {
+  align-self: center;
+}
+
+/* Status pills take a full-strength outline in their own tone. */
+.w-root .w-hist .w-pill {
+  border-color: currentColor;
+  border-radius: var(--r-xs);
+  padding: 2px 6px;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+/* Clear reads flush with the gutter; its 6px padding stays as hit area. */
+.w-root .w-screen:has(> .w-body > .w-hist) > .w-head > .w-btn[data-variant="ghost"] {
+  margin-right: -6px;
+}
+
+.w-root .w-hist-foot {
+  gap: 8px;
+  margin-top: auto;
+  padding: 8px var(--w-gutter) 14px;
+}
+
+.w-root .w-hist-foot > .w-hint:not([data-tone]) {
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 14px;
+  text-align: center;
+}
+
+/* --------------------------------------------------------- account sheet */
+
+/* Rows as the home header: the initial, the name over the mono address. */
+.w-root .w-account-sheet {
+  border-color: var(--line-strong);
+  padding-bottom: 6px;
+  background: var(--surface-1);
+}
+
+.w-root .w-account-sheet .w-sheet-head {
+  min-height: 44px;
+  padding: 8px var(--w-gutter) 4px;
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.w-root .w-account-sheet .w-sheet-head > .w-back {
+  width: 28px;
+  height: 28px;
+  margin-right: -6px;
+}
+
+.w-root .w-account-sheet .w-account {
+  min-height: 52px;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 8px var(--w-gutter);
+}
+
+.w-root .w-account-sheet .w-account[aria-current="true"] {
+  background: var(--surface-2);
+}
+
+.w-root .w-account-sheet .w-account-main {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.w-root .w-account-sheet .w-account-text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.w-root .w-account-sheet .w-asset-symbol {
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.w-root .w-account-sheet .w-asset-sub {
+  color: var(--text-3);
+  font-family: var(--font-num);
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+.w-root .w-account-sheet .w-panel-body {
+  gap: 8px;
+  padding: 12px var(--w-gutter);
+  background: transparent;
+}

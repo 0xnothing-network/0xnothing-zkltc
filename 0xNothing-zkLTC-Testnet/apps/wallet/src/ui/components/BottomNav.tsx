@@ -20,7 +20,7 @@ const HOME_FAMILY = new Set<RouteName>([
 
 const ITEMS: readonly { name: RouteName; label: MessageKey; icon: IconName; path: string }[] = [
   { name: "home", label: "nav.home", icon: "home", path: "#/home" },
-  { name: "swap", label: "nav.swap", icon: "swap", path: "#/swap" },
+  { name: "swap", label: "nav.swap", icon: "trade", path: "#/swap" },
   { name: "dapps", label: "nav.dapp", icon: "dapp", path: "#/dapps" },
 ];
 
@@ -37,7 +37,7 @@ export function BottomNav({ current }: { current: RouteName }): ReactNode {
             aria-current={active ? "page" : undefined}
           >
             <span className="w-nav-glyph" aria-hidden="true">
-              <Icon name={item.icon} size={20} />
+              <Icon name={item.icon} size={16} />
             </span>
             {t(item.label)}
           </a>

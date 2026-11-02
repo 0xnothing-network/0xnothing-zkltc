@@ -15,6 +15,7 @@ import { loadPortfolio, rowBalance } from "../../core/services/portfolio";
 import { AmountField } from "../components/AmountField";
 import { Button, Icon, Note, Panel, Row, Rows } from "../components/kit";
 import { Screen } from "../components/Screen";
+import { TokenLogo } from "../components/TokenLogo";
 import { useActionGate } from "../hooks/useActionGate";
 import { useLiveRead } from "../hooks/useLiveRead";
 import { reviewKey } from "../lib/reviewKey";
@@ -169,7 +170,7 @@ export function Lend(): ReactNode {
         ))}
       </div>
       <form
-        className="w-flow"
+        className="w-flow w-lend-flow"
         aria-busy={busy || read.loading}
         onSubmit={(event) => {
           event.preventDefault();
@@ -178,78 +179,86 @@ export function Lend(): ReactNode {
       >
         <div className="w-flow-main">
           <AmountField
-          label={supply ? t("lend.supplyLabel") : t("lend.withdrawLabel")}
-          value={amount}
-          invalid={amountInvalid}
-          disabled={busy}
-          onChange={(next) => {
-            setAmount(next);
-            setError(null);
-          }}
-          symbol={NUSD_TOKEN.symbol}
-          onMax={cap === null ? undefined : fillMax}
-          hint={
-            cap === null
-              ? t("send.readingBalance")
-              : t(supply ? "lend.hintWallet" : "lend.hintWithdrawable", {
-                amount: formatBalance(cap, NUSD_TOKEN.decimals),
-                symbol: NUSD_TOKEN.symbol,
-              })
-          }
-        />
-        <Panel>
-          <Rows>
-            <Row
-              label={t("lend.supplied")}
-              value={state === null ? "…" : `${formatAmount(state.supplied, 18, 2)} NUSD`}
-              tone="green"
-            />
-            {supply ? (
+            label={supply ? t("lend.supplyLabel") : t("lend.withdrawLabel")}
+            value={amount}
+            invalid={amountInvalid}
+            disabled={busy}
+            onChange={(next) => {
+              setAmount(next);
+              setError(null);
+            }}
+            symbol={(
               <>
-                <Row
-                  label={t("lend.currentYield")}
-                  value={state === null ? "…" : formatRateWad(state.supplyRateWad)}
-                />
-                <Row
-                  label={t("lend.borrowApr")}
-                  value={state === null ? "…" : formatRateWad(state.lenderRateWad)}
-                />
-                <Row
-                  label={t("lend.utilization")}
-                  value={utilization === null ? "…" : `${utilization.toFixed(2)}%`}
-                />
-              </>
-            ) : (
-              <>
-                <Row
-                  label={t("lend.maxWithdraw")}
-                  value={state === null ? "…" : `${formatAmount(state.maxWithdraw, 18, 2)} NUSD`}
-                />
-                <Row
-                  label={t("lend.liquidity")}
-                  value={
-                    state === null ? "…" : `${formatAmount(state.availableLiquidity, 18, 2)} NUSD`
-                  }
-                />
-                <Row
-                  label={t("lend.currentYield")}
-                  value={state === null ? "…" : formatRateWad(state.supplyRateWad)}
-                />
+                <TokenLogo token={NUSD_TOKEN} size={16} />
+                {NUSD_TOKEN.symbol}
               </>
             )}
-          </Rows>
-        </Panel>
-        {over ? (
-          <Note tone="error">{supply ? t("lend.overWallet") : t("lend.overWithdraw")}</Note>
-        ) : null}
-        {state !== null && !state.activated ? (
-          <Note tone="error">{t("lend.notActive")}</Note>
-        ) : null}
-        {supply && state?.supplyPaused === true && state.activated ? (
-          <Note tone="error">{t("lend.supplyPaused")}</Note>
-        ) : null}
+            onMax={cap === null ? undefined : fillMax}
+            hint={
+              cap === null
+                ? t("send.readingBalance")
+                : t(supply ? "lend.hintWallet" : "lend.hintWithdrawable", {
+                  amount: formatBalance(cap, NUSD_TOKEN.decimals),
+                  symbol: NUSD_TOKEN.symbol,
+                })
+            }
+          />
+          <Panel>
+            <Rows>
+              <Row
+                label={t("lend.supplied")}
+                value={state === null ? "…" : `${formatAmount(state.supplied, 18, 2)} NUSD`}
+                tone="green"
+              />
+              {supply ? (
+                <>
+                  <Row
+                    label={t("lend.currentYield")}
+                    value={state === null ? "…" : formatRateWad(state.supplyRateWad)}
+                  />
+                  <Row
+                    label={t("lend.borrowApr")}
+                    value={state === null ? "…" : formatRateWad(state.lenderRateWad)}
+                  />
+                  <Row
+                    label={t("lend.utilization")}
+                    value={utilization === null ? "…" : `${utilization.toFixed(2)}%`}
+                  />
+                </>
+              ) : (
+                <>
+                  <Row
+                    label={t("lend.maxWithdraw")}
+                    value={state === null ? "…" : `${formatAmount(state.maxWithdraw, 18, 2)} NUSD`}
+                  />
+                  <Row
+                    label={t("lend.liquidity")}
+                    value={
+                      state === null ? "…" : `${formatAmount(state.availableLiquidity, 18, 2)} NUSD`
+                    }
+                  />
+                  <Row
+                    label={t("lend.currentYield")}
+                    value={state === null ? "…" : formatRateWad(state.supplyRateWad)}
+                  />
+                </>
+              )}
+            </Rows>
+          </Panel>
+          {over ? (
+            <Note tone="error">{supply ? t("lend.overWallet") : t("lend.overWithdraw")}</Note>
+          ) : null}
+          {state !== null && !state.activated ? (
+            <Note tone="error">{t("lend.notActive")}</Note>
+          ) : null}
+          {supply && state?.supplyPaused === true && state.activated ? (
+            <Note tone="error">{t("lend.supplyPaused")}</Note>
+          ) : null}
           {read.error !== null ? <Note tone="error">{read.error}</Note> : null}
-          <Note>{t("lend.note")}</Note>
+          <p className="w-hint w-flow-note">
+            <Icon name="info" size={14} />
+            <span>{t("lend.note")}</span>
+          </p>
         </div>
         <div className="w-flow-actions">
           {error !== null ? <Note tone="error">{error}</Note> : null}

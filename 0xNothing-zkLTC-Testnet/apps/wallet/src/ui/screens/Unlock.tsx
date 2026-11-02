@@ -1,8 +1,9 @@
 import { type ReactNode, useState } from "react";
 import { t } from "../../core/i18n";
-import { unlock, wipeWallet, WrongPasswordError } from "../../core/keyring/vault";
+import { accountLabel, unlock, wipeWallet, WrongPasswordError } from "../../core/keyring/vault";
+import { shortenAddress } from "../../core/lib/format";
 import { describeError } from "../../core/lib/errors";
-import { Brand, Button, Note } from "../components/kit";
+import { Button, Note, Wordmark } from "../components/kit";
 import { useActionGate } from "../hooks/useActionGate";
 import { Screen } from "../components/Screen";
 import { useWallet } from "../state/WalletContext";
@@ -19,7 +20,7 @@ import { useWallet } from "../state/WalletContext";
  * compared case-insensitively rather than against one fixed spelling.
  */
 export function Unlock(): ReactNode {
-  const { openWallet } = useWallet();
+  const { active, openWallet } = useWallet();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -76,40 +77,51 @@ export function Unlock(): ReactNode {
   };
 
   return (
-    <Screen title={t("unlock.title")}>
-      <div className="w-flow" aria-busy={busy}>
+    <Screen title={t("unlock.title")} bare={!resetting}>
+      <div
+        className="w-flow w-onb"
+        data-step={resetting ? "reset" : "unlock"}
+        aria-busy={busy}
+        data-lock={resetting ? undefined : "true"}
+      >
         <div className="w-flow-main">
-          {resetting ? null : <Brand />}
+          {resetting ? null : (
+            <Wordmark
+              sub={active
+                ? `${accountLabel(active)} · ${shortenAddress(active.address)}`
+                : undefined}
+            />
+          )}
           {resetting ? (
             <>
-            <Note tone="warn">{t("unlock.wipeWarning", { word: wipeWord })}</Note>
-            <input
-              className="w-input"
-              value={confirmWord}
-              autoFocus
-              disabled={busy}
-              spellCheck={false}
-              autoComplete="off"
-              aria-label={t("wipe.inputAria", { word: wipeWord })}
-              aria-invalid={confirmWord.length > 0 && !wipeReady}
-              onChange={(event) => {
-                setConfirmWord(event.target.value);
-                setError(null);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && wipeReady) void wipe();
-              }}
-            />
-            {error ? (
-              <div role="alert">
-                <Note tone="error">{error}</Note>
-              </div>
-            ) : null}
+              <Note tone="warn">{t("unlock.wipeWarning", { word: wipeWord })}</Note>
+              <input
+                className="w-input"
+                value={confirmWord}
+                autoFocus
+                disabled={busy}
+                spellCheck={false}
+                autoComplete="off"
+                aria-label={t("wipe.inputAria", { word: wipeWord })}
+                aria-invalid={confirmWord.length > 0 && !wipeReady}
+                onChange={(event) => {
+                  setConfirmWord(event.target.value);
+                  setError(null);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && wipeReady) void wipe();
+                }}
+              />
+              {error ? (
+                <div role="alert">
+                  <Note tone="error">{error}</Note>
+                </div>
+              ) : null}
             </>
           ) : (
             <>
               <label className="w-field">
-                <span className="w-label">{t("common.password")}</span>
+                <span className="w-label w-sr-only">{t("common.password")}</span>
                 <input
                   className="w-input"
                   type="password"
@@ -130,9 +142,17 @@ export function Unlock(): ReactNode {
               </label>
               {error ? (
                 <div role="alert">
-                  <Note tone="error">{error}</Note>
+                  <p className="w-caption" data-tone="error">{error}</p>
                 </div>
               ) : null}
+              <Button
+                variant="primary"
+                block
+                disabled={busy || password.length === 0}
+                onClick={() => void submit()}
+              >
+                {busy ? t("unlock.opening") : t("unlock.title")}
+              </Button>
             </>
           )}
         </div>
@@ -151,19 +171,9 @@ export function Unlock(): ReactNode {
               </Button>
             </div>
           ) : (
-            <>
-            <Button
-              variant="primary"
-              block
-              disabled={busy || password.length === 0}
-              onClick={() => void submit()}
-            >
-              {busy ? t("unlock.opening") : t("unlock.title")}
-            </Button>
-            <Button size="sm" disabled={busy} onClick={showReset}>
+            <Button variant="ghost" size="sm" disabled={busy} onClick={showReset}>
               {t("unlock.forgot")}
             </Button>
-            </>
           )}
         </div>
       </div>

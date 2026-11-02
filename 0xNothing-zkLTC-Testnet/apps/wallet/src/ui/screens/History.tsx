@@ -12,7 +12,7 @@ import {
   type TxKind,
   type TxRecord,
 } from "../../core/services/history";
-import { Button, Empty, Note, Pill, type Tone } from "../components/kit";
+import { Button, Empty, Icon, type IconName, Note, Pill, type Tone } from "../components/kit";
 import { Screen } from "../components/Screen";
 import { useActionGate } from "../hooks/useActionGate";
 import { useLiveRead } from "../hooks/useLiveRead";
@@ -37,6 +37,21 @@ const KIND_LABEL: Record<TxKind, MessageKey> = {
   approve: "kind.approve",
   nft: "kind.nft",
   dapp: "kind.dapp",
+};
+
+const KIND_ICON: Record<TxKind, IconName> = {
+  send: "send",
+  "mint-nusd": "plus",
+  "redeem-nusd": "receive",
+  supply: "send",
+  withdraw: "receive",
+  "points-stake": "lock",
+  "points-withdraw": "receive",
+  "points-claim": "checkCircle",
+  swap: "trade",
+  approve: "checkCircle",
+  nft: "dapp",
+  dapp: "external",
 };
 
 const STATUS: Record<TxRecord["status"], { label: MessageKey; tone: Tone }> = {
@@ -75,62 +90,72 @@ export function History(): ReactNode {
       onBack={goHome}
       right={
         rows.length > 0 ? (
-          <Button size="sm" disabled={busy || read.busy} onClick={() => void clear()}>
+          <Button variant="ghost" size="sm" disabled={busy || read.busy} onClick={() => void clear()}>
             {busy ? t("common.working") : t("hist.clear")}
           </Button>
         ) : undefined
       }
     >
-      {rows.length === 0 ? (
-        read.error !== null ? (
-          <div className="w-stack" role="alert">
-            <Note tone="error">{read.error}</Note>
-          </div>
+      <div className="w-hist">
+        {rows.length === 0 ? (
+          read.error !== null ? (
+            <div className="w-stack" role="alert">
+              <Note tone="error">{read.error}</Note>
+            </div>
+          ) : (
+            <Empty>{read.loading ? t("hist.loading") : t("hist.empty")}</Empty>
+          )
         ) : (
-          <Empty>{read.loading ? t("hist.loading") : t("hist.empty")}</Empty>
-        )
-      ) : (
-        <div className="w-list" aria-busy={read.busy || busy}>
-          {rows.map((row) => (
-            <button
-              key={row.hash}
-              type="button"
-              className="w-tx"
-              aria-label={`${recordSummary(row)} · ${t(STATUS[row.status].label)} · ${formatTimeAgo(row.at)}`}
-              onClick={() => {
-                const url = txUrl(row.hash, network);
-                if (url) void openExternal(url);
-              }}
-            >
-              <span className="w-tx-main">
-                <span className="w-tx-summary">{recordSummary(row)}</span>
-                <span className="w-tx-detail">
-                  {t(KIND_LABEL[row.kind])} ·{" "}
-                  {recordDetail(row) ?? shortenAddress(row.hash, 10, 6)}
+          <div className="w-list" aria-busy={read.busy || busy}>
+            {rows.map((row) => (
+              <button
+                key={row.hash}
+                type="button"
+                className="w-tx"
+                data-status={row.status}
+                aria-label={`${recordSummary(row)} · ${t(STATUS[row.status].label)} · ${formatTimeAgo(row.at)}`}
+                onClick={() => {
+                  const url = txUrl(row.hash, network);
+                  if (url) void openExternal(url);
+                }}
+              >
+                <span className="w-tx-glyph" aria-hidden="true">
+                  <Icon name={row.status === "failed" ? "close" : KIND_ICON[row.kind]} size={16} />
                 </span>
-              </span>
-              <span className="w-tx-side">
-                <Pill tone={STATUS[row.status].tone}>{t(STATUS[row.status].label)}</Pill>
-                <span className="w-tx-detail" title={formatClock(row.at)}>
-                  {formatTimeAgo(row.at)}
+                <span className="w-tx-main">
+                  <span className="w-tx-summary">{recordSummary(row)}</span>
+                  {/* The time closes the detail line and never truncates; the
+                      detail before it gives way first. */}
+                  <span className="w-tx-detail">
+                    <span className="w-tx-what">
+                      {t(KIND_LABEL[row.kind])} ·{" "}
+                      {recordDetail(row) ?? shortenAddress(row.hash, 10, 6)}
+                    </span>
+                    <span className="w-tx-when" title={formatClock(row.at)}>
+                      · {formatTimeAgo(row.at)}
+                    </span>
+                  </span>
                 </span>
-              </span>
-            </button>
-          ))}
+                <span className="w-tx-side">
+                  <Pill tone={STATUS[row.status].tone}>{t(STATUS[row.status].label)}</Pill>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="w-stack w-hist-foot">
+          {read.error !== null && rows.length > 0 ? (
+            <div role="alert">
+              <Note tone="error">{read.error}</Note>
+            </div>
+          ) : null}
+          {actionError !== null ? (
+            <div role="alert">
+              <Note tone="error">{actionError}</Note>
+            </div>
+          ) : null}
+          <Note>{t("hist.note")}</Note>
         </div>
-      )}
-      <div className="w-stack">
-        {read.error !== null && rows.length > 0 ? (
-          <div role="alert">
-            <Note tone="error">{read.error}</Note>
-          </div>
-        ) : null}
-        {actionError !== null ? (
-          <div role="alert">
-            <Note tone="error">{actionError}</Note>
-          </div>
-        ) : null}
-        <Note>{t("hist.note")}</Note>
       </div>
     </Screen>
   );

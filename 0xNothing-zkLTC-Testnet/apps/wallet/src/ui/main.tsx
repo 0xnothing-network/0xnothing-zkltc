@@ -1,5 +1,9 @@
 import { createRoot } from "react-dom/client";
 import "../styles/wallet.css";
+import "../styles/suite/onboarding.css";
+import "../styles/suite/home.css";
+import "../styles/suite/forms.css";
+import "../styles/suite/system.css";
 import { applyDocumentLang, t } from "../core/i18n";
 import { App } from "./App";
 import { WalletProvider } from "./state/WalletContext";

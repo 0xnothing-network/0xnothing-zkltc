@@ -1,0 +1,573 @@
+/* 0xWallet suite: forms screens. Loaded after wallet.css, so it overrides it. */
+
+/*
+ * Send, send NFT, swap, mint, earn and lend, plus the token picker and review
+ * sheets they open. Every rule is scoped to a form class (.w-send-flow,
+ * .w-swap-flow, .w-mint-flow, .w-earn-flow, .w-lend-flow) or a sheet class
+ * (.w-swap-review, .w-token-sheet), so no other screen moves.
+ */
+
+/* --------------------------------------------- forms: frame */
+
+/* A 12px inset under the header, fields 12px apart. */
+.w-root :is(.w-send-flow, .w-mint-flow, .w-lend-flow) > .w-flow-main {
+  gap: 12px;
+  padding: 12px var(--w-gutter);
+}
+
+/* The decisive action pinned at the foot, 22px off the popup edge. */
+.w-root :is(.w-send-flow, .w-mint-flow, .w-lend-flow) > .w-flow-actions {
+  padding: 12px var(--w-gutter) calc(22px + env(safe-area-inset-bottom));
+}
+
+/* A direction switch (12px margin + 38px control) takes its share of the height. */
+.w-root .w-tabs + :is(.w-mint-flow, .w-lend-flow) {
+  min-height: calc(100% - 50px);
+}
+
+/* A plain caption led by the info glyph: 11px dim text, no card. */
+.w-root .w-flow-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px;
+  color: var(--text-3);
+  font-size: 11px;
+  letter-spacing: 0;
+  line-height: 15px;
+}
+
+.w-flow-note > .w-icon {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+/* --------------------------------------------- forms: amount field */
+
+/* figure + token chip, then the hint and MAX over a hairline (mt-2, pt-1). */
+.w-root :is(.w-send-flow, .w-swap-flow, .w-mint-flow, .w-earn-flow, .w-lend-flow) .w-amount {
+  padding: 12px;
+}
+
+.w-root :is(.w-send-flow, .w-swap-flow, .w-mint-flow, .w-earn-flow, .w-lend-flow) .w-amount-foot {
+  margin-top: 4px;
+  border-top-color: var(--line);
+  padding-top: 4px;
+}
+
+.w-root :is(.w-send-flow, .w-swap-flow, .w-mint-flow, .w-earn-flow, .w-lend-flow) .w-amount-side {
+  gap: 6px;
+  border-radius: var(--r-sm);
+  padding: 4px 10px;
+  background: var(--surface-3);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/*
+ * An inset field's card rule (.w-field[data-inset] > .w-amount) outranks the
+ * shared focus and invalid edges, so they are restated here at its weight:
+ * the accent edge on focus (teal on mint and earn), the red edge when invalid.
+ */
+.w-root :is(.w-swap-flow, .w-mint-flow, .w-earn-flow) .w-field[data-inset="true"] > .w-amount:focus-within {
+  border-color: var(--accent);
+}
+
+.w-root :is(.w-swap-flow, .w-mint-flow, .w-earn-flow) .w-field[data-inset="true"] > .w-amount[data-invalid="true"] {
+  border-color: var(--negative);
+}
+
+.w-root .w-amount-side > .w-logo {
+  width: 16px;
+  height: 16px;
+  border: 0;
+  background: var(--surface-2);
+}
+
+/* The swap chip sits on a card, so it takes the field tone and a hairline. */
+.w-root .w-swap-flow .w-amount-side:has(> .w-token-chip-wrap) {
+  padding: 0;
+  background: transparent;
+}
+
+.w-root .w-swap-flow .w-token-chip {
+  padding: 4px 10px;
+  border-color: var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+
+.w-root .w-swap-flow .w-token-chip:hover:not(:disabled) {
+  border-color: var(--line-strong);
+}
+
+.w-root .w-swap-flow .w-token-chip > .w-icon {
+  width: 12px;
+  height: 12px;
+  color: var(--text-3);
+}
+
+/* --------------------------------------------- forms: label/value cards */
+
+/* Rows on a 12px card, 4px apart over hairlines (p-3, py-1, divide-y). */
+.w-root :is(.w-swap-flow, .w-mint-flow, .w-lend-flow) > .w-flow-main > .w-panel {
+  padding: 12px;
+}
+
+.w-root .w-mint-flow > .w-flow-main > .w-panel,
+.w-root .w-lend-flow > .w-flow-main > .w-panel {
+  padding: 10px;
+}
+
+.w-root :is(.w-swap-flow, .w-mint-flow, .w-lend-flow) > .w-flow-main > .w-panel .w-row {
+  padding: 4px 0;
+}
+
+/* --------------------------------------------- send */
+
+/* Asset row: mark and symbol left, the balance in mono right of them. */
+.w-root .w-send-flow .w-token-select-face > .w-token-select-meta {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: var(--text-2);
+  font-family: var(--font-num);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.w-root .w-send-flow .w-token-select-face .w-logo {
+  width: 24px;
+  height: 24px;
+}
+
+/* The recipient reads as an address. */
+.w-root .w-send-flow .w-input {
+  font-family: var(--font-num);
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+/* The fee card: 12px in, rows 8px apart over a hairline; 16px under the amount. */
+.w-root .w-send-flow > .w-flow-main > .w-panel {
+  margin-top: 4px;
+  padding: 12px;
+}
+
+.w-root .w-send-flow > .w-flow-main > .w-panel .w-row {
+  padding: 0;
+}
+
+.w-root .w-send-flow > .w-flow-main > .w-panel .w-row + .w-row {
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+/* Send NFT: the piece on a card, its art leading. */
+.w-root .w-send-nft .w-nft-card {
+  justify-content: flex-start;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 12px;
+  background: var(--surface-1);
+  box-shadow: var(--w-card-shadow);
+}
+
+.w-root .w-send-nft .w-nft-card > .w-logo {
+  width: 48px;
+  height: 48px;
+  border-color: var(--line);
+  border-radius: var(--r-sm);
+}
+
+.w-root .w-send-nft .w-mono-break {
+  min-width: 0;
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.w-root .w-send-nft .w-nft-id {
+  color: var(--text-3);
+  font-family: var(--font-num);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* --------------------------------------------- swap */
+
+/* The body runs From, To, details and Swap 8px apart; the button follows the card. */
+.w-root .w-swap-flow > .w-flow-main {
+  gap: 8px;
+  padding: 10px var(--w-gutter) 8px;
+}
+
+.w-root .w-swap-flow > .w-flow-actions {
+  margin-top: 0;
+  padding: 0 var(--w-gutter) 10px;
+  background: var(--bg);
+}
+
+/* The flip bridges the cards, which stand 4px apart. */
+.w-root .w-swap-flow .w-swap-flip {
+  height: 0;
+  margin: -6px 0;
+}
+
+.w-root .w-swap-flow .w-swap-flip > .w-btn {
+  border-color: var(--line);
+  background: var(--surface-2);
+}
+
+.w-root .w-swap-flow .w-swap-flip > .w-btn:hover:not(:disabled) {
+  color: var(--text-1);
+}
+
+/* --------------------------------------------- mint */
+
+.w-root .w-mint-flow > .w-flow-main {
+  gap: 8px;
+}
+
+/* A plain down arrow: 8px under the field, 4px over the output. */
+.w-root .w-mint-flow .w-flow-arrow {
+  margin: 0 0 -4px;
+}
+
+/* Output: label over the figure in teal, the token mark at the right. */
+.w-root .w-mint-flow .w-receive-out {
+  padding: 12px;
+}
+
+.w-root .w-mint-flow .w-receive-out .w-summary-value {
+  font-family: var(--font-num);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 28px;
+}
+
+.w-root .w-mint-flow .w-receive-out .w-summary-meta {
+  font-family: var(--font-num);
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.w-root .w-mint-flow .w-receive-out > .w-logo {
+  width: 28px;
+  height: 28px;
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  background: var(--surface-2);
+}
+
+/* --------------------------------------------- earn */
+
+/* The form keeps its height, so the positions follow it rather than the fold. */
+.w-root .w-earn-flow {
+  min-height: 0;
+}
+
+.w-root .w-earn-flow > .w-flow-main {
+  gap: 10px;
+  padding: 10px var(--w-gutter) 0;
+}
+
+/* Stats: 8px grid, the top pair larger, the rest plain under a hairline. */
+.w-root .w-earn-stats {
+  gap: 8px;
+}
+
+.w-root .w-earn-stats > div:nth-child(n + 3) {
+  padding-top: 4px;
+}
+
+.w-root .w-earn-stats dd {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.w-root .w-earn-stats > div:nth-child(-n + 2) dd {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Stake card: 8px between the field, the lock chips, the estimate and the button. */
+.w-root .w-earn-stake {
+  gap: 8px;
+}
+
+/* The field: label, figure with MAX beside it, the wallet hint underneath. */
+.w-root .w-earn-stake .w-field[data-inset="true"] > .w-amount {
+  row-gap: 4px;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.w-root .w-earn-stake .w-amount input {
+  grid-column: 1;
+  grid-row: 2;
+  min-height: 26px;
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.w-root .w-earn-stake .w-amount-foot {
+  display: contents;
+}
+
+.w-root .w-earn-stake .w-amount-foot > .w-max {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: center;
+}
+
+.w-root .w-earn-stake .w-amount-foot > .w-amount-hint {
+  grid-column: 1 / -1;
+  grid-row: 3;
+}
+
+.w-root .w-earn-stake .w-field:not([data-inset]) > .w-label {
+  font-size: 11px;
+}
+
+.w-root .w-earn-stake > .w-rows .w-row {
+  padding: 4px 0;
+}
+
+/* Positions: the section label, then one compact card per lock. */
+.w-root .w-earn-more {
+  gap: 10px;
+  padding: 10px var(--w-gutter) 14px;
+}
+
+.w-earn-positions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* No position yet: a compact card in the list's place, not a tall empty block. */
+.w-root .w-earn-positions > .w-empty {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 16px 12px;
+  background: var(--surface-1);
+  box-shadow: var(--w-card-shadow);
+  color: var(--text-3);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-align: center;
+}
+
+.w-root .w-earn-positions .w-panel-head {
+  min-height: 0;
+  border: 0;
+  padding: 10px 10px 0;
+  color: var(--text-1);
+  font-family: var(--font-num);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.w-root .w-earn-positions .w-panel-head > .w-btn {
+  min-height: 22px;
+  border-radius: var(--r-xs);
+  padding: 2px 8px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.w-root .w-earn-positions .w-panel-body {
+  gap: 6px;
+  padding: 6px 10px 10px;
+}
+
+.w-root .w-earn-positions .w-row {
+  padding: 1px 0;
+}
+
+.w-root .w-earn-positions .w-row + .w-row {
+  border-top: 0;
+}
+
+.w-root .w-earn-positions .w-row :is(dt, dd) {
+  font-size: 11px;
+}
+
+.w-root .w-earn-positions .w-row dt {
+  color: var(--text-3);
+}
+
+/* The lock's progress, a 4px teal bar under the card head. */
+.w-earn-progress {
+  display: block;
+  order: -1;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--accent);
+  appearance: none;
+}
+
+.w-earn-progress::-webkit-progress-bar {
+  background: var(--surface-2);
+}
+
+.w-earn-progress::-webkit-progress-value {
+  background: var(--accent);
+}
+
+.w-earn-progress::-moz-progress-bar {
+  background: var(--accent);
+}
+
+/* --------------------------------------------- review sheets */
+
+/* Review: a 14px title, the hero as its own card, then the rows and the pair of buttons. */
+.w-root .w-swap-review .w-sheet-head {
+  min-height: 44px;
+  padding: 6px 8px 6px var(--w-gutter);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.w-root .w-swap-review > .w-panel-body {
+  gap: 10px;
+  padding: 10px var(--w-gutter) calc(14px + env(safe-area-inset-bottom));
+}
+
+.w-root .w-swap-review > :is(.w-swap-review-hero, .w-summary) {
+  margin: 4px var(--w-gutter) 0;
+}
+
+.w-root .w-swap-review > .w-swap-review-hero {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 14px 12px;
+  background: var(--surface-1);
+  box-shadow: var(--w-card-shadow);
+}
+
+.w-root .w-swap-review-hero .w-logo {
+  width: 32px;
+  height: 32px;
+}
+
+.w-root .w-swap-review-hero strong {
+  color: var(--text-1);
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+.w-root .w-swap-review-hero .w-review-arrow {
+  border-color: var(--line);
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.w-root .w-swap-review .w-summary-value {
+  font-family: var(--font-num);
+  letter-spacing: 0;
+}
+
+/* Rows handed in bare still sit on a card. */
+.w-root .w-swap-review > .w-panel-body > .w-rows {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface-1);
+  box-shadow: var(--w-card-shadow);
+}
+
+/* --------------------------------------------- token picker sheet */
+
+.w-root .w-token-sheet .w-sheet-head {
+  min-height: 44px;
+  padding: 6px 8px 6px var(--w-gutter);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Square corners: the shared 10px control radius would curl the hairline's ends. */
+.w-root .w-token-search {
+  gap: 6px;
+  border-bottom-color: var(--line);
+  border-radius: 0;
+  padding: 2px var(--w-gutter) 10px;
+}
+
+.w-root .w-token-search .w-hint {
+  font-size: 11px;
+  line-height: 15px;
+}
+
+/* Options: 52px hairline rows, a 28px mark, mono source tag on the right. */
+.w-root .w-token-option {
+  min-height: 52px;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 10px;
+  border-bottom-color: var(--line);
+  padding: 8px var(--w-gutter);
+}
+
+.w-root .w-token-option:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.w-root .w-token-option[aria-selected="true"] {
+  background: var(--surface-2);
+}
+
+.w-root .w-token-option .w-logo {
+  width: 28px;
+  height: 28px;
+}
+
+.w-root .w-token-option-copy strong {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.w-root .w-token-option-copy span {
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.w-root .w-token-ca {
+  width: 28px;
+  height: 28px;
+  border-color: var(--line-strong);
+  color: var(--text-2);
+  font-family: var(--font-num);
+  font-size: 10px;
+}
+
+.w-root .w-token-source {
+  border-color: var(--line);
+  border-radius: var(--r-xs);
+  padding: 2px 6px;
+  color: var(--text-2);
+  font-family: var(--font-num);
+  font-size: 11px;
+}
+
+.w-root .w-token-source[data-core="true"] {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: transparent;
+  color: var(--accent);
+}
+
+/* A lock chip is one line: "180d ×1.5" fits its 72px column once the grid track stops shrinking it. */
+.w-root .w-earn-lock-option > span {
+  white-space: nowrap;
+}

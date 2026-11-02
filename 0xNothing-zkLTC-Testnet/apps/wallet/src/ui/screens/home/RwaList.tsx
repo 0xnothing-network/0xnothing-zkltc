@@ -82,9 +82,9 @@ function RwaPosition({ config }: { config: RwaMarketConfig }) {
           setError(null);
           setReview({ amount, buy, limit, deadline: quote.data.deadline, fee: quote.data.values[1], total: quote.data.values[2] });
         }}>{t("rwa.review")}</Button>
-        <a href={config.documentationUrl} target="_blank" rel="noreferrer">{t("rwa.documents")} ↗</a>
-        <details><summary>{t("rwa.sources")}</summary>
-          {config.sourceUrls.map((url, i) => <p key={`${i}:${url}`}><a href={url} target="_blank" rel="noreferrer">{t("rwa.source", { index: i + 1 })} ↗</a></p>)}
+        <a className="w-rwa-link" href={config.documentationUrl} target="_blank" rel="noreferrer">{t("rwa.documents")} ↗</a>
+        <details className="w-rwa-sources"><summary>{t("rwa.sources")}</summary>
+          {config.sourceUrls.map((url, i) => <p key={`${i}:${url}`}><a className="w-rwa-link" href={url} target="_blank" rel="noreferrer">{t("rwa.source", { index: i + 1 })} ↗</a></p>)}
         </details>
         {error && !review ? <Note tone="error">{error}</Note> : null}
       </div>
@@ -107,8 +107,8 @@ function RwaPosition({ config }: { config: RwaMarketConfig }) {
 export function RwaList() {
   const { address, network } = useWallet();
   const markets = rwaMarkets.filter((market) => market.chainId === network.chainId);
-  if (!isLitvmNetwork(network)) return <Note>{t("rwa.network")}</Note>;
-  return <div className="w-stack">
+  if (!isLitvmNetwork(network)) return <div className="w-stack w-rwa"><Note>{t("rwa.network")}</Note></div>;
+  return <div className="w-stack w-rwa">
     <Note>{t("rwa.policy")}</Note>
     {markets.length ? markets.map((config) => <RwaPosition key={`${config.market}:${address}:${network.id}:${network.rpcUrl}`} config={config} />)
       : <Empty><strong>{t("rwa.empty")}</strong><span>{t("rwa.activation")}</span></Empty>}

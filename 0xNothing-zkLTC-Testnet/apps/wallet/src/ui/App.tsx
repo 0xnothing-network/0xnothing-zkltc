@@ -100,7 +100,10 @@ export function App(): ReactNode {
 
   // The nav belongs to the wallet itself: an approval window is not a place to
   // wander off from, and there is nothing to navigate to before the vault opens.
-  const nav = phase === "ready" && route.name !== "approve";
+  // Pushed screens exit through their back arrow, so only the three top-level
+  // destinations carry the nav and task screens keep its 52px for the form.
+  const nav = phase === "ready"
+    && (route.name === "home" || route.name === "swap" || route.name === "dapps");
 
   return (
     <div className="w-root" data-surface={surface} data-theme={settings.theme}>

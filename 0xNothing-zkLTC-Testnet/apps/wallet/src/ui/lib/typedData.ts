@@ -42,6 +42,26 @@ export function typedSummary(message: string): TypedDataSummary | null {
 // characters could reorder or hide part of what the user is asked to sign.
 const SHOWN_AS_TEXT = /^[\p{L}\p{M}\p{N}\p{P}\p{S}\p{Zs}\n\r\t]*$/u;
 
+const SHOWN_AS_CHAR = /[\p{L}\p{M}\p{N}\p{P}\p{S}\p{Zs}\n\r\t]/u;
+
+/**
+ * Typed data as it will be signed, not as the page wrote it. Re-serialising the
+ * parsed value collapses a duplicated key to the one JSON.parse (and so the
+ * signer) keeps and drops padding; any invisible or reordering character is
+ * shown as its \uXXXX escape instead of being rendered.
+ */
+export function readableTypedData(message: string): string {
+  let text = message;
+  try {
+    text = JSON.stringify(JSON.parse(message), null, 2);
+  } catch {
+    // Unparseable data is already refused for signing; show it verbatim, escaped.
+  }
+  return Array.from(text, (char) => SHOWN_AS_CHAR.test(char)
+    ? char
+    : `\\u${(char.codePointAt(0) ?? 0).toString(16).padStart(4, "0")}`).join("");
+}
+
 /** personal_sign carries hex-encoded UTF-8 far more often than plain text. */
 export function readableSignMessage(message: string): string {
   if (!isHex(message)) return SHOWN_AS_TEXT.test(message) ? message : stringToHex(message);

@@ -9,6 +9,7 @@ export function TransactionReview({
   hero,
   children,
   confirmLabel = t("swap.confirmSubmit"),
+  error = null,
   onClose,
   onConfirm,
 }: {
@@ -18,6 +19,7 @@ export function TransactionReview({
   hero?: ReactNode;
   children: ReactNode;
   confirmLabel?: string;
+  error?: string | null;
   onClose: () => void;
   onConfirm: () => void;
 }): ReactNode {
@@ -61,7 +63,13 @@ export function TransactionReview({
         {hero}
         <div className="w-panel-body">
           {children}
-          <Note tone="warn">{t("swap.reviewNotice")}</Note>
+          <Note>{t("swap.reviewNotice")}</Note>
+          {/* A failed signature stays on this sheet; the bar behind it is covered. */}
+          {error ? (
+            <div role="alert">
+              <Note tone="error">{error}</Note>
+            </div>
+          ) : null}
           <div className="w-btn-row">
             <Button type="button" disabled={busy} onClick={onClose}>
               {t("common.cancel")}

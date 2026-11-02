@@ -67,7 +67,7 @@ export function ChangePassword(): ReactNode {
             <Note>{t("pwd.note")}</Note>
           </>
         ) : (
-          <>
+          <div className="w-set-form">
             <label className="w-field">
               <span className="w-label">{t("pwd.current")}</span>
               <input
@@ -141,7 +141,7 @@ export function ChangePassword(): ReactNode {
                 {busy ? t("pwd.saving") : t("common.confirm")}
               </Button>
             </div>
-          </>
+          </div>
         )}
       </PanelBody>
     </Panel>

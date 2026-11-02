@@ -73,7 +73,7 @@ export function ImportAccount(): ReactNode {
             <Note>{t("imp.note")}</Note>
           </>
         ) : (
-          <>
+          <div className="w-set-form">
             <label className="w-field">
               <span className="w-label">{t("reveal.keyTitle")}</span>
               <input
@@ -142,7 +142,7 @@ export function ImportAccount(): ReactNode {
                 {busy ? t("imp.importing") : t("imp.submit")}
               </Button>
             </div>
-          </>
+          </div>
         )}
       </PanelBody>
     </Panel>

@@ -2,7 +2,7 @@ import { type ReactNode, useState } from "react";
 import { t } from "../../../core/i18n";
 import { describeError } from "../../../core/lib/errors";
 import { wipeWallet } from "../../../core/keyring/vault";
-import { Button, Note, Panel, PanelBody } from "../../components/kit";
+import { Button, Icon, Note, Panel, PanelBody } from "../../components/kit";
 import { useActionGate } from "../../hooks/useActionGate";
 
 /**
@@ -42,7 +42,7 @@ export function DangerZone(): ReactNode {
   };
 
   return (
-    <Panel title={t("danger.panel")}>
+    <Panel title={t("danger.panel")} tone="danger">
       <PanelBody>
         {!open ? (
           <>
@@ -56,11 +56,12 @@ export function DangerZone(): ReactNode {
               }}
             >
               {t("wipe.action")}
+              <Icon name="trash" size={16} />
             </Button>
             <Note>{t("danger.note")}</Note>
           </>
         ) : (
-          <>
+          <div className="w-set-form">
             <label className="w-field">
               <span className="w-label">{t("wipe.typeLabel", { word: confirmWord })}</span>
               <input
@@ -107,7 +108,7 @@ export function DangerZone(): ReactNode {
                 {busy ? t("danger.deleting") : t("danger.forever")}
               </Button>
             </div>
-          </>
+          </div>
         )}
       </PanelBody>
     </Panel>

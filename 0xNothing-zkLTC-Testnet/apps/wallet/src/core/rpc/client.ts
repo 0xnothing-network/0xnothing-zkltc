@@ -44,6 +44,9 @@ function clientFor(network: WalletNetwork) {
       timeout: 5_000,
     }),
     batch: { multicall: { batchSize: 16_384 } },
+    // No offchain lookups: nothing here resolves ENS or CCIP data, and with it on
+    // any contract (or RPC) could make the wallet fetch a URL of its choosing.
+    ccipRead: false,
   });
 }
 
@@ -102,5 +105,6 @@ export async function walletClientFor(
     account,
     chain: viemChainFor(network),
     transport: transportFor(network),
+    ccipRead: false,
   });
 }

@@ -30,7 +30,7 @@ import {
   typedEffect,
   UNLIMITED,
 } from "../lib/requestEffect";
-import { readableSignMessage, typedSummary } from "../lib/typedData";
+import { readableSignMessage, readableTypedData, typedSummary } from "../lib/typedData";
 import { useRoute } from "../router";
 import { useWallet } from "../state/WalletContext";
 
@@ -181,6 +181,23 @@ function hostOf(origin: string): string {
     return origin;
   }
 }
+
+/** How long Approve stays disarmed after a request appears or the window is raised. */
+const APPROVE_ARM_MS = 800;
+
+/**
+ * A plain-http page off this machine is shown with its scheme, so it cannot
+ * pass for the https site of the same name; loopback is a developer's own box.
+ */
+function insecureOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    return url.protocol !== "https:"
+      && !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  } catch {
+    return true;
+  }
+}
 export function Approve(): ReactNode {
   const route = useRoute();
   const { address, network, settings, notify, refresh } = useWallet();
@@ -224,6 +241,35 @@ export function Approve(): ReactNode {
   }, [queue, queueError, wanted]);
 
   const request = queue?.find((entry) => entry.id === wanted) ?? queue?.[0] ?? null;
+
+  // The window swaps in the next queued request in place, and the worker raises
+  // it whenever a page asks again. Approve stays disarmed for a moment after
+  // either, so a double click or a stray Enter meant for the previous request
+  // (or for the page) cannot approve one the user has not seen.
+  const [armedId, setArmedId] = useState<string | null>(null);
+  const [focusTick, setFocusTick] = useState(0);
+  useEffect(() => {
+    const rearm = (): void => {
+      if (document.visibilityState === "visible") setFocusTick((tick) => tick + 1);
+    };
+    window.addEventListener("focus", rearm);
+    document.addEventListener("visibilitychange", rearm);
+    return () => {
+      window.removeEventListener("focus", rearm);
+      document.removeEventListener("visibilitychange", rearm);
+    };
+  }, []);
+  const requestId = request?.id ?? null;
+  useEffect(() => {
+    setArmedId(null);
+    if (requestId === null) return;
+    const focused = document.activeElement;
+    if (focused instanceof HTMLElement) focused.blur();
+    const timer = window.setTimeout(() => setArmedId(requestId), APPROVE_ARM_MS);
+    return () => window.clearTimeout(timer);
+  }, [requestId, focusTick]);
+  const armed = requestId !== null && armedId === requestId;
+
   const signer = request?.account ?? address;
   const mismatch = request?.account !== undefined
     && (address === null || request.account.toLowerCase() !== address.toLowerCase());
@@ -289,6 +335,7 @@ export function Approve(): ReactNode {
     if (
       busy
       || request === null
+      || !armed
       || signer === null
       || mismatch
       || networkMismatch
@@ -387,6 +434,7 @@ export function Approve(): ReactNode {
   }
 
   const host = hostOf(request.origin);
+  const insecure = insecureOrigin(request.origin);
   const valueWei = tx === null ? null : safeQuantity(tx.value);
   const gasGiven = tx === null || tx.gas === undefined ? undefined : safeQuantity(tx.gas);
   const selector = tx?.data !== undefined && tx.data.length >= 10 ? tx.data.slice(0, 10) : null;
@@ -403,16 +451,20 @@ export function Approve(): ReactNode {
     || (request.kind === "switch-network" && targetNetwork === null);
 
   return (
-    <Screen title={t(KIND_TITLE[request.kind])}>
-      <div className="w-flow" aria-busy={busy}>
+    <Screen title={t(KIND_TITLE[request.kind])} bare>
+      <div className="w-flow w-approve-flow" aria-busy={busy}>
         <div className="w-flow-main">
-          <div className="w-approve-origin">
-          <span className="w-asset-symbol">{host}</span>
-          <span className="w-asset-sub">{request.title ?? request.origin}</span>
+          <div className="w-approve-bar">
+            <img className="w-approve-mark" src="./icons/icon-128.png" alt="" width={20} height={20} />
+            <div className="w-approve-origin" data-insecure={insecure ? "true" : undefined}>
+              <span className="w-asset-symbol">{insecure ? request.origin : host}</span>
+              <span className="w-asset-sub">{request.title ?? request.origin}</span>
+            </div>
+            {queue.length > 1 ? (
+              <p className="w-queue">{t("apr.queueMore", { count: queue.length - 1 })}</p>
+            ) : null}
           </div>
-          {queue.length > 1 ? (
-            <p className="w-queue">{t("apr.queueMore", { count: queue.length - 1 })}</p>
-          ) : null}
+          <h1 className="w-approve-title">{t(KIND_TITLE[request.kind])}</h1>
         {request.kind === "connect" ? (
           <Panel title={t("apr.connectTitle")}>
             <PanelBody>
@@ -449,61 +501,71 @@ export function Approve(): ReactNode {
           </Panel>
         ) : null}
         {tx !== null ? (
-          <Panel title={t("apr.txTitle")}>
-            <PanelBody>
-              <Rows>
-                <Row
-                  label={t("apr.signer")}
-                  value={signer === null ? "…" : shortenAddress(signer)}
-                />
-                <Row
-                  label={t("apr.sendTo")}
-                  value={tx.to === undefined ? t("apr.deploy") : shortenAddress(tx.to, 10, 6)}
-                  tone={tx.to === undefined ? "red" : undefined}
-                />
-                <Row
-                  label={t("apr.valueAttached", { symbol: nativeToken.symbol })}
-                  value={
-                    valueWei === null
-                      ? t("apr.unreadableValue")
-                      : t("common.amountWithSymbol", {
-                          amount: formatAmount(valueWei, nativeToken.decimals, 6),
-                          symbol: nativeToken.symbol,
-                        })
-                  }
-                  tone={valueWei !== null && valueWei > 0n ? "green" : undefined}
-                />
-                <Row
-                  label={t("apr.functionCalled")}
-                  value={
-                    selector === null
-                      ? t("apr.plainTransfer", { symbol: nativeToken.symbol })
-                      : (selectorLabel(selector) ?? t("apr.contractCall", { selector }))
-                  }
-                />
-                {effect !== null ? <EffectRows effect={effect} metaOf={metaOf} /> : null}
-                <Row
-                  label={t("apr.gas")}
-                  value={(preview.data?.gas ?? gasGiven)?.toString() ?? "…"}
-                />
-                <Row
-                  label={t("apr.maxFee")}
-                  value={
-                    preview.data?.feeWei === undefined || preview.data.feeWei === null
-                      ? "…"
-                      : t("common.amountWithSymbol", {
-                          amount: formatAmount(preview.data.feeWei, nativeToken.decimals, 6),
-                          symbol: nativeToken.symbol,
-                        })
-                  }
-                />
-              </Rows>
-              {grantNote !== null ? <Note tone="warn">{t(grantNote)}</Note> : null}
-              {tx.data !== undefined && tx.data !== "0x" ? (
-                <p className="w-code w-mono-break">{tx.data}</p>
-              ) : null}
-            </PanelBody>
-          </Panel>
+          <>
+            <Panel title={t("apr.txTitle")}>
+              <PanelBody>
+                <Rows>
+                  <Row
+                    label={t("apr.signer")}
+                    value={signer === null ? "…" : shortenAddress(signer)}
+                  />
+                  <Row
+                    label={t("apr.sendTo")}
+                    value={tx.to === undefined ? t("apr.deploy") : shortenAddress(tx.to, 10, 6)}
+                    tone={tx.to === undefined ? "red" : undefined}
+                  />
+                  <Row
+                    label={t("apr.valueAttached", { symbol: nativeToken.symbol })}
+                    value={
+                      valueWei === null
+                        ? t("apr.unreadableValue")
+                        : t("common.amountWithSymbol", {
+                            amount: formatAmount(valueWei, nativeToken.decimals, 6),
+                            symbol: nativeToken.symbol,
+                          })
+                    }
+                    tone={valueWei !== null && valueWei > 0n ? "green" : undefined}
+                  />
+                  <Row
+                    label={t("apr.functionCalled")}
+                    value={
+                      selector === null
+                        ? t("apr.plainTransfer", { symbol: nativeToken.symbol })
+                        : (selectorLabel(selector) ?? t("apr.contractCall", { selector }))
+                    }
+                  />
+                  {effect !== null ? <EffectRows effect={effect} metaOf={metaOf} /> : null}
+                </Rows>
+              </PanelBody>
+            </Panel>
+            {/* The grant warning sits between what is signed and what it costs. */}
+            {grantNote !== null ? (
+              <div className="w-approve-risk">
+                <Note tone="warn">{t(grantNote)}</Note>
+              </div>
+            ) : null}
+            {/* The fee as its own two-column card: gas limit left, max fee right. */}
+            <dl className="w-approve-fee">
+              <div>
+                <dt>{t("apr.gas")}</dt>
+                <dd>{(preview.data?.gas ?? gasGiven)?.toString() ?? "…"}</dd>
+              </div>
+              <div>
+                <dt>{t("apr.maxFee")}</dt>
+                <dd>
+                  {preview.data?.feeWei === undefined || preview.data.feeWei === null
+                    ? "…"
+                    : t("common.amountWithSymbol", {
+                        amount: formatAmount(preview.data.feeWei, nativeToken.decimals, 6),
+                        symbol: nativeToken.symbol,
+                      })}
+                </dd>
+              </div>
+            </dl>
+            {tx.data !== undefined && tx.data !== "0x" ? (
+              <p className="w-code w-mono-break w-approve-raw">{tx.data}</p>
+            ) : null}
+          </>
         ) : null}
         {request.kind === "sign" ? (
           <Panel title={t("apr.signTitle")}>
@@ -527,7 +589,7 @@ export function Approve(): ReactNode {
                 {effect !== null ? <EffectRows effect={effect} metaOf={metaOf} /> : null}
               </Rows>
               {grantNote !== null ? <Note tone="warn">{t(grantNote)}</Note> : null}
-              <p className="w-code w-mono-break">{request.message ?? ""}</p>
+              <p className="w-code w-mono-break">{readableTypedData(request.message ?? "")}</p>
               <Note>{t("apr.typedNote")}</Note>
             </PanelBody>
           </Panel>
@@ -561,7 +623,7 @@ export function Approve(): ReactNode {
               variant="primary"
               block
               disabled={
-                busy || signer === null || mismatch || networkMismatch || unreadable || wrongChain
+                busy || !armed || signer === null || mismatch || networkMismatch || unreadable || wrongChain
               }
               onClick={() => void approve()}
             >

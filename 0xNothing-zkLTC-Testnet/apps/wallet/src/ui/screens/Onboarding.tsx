@@ -3,7 +3,7 @@ import { t } from "../../core/i18n";
 import { checkMnemonic, completeWord, newMnemonic } from "../../core/keyring/mnemonic";
 import { createVault, MIN_WALLET_PASSWORD_LENGTH } from "../../core/keyring/vault";
 import { describeError } from "../../core/lib/errors";
-import { Brand, Button, Note } from "../components/kit";
+import { Button, Icon, Note, Wordmark } from "../components/kit";
 import { useActionGate } from "../hooks/useActionGate";
 import { Screen } from "../components/Screen";
 import { useWallet } from "../state/WalletContext";
@@ -21,13 +21,14 @@ import { useWallet } from "../state/WalletContext";
 type Step = "choose" | "create" | "import" | "password";
 
 export function Onboarding(): ReactNode {
-  const { openWallet } = useWallet();
+  const { network, openWallet } = useWallet();
   const [step, setStep] = useState<Step>("choose");
   const [phrase, setPhrase] = useState("");
   const [typed, setTyped] = useState("");
   const [saved, setSaved] = useState(false);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showSecret, setShowSecret] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const actionGate = useActionGate();
@@ -110,22 +111,27 @@ export function Onboarding(): ReactNode {
 
   if (step === "choose") {
     return (
-      <Screen title={t("onb.title")}>
+      <Screen title={t("onb.title")} bare>
         <div className="w-stack w-welcome">
-          <Brand />
+          <Wordmark sub="by 0xNothing" />
           <Note>{t("onb.intro")}</Note>
-          <Button variant="primary" block onClick={startCreate}>
-            {t("onb.create")}
-          </Button>
-          <Button
-            block
-            onClick={() => {
-              setError(null);
-              setStep("import");
-            }}
-          >
-            {t("onb.import")}
-          </Button>
+          <div className="w-welcome-actions">
+            <Button variant="primary" block onClick={startCreate}>
+              {t("onb.create")}
+            </Button>
+            <Button
+              block
+              onClick={() => {
+                setError(null);
+                setStep("import");
+              }}
+            >
+              {t("onb.import")}
+            </Button>
+            <p className="w-foot-caption">
+              {network.name} · {t("set.chainId")} {network.chainId}
+            </p>
+          </div>
         </div>
       </Screen>
     );
@@ -134,15 +140,16 @@ export function Onboarding(): ReactNode {
     return (
       <Screen
         title={t("onb.phraseTitle")}
+        step="2 / 3"
         onBack={() => {
           setPhrase("");
           setSaved(false);
           setStep("choose");
         }}
       >
-        <div className="w-flow">
+        <div className="w-flow w-onb" data-step="seed">
           <div className="w-flow-main">
-            <Note tone="warn">{t("onb.phraseWarn")}</Note>
+            <Note tone="error">{t("onb.phraseWarn")}</Note>
             <div className="w-seed">
               {words.map((word, index) => (
                 <span className="w-word" key={`${index}-${word}`}>
@@ -151,20 +158,22 @@ export function Onboarding(): ReactNode {
                 </span>
               ))}
             </div>
-            <div className="w-btn-row">
-              <Button onClick={startCreate}>{t("onb.regenerate")}</Button>
+            <div className="w-regen">
+              <Button variant="ghost" size="sm" onClick={startCreate}>
+                ↻ {t("onb.regenerate")}
+              </Button>
             </div>
-            <label className="w-split">
-              <span className="w-hint">{t("onb.savedCheck")}</span>
+          </div>
+          <div className="w-flow-actions">
+            <label className="w-check-row">
               <input
                 className="w-check"
                 type="checkbox"
                 checked={saved}
                 onChange={(event) => setSaved(event.target.checked)}
               />
+              <span className="w-hint">{t("onb.savedCheck")}</span>
             </label>
-          </div>
-          <div className="w-flow-actions">
             <Button
               variant="primary"
               block
@@ -183,8 +192,8 @@ export function Onboarding(): ReactNode {
   }
   if (step === "import") {
     return (
-      <Screen title={t("onb.importTitle")} onBack={() => setStep("choose")}>
-        <div className="w-flow" aria-busy={busy}>
+      <Screen title={t("onb.importTitle")} step="2 / 3" onBack={() => setStep("choose")}>
+        <div className="w-flow w-onb" data-step="import" aria-busy={busy}>
           <div className="w-flow-main">
             <label className="w-field">
               <span className="w-label">{t("onb.phraseTitle")}</span>
@@ -207,7 +216,7 @@ export function Onboarding(): ReactNode {
               />
             </label>
             {suggestions.length > 0 ? (
-              <div className="w-btn-row">
+              <div className="w-btn-row w-onb-suggest">
                 {suggestions.map((word) => (
                   <Button
                     key={word}
@@ -245,53 +254,82 @@ export function Onboarding(): ReactNode {
   return (
     <Screen
       title={t("common.password")}
+      step="3 / 3"
       onBack={() => {
         if (!busy) back();
       }}
     >
-      <div className="w-flow" aria-busy={busy}>
+      <div className="w-flow w-onb" data-step="password" aria-busy={busy}>
         <div className="w-flow-main">
-          <Note>{t("onb.passwordNote")}</Note>
           <label className="w-field">
-          <span className="w-label">{t("common.password")}</span>
-          <input
-            className="w-input"
-            type="password"
-            value={password}
-            autoComplete="new-password"
-            autoFocus
-            disabled={busy}
-            aria-label={t("common.password")}
-            aria-invalid={passwordTooShort}
-            onChange={(event) => {
-              setPassword(event.target.value);
-              setError(null);
-            }}
-          />
+            <span className="w-label">{t("common.password")}</span>
+            <span className="w-secret">
+              <input
+                className="w-input"
+                type={showSecret ? "text" : "password"}
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="none"
+                value={password}
+                autoComplete="new-password"
+                autoFocus
+                disabled={busy}
+                aria-label={t("common.password")}
+                aria-invalid={passwordTooShort}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  setError(null);
+                }}
+              />
+              <button
+                type="button"
+                className="w-secret-toggle"
+                aria-label={t("common.password")}
+                aria-pressed={showSecret}
+                onClick={() => setShowSecret((current) => !current)}
+              >
+                <Icon name={showSecret ? "eyeOff" : "eye"} size={16} />
+              </button>
+            </span>
           </label>
           <label className="w-field">
-          <span className="w-label">{t("onb.repeat")}</span>
-          <input
-            className="w-input"
-            type="password"
-            value={confirm}
-            autoComplete="new-password"
-            disabled={busy}
-            aria-label={t("onb.repeatAria")}
-            aria-invalid={passwordsMismatch}
-            onChange={(event) => {
-              setConfirm(event.target.value);
-              setError(null);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && passwordReady) void install();
-            }}
-          />
+            <span className="w-label">{t("onb.repeat")}</span>
+            <span className="w-secret">
+              <input
+                className="w-input"
+                type={showSecret ? "text" : "password"}
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="none"
+                value={confirm}
+                autoComplete="new-password"
+                disabled={busy}
+                aria-label={t("onb.repeatAria")}
+                aria-invalid={passwordsMismatch}
+                onChange={(event) => {
+                  setConfirm(event.target.value);
+                  setError(null);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && passwordReady) void install();
+                }}
+              />
+              <button
+                type="button"
+                className="w-secret-toggle"
+                aria-label={t("common.password")}
+                aria-pressed={showSecret}
+                onClick={() => setShowSecret((current) => !current)}
+              >
+                <Icon name={showSecret ? "eyeOff" : "eye"} size={16} />
+              </button>
+            </span>
           </label>
-          {passwordTooShort ? (
-            <Note tone="warn">{t("onb.shortPassword", { min: MIN_WALLET_PASSWORD_LENGTH })}</Note>
-          ) : null}
+          <p className="w-caption" data-tone={passwordTooShort ? "warn" : undefined}>
+            {t("onb.shortPassword", { min: MIN_WALLET_PASSWORD_LENGTH })}
+          </p>
           {passwordsMismatch ? <Note tone="error">{t("onb.mismatch")}</Note> : null}
+          <Note boxed>{t("onb.passwordNote")}</Note>
           {error ? (
             <div role="alert">
               <Note tone="error">{error}</Note>

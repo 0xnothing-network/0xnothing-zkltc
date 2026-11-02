@@ -1,0 +1,164 @@
+/* 0xWallet suite: onboarding screens. Loaded after wallet.css, so it overrides it. */
+
+/*
+ * Welcome, seed phrase, set password, restore and unlock, as the suite's first
+ * four screens. Every rule is scoped to .w-welcome or to a .w-onb flow, whose
+ * data-step names the step, so no other screen picks any of it up.
+ */
+
+/* The wordmark keeps the mock's 42px line, so the name sits where the mock has it. */
+.w-root :is(.w-welcome, .w-onb) .w-wordmark-name {
+  line-height: 42px;
+}
+
+.w-root :is(.w-welcome, .w-onb) .w-wordmark-sub {
+  line-height: 18px;
+}
+
+/*
+ * Welcome: wordmark high, the intro centred in the free space, the choices at the foot.
+ * The mock's 96px sits inside its 14px frame padding, so the name starts 110px down.
+ */
+.w-root .w-welcome {
+  padding: 110px var(--w-gutter) 22px;
+}
+
+.w-root .w-welcome > .w-hint {
+  max-width: 324px;
+  margin: auto 0;
+  padding: 0 12px;
+}
+
+/* The chain line sits where the mock's 24px line box puts it: 27px under Restore. */
+.w-root .w-welcome .w-foot-caption {
+  padding: 14px 0 4px;
+}
+
+/* Header steps: content 12px under the rule on the phrase, 16px on the forms. */
+.w-root .w-onb:not([data-lock]) .w-flow-main {
+  padding-top: 16px;
+}
+
+.w-root .w-onb[data-step="seed"] .w-flow-main {
+  padding-top: 12px;
+}
+
+/* The decisive action pinned 22px above the popup's foot. */
+.w-root .w-onb .w-flow-actions {
+  padding-bottom: calc(22px + env(safe-area-inset-bottom));
+}
+
+/* Seed phrase: the warning reads as body copy on a red-edged strip. A password
+   mismatch on the next step keeps its red text: that one is an error, not a warning. */
+.w-root .w-onb .w-flow-main > .w-hint:is([data-tone="error"], [data-tone="warn"]) {
+  padding: 12px;
+}
+
+.w-root .w-onb[data-step="seed"] .w-flow-main > .w-hint[data-tone="error"] {
+  color: var(--text-2);
+}
+
+.w-root .w-onb .w-seed {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--w-card-shadow);
+}
+
+.w-root .w-onb .w-word {
+  align-items: center;
+  color: var(--text-1);
+}
+
+.w-root .w-onb .w-word span {
+  width: 16px;
+  flex: 0 0 16px;
+  font-family: var(--font-num);
+}
+
+/* "New phrase" is a bare text link: its 18px line, 10px under the card. */
+.w-root .w-onb .w-regen .w-btn {
+  min-height: 18px;
+  gap: 4px;
+  line-height: 18px;
+}
+
+.w-root .w-onb[data-step="seed"] .w-flow-actions {
+  gap: 12px;
+}
+
+/* The native box keeps no UA margin: flush with the gutter, its sentence 10px on. */
+.w-root .w-onb .w-check {
+  margin: 0;
+}
+
+.w-root .w-onb .w-check-row > .w-hint {
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* Restore: the phrase in the mono face the words are shown in, completions as chips. */
+.w-root .w-onb textarea.w-input {
+  min-height: 112px;
+  padding: 12px;
+  font-family: var(--font-num);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.w-root .w-onb-suggest {
+  flex-wrap: wrap;
+}
+
+.w-root .w-onb-suggest > .w-btn {
+  flex: 0 0 auto;
+  font-family: var(--font-num);
+  font-weight: 400;
+}
+
+/* Set password: 44px fields, the eye 16px inside the right edge. */
+.w-root .w-onb .w-input {
+  min-height: 44px;
+  border-radius: var(--r-md);
+}
+
+.w-root .w-onb .w-secret-toggle {
+  width: 40px;
+}
+
+/* The info glyph 2px down against the note's first line, as the mock nudges it. */
+.w-root .w-onb .w-hint[data-boxed="true"] > .w-icon {
+  margin-top: 2px;
+  flex: 0 0 auto;
+}
+
+/* Unlock: the wordmark 94px down (80px inside the 14px frame padding), then the
+   field, its error and Open wallet 10px apart. */
+.w-root .w-onb[data-lock] .w-flow-main {
+  padding-top: 94px;
+}
+
+.w-root .w-onb[data-lock] .w-flow-main > .w-btn {
+  margin-top: 0;
+}
+
+.w-root .w-onb[data-lock] [role="alert"] > .w-caption {
+  line-height: 16px;
+}
+
+/* "Forgotten the password?" a quiet link, 30px off the foot. */
+.w-root .w-onb[data-lock] .w-flow-actions {
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+.w-root .w-onb[data-lock] .w-flow-actions > .w-btn[data-variant="ghost"] {
+  color: var(--text-3);
+}
+
+.w-root .w-onb[data-lock] .w-flow-actions > .w-btn[data-variant="ghost"]:hover:not(:disabled) {
+  color: var(--text-2);
+}
+
+/* Reset: Cancel and Erase share the foot, each 44px. */
+.w-root .w-onb[data-step="reset"] .w-flow-actions > .w-btn-row > .w-btn {
+  min-height: 44px;
+}

@@ -83,7 +83,7 @@ export function TokenManager(): ReactNode {
     <Panel title={t("tok.panel")}>
       <PanelBody>
         {adding ? (
-          <>
+          <div className="w-set-form">
             <label className="w-field">
               <span className="w-label">{t("tok.addressLabel")}</span>
               <input
@@ -137,10 +137,9 @@ export function TokenManager(): ReactNode {
               </Button>
             </div>
             <Note>{t("tok.note")}</Note>
-          </>
+          </div>
         ) : (
           <Button
-            variant="primary"
             block
             disabled={busy !== null}
             onClick={() => {

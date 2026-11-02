@@ -11,7 +11,9 @@ const config: CapacitorConfig = {
   webDir: "dist",
   android: {
     allowMixedContent: false,
-    captureInput: true,
+    // Off (the default): with it on, Capacitor hands the keyboard a bare input
+    // connection that can inject script and that hides password fields' type.
+    captureInput: false,
     webContentsDebuggingEnabled: false,
   },
   server: {

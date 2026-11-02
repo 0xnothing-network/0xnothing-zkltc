@@ -23,7 +23,7 @@ test("Android regeneration excludes wallet backups and repairs the scaffold pack
     assert.match(once, /android:fullBackupContent="@xml\/wallet_backup_rules"/u);
     assert.match(once, /android:dataExtractionRules="@xml\/wallet_data_extraction_rules"/u);
     assert.match(once, /android:label="Keep label"/u);
-    assert.match(once, /<activity android:name=".MainActivity" \/>/u);
+    assert.match(once, /<activity android:name=".MainActivity" android:taskAffinity="" \/>/u);
     assert.equal(await readFile(examplePath, "utf8"), 'assertEquals("xyz.zeroxnothing.wallet", appContext.getPackageName());');
 
     const legacy = await readFile(join(main, "res/xml/wallet_backup_rules.xml"), "utf8");

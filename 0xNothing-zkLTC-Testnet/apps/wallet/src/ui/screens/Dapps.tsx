@@ -8,7 +8,7 @@ import { persistentStore } from "../../core/platform/storage";
 import { STORAGE_KEYS } from "../../core/platform/storageKeys";
 import { listConnections, revokeConnection } from "../../core/services/dapp";
 import { announceToPages } from "../../core/services/walletEvents";
-import { Button, Icon, Note, Panel, PanelBody } from "../components/kit";
+import { Button, Icon, Note } from "../components/kit";
 import { Screen } from "../components/Screen";
 import { useActionGate } from "../hooks/useActionGate";
 import { useLiveRead } from "../hooks/useLiveRead";
@@ -59,66 +59,69 @@ export function Dapps(): ReactNode {
   };
   return (
     <Screen title={t("dapp.title")}>
-      <div className="w-list">
-        {DAPPS.map((entry) => (
-          <button
-            key={entry.id}
-            type="button"
-            className="w-dapp"
-            onClick={() => void openExternal(entry.url)}
-          >
-            <span className="w-mark" aria-hidden="true">
-              {entry.mark}
-            </span>
-            <span className="w-asset-main">
-              <span className="w-asset-symbol">{entry.title}</span>
-              <span className="w-asset-sub">{entry.subtitle}</span>
-            </span>
-            <span className="w-asset-side">
-              <span className="w-asset-usd" aria-hidden="true"><Icon name="external" size={15} /></span>
-            </span>
-          </button>
-        ))}
-      </div>
-      <div className="w-stack" aria-busy={read.busy || busy !== null}>
-        <Panel title={t("dapp.connections")}>
-          <PanelBody>
-            {read.loading && read.data === null ? (
+      <div className="w-stack w-dapps" aria-busy={read.busy || busy !== null}>
+        <div className="w-list">
+          {DAPPS.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              className="w-dapp"
+              onClick={() => void openExternal(entry.url)}
+            >
+              <span className="w-mark" aria-hidden="true">
+                {entry.mark}
+              </span>
+              <span className="w-asset-main">
+                <span className="w-asset-symbol">{entry.title}</span>
+                <span className="w-asset-sub">{entry.subtitle}</span>
+              </span>
+              <span className="w-asset-side">
+                <span className="w-asset-usd" aria-hidden="true"><Icon name="external" size={16} /></span>
+              </span>
+            </button>
+          ))}
+        </div>
+        {/* Connected sites: the label outside, each origin on its own small card. */}
+        <section className="w-dapp-sites">
+          <h2 className="w-dapp-sites-label">{t("dapp.connections")}</h2>
+          {read.loading && read.data === null ? (
+            <div className="w-dapp-site">
               <Note>{t("common.working")}</Note>
-            ) : read.error !== null && read.data === null ? (
-              <div role="alert">
-                <Note tone="error">{read.error}</Note>
-              </div>
-            ) : connections.length === 0 ? (
+            </div>
+          ) : read.error !== null && read.data === null ? (
+            <div role="alert">
+              <Note tone="error">{read.error}</Note>
+            </div>
+          ) : connections.length === 0 ? (
+            <div className="w-dapp-site">
               <Note>{isExtension ? t("dapp.emptyExt") : t("dapp.emptyAndroid")}</Note>
-            ) : (
-              connections.map((entry) => (
-                <div key={entry.origin} className="w-split">
-                  <span className="w-asset-main">
-                    <span className="w-asset-symbol">{entry.origin}</span>
-                    <span className="w-asset-sub">
-                      {entry.accounts.map((account) => shortenAddress(account)).join(", ")} ·{" "}
-                      {formatTimeAgo(entry.at)}
-                    </span>
+            </div>
+          ) : (
+            connections.map((entry) => (
+              <div key={entry.origin} className="w-split w-dapp-site">
+                <span className="w-asset-main">
+                  <span className="w-asset-symbol">{entry.origin}</span>
+                  <span className="w-asset-sub">
+                    {entry.accounts.map((account) => shortenAddress(account)).join(", ")} ·{" "}
+                    {formatTimeAgo(entry.at)}
                   </span>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    disabled={busy !== null}
-                    onClick={() => void revoke(entry.origin)}
-                  >
-                    {busy === entry.origin ? t("common.working") : t("dapp.revoke")}
-                  </Button>
-                </div>
-              ))
-            )}
-            {read.error !== null && read.data !== null ? (
-              <div role="alert">
-                <Note tone="error">{read.error}</Note>
+                </span>
+                <Button
+                  size="sm"
+                  disabled={busy !== null}
+                  onClick={() => void revoke(entry.origin)}
+                >
+                  {busy === entry.origin ? t("common.working") : t("dapp.revoke")}
+                </Button>
               </div>
-            ) : null}
-          </PanelBody>
-        </Panel>
+            ))
+          )}
+          {read.error !== null && read.data !== null ? (
+            <div role="alert">
+              <Note tone="error">{read.error}</Note>
+            </div>
+          ) : null}
+        </section>
         {actionError !== null ? (
           <div role="alert">
             <Note tone="error">{actionError}</Note>

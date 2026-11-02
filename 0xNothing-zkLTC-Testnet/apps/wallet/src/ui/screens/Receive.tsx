@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { addressUrl } from "../../config/chain";
 import { t } from "../../core/i18n";
+import { accountLabel } from "../../core/keyring/vault";
 import { openExternal } from "../../core/platform/env";
 import { Button, Empty, Note } from "../components/kit";
 import { Screen } from "../components/Screen";
@@ -8,9 +9,18 @@ import { useCopy } from "../hooks/useCopy";
 import { goHome } from "../router";
 import { useWallet } from "../state/WalletContext";
 
-/** Three readable rows keep the whole address visible without a cramped grid. */
-function groups(address: string): string[] {
-  return [address.slice(0, 14), address.slice(14, 28), address.slice(28)].filter(Boolean);
+/**
+ * Three readable rows keep the whole address visible without a cramped grid:
+ * two 8-character groups a row, spaced by the stylesheet rather than a typed
+ * space, so a selected address still copies as one unbroken string.
+ */
+function groups(address: string): string[][] {
+  const rows: string[][] = [];
+  for (let at = 0; at < address.length; at += 16) {
+    const row = address.slice(at, at + 16);
+    rows.push([row.slice(0, 8), row.slice(8)].filter(Boolean));
+  }
+  return rows;
 }
 
 function saveQr(dataUrl: string, address: string): void {
@@ -23,7 +33,7 @@ function saveQr(dataUrl: string, address: string): void {
 }
 
 export function Receive(): ReactNode {
-  const { address, network, notify } = useWallet();
+  const { active, address, network, notify } = useWallet();
   const { copied, copy } = useCopy();
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(address !== null);
@@ -72,8 +82,12 @@ export function Receive(): ReactNode {
 
   return (
     <Screen title={t("recv.title")} onBack={goHome}>
-      <div className="w-receive" aria-busy={qrLoading}>
+      <div className="w-receive w-recv" aria-busy={qrLoading}>
         <section className="w-receive-card">
+          <span className="w-receive-account">
+            {active ? accountLabel(active) : t("account.main")}
+            <span className="w-receive-network"> · {network.name}</span>
+          </span>
           {qrDataUrl ? (
             <div className="w-receive-qr">
               <img
@@ -88,37 +102,36 @@ export function Receive(): ReactNode {
               <Note>{t("common.working")}</Note>
             </div>
           ) : null}
-          <span className="w-receive-network">{network.name}</span>
           <div className="w-addr-block">
-            {groups(address).map((chunk, index) => (
-              <span key={`${chunk}-${index}`}>{chunk}</span>
+            {groups(address).map((row, index) => (
+              <span key={`${row.join("")}-${index}`} className="w-addr-row">
+                {row.map((chunk, part) => (
+                  <span key={part}>{chunk}</span>
+                ))}
+              </span>
             ))}
           </div>
         </section>
-        <Button
-          variant="primary"
-          block
-          onClick={() => void copy(address).then((ok) => {
-            if (!ok) notify(t("common.copyFailed"), "error");
-          })}
-        >
-          {copied ? `${t("common.copied")} ✓` : t("recv.copyAddress")}
-        </Button>
-        {qrDataUrl || network.explorerUrl ? (
-          <div className="w-btn-row">
-            {qrDataUrl ? (
-              <Button onClick={() => saveQr(qrDataUrl, address)}>
-                {t("common.save")} QR
-              </Button>
-            ) : null}
-            {network.explorerUrl ? (
-              <Button onClick={() => void openExternal(addressUrl(address, network))}>
-                {t("recv.viewExplorer")}
-              </Button>
-            ) : null}
-          </div>
+        <div className="w-btn-row">
+          <Button
+            onClick={() => void copy(address).then((ok) => {
+              if (!ok) notify(t("common.copyFailed"), "error");
+            })}
+          >
+            {copied ? `${t("common.copied")} ✓` : t("recv.copyAddress")}
+          </Button>
+          {qrDataUrl ? (
+            <Button onClick={() => saveQr(qrDataUrl, address)}>
+              {t("common.save")} QR
+            </Button>
+          ) : null}
+        </div>
+        {network.explorerUrl ? (
+          <Button variant="ghost" size="sm" onClick={() => void openExternal(addressUrl(address, network))}>
+            {t("recv.viewExplorer")} ↗
+          </Button>
         ) : null}
-        <Note>{t("recv.warning", { network: network.name })}</Note>
+        <Note tone="warn">{t("recv.warning", { network: network.name })}</Note>
       </div>
     </Screen>
   );

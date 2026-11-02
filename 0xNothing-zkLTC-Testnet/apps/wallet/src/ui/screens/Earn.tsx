@@ -21,7 +21,7 @@ import {
 import { loadPortfolio, rowBalance } from "../../core/services/portfolio";
 import { AmountField } from "../components/AmountField";
 import { TransactionReview } from "../components/TransactionReview";
-import { Button, Empty, Note, Panel, PanelBody, Row, Rows } from "../components/kit";
+import { Button, Empty, Icon, Note, Panel, PanelBody, Row, Rows } from "../components/kit";
 import { Screen } from "../components/Screen";
 import { useActionGate } from "../hooks/useActionGate";
 import { useLiveRead } from "../hooks/useLiveRead";
@@ -275,182 +275,203 @@ export function Earn(): ReactNode {
         }}
       >
         <div className="w-flow-main">
-          <AmountField
-            label={t("earn.stakeLabel")}
-            value={amount}
-            invalid={amountInvalid}
-            disabled={busy}
-            onChange={(next) => {
-              setAmount(next);
-              setError(null);
-            }}
-            symbol={NUSD_TOKEN.symbol}
-            onMax={walletNusd === null ? undefined : fillStakeMax}
-            hint={walletNusd === null
-              ? t("send.readingBalance")
-              : t("lend.hintWallet", {
-                amount: formatBalance(walletNusd, NUSD_TOKEN.decimals),
-                symbol: NUSD_TOKEN.symbol,
-              })}
-          />
-          <div className="w-field">
-            <span className="w-label">{t("earn.lockPeriod")}</span>
-            <div className="w-earn-locks" role="group" aria-label={t("earn.lockPeriod")}>
-              {POINTS_LOCK_OPTIONS.map((option) => (
-                <button
-                  key={option.duration}
-                  type="button"
-                  className="w-earn-lock-option"
-                  aria-label={t("earn.lockOption", {
-                    days: lockDays(option.duration),
-                    multiplier: multiplierLabel(option.multiplierBps),
-                  })}
-                  aria-pressed={lockDuration === option.duration}
-                  disabled={busy}
-                  onClick={() => {
-                    setLockDuration(option.duration);
-                    setError(null);
-                  }}
-                >
-                  <span aria-hidden="true">{lockDays(option.duration)}d</span>
-                  <strong aria-hidden="true">x{multiplierLabel(option.multiplierBps)}</strong>
-                </button>
-              ))}
-            </div>
-          </div>
-          <dl className="w-earn-estimate" aria-label={t("earn.stake")}>
+          <dl className="w-earn-stats">
             <div>
-              <dt>{t("earn.pointsPerDay")}</dt>
-              <dd data-tone="green">
-                {estimatedDailyPoints === null ? "—" : formatPointsPerDay(estimatedDailyPoints)}
+              <dt>{t("earn.locked")}</dt>
+              <dd>
+                {state === null
+                  ? "…"
+                  : `${formatAmount(state.totalLocked, NUSD_TOKEN.decimals, 4)} NUSD`}
               </dd>
             </div>
             <div>
-              <dt>{t("earn.unlocks")}</dt>
-              <dd>{estimatedUnlockTime === null ? "—" : unlockDateLabel(estimatedUnlockTime)}</dd>
+              <dt>{t("earn.points")}</dt>
+              <dd data-tone="green">{state === null ? "…" : formatPoints(state.points)}</dd>
             </div>
-          </dl>
-          <Panel>
-            <Rows>
-              <Row
-                label={t("earn.locked")}
-                value={state === null
-                  ? "…"
-                  : `${formatAmount(state.totalLocked, NUSD_TOKEN.decimals, 4)} NUSD`}
-                tone="green"
-              />
-              <Row
-                label={t("earn.points")}
-                value={state === null ? "…" : formatPoints(state.points)}
-                tone="green"
-              />
-              <Row
-                label={t("earn.rewardShare")}
-                value={state === null
-                  ? "…"
-                  : `${(rewardShareBps(state.weight, state.totalWeight) / 100).toFixed(2)}%`}
-              />
-              <Row
-                label={t("earn.yourDaily")}
-                value={state === null
+            <div>
+              <dt>{t("earn.yourDaily")}</dt>
+              <dd>
+                {state === null
                   ? "…"
                   : `${formatAmount(dailyReward(state.rewardRate, state.weight, state.totalWeight), NUSD_TOKEN.decimals, 4)} NUSD`}
-                tone="green"
-              />
-              <Row
-                label={t("earn.stream")}
-                value={state === null
+              </dd>
+            </div>
+            <div className="w-earn-claim">
+              <div>
+                <dt>{t("earn.claimable")}</dt>
+                <dd>
+                  {state === null
+                    ? "…"
+                    : `${formatAmount(state.claimable, NUSD_TOKEN.decimals, 4)} NUSD`}
+                </dd>
+              </div>
+              {state !== null && state.claimable > 0n ? (
+                <Button type="button" variant="ghost" size="sm" disabled={busy || !claimReady} onClick={openClaimReview}>
+                  {t("earn.claim")}
+                </Button>
+              ) : null}
+            </div>
+            <div>
+              <dt>{t("earn.rewardShare")}</dt>
+              <dd>
+                {state === null
+                  ? "…"
+                  : `${(rewardShareBps(state.weight, state.totalWeight) / 100).toFixed(2)}%`}
+              </dd>
+            </div>
+            <div>
+              <dt>{t("earn.stream")}</dt>
+              <dd>
+                {state === null
                   ? "…"
                   : state.rewardRate > 0n
                     ? `${formatAmount(state.rewardRate * 86_400n, NUSD_TOKEN.decimals, 2)} NUSD`
                     : `${formatAmount(state.queued, NUSD_TOKEN.decimals, 2)} NUSD`}
+              </dd>
+            </div>
+          </dl>
+
+          <section className="w-earn-stake" aria-label={t("earn.stake")}>
+            <AmountField
+              label={t("earn.stakeLabel")}
+              inset
+              value={amount}
+              invalid={amountInvalid}
+              disabled={busy}
+              onChange={(next) => {
+                setAmount(next);
+                setError(null);
+              }}
+              symbol={null}
+              onMax={walletNusd === null ? undefined : fillStakeMax}
+              hint={walletNusd === null
+                ? t("send.readingBalance")
+                : t("lend.hintWallet", {
+                  amount: formatBalance(walletNusd, NUSD_TOKEN.decimals),
+                  symbol: NUSD_TOKEN.symbol,
+                })}
+            />
+            <div className="w-field">
+              <span className="w-label">{t("earn.lockPeriod")}</span>
+              <div className="w-earn-locks" role="group" aria-label={t("earn.lockPeriod")}>
+                {POINTS_LOCK_OPTIONS.map((option) => (
+                  <button
+                    key={option.duration}
+                    type="button"
+                    className="w-earn-lock-option"
+                    aria-label={t("earn.lockOption", {
+                      days: lockDays(option.duration),
+                      multiplier: multiplierLabel(option.multiplierBps),
+                    })}
+                    aria-pressed={lockDuration === option.duration}
+                    disabled={busy}
+                    onClick={() => {
+                      setLockDuration(option.duration);
+                      setError(null);
+                    }}
+                  >
+                    <span aria-hidden="true">{lockDays(option.duration)}d ×{multiplierLabel(option.multiplierBps)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Rows>
+              <Row
+                label={t("earn.pointsPerDay")}
+                value={estimatedDailyPoints === null ? "—" : formatPointsPerDay(estimatedDailyPoints)}
               />
               <Row
-                label={t("earn.claimable")}
-                value={state === null
-                  ? "…"
-                  : `${formatAmount(state.claimable, NUSD_TOKEN.decimals, 4)} NUSD`}
-                tone="green"
+                label={t("earn.unlocks")}
+                value={estimatedUnlockTime === null ? "—" : unlockDateLabel(estimatedUnlockTime)}
               />
             </Rows>
-            {state !== null && state.claimable > 0n ? (
-              <PanelBody>
-                <Button type="button" variant="primary" block disabled={busy || !claimReady} onClick={openClaimReview}>
-                  {t("earn.claim")}
-                </Button>
-              </PanelBody>
-            ) : null}
-          </Panel>
-          {overWallet ? <Note tone="error">{t("earn.overWallet")}</Note> : null}
+            {overWallet ? <Note tone="error">{t("earn.overWallet")}</Note> : null}
+            {error !== null ? <Note tone="error">{error}</Note> : null}
+            <Button type="submit" variant="primary" block disabled={busy || !stakeReady}>
+              {busy || read.loading ? t("common.working") : t("earn.submitStake")}
+            </Button>
+          </section>
           {read.error !== null ? <Note tone="error">{read.error}</Note> : null}
-          <Note>{t("earn.stakeNote")}</Note>
-        </div>
-        <div className="w-flow-actions">
-          {error !== null ? <Note tone="error">{error}</Note> : null}
-          <Button type="submit" variant="primary" block disabled={busy || !stakeReady}>
-            {busy || read.loading ? t("common.working") : t("earn.submitStake")}
-          </Button>
+          <p className="w-hint w-flow-note">
+            <Icon name="info" size={14} />
+            <span>{t("earn.stakeNote")}</span>
+          </p>
         </div>
       </form>
 
-      <div className="w-stack">
-        <span className="w-label">{t("earn.positions")}</span>
-        {state?.positionsTruncated === true ? (
-          <Note tone="warn">
-            {t("earn.positionsTruncated", { count: state.positionCount.toString() })}
-          </Note>
-        ) : null}
-        {state === null && read.loading ? (
-          <Empty>{t("common.working")}</Empty>
-        ) : state === null || state.positions.length === 0 ? (
-          <Empty>{t("earn.noPositions")}</Empty>
-        ) : (
-          state.positions.map((position) => {
-            const mature = !position.withdrawn && now >= position.unlockTime;
-            return (
-              <Panel key={position.id.toString()} title={t("earn.position", { id: position.id.toString() })}>
-                <PanelBody>
-                  <Rows>
-                    <Row
-                      label={t("earn.positionAmount")}
-                      value={`${formatAmount(position.amount, NUSD_TOKEN.decimals, 4)} NUSD`}
-                    />
-                    <Row
-                      label={t("earn.pointsPerDay")}
-                      value={position.withdrawn ? "—" : formatPointsPerDay(position.weight)}
-                      tone="green"
-                    />
-                    <Row label={t("earn.unlocks")} value={unlockLabel(position.unlockTime)} />
-                    {position.withdrawn ? (
-                      <Row label={t("earn.withdrawn")} value={t("common.yes")} tone="dim" />
-                    ) : null}
-                  </Rows>
-                  {mature ? (
+      <div className="w-stack w-earn-more">
+        <section className="w-earn-positions" aria-label={t("earn.positions")}>
+          <span className="w-label">{t("earn.positions")}</span>
+          {state?.positionsTruncated === true ? (
+            <Note tone="warn">
+              {t("earn.positionsTruncated", { count: state.positionCount.toString() })}
+            </Note>
+          ) : null}
+          {state === null && read.loading ? (
+            <Empty>{t("common.working")}</Empty>
+          ) : state === null || state.positions.length === 0 ? (
+            <Empty>{t("earn.noPositions")}</Empty>
+          ) : (
+            state.positions.map((position) => {
+              const mature = !position.withdrawn && now >= position.unlockTime;
+              // How far through its lock the position is, for the bar under the rows.
+              const left = position.unlockTime > now ? Number(position.unlockTime - now) : 0;
+              const elapsed = Math.min(position.lockDuration, Math.max(0, position.lockDuration - left));
+              return (
+                <Panel
+                  key={position.id.toString()}
+                  title={t("earn.position", { id: position.id.toString() })}
+                  aside={position.withdrawn ? undefined : (
                     <Button
                       type="button"
-                      variant="primary"
-                      block
-                      disabled={busy}
+                      size="sm"
+                      disabled={busy || !mature}
                       onClick={() => openWithdrawReview(position)}
                     >
                       {t("earn.withdraw")}
                     </Button>
-                  ) : null}
-                </PanelBody>
-              </Panel>
-            );
-          })
-        )}
-      </div>
+                  )}
+                >
+                  <PanelBody>
+                    <Rows>
+                      <Row
+                        label={t("earn.positionAmount")}
+                        value={`${formatAmount(position.amount, NUSD_TOKEN.decimals, 4)} NUSD`}
+                      />
+                      <Row
+                        label={t("earn.pointsPerDay")}
+                        value={position.withdrawn ? "—" : formatPointsPerDay(position.weight)}
+                        tone="green"
+                      />
+                      <Row label={t("earn.unlocks")} value={unlockLabel(position.unlockTime)} />
+                      {position.withdrawn ? (
+                        <Row label={t("earn.withdrawn")} value={t("common.yes")} tone="dim" />
+                      ) : null}
+                    </Rows>
+                    {position.withdrawn || position.lockDuration === 0 ? null : (
+                      <progress
+                        className="w-earn-progress"
+                        value={elapsed}
+                        max={position.lockDuration}
+                        aria-hidden="true"
+                      />
+                    )}
+                  </PanelBody>
+                </Panel>
+              );
+            })
+          )}
+        </section>
 
-      <Panel title={t("earn.lending")}>
-        <PanelBody>
-          <Note>{t("earn.lendingNote")}</Note>
-          <Button type="button" block onClick={() => navigate("#/lend")}>
-            {t("earn.lending")}
-          </Button>
-        </PanelBody>
-      </Panel>
+        <Panel title={t("earn.lending")}>
+          <PanelBody>
+            <Note>{t("earn.lendingNote")}</Note>
+            <Button type="button" block onClick={() => navigate("#/lend")}>
+              {t("earn.lending")}
+            </Button>
+          </PanelBody>
+        </Panel>
+      </div>
 
       {review !== null ? (
         <TransactionReview
