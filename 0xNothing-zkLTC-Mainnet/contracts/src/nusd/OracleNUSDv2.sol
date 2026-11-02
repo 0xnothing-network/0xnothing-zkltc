@@ -18,6 +18,10 @@ import {IPriceOracle} from "../oracle/IPriceOracle.sol";
 ///           restore the peg when LTC recovers. Redemption can never be paused.
 ///         - Surplus: once the reserve reaches 3.3x supply, anyone can mint the excess down to 3.0x,
 ///           at most once every 7 days: 80% to the staking pool, 20% to the treasury.
+///         - Oracle lag: a price is only exact when it is fresh, so minting (and the surplus
+///           release) also needs a price no older than `mintMaxPriceAge`, minting is capped per
+///           hour, and the mint and redeem fees (up to 2%) can be set at or above the feed's
+///           deviation threshold. Together they bound what anyone can extract from a lagging feed.
 ///         The admin changes bounded parameters only; nobody can pause redemption, move the
 ///         reserve or mint outside these rules.
 contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
@@ -28,6 +32,9 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
     error InvalidFee();
     error InvalidSurplusRatios();
     error InvalidSurplusSplit();
+    error InvalidMintGuards();
+    error StaleMintPrice(uint256 updatedAt, uint256 maxAge);
+    error MintRateLimited(uint256 requestedAmountNusd, uint256 availableAmountNusd);
     error MintPaused();
     error SlippageExceeded(uint256 minimumAmount, uint256 actualAmount);
     error SupplyCeilingExceeded(uint256 requestedAmountNusd, uint256 availableAmountNusd);
@@ -50,7 +57,12 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     /// @notice How long the oracle must stay unusable before the price-free exit opens.
     uint256 public constant ORACLE_FAILURE_GRACE = 7 days;
-    uint256 public constant MAX_FEE_BPS = 50;
+    /// @notice Mint and redeem fees can be raised to the feed's deviation threshold, never above 2%.
+    uint256 public constant MAX_FEE_BPS = 200;
+    /// @notice The hourly mint budget resets on this period.
+    uint256 public constant MINT_WINDOW = 1 hours;
+    uint256 public constant MIN_MINT_PRICE_AGE = 1 minutes;
+    uint256 public constant MAX_MINT_PRICE_AGE = 1 days;
     /// @notice The ceiling doubles once supply uses 80% of it, at most once per interval.
     uint256 public constant CEILING_RAISE_USAGE_BPS = 8_000;
     uint256 public constant CEILING_RAISE_INTERVAL = 7 days;
@@ -85,6 +97,14 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
     address public surplusTreasury;
     uint16 public surplusTreasuryBps = 2_000;
 
+    // One slot: the oracle-lag guards on minting.
+    /// @notice NUSD that may be minted per MINT_WINDOW (unlimited until the admin sets it).
+    uint96 public mintLimitPerWindow = type(uint96).max;
+    uint96 public mintedInWindow;
+    uint40 public mintWindowStart;
+    /// @notice Oldest price, in seconds, a mint or surplus release accepts.
+    uint24 public mintMaxPriceAge = 90 minutes;
+
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
 
@@ -113,6 +133,7 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
     event SupplyCeilingUpdated(uint256 supplyCeilingNusd, bool automatic);
     event SurplusRecipientsUpdated(address indexed staking, address indexed treasury, uint256 treasuryBps);
     event SurplusRatiosUpdated(uint256 floorBps, uint256 triggerBps);
+    event MintGuardsUpdated(uint256 maxPriceAge, uint256 limitPerWindow);
 
     constructor(IPriceOracle priceOracle, address initialAdmin, uint256 supplyCeilingNusd_)
         RoleControl(initialAdmin)
@@ -172,6 +193,7 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
         if (msg.value == 0) revert InvalidAmount();
         if (recipient == address(0)) revert InvalidRecipient();
 
+        _requireFreshPrice();
         amountNusd = quoteMint(msg.value);
         if (amountNusd == 0) revert InvalidAmount();
         if (amountNusd < minNusdOut) revert SlippageExceeded(minNusdOut, amountNusd);
@@ -180,6 +202,8 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
         uint256 ceiling = _raiseCeilingIfDue(supply + amountNusd);
         uint256 availableAmountNusd = ceiling > supply ? ceiling - supply : 0;
         if (amountNusd > availableAmountNusd) revert SupplyCeilingExceeded(amountNusd, availableAmountNusd);
+
+        _consumeMintBudget(amountNusd);
 
         // The whole deposit joins the reserve; the fee is the NUSD that was not minted for it.
         totalCollateralWei += msg.value;
@@ -316,6 +340,7 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
         if (block.timestamp < nextAt) revert SurplusTooSoon(nextAt);
 
         bool ready;
+        _requireFreshPrice();
         (amountNusd, ready) = surplusMintCapacity();
         uint256 reserveValue = _valueOf(totalCollateralWei);
         if (!ready) revert SurplusBelowTrigger(reserveValue, totalSupply);
@@ -367,6 +392,27 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
         emit SurplusRecipientsUpdated(staking, treasury, treasuryBps);
     }
 
+    /// @notice Oracle-lag guards: the oldest price a mint accepts and the NUSD mintable per hour.
+    function setMintGuards(uint256 maxPriceAge, uint256 limitPerWindow) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (
+            maxPriceAge < MIN_MINT_PRICE_AGE || maxPriceAge > MAX_MINT_PRICE_AGE || limitPerWindow == 0
+                || limitPerWindow > type(uint96).max
+        ) revert InvalidMintGuards();
+        // forge-lint: disable-next-line(unsafe-typecast)
+        mintMaxPriceAge = uint24(maxPriceAge);
+        // forge-lint: disable-next-line(unsafe-typecast)
+        mintLimitPerWindow = uint96(limitPerWindow);
+        emit MintGuardsUpdated(maxPriceAge, limitPerWindow);
+    }
+
+    /// @notice NUSD that can still be minted in the current window.
+    function mintAvailableInWindow() public view returns (uint256) {
+        // forge-lint: disable-next-line(block-timestamp)
+        if (block.timestamp >= uint256(mintWindowStart) + MINT_WINDOW) return mintLimitPerWindow;
+        uint256 minted = mintedInWindow;
+        return minted >= mintLimitPerWindow ? 0 : mintLimitPerWindow - minted;
+    }
+
     function setSurplusRatios(uint256 floorBps, uint256 triggerBps) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (
             floorBps < MIN_SURPLUS_FLOOR_BPS || triggerBps < floorBps + MIN_SURPLUS_GAP_BPS
@@ -398,6 +444,28 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
                 emit SupplyCeilingUpdated(raised, true);
                 ceiling = raised;
             }
+        }
+    }
+
+    function _requireFreshPrice() private view {
+        (, uint256 updatedAt,) = oracle.readPriceWad();
+        uint256 maxAge = mintMaxPriceAge;
+        // forge-lint: disable-next-line(block-timestamp)
+        if (updatedAt > block.timestamp || block.timestamp - updatedAt > maxAge) revert StaleMintPrice(updatedAt, maxAge);
+    }
+
+    /// @dev Counts a mint against the hourly budget, opening a new window when the last one ended.
+    function _consumeMintBudget(uint256 amountNusd) private {
+        uint256 available = mintAvailableInWindow();
+        if (amountNusd > available) revert MintRateLimited(amountNusd, available);
+        // forge-lint: disable-next-line(block-timestamp)
+        if (block.timestamp >= uint256(mintWindowStart) + MINT_WINDOW) {
+            mintWindowStart = uint40(block.timestamp);
+            // forge-lint: disable-next-line(unsafe-typecast)
+            mintedInWindow = uint96(amountNusd);
+        } else {
+            // forge-lint: disable-next-line(unsafe-typecast)
+            mintedInWindow += uint96(amountNusd);
         }
     }
 

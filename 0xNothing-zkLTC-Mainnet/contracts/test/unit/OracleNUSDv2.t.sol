@@ -63,9 +63,11 @@ contract OracleNUSDv2Test is TestBase {
         assertEq(nusd.quoteRedeem(99.5 ether), 0.990025 ether, "oracle value minus fee");
 
         vm.expectRevert(OracleNUSDv2.InvalidFee.selector);
-        nusd.setFees(51, 0);
+        nusd.setFees(201, 0);
         vm.expectRevert(OracleNUSDv2.InvalidFee.selector);
-        nusd.setFees(0, 51);
+        nusd.setFees(0, 201);
+        nusd.setFees(200, 200);
+        assertEq(nusd.mintFeeBps(), 200, "fees reach 2% for coarse feeds");
     }
 
     function testMintGuards() public {
@@ -344,6 +346,85 @@ contract OracleNUSDv2Test is TestBase {
 
         vm.expectRevert(OracleNUSDv2.InvalidAmount.selector);
         nusd.coverReserve();
+    }
+
+    // ---------------------------------------------------------------- oracle-lag guards
+
+    function testMintNeedsAFreshPrice() public {
+        nusd.setMintGuards(10 minutes, 1_000_000 ether);
+        oracle.setUpdatedAt(vm.getBlockTimestamp() - 11 minutes);
+        vm.prank(ALICE);
+        vm.expectRevert(
+            abi.encodeWithSelector(OracleNUSDv2.StaleMintPrice.selector, vm.getBlockTimestamp() - 11 minutes, 10 minutes)
+        );
+        nusd.mintAtOracle{value: 1 ether}(0, ALICE);
+
+        oracle.setUpdatedAt(vm.getBlockTimestamp() - 10 minutes);
+        assertEq(_mint(nusd, ALICE, 1 ether), 100 ether, "fresh enough");
+
+        // Redemption never waits for a fresher price.
+        oracle.setUpdatedAt(vm.getBlockTimestamp() - 80 minutes);
+        vm.prank(ALICE);
+        assertEq(nusd.redeemAtOracle(100 ether, 0, ALICE), 1 ether, "redeem stays open");
+    }
+
+    function testSurplusReleaseNeedsAFreshPriceToo() public {
+        nusd.setSurplusRecipients(STAKING, TREASURY, 2_000);
+        nusd.setMintGuards(10 minutes, 1_000_000 ether);
+        _mint(nusd, ALICE, 1 ether);
+        oracle.setPrice(1_000 ether);
+        oracle.setUpdatedAt(vm.getBlockTimestamp() - 1 hours);
+        vm.expectRevert(
+            abi.encodeWithSelector(OracleNUSDv2.StaleMintPrice.selector, vm.getBlockTimestamp() - 1 hours, 10 minutes)
+        );
+        nusd.releaseSurplus();
+    }
+
+    function testMintingIsCappedPerHour() public {
+        nusd.setMintGuards(90 minutes, 150 ether);
+        _mint(nusd, ALICE, 1 ether);
+        assertEq(nusd.mintAvailableInWindow(), 50 ether, "100 of 150 used");
+        vm.prank(BOB);
+        vm.expectRevert(abi.encodeWithSelector(OracleNUSDv2.MintRateLimited.selector, 100 ether, 50 ether));
+        nusd.mintAtOracle{value: 1 ether}(0, BOB);
+        _mint(nusd, BOB, 0.5 ether);
+        assertEq(nusd.mintAvailableInWindow(), 0, "window spent");
+
+        vm.warp(vm.getBlockTimestamp() + 1 hours);
+        oracle.setUpdatedAt(vm.getBlockTimestamp());
+        assertEq(nusd.mintAvailableInWindow(), 150 ether, "new window");
+        _mint(nusd, BOB, 1 ether);
+        assertEq(nusd.mintedInWindow(), 100 ether, "counted in the new window");
+    }
+
+    /// A round trip across a price update never pays when the move is within the two fees:
+    /// mint at the old price, redeem at the new one, and get back no more zkLTC than deposited.
+    function testFuzzLagWithinFeesIsUnprofitable(uint256 rawFee, uint256 rawDrop, uint256 rawDeposit) public {
+        uint256 fee = bound(rawFee, 0, 200);
+        // (1 - f)^2 >= 1 - d  <=>  d <= 2f - f^2 (in bps: 2f - f^2 / 10_000)
+        uint256 drop = bound(rawDrop, 0, 2 * fee - fee * fee / 10_000);
+        uint256 deposit = bound(rawDeposit, 0.01 ether, 100 ether);
+        nusd.setFees(fee, fee);
+        _mint(nusd, BOB, 10 ether); // other holders keep the reserve above 1x
+        uint256 minted = _mint(nusd, ALICE, deposit);
+        oracle.setPrice(PRICE * (10_000 - drop) / 10_000);
+        vm.prank(ALICE);
+        uint256 out = nusd.redeemAtOracle(minted, 0, ALICE);
+        assertLe(out, deposit + 1, "lag inside the fees paid out");
+    }
+
+    function testMintGuardBounds() public {
+        vm.expectRevert(OracleNUSDv2.InvalidMintGuards.selector);
+        nusd.setMintGuards(59, 1 ether);
+        vm.expectRevert(OracleNUSDv2.InvalidMintGuards.selector);
+        nusd.setMintGuards(1 days + 1, 1 ether);
+        vm.expectRevert(OracleNUSDv2.InvalidMintGuards.selector);
+        nusd.setMintGuards(10 minutes, 0);
+        vm.prank(STRANGER);
+        vm.expectRevert();
+        nusd.setMintGuards(10 minutes, 1 ether);
+        assertEq(nusd.mintMaxPriceAge(), 90 minutes, "default age");
+        assertEq(nusd.mintLimitPerWindow(), type(uint96).max, "unlimited until set");
     }
 
     // ---------------------------------------------------------------- fuzz
