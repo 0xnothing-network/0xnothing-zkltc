@@ -63,7 +63,7 @@ export function PumpStatsDashboard() {
 
       {statsQuery.isLoading ? (
         <StatsSkeleton />
-      ) : statsQuery.error || !stats ? (
+      ) : !stats ? (
         <PumpErrorState
           message={statsQuery.error?.message ?? "Protocol statistics are unavailable."}
           onRetry={() => void statsQuery.refetch()}
@@ -142,7 +142,7 @@ export function PumpStatsDashboard() {
             </div>
             {marketsQuery.isLoading ? (
               <div className="pump-stats-market-skeleton" role="status" aria-label="Loading top markets" />
-            ) : marketsQuery.error ? (
+            ) : marketsQuery.error && !marketsQuery.markets.length ? (
               <p className="pump-stats-inline-error">Top markets are temporarily unavailable.</p>
             ) : marketsQuery.markets.length ? (
               <div className="pump-stats-market-list">
@@ -315,6 +315,7 @@ function ProtocolFeePanel({
         <button
           className="pump-button pump-button-primary pump-button-large pump-button-full"
           type="button"
+          aria-busy={actionPending}
           disabled={!address || actionPending || feeReadPending || (!wrongChain && !pendingQuery.error && pending <= 0n)}
           onClick={() => void handleDistribute()}
         >

@@ -366,7 +366,7 @@ export function PumpChart({ token, tokenName }: { token: Address; tokenName: str
       <div className="pump-chart" ref={containerRef} role="img" aria-label={`${tokenName} price candlestick chart, ${PERIODS.find((item) => item.value === period)?.label ?? "selected"} interval, ${query.data?.candles.length ?? 0} indexed candles`} />
       {query.isLoading ? (
         <div className="pump-chart-loading"><PumpInlineLoading label="Loading chart" /></div>
-      ) : query.error ? (
+      ) : query.error && !query.data?.candles.length ? (
         <div className="pump-chart-message" role="alert">
           <span>Chart unavailable</span>
           <button type="button" onClick={() => void query.refetch()}>Retry</button>

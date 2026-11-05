@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatUnits, maxUint256, parseUnits } from "viem";
 import {
@@ -54,6 +54,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
   const { switchChain } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
   const submitLockRef = useRef(false);
+  const amountId = useId();
   const [mode, setMode] = useState<TradeMode>(market.status === "READY" ? "sell" : "buy");
   const [amount, setAmount] = useState("");
   const [slippageBps, setSlippageBps] = useState(100n);
@@ -143,6 +144,8 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
     ]);
     onComplete?.();
   };
+
+  const submitDisabled = pending || !configured || quotePending || Boolean(quoteError) || !tradeAllowed;
 
   const submit = async () => {
     if (!configured) {
@@ -236,14 +239,14 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
         <button type="button" disabled={pending || market.status === "GRADUATED"} className={mode === "sell" ? "active sell" : ""} aria-pressed={mode === "sell"} onClick={() => { setMode("sell"); setAmount(""); }}>Sell</button>
       </div>
 
-      <label className="pump-amount-field">
+      <label className="pump-amount-field" htmlFor={amountId}>
         <span><span>{mode === "buy" ? "Maximum spend" : "You pay"}</span><button type="button" disabled={pending} onClick={() => setAmount(formatUnits(sourceBalance, 18))}>Max {displayAmount(sourceBalance)}</button></span>
-        <span><input inputMode="decimal" disabled={pending} value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.0" /><strong>{mode === "buy" ? "NUSD" : market.symbol}</strong></span>
+        <span><input id={amountId} inputMode="decimal" autoComplete="off" autoCorrect="off" spellCheck={false} aria-invalid={amountWei > 0n && actualInput > sourceBalance} onKeyDown={(event) => { if (event.key === "Enter" && !event.repeat && !event.nativeEvent.isComposing && !submitDisabled) void submit(); }} disabled={pending} value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.0" /><strong>{mode === "buy" ? "NUSD" : market.symbol}</strong></span>
       </label>
 
       <div className="pump-quote-arrow" aria-hidden="true">&darr;</div>
 
-      <div className="pump-amount-field pump-amount-output">
+      <div className="pump-amount-field pump-amount-output" aria-busy={quotePending}>
         <span><span>You receive</span><small>{quotePending ? "Quoting" : "Estimated"}</small></span>
         <span><strong>{displayAmount(quoteOutput)}</strong><b>{mode === "buy" ? market.symbol : "NUSD"}</b></span>
       </div>
@@ -258,7 +261,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
       {quoteError ? <p className="pump-inline-error">Quote unavailable. <button type="button" onClick={() => void activeQuote.refetch()}>Retry</button></p> : null}
 
       {market.status === "READY" ? <p className="pump-form-hint">Buys are paused at the $6,000 market-cap target. Selling remains available and reopens the curve.</p> : null}
-      <button type="button" className="pump-button pump-button-primary pump-button-large pump-button-full" disabled={pending || !configured || quotePending || Boolean(quoteError) || !tradeAllowed} onClick={() => void submit()}>{buttonLabel}</button>
+      <button type="button" className="pump-button pump-button-primary pump-button-large pump-button-full" aria-busy={pending} disabled={submitDisabled} onClick={() => void submit()}>{buttonLabel}</button>
       {!configured ? <p className="pump-form-hint">Trading activates after deployment addresses are configured.</p> : null}
     </aside>
   );

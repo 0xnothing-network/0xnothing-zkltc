@@ -138,7 +138,7 @@ function GraduationAction({ market, onComplete }: { market: PumpMarket; onComple
     && adapterAllowed.data === true;
 
   if (market.status === "GRADUATED" && market.pool !== ZERO_ADDRESS) {
-    return <a href={`/0xFi/pools/${market.pool}`} className="pump-button pump-button-primary">0xFi pool</a>;
+    return <Link href={`/0xFi/pools/${market.pool}`} className="pump-button pump-button-primary">0xFi pool</Link>;
   }
   if (market.status !== "READY") return null;
 
@@ -197,7 +197,7 @@ function GraduationAction({ market, onComplete }: { market: PumpMarket; onComple
         : chainId !== PUMP_CHAIN_ID
           ? "Switch network"
           : "Graduate";
-  return <button type="button" className="pump-button pump-button-primary" disabled={!operational || pending} onClick={() => void graduate()}>{label}</button>;
+  return <button type="button" className="pump-button pump-button-primary" aria-busy={pending} disabled={!operational || pending} onClick={() => void graduate()}>{label}</button>;
 }
 
 export function TokenDetail({ token }: { token: Address }) {

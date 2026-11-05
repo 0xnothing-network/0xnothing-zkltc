@@ -36,7 +36,7 @@ export function TokenHolders({ token, symbol }: { token: Address; symbol: string
 
       {data?.warning ? <p className="pump-source-note pump-holder-warning">{data.warning}</p> : null}
 
-      {query.error ? (
+      {query.error && !data ? (
         <PumpErrorState message={query.error.message} onRetry={() => void query.refetch()} />
       ) : query.isLoading || !data ? (
         <PumpInlineLoading label="Loading token holders" />

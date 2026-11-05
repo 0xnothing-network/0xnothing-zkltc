@@ -111,7 +111,7 @@ export function PumpPortfolio() {
           <section className="pump-portfolio-section">
             <div className="pump-section-heading"><div><span className="pump-eyebrow">Balances</span><h2>Tokens held</h2></div><span>{portfolio.held.length}</span></div>
             {portfolio.balanceWarning ? <p className="pump-source-note">{portfolio.balanceWarning}</p> : null}
-            {portfolio.heldError ? (
+            {portfolio.heldError && !portfolio.held.length ? (
               <PumpErrorState message={(portfolio.heldError as Error).message} onRetry={handleRefetchHeld} />
             ) : portfolio.heldIsLoading ? (
               <PumpLoadingRows count={3} />
@@ -122,7 +122,7 @@ export function PumpPortfolio() {
 
           <section className="pump-portfolio-section">
             <div className="pump-section-heading"><div><span className="pump-eyebrow">Creator</span><h2>Markets created</h2></div><span>{portfolio.created.length}</span></div>
-            {portfolio.createdError ? (
+            {portfolio.createdError && !portfolio.created.length ? (
               <PumpErrorState message={(portfolio.createdError as Error).message} onRetry={handleRefetchCreated} />
             ) : portfolio.createdIsLoading ? (
               <PumpLoadingRows count={2} />

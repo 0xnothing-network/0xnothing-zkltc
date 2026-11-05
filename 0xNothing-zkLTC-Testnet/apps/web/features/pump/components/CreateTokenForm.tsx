@@ -384,7 +384,7 @@ export function CreateTokenForm() {
                 {preview ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={preview} alt="Token logo preview" />
-                ) : <span>IMG</span>}
+                ) : <span aria-hidden="true">IMG</span>}
               </span>
               <span><strong>{file?.name || "Choose token logo"}</strong><small>PNG, JPEG or WebP. Maximum 2 MB.</small></span>
               <input
@@ -397,17 +397,19 @@ export function CreateTokenForm() {
           </label>
 
           {/* Fields lock while a creation runs: the paid reservation is bound to their content hash. */}
-          <label className="pump-field"><span>Name</span><input value={name} maxLength={64} readOnly={busy} onChange={(event) => setName(event.target.value)} placeholder="Nothing Coin" /></label>
-          <label className="pump-field"><span>Ticker</span><input value={symbol} maxLength={12} readOnly={busy} onChange={(event) => setSymbol(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} placeholder="NOTHING" /></label>
+          <label className="pump-field"><span>Name</span><input value={name} autoComplete="off" maxLength={64} readOnly={busy} onChange={(event) => setName(event.target.value)} placeholder="Nothing Coin" /></label>
+          <label className="pump-field"><span>Ticker</span><input value={symbol} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false} maxLength={12} readOnly={busy} onChange={(event) => setSymbol(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} placeholder="NOTHING" /></label>
           <label className="pump-field pump-field-wide"><span>Description</span><textarea value={description} maxLength={500} rows={5} readOnly={busy} onChange={(event) => setDescription(event.target.value)} placeholder="What is this token about?" /><small>{description.length}/500</small></label>
           <label className="pump-field"><span>Website <em>optional</em></span><input type="url" value={website} readOnly={busy} onChange={(event) => setWebsite(event.target.value)} placeholder="https://" /></label>
           <label className="pump-field"><span>Social <em>optional</em></span><input type="url" value={twitter} readOnly={busy} onChange={(event) => setTwitter(event.target.value)} placeholder="https://x.com/" /></label>
         </div>
 
-        {validation ? <p className="pump-form-hint">{validation}</p> : null}
+        {validation ? <p id="pump-create-validation" className="pump-form-hint" aria-live="polite">{validation}</p> : null}
         <button
           className="pump-button pump-button-primary pump-button-large pump-button-full"
           type="button"
+          aria-describedby={validation ? "pump-create-validation" : undefined}
+          aria-busy={busy}
           disabled={busy || !PUMP_CONFIGURED || !NUSD_CONFIGURED}
           onClick={() => void submit()}
         >

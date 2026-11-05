@@ -445,6 +445,7 @@
 .pump-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
 .pump-detail-main { display: grid; gap: 16px; min-width: 0; }
 .pump-chart-panel { position: relative; min-width: 0; padding: 0; overflow: hidden; }
+.pump-chart-panel[aria-busy="true"] { min-height: 466px; }
 .pump-chart-heading { min-height: 66px; padding: 0 18px; border-bottom: 1px solid var(--pump-line); }
 .pump-chart-heading > div:first-child { min-width: 0; }
 .pump-chart-heading h2 { overflow-wrap: anywhere; }
@@ -466,6 +467,7 @@
 .pump-amount-field strong { flex: none; font-size: 12px; }
 .pump-amount-output > span:last-child { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
 .pump-amount-output > span:last-child > strong { min-width: 0; font-size: 20px; font-weight: 500; line-height: 1.3; overflow-wrap: anywhere; }
+.pump-amount-output[aria-busy="true"] > span:last-child > strong { opacity: 0.5; }
 .pump-amount-output b { font-size: 12px; font-weight: 500; }
 .pump-quote-arrow { display: grid; width: 28px; height: 28px; margin: -1px auto; place-items: center; border: 1px solid var(--pump-line); background: var(--pump-panel); color: var(--pump-muted); font-size: 12px; }
 .pump-trade-details { display: grid; gap: 12px; margin: 18px 0; }
@@ -839,6 +841,7 @@
 .pump-holders,
 .pump-history { padding: 0; }
   .pump-chart { height: 320px; }
+  .pump-chart-panel[aria-busy="true"] { min-height: 404px; }
   .pump-chart-message { inset: 84px 0 0; }
   .pump-vault-oracle-strip { margin-inline: -18px; }
   .pump-vault-metrics { margin-inline: -18px; }
@@ -929,6 +932,11 @@
 .pump-amount-field button,
 .pump-vault-field-head button,
 .pump-inline-options button { min-height: 44px; }
+  /* Inline Retry links keep their one-line box; an invisible overlay carries the 44px tap target. */
+  .pump-inline-error button,
+.pump-vault-alert button { position: relative; }
+  .pump-inline-error button::after,
+.pump-vault-alert button::after { content: ""; position: absolute; top: 50%; right: 0; left: 0; min-height: 44px; transform: translateY(-50%); }
 }
 
 @supports (content-visibility: auto) {
@@ -1037,6 +1045,13 @@
 .pump-shell .pump-vault-field-head button:disabled {
   border: 0 !important;
   background: transparent !important;
+  color: var(--pump-muted) !important;
+  opacity: 0.45 !important;
+}
+
+.pump-shell .pump-amount-field button:disabled,
+.pump-shell .pump-inline-options button:disabled {
+  cursor: not-allowed;
   color: var(--pump-muted) !important;
   opacity: 0.45 !important;
 }
@@ -1559,6 +1574,10 @@
 
   .pump-chart {
     height: 280px;
+  }
+
+  .pump-chart-panel[aria-busy="true"] {
+    min-height: 364px;
   }
 
   .pump-chart-heading .pump-periods {

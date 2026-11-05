@@ -168,7 +168,7 @@ function tradeHarness(change?: "account" | "chain" | "connector" | "disconnect",
     {
       "react/jsx-runtime": { jsx, jsxs: jsx },
       react: {
-        useMemo: (fn: () => unknown) => fn(), useRef: (current: unknown) => ({ current }),
+        useMemo: (fn: () => unknown) => fn(), useRef: (current: unknown) => ({ current }), useId: () => "trade-amount",
         useState: () => { const index = stateIndex++; return [states[index], (value: unknown) => { states[index] = value as never; if (index === 3 && value === false) done = true; }]; },
       },
       "@tanstack/react-query": { useQueryClient: () => ({}) },

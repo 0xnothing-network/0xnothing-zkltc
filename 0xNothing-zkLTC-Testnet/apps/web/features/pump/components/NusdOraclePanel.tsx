@@ -381,8 +381,8 @@ export function NusdOraclePanel() {
       {metricsReadFailed ? <p className="pump-vault-alert warning">Protocol metrics could not be refreshed. <button type="button" onClick={() => void refresh()}>Retry</button></p> : null}
 
       <div className="pump-segmented pump-vault-tabs" role="group" aria-label="NUSD action">
-        <button type="button" className={mode === "mint" ? "active" : ""} aria-pressed={mode === "mint"} onClick={() => setMode("mint")}>Mint</button>
-        <button type="button" className={mode === "redeem" ? "active" : ""} aria-pressed={mode === "redeem"} onClick={() => setMode("redeem")}>Redeem</button>
+        <button type="button" disabled={isSubmitting} className={mode === "mint" ? "active" : ""} aria-pressed={mode === "mint"} onClick={() => setMode("mint")}>Mint</button>
+        <button type="button" disabled={isSubmitting} className={mode === "redeem" ? "active" : ""} aria-pressed={mode === "redeem"} onClick={() => setMode("redeem")}>Redeem</button>
       </div>
 
       <div className="pump-vault-workspace">
@@ -390,17 +390,17 @@ export function NusdOraclePanel() {
           {mode === "mint" ? (
             <div className="pump-field pump-vault-step">
               <div className="pump-vault-field-head"><label htmlFor="nusd-mint-input"><span>01</span> zkLTC to deposit</label><small>Wallet {displayWad(nativeBalance.data?.value, nativeBalance.isLoading, 4)} zkLTC</small></div>
-              <div className="pump-vault-token-field"><input id="nusd-mint-input" inputMode="decimal" value={mintAmount} onChange={(event) => setMintAmount(event.target.value)} placeholder="0.0" /><strong>zkLTC</strong></div>
+              <div className="pump-vault-token-field"><input id="nusd-mint-input" inputMode="decimal" autoComplete="off" aria-describedby={actionError ? "nusd-action-error" : undefined} disabled={isSubmitting} value={mintAmount} onChange={(event) => setMintAmount(event.target.value)} placeholder="0.0" /><strong>zkLTC</strong></div>
             </div>
           ) : (
             <div className="pump-field pump-vault-step">
-              <div className="pump-vault-field-head"><label htmlFor="nusd-redeem-input"><span>01</span> NUSD to redeem</label><button type="button" disabled={!nusdBalance.data} onClick={() => setRedeemAmount(formatInputAmount(nusdBalance.data ?? 0n))}>MAX {displayUsdWad(nusdBalance.data, nusdBalance.isLoading, 2)}</button></div>
-              <div className="pump-vault-token-field"><input id="nusd-redeem-input" inputMode="decimal" value={redeemAmount} onChange={(event) => setRedeemAmount(event.target.value)} placeholder="0.0" /><strong>NUSD</strong></div>
+              <div className="pump-vault-field-head"><label htmlFor="nusd-redeem-input"><span>01</span> NUSD to redeem</label><button type="button" disabled={isSubmitting || !nusdBalance.data} onClick={() => setRedeemAmount(formatInputAmount(nusdBalance.data ?? 0n))}>MAX {displayUsdWad(nusdBalance.data, nusdBalance.isLoading, 2)}</button></div>
+              <div className="pump-vault-token-field"><input id="nusd-redeem-input" inputMode="decimal" autoComplete="off" aria-describedby={actionError ? "nusd-action-error" : undefined} disabled={isSubmitting} value={redeemAmount} onChange={(event) => setRedeemAmount(event.target.value)} placeholder="0.0" /><strong>NUSD</strong></div>
             </div>
           )}
 
-          {actionError ? <p className="pump-vault-inline-error">{actionError}</p> : null}
-          <button type="button" className="pump-button pump-button-primary pump-button-large" disabled={actionDisabled} onClick={() => void submit()}>{actionLabel}</button>
+          {actionError ? <p id="nusd-action-error" className="pump-vault-inline-error" role={amountExceedsBalance ? "alert" : undefined}>{actionError}</p> : null}
+          <button type="button" className="pump-button pump-button-primary pump-button-large" aria-busy={isSubmitting} disabled={actionDisabled} onClick={() => void submit()}>{actionLabel}</button>
         </div>
 
         <aside className="pump-vault-preview" aria-live="polite">

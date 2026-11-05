@@ -13,10 +13,10 @@ export function TradeHistory({ token }: { token: Address }) {
         <div><span className="pump-eyebrow">On-chain activity</span><h2>Recent trades</h2></div>
         <span className="pump-source-label">{query.data?.source ?? "loading"}</span>
       </div>
-      {query.error ? <PumpErrorState message={query.error.message} onRetry={() => void query.refetch()} /> : query.isLoading ? (
+      {query.error && !query.data ? <PumpErrorState message={query.error.message} onRetry={() => void query.refetch()} /> : query.isLoading ? (
         <PumpInlineLoading label="Loading recent trades" />
       ) : (
-        <div className="pump-table-wrap" tabIndex={0} aria-label="Recent trades table, scroll horizontally for all columns">
+        <div className="pump-table-wrap" role="region" tabIndex={0} aria-label="Recent trades table, scroll horizontally for all columns">
           <table className="pump-table">
             <caption className="sr-only">Recent indexed trades for this token</caption>
             <thead><tr><th>Trade</th><th>NUSD</th><th>Tokens</th><th>Price</th><th>Fee</th><th>Trader</th><th>Time</th></tr></thead>

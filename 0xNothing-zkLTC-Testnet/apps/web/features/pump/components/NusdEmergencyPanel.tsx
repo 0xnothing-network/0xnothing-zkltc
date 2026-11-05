@@ -164,10 +164,10 @@ export function NusdEmergencyPanel() {
         <div className="pump-vault-workspace">
           <div className="pump-vault-form">
             <div className="pump-field pump-vault-step">
-              <div className="pump-vault-field-head"><label htmlFor="nusd-emergency-input">NUSD to burn</label><button type="button" disabled={!balance} onClick={() => setAmountText(formatUnits(balance ?? 0n, 18))}>MAX {wad(balance, 2)}</button></div>
-              <div className="pump-vault-token-field"><input id="nusd-emergency-input" inputMode="decimal" value={amountText} onChange={(event) => setAmountText(event.target.value)} placeholder="0.0" /><strong>NUSD</strong></div>
+              <div className="pump-vault-field-head"><label htmlFor="nusd-emergency-input">NUSD to burn</label><button type="button" disabled={busy || !balance} onClick={() => setAmountText(formatUnits(balance ?? 0n, 18))}>MAX {wad(balance, 2)}</button></div>
+              <div className="pump-vault-token-field"><input id="nusd-emergency-input" inputMode="decimal" autoComplete="off" aria-invalid={balance !== undefined && amount > balance} disabled={busy} value={amountText} onChange={(event) => setAmountText(event.target.value)} placeholder="0.0" /><strong>NUSD</strong></div>
             </div>
-            <button type="button" className="pump-button pump-button-primary pump-button-large" disabled={!isConnected || busy || amount === 0n || (balance !== undefined && amount > balance)} onClick={() => void send("emergencyRedeem", "NUSD redeemed", "Your share of the zkLTC reserve was sent to your wallet.")}>
+            <button type="button" className="pump-button pump-button-primary pump-button-large" aria-busy={busy} disabled={!isConnected || busy || amount === 0n || (balance !== undefined && amount > balance)} onClick={() => void send("emergencyRedeem", "NUSD redeemed", "Your share of the zkLTC reserve was sent to your wallet.")}>
               {wrongChain ? "Switch to LitVM" : busy ? "Confirming" : "Exit at reserve share"}
             </button>
           </div>
