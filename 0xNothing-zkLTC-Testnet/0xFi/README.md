@@ -7,8 +7,12 @@ and connects the existing 0xPump graduation flow to a canonical NUSD-paired AMM.
 
 - Swap and shared constant-product liquidity pools
 - One canonical LP token per unordered pair
-- NUSD fixed-lock staking for on-chain xPoints, plus LP gauges for the remaining pairs
-- NUSD lending and borrowing with pooled supplier liquidity
+- NUSD staking through the core `RewardStaking` contract
+  (`0x59589d9a5840D2CEF7A6e4A8cB55C258cc73E483`), plus LP gauges for the
+  NUSD pairs. The NUSD fixed-lock xPoints module is the retired v1
+  `nusdPointsStaking` in `contracts/deployments/latest.json`.
+- NUSD lending and borrowing with pooled supplier liquidity and pooled
+  (cross-asset) collateral
 - DIA-priced nBTC and nETH debt with isolated user and safety-reserve collateral
 - Goldsky history and candles with direct-RPC quotes, balances, positions, and a
   5,000-block RPC event tail for data that has not reached the indexer yet
@@ -30,14 +34,17 @@ full 150%. User-owned and reserve-owned NUSD are accounted separately; users can
 never withdraw reserve collateral.
 
 Synth minting charges an additional 0.1% of the oracle-priced NUSD notional.
-The fee is not collateral and does not reduce the 1:1 mint amount. It is routed
-to the matching synth/NUSD gauge for LP stakers; fees queue when nobody is
-staked, so an empty gauge cannot burn the reward clock.
+The fee is not collateral and does not reduce the 1:1 mint amount. It is pulled
+from the wallet in addition to collateral and, in v3, sent to the vault's
+`mintFeeDistributor`, which is the core fee splitter
+(`0xAea1Ef82Dbe800BB3683009630813457D990a9B0`), not a gauge.
 
-Official 0xFi swaps charge 0.5% per pool for that pool's LPs and 0.1% protocol
-fee once per route. A route that needs an intermediary also pays one additional
-0.1% route surcharge. A direct swap is therefore nominally 0.6%; a two-pool
-route through NUSD is nominally 1.2%.
+Official 0xFi swaps charge 0.5% per pool for that pool's LPs. The v3 router
+also charges one router fee per route, with no surcharge: 10 bps if either end
+of the path is NUSD or WzkLTC, otherwise 30 bps. A one-pool swap is therefore
+nominally 0.6%, a two-pool route with a NUSD or WzkLTC end is 1.1%, and
+TOKEN -> NUSD -> TOKEN is 1.3%. The router allows at most three pools per route
+(1.5% LP plus 0.1% or 0.3%).
 
 ## Commands
 
@@ -67,11 +74,17 @@ nBTC/NUSD and nETH/NUSD remain available as separate LP programs. See
 `docs/NUSD_POINTS.md` for xPoints units, security boundaries, key separation
 and tests.
 
-The live v3 lending pool is `0x6Cc96c044321b3205Ac108107Fc6d2d47e0B3E44`. The
-retired v1 pool `0x7CB638F8e10f1bd200A3c5C3fD014C3FD97BA914` uses the fixed
-4.5% borrower / 4% lender / 0.5% protocol spread and isolated 80/85/90 risk
-parameters for WzkLTC, nBTC, and nETH. A stale DIA feed still blocks every
-debt-increasing action.
+The live v3 lending pool is `0x6Cc96c044321b3205Ac108107Fc6d2d47e0B3E44`
+(`PooledNUSDLendingPoolV2`). It uses the fixed 4.5% borrower / 4% lender (on the
+borrowed share) / 0.5% protocol spread and, for each of WzkLTC, nBTC and nETH,
+80% LTV, 85% margin call, 90% liquidation and a 5% liquidation bonus. Collateral
+risk is pooled: all of an account's collateral assets count toward one
+borrowing capacity and one health factor, not isolated per asset. The pool
+`0x7CB638F8e10f1bd200A3c5C3fD014C3FD97BA914` is the retired v1 pool. A stale
+DIA feed still blocks every debt-increasing action.
+
+Integration guides for developers are in
+`../docs/developers/0xfi.md`.
 
 See `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, and `docs/DEPLOYMENT.md` before
 changing risk parameters or enabling 0xPump graduation.

@@ -4,8 +4,8 @@ This code is a testnet implementation, not an audit report.
 
 ## Economic controls
 
-- A nonrefundable `1 NUSD` reservation fee is paid before hosted IPFS upload, reducing cheap token and storage spam. It does not prevent bots, sybil identities, frontrunning, or malicious token marketing.
-- The `0.1%` trade fee is fixed in contract code so an administrator cannot raise it after launch.
+- A nonrefundable reservation fee (currently `1 NUSD`, `createFee()`) is paid before hosted IPFS upload, reducing cheap token and storage spam. It does not prevent bots, sybil identities, frontrunning, or malicious token marketing.
+- Each market's trade fee (currently `0.1%`) is fixed when the market is created, so an administrator cannot raise it for an existing market. The `ZeroXPumpV2` parameter admin can set terms for markets created later, capped in code at `MAX_TRADE_FEE_BPS = 100` (1%) and `MAX_CREATE_FEE_NUSD = 100 NUSD`.
 - The curve must remain solvent for every buy/sell sequence. Tests cover reserve accounting, rounding, fee separation, and round-trip behavior.
 - Frontend quotes are advisory. Contract-side `minOut` and `deadline` checks are the actual protection.
 

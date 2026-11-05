@@ -1,10 +1,20 @@
 # 0xNothing zkLTC Testnet Contracts
 
-This Foundry project contains OracleNUSD, the 0xPump bonding curve, the
-disabled-by-default graduation router and the active [0xPixel V2](PIXEL_V2.md)
-collection with fully on-chain metadata and grids up to 256. The legacy
-deployed 0xPixel sources under `src/0xpixel/reference/` remain immutable
-references and are excluded from builds.
+This Foundry project contains NUSD (`OracleNUSDv2`, plus the earlier
+`OracleNUSD`), the 0xPump bonding curve (`ZeroXPumpV2`, plus the earlier
+`ZeroXPump`), the disabled-by-default graduation router, the v3 tokenomics
+contracts (`OracleRouter`, `FeeSplitter`, `RewardStaking`, `OwnerTreasury`),
+the NUSD NFT marketplace (`NusdNftMarketplaceV2`) and the active
+[0xPixel V2](PIXEL_V2.md) collection with fully on-chain metadata and grids up
+to 256. The legacy deployed 0xPixel sources under `src/0xpixel/reference/`
+remain immutable references and are excluded from builds.
+
+The live set is v3, active on LiteForge since 2026-10-15. It was deployed by
+`script/DeployV3Core.s.sol` (output `deployments/v3-core.json`) as the core
+stage of `0xFi/scripts/deploy-v3.mjs`; see `docs/DEPLOYMENT.md` and
+`docs/TOKENOMICS.md`. Never rerun the v3 broadcast. The `DeployTestnet.s.sol`
+sections below describe the earlier `OracleNUSD`/`ZeroXPump` deployment and are
+kept for reference.
 
 ## Test
 
@@ -15,8 +25,8 @@ forge test
 Set `LITVM_RPC_URL` to include the optional DIA fork test. The testnet LTC/USD DIA
 AggregatorV3 adapter defaults to `0x45dDa5d881BD2C917976CCfde74fFd6f6412da29`.
 
-Token creation is prepaid: `reserveMarket(contentHash)` charges `1 NUSD` before
-the IPFS upload, and `createMarket(..., contentHash)` consumes that sender's
+Token creation is prepaid: `reserveMarket(contentHash)` charges the current
+`createFee()` (`1 NUSD` on the live `ZeroXPumpV2`) before the IPFS upload, and `createMarket(..., contentHash)` consumes that sender's
 reservation without charging again. Reservations are scoped by owner, have no
 refund or expiry, and remain retryable until creation succeeds. Index creation
 fees from `CreationFeePaid`, including abandoned reservations. After creation,
@@ -24,10 +34,14 @@ fees from `CreationFeePaid`, including abandoned reservations. After creation,
 client loses its transaction receipt and prevents that owner from reserving the
 same content hash again.
 
-OracleNUSD combines the ERC-20 and recognized native-zkLTC reserve. Mint and
-redeem are priced from the DIA adapter with zero protocol fee, and independent
-`mintPaused` and `redeemPaused` controls are granted to `PROTOCOL_ADMIN`.
-`vault()` returns the OracleNUSD contract itself for Pump compatibility. The
+`OracleNUSDv2` combines the ERC-20 and recognized native-zkLTC reserve. Mint
+and redeem are priced through the LTC `OracleRouter` (a DIA adapter behind it)
+with zero fee on the live deployment (capped at `MAX_FEE_BPS = 50`). Only
+minting can be paused (`mintPaused`, `PAUSER_ROLE`); redemption has no pause,
+and `emergencyRedeem` pays the pro-rata reserve 7 days after
+`reportOracleFailure`. The earlier `OracleNUSD` had separate `mintPaused` and
+`redeemPaused` controls. `vault()` returns the NUSD contract itself for Pump
+compatibility. The
 supply ceiling limits issuance but is not an overcollateralization guarantee;
 the risk model is documented in `docs/ARCHITECTURE.md` and `docs/SECURITY.md`.
 

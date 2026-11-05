@@ -19,18 +19,21 @@ The initial liquidity mint permanently locks a minimum share. Swaps enforce the
 constant-product invariant after a fee, while router calls require a deadline
 and minimum output. Native zkLTC enters pools through WzkLTC and unwraps on exit.
 
-Each pool keeps a 0.5% LP fee in its reserves. The router records a separate
-0.1% protocol fee in the input token, fully backed by its token balance and
-withdrawable only by the factory owner. Direct liquid pairs are preferred. If a
-direct pair is unavailable, the router may use NUSD as an intermediary and
-charges one extra 0.1% route surcharge. The surcharge is collected once, while
-the 0.5% LP fee applies independently to every pool in the path.
+Each pool keeps a 0.5% LP fee in its reserves, applied independently to every
+pool in the path. The v3 router (`ZeroXFiRouterV2`) charges one router fee per
+route, with no surcharge: 10 bps if `path[0]` or the last path entry is a base
+asset (NUSD or WzkLTC), otherwise 30 bps. The fee is taken in `path[0]` when the
+input is a base asset, otherwise in `path[1]`, which must then be a base asset.
+Fees accrue in `accruedRouterFees[token]`, fully backed by the router's token
+balance. `distributeFees(token)` is permissionless and pays NUSD fees to the fee
+splitter and WzkLTC fees to the treasury; in v3 both recipients are the core fee
+splitter. A route has at most three pools.
 
-The testnet migration keeps existing immutable pools and LP ownership intact.
-Its replacement official router quotes the 0.5% LP economics even for legacy
-0.3% pair bytecode; the conservative output leaves the difference in pool
-reserves. Fresh factory deployments also restrict pair swaps to the active
-router and rotate that router only through a 48-hour delay.
+v3 is a fresh `ZeroXFiFactoryV2` deployment. Its pairs charge a 0.5% LP fee and
+accept `swap` calls only from `factory.router()`. Every pair must contain NUSD
+or WzkLTC. The factory rotates its router only through a 48-hour delay. The
+legacy 0.3% pair bytecode and the conservative-quote migration router belonged
+to the retired v1 suite (`contracts/deployments/latest.json`) only.
 
 ## Farming
 
@@ -39,10 +42,11 @@ reward-per-staked-token accumulator. A user's claim equals their time-weighted
 LP balance multiplied by accumulator growth. Gauges cannot mint NUSD and cannot
 promise rewards beyond tokens already funded.
 
-The 0.1% NUSD synth mint fee is transferred atomically to a permanently bound
-synth/NUSD gauge route. Fees remain queued in the distributor until the gauge
-has stake and enough NUSD for a nonzero seven-day reward rate. If all LP exits,
-the remaining schedule duration pauses and resumes with the next stake.
+Gauge rewards come only from funded schedules (`GaugeFactory.fundGauge`). If all
+LP exits, the remaining schedule duration pauses and resumes with the next
+stake. In v3 the 0.1% NUSD synth mint fee does not go to a gauge: each vault's
+`mintFeeDistributor` is the core fee splitter, and the fee is transferred to it
+atomically during the mint.
 
 ## Synthetic assets
 
@@ -85,7 +89,9 @@ borrow cap. Existing borrowers can still repay, be liquidated, and withdraw
 collateral after their debt is cleared.
 
 WzkLTC, nBTC, and nETH are accepted as lending collateral on testnet. The synth
-assets use much smaller isolated caps to bound recursive NUSD leverage; raw DEX
+assets use much smaller per-asset collateral caps (0.01 nBTC, 0.25 nETH, equal
+to their synth debt ceilings) to bound recursive NUSD leverage; risk itself is
+still pooled across the account's collateral. Raw DEX
 spot prices are never used for solvency. Governance may change collateral only
 after separate risk review.
 
@@ -99,8 +105,11 @@ the terminal curve ratio, returns ordinary ERC-20 LP tokens, and lets the live
 router send them to the existing permanent locker.
 
 Adapter allowlisting and router enablement use the live router's intrinsic
-48-hour scheduling delay. Direct testnet governance cannot bypass that delay,
-and preparing or deploying a pool does not shorten it.
+scheduling delay (`GraduationRouter.minimumDelay`). For the v3 core router it is
+1 hour (`contracts/script/DeployV3Core.s.sol:58`, `graduationDelaySeconds: 3600`
+in `contracts/deployments/v3-core.json`); the 48-hour delay belonged to the
+retired v1 setup. Direct testnet governance cannot bypass that delay, and
+preparing or deploying a pool does not shorten it.
 
 After activation, `PumpGraduationController` owns the Pump and its graduation
 router. Any account may call `graduateReady(token)`, but cannot choose the

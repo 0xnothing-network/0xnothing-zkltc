@@ -36,10 +36,10 @@ graph LR
 | Phần | Luật |
 | --- | --- |
 | Mint NUSD | zkLTC trị giá 1 USD theo oracle mint 1 NUSD. Phí mint mặc định 0, tối đa 0.5%, và phí nằm lại trong dự trữ. Owner có quyền tạm dừng mint |
-| Redeem NUSD | Trả **min(giá oracle, phần tỷ lệ của dự trữ)**. Khi đủ bảo chứng thì đúng 1 USD; khi thiếu thì mọi người chịu cùng một tỷ lệ, nên không có cuộc đua rút trước, và NUSD tự về 1 USD khi LTC hồi. **Không ai tạm dừng được redeem** |
-| Oracle chết | Ai cũng báo lỗi oracle được. Sau 7 ngày oracle vẫn chết, người giữ đốt NUSD để lấy phần zkLTC theo tỷ lệ |
+| Redeem NUSD | Trả **min(giá oracle, phần tỷ lệ của dự trữ)**. Khi đủ bảo chứng thì đúng 1 USD; khi thiếu thì mọi người chịu cùng một tỷ lệ, nên không có cuộc đua rút trước, và NUSD tự về 1 USD khi LTC hồi. **Không ai tạm dừng được redeem**, nhưng `quoteRedeem`/`redeemAtOracle` đọc oracle không có try/catch nên sẽ revert khi giá DIA cũ hơn 90 phút. Lúc đó lối ra duy nhất là `reportOracleFailure` rồi `emergencyRedeem` sau 7 ngày |
+| Oracle chết | Ai cũng gọi `reportOracleFailure()` được khi oracle không trả giá. Từ `oracleFailureReportedAt + 7 ngày`, nếu oracle vẫn chết, người giữ gọi `emergencyRedeem` đốt NUSD để lấy phần zkLTC theo tỷ lệ (không phí, không cần giá). Oracle sống lại thì ai cũng gọi `clearOracleFailure()` |
 | Trần cung | 1,000,000 NUSD. Tự nhân đôi khi cung sau lần mint đạt ≥ 80% trần, tối đa 1 lần/7 ngày. Owner chỉnh được nhưng không thấp hơn cung hiện có |
-| Thặng dư | Khi dự trữ ≥ **3,3×** cung, ai cũng gọi `releaseSurplus()` để mint phần dư về đúng **3,0×**, tối đa 1 lần/7 ngày: **80% người stake / 20% quỹ** |
+| Thặng dư | Khi dự trữ ≥ **3,3×** cung, ai cũng gọi `releaseSurplus()` để mint phần dư hướng về **3,0×**, tối đa 1 lần/7 ngày: **80% người stake / 20% quỹ**. Lượng mint bị giới hạn bởi phần trần cung còn trống, cần đã đặt đủ hai địa chỉ nhận, và `FeeSplitter.harvest()` cũng tự gọi bước này |
 | Phí NUSD | 70% người stake / 20% đốt (tăng bảo chứng) / 10% quỹ |
 | Phí zkLTC | 90% vào dự trữ NUSD / 10% quỹ |
 | Stake (0xPoints) | Khóa NUSD 30/90/180/365 ngày, trọng số ×1 / ×1.2 / ×1.5 / ×3. Mọi NUSD đi vào contract được rải đều trong 7 ngày theo trọng số. Khi không ai stake, dòng thưởng tạm dừng và giữ nguyên chứ không mất. Thưởng không hết hạn. Rút gốc khi đáo hạn và không bao giờ phụ thuộc phí. `claimAndStake` khóa thưởng thành vị thế mới |

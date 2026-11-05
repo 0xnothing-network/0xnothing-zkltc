@@ -23,20 +23,23 @@
   recipient, price, or slippage parameters
 - Exact LP output pinning and atomic protected-pair preparation; any topology,
   reserve, router, or implementation drift fails closed
-- Exact router fee ledgers: direct swaps account for 0.1% protocol plus 0.5% LP,
-  while intermediary routes add one 0.1% surcharge and another 0.5% per pool
-- Atomic 0.1% synth mint fee collection with a caller maximum, canonical
-  vault/pair binding, queued empty-gauge rewards, and a paused zero-stake clock
+- Exact router fee ledgers: one router fee per route, 10 bps if either end of
+  the path is NUSD or WzkLTC and 30 bps otherwise, with no surcharge, plus 0.5%
+  LP fee per pool (at most three pools)
+- Atomic 0.1% synth mint fee collection with a caller maximum; in v3 the fee is
+  sent to the vault's `mintFeeDistributor`, the core fee splitter, not a gauge
 
 ## Known economic risks
 
-- The active lending pool is `0x7CB638F8e10f1bd200A3c5C3fD014C3FD97BA914`.
-  It uses the fixed-rate, bad-debt-inclusive borrow-cap implementation and
-  DIA-only pricing for WzkLTC, nBTC, and nETH. The receipt-verified migration
-  moved `19.999999999999999 NUSD` into it; the retired pool at
-  `0x099Fe8b7611A294eD33e6D96a0b958E189143622` is paused and retains only its
-  mandatory `1,000 wei` locked-share reserve. Supply, borrow, and healthy
-  collateral withdrawal are enabled on the replacement. They still fail closed
+- The active v3 lending pool is `0x6Cc96c044321b3205Ac108107Fc6d2d47e0B3E44`
+  (`PooledNUSDLendingPoolV2`). It uses fixed rates, a bad-debt-inclusive borrow
+  cap, pooled cross-asset collateral and DIA-only pricing for WzkLTC, nBTC, and
+  nETH. `0x7CB638F8e10f1bd200A3c5C3fD014C3FD97BA914` is the retired v1 pool.
+  (In v1, a receipt-verified migration moved `19.999999999999998 NUSD` into
+  that pool from the earlier pool `0x099Fe8b7611A294eD33e6D96a0b958E189143622`,
+  which is paused and retains only its mandatory `1,000 wei` locked-share
+  reserve.) Supply, borrow, and healthy collateral withdrawal on the v3 pool
+  still fail closed
   when governance pauses the relevant action, liquidity is insufficient, or a
   required DIA price is stale.
 - The existing OracleNUSD reserve model is not guaranteed overcollateralized.
@@ -66,11 +69,11 @@
   a second independently governed safety oracle.
 - AMM LPs face impermanent loss and low-liquidity manipulation. Lending never
   treats a raw AMM spot price as an oracle.
-- Legacy testnet pairs remain permissionless immutable 0.3% bytecode. The
-  official replacement router produces the requested 0.5% LP economics by
-  quoting conservatively, but a caller interacting with a legacy pair directly
-  can bypass router protocol accounting. Production must use the router-bound
-  pair implementation.
+- Retired v1 pairs (`contracts/deployments/latest.json`) are permissionless
+  immutable 0.3% bytecode, and a caller interacting with one directly bypasses
+  router fee accounting. This does not apply to v3: v3 pairs charge a 0.5% LP
+  fee and accept `swap` only from `factory.router()`. Production must use the
+  router-bound pair implementation.
 - A funded farming schedule can end. The UI must not label unfunded emissions as
   guaranteed APY.
 - A pause-only guardian reacts immediately; only the owner may unpause or change

@@ -78,14 +78,28 @@ event TokenGraduated(
   address lpRecipient
 );
 
-event ProtocolFeesWithdrawn(address indexed recipient, uint256 amountNusd);
+event ProtocolFeesDistributed(
+  address indexed caller,
+  address indexed recipient,
+  uint256 amountNusd
+);
 ```
+
+The deployed `ZeroXPumpV2` emits `ProtocolFeesDistributed` from the
+permissionless `distributeFees()` (`contracts/src/pump/ZeroXPumpV2.sol:156,
+402-409`). The subgraph also handles the older
+`ProtocolFeesWithdrawn(address indexed recipient, uint256 amountNusd)` event
+from v1/mainnet-style deployments; `ZeroXPumpV2` never emits it. Both are
+recorded as `FeeWithdrawal` entities.
 
 For trade accounting, `curveNusdAmount` is the volume. A buy has
 `userNusdAmount = curveNusdAmount + feeNusd`; a sell has
 `userNusdAmount = curveNusdAmount - feeNusd`. Prices use 18-decimal NUSD WAD.
 `graduationThresholdNusd` is the `6,000 NUSD` market-cap target, not a real-NUSD
-reserve target. Market cap is `spotPriceNusdWad * fixedTotalSupply / 1e18`.
+reserve target. Market cap is `spotPriceNusdWad * Market.totalSupply / 1e18`
+(`src/mapping.ts:98-100`). `totalSupply` stays fixed while the market is on the
+curve; graduation burns the unsold tokens, so the mapping lowers it then
+(`src/mapping.ts:466-469`).
 `graduationReserveThresholdNusd` is the separately derived real-reserve target
 (`1,500 NUSD` with the release parameters), and `curveProgressBps` measures
 funding against that derived target.
@@ -129,6 +143,19 @@ source. Matchstick execution itself may require WSL, Docker, or Linux when its
 native runner is unavailable on Windows.
 
 ## Frontend query contract
+
+The public testnet endpoint (Goldsky, GraphQL over HTTPS POST) is:
+
+```text
+https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxpump-testnet/1.0.0/gn
+```
+
+It is the `pumpGoldskyEndpoint` key in
+`apps/web/features/fi/config/testnet.generated.json`.
+
+`Market.status` is a `MarketStatus` enum with the values `CURVE`, `READY` and
+`GRADUATED`. `CURVE` is the state the contract calls `TRADING`
+(`ZeroXPumpV2.sol:49-54`).
 
 The stable frontend entities are `markets`, `tokenBalances`, `trades`, and
 `candles`. Relations are Graph entities, so holder/trade/candle queries use

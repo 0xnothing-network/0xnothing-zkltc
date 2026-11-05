@@ -2,7 +2,12 @@
 
 V2 is a separate immutable collection with free minting, fully on-chain SVG
 artwork and ERC-721 JSON metadata. It retains creator royalties of 1% through
-ERC-2981. The existing collection and marketplace continue to function.
+ERC-2981. The Classic collection stays readable and tradable. The legacy
+zkLTC market `0x13337cadA78d53C90E3c0EcE44C17c467C1a86F4` is paused
+(`../deployments/liteforge-testnet/legacy-marketplace-pause.json`) and the first
+NUSD market is retired; trading happens on the NUSD marketplace
+`0xd219EfFe076B68934e212313C8d468b994d6e52E` (`deployments/v3-core.json`).
+Integration guide: [../docs/developers/0xpixel.md](../docs/developers/0xpixel.md).
 
 ## Canvas and compression
 
@@ -65,12 +70,18 @@ The verified public deployment record is
 address, start block, runtime hash, receipt costs and a live 256-grid smoke NFT.
 V2 is `0xd83cb7acef921f98b6b983cbb712a583869da9eb` on chain 4441, deployed at
 block 56,305,414. Its complete runtime matches the locally tested artifact.
-The explorer currently indexes about 83% of blocks and rejects verification
-because it does not recognize the new contract address. The standard compiler
-input is saved in `output/pixel-v2-2026-10-01/standard-input.json`; explorer
-source verification remains pending.
-The combined deployment manifest preserves `pixel.legacyNft` and its start
-block while `pixel.nft` selects V2. The marketplace accepts either collection.
+Historical status as of 2026-10-01, not re-verified since: the explorer then
+indexed about 83% of blocks and rejected verification because it did not
+recognize the new contract address. The deployment record names the standard
+compiler input as `output/pixel-v2-2026-10-01/standard-input.json`
+(`sourceVerification.standardInput`); that file is not checked into this
+repository. Explorer source verification was pending at that time, so re-check
+it on the explorer.
+The combined deployment manifest
+(`../deployments/liteforge-testnet/deployments.json`) preserves
+`pixel.legacyNft` and its start block while `pixel.nft` selects V2. The NUSD marketplace (`NusdNftMarketplaceV2`
+at `0xd219EfFe076B68934e212313C8d468b994d6e52E`) allows both collections
+(`../apps/web/lib/nusdMarketplace.generated.json`).
 
 Build/test with the repository's vendored dependencies:
 
@@ -87,11 +98,12 @@ caps each transaction's maximum cost at 0.05 testnet zkLTC, simulates before
 signing, journals submitted transactions for retry and verifies the complete
 deployed runtime against the current compiled artifact before promotion.
 
-Web/ví identities and caches use collection + token ID. Historical image URLs
+Web and wallet identities and caches use collection + token ID. Historical image URLs
 without a collection continue to resolve the legacy collection. Both NFT
-generations remain readable and transferable. The new subgraph datasource is
-included in the local build; until it is published, the web uses RPC/explorer
-fallbacks for V2 rather than relying on the legacy hosted index.
+generations remain readable and transferable. The subgraph
+`pixel-nusd-market/1.1.0` is published on Goldsky and indexes V2 `Transfer`
+mints from block 61,141,428 (`../subgraphs/0xpixel-nusd-market/subgraph.yaml`);
+earlier V2 mints are read over RPC.
 Activity uses bounded, unbatched RPC log reads for recent events while merging
 available explorer history; provider timeouts and range limits split ranges.
 
