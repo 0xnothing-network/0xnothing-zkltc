@@ -25,11 +25,13 @@ type LiquidityRow = { id: string; timestamp: string; action: "MINT" | "BURN"; se
 type Result = { swaps?: SwapRow[]; liquidityEvents?: LiquidityRow[] };
 
 const CACHE_TTL_MS = 12_000;
+/** A poll or chain-event refresh takes a list only this young, so a confirmed tx shows at once. */
+const FRESH_READ_MAX_AGE_MS = 3_000;
 const STALE_TTL_MS = 60_000;
 const MAX_CACHE_ENTRIES = 128;
 const cacheHeaders = (fresh: boolean) => publicCdnCacheHeaders(
   "public, s-maxage=10, stale-while-revalidate=30",
-  10,
+  fresh ? 2 : 10,
   fresh ? 0 : CDN_STALE_SECONDS,
 );
 
@@ -115,7 +117,8 @@ async function loadActivity(pair: string, dynamicPool?: Address): Promise<Activi
 
 export async function GET(request: NextRequest) {
   const pair = request.nextUrl.searchParams.get("pair")?.toLowerCase() || "";
-  const CACHE_HEADERS = cacheHeaders(isFreshRead(request));
+  const freshRead = isFreshRead(request);
+  const CACHE_HEADERS = cacheHeaders(freshRead);
   const validPairs = canonicalPairs.map(([a, b]) => pairSlug(a, b));
   const dynamicPool = isAddress(pair) ? getAddress(pair) : undefined;
   if (!dynamicPool && !validPairs.includes(pair)) {
@@ -128,7 +131,7 @@ export async function GET(request: NextRequest) {
     }
 
     const cached = activityCache.entry(pair);
-    if (cached && cached.ageMs <= CACHE_TTL_MS) {
+    if (cached && cached.ageMs <= (freshRead ? FRESH_READ_MAX_AGE_MS : CACHE_TTL_MS)) {
       return NextResponse.json(cached.value, { headers: CACHE_HEADERS });
     }
 

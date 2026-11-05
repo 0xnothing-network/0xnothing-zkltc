@@ -14,6 +14,8 @@ const IMMUTABLE_CONTRACT_READS = new Set([
   "allPairs",
   "decimals",
   "factory",
+  // A non-zero pair mapping never changes; callers poll on their own while it is still zero.
+  "getPair",
   "imageURI",
   "metadataURI",
   "name",
@@ -62,6 +64,26 @@ export function isLiveQueryKey(queryKey: QueryKey): boolean {
   return typeof prefix === "string"
     && !STATIC_APP_QUERIES.has(prefix)
     && LIVE_APP_QUERY_PREFIXES.some((family) => prefix.startsWith(family));
+}
+
+/**
+ * Every observer opted out of refreshes (staleTime Infinity or "static"), so block
+ * sweeps and event waves leave it alone; its own refetchInterval still runs.
+ */
+export function isPinnedQuery(query: { observers: ReadonlyArray<{ options: { staleTime?: unknown } }> }): boolean {
+  return query.observers.length > 0 && query.observers.every((observer) => {
+    const staleTime = observer.options.staleTime;
+    return staleTime === Infinity || staleTime === "static";
+  });
+}
+
+/**
+ * An infinite query showing more than one page. Refetching it re-reads every page in
+ * sequence, so event waves skip it; a single page still refreshes as before.
+ */
+export function isDeepInfiniteData(data: unknown): boolean {
+  const pages = (data as { pages?: unknown } | undefined)?.pages;
+  return Array.isArray(pages) && pages.length > 1;
 }
 
 let liveSocketConnected = false;

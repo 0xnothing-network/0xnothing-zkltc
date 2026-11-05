@@ -165,6 +165,19 @@ test("a socket that stops answering keep-alives fails instead of hanging", async
   assert.equal(fake.closed, true);
 });
 
+test("a socket stuck connecting fails instead of waiting for the browser's handshake timeout", async () => {
+  const clock = fakeTimers();
+  const fake = fakeSocket();
+  const transport = live.openLiveTransport("wss://rpc.test", () => fake.socket, clock.timers);
+  const subscribing = transport.subscribe({ params: ["logs", { address: [TOKEN] }], onData: () => undefined, onError: () => undefined });
+  const failed = subscribing.then(() => false, () => true);
+  clock.advance(9_999);
+  assert.equal(fake.closed, false);
+  clock.advance(1);
+  assert.equal(await failed, true);
+  assert.equal(fake.closed, true);
+});
+
 function fakeTransports() {
   const opened: Array<{ url: string; filters: unknown[]; closed: boolean; fail: () => void; unsubscribed: number; reject?: boolean }> = [];
   const open = (url: string): LiveEvents.LiveTransport => {
@@ -209,7 +222,7 @@ test("a dropped socket reconnects with backoff, alternating endpoints, and resub
   const { opened, open } = fakeTransports();
   const statuses: boolean[] = [];
   let events = 0;
-  const session = live.startLiveSocket({ urls: ["wss://a", "wss://b"], onEvent: () => { events += 1; }, onStatus: (value) => statuses.push(value), open, timers: clock.timers });
+  const session = live.startLiveSocket({ urls: ["wss://a", "wss://b"], onEvent: () => { events += 1; }, onStatus: (value) => statuses.push(value), open, timers: clock.timers, random: () => 1 });
   await settle();
   opened[0]!.fail();
   assert.deepEqual(statuses, [true, false]);
@@ -241,6 +254,7 @@ test("failed connects back off exponentially and wake() retries immediately", as
       return { subscribe: async () => { throw new Error("refused"); }, close: () => undefined };
     },
     timers: clock.timers,
+    random: () => 1,
   });
   await settle();
   clock.advance(1_000);

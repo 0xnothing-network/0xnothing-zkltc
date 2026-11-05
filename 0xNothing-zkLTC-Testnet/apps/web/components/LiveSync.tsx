@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccount, useBlockNumber } from "wagmi";
 import { litvm } from "@/config/wagmi";
-import { BLOCK_SYNC_MS, isBlockSyncedQueryKey, isLiveQueryKey, notifyLiveWave, setLiveSocketConnected } from "@/lib/liveData";
+import { BLOCK_SYNC_MS, isBlockSyncedQueryKey, isDeepInfiniteData, isLiveQueryKey, isPinnedQuery, notifyLiveWave, setLiveSocketConnected } from "@/lib/liveData";
 import { createWaveScheduler, liveWatchAddresses, oncePerBlock, startLiveSocket, type LiveSocketSession } from "@/lib/liveEvents";
 import { LITVM_WS_URLS } from "@/lib/publicConfig";
 
@@ -12,7 +12,8 @@ const BLOCK_POLL_MS = BLOCK_SYNC_MS + Math.floor(Math.random() * 2_001);
 /** With events pushed over the socket, the block sweep only refreshes time-dependent reads. */
 const SOCKET_SWEEP_MS = 30_000 + Math.floor(Math.random() * 5_001);
 const WAVE_MIN_GAP_MS = 1_500;
-const WAVE_FOLLOW_UP_MS = 2_500;
+// Past the 3 s fresh-read window of the 0xFi data routes, so the follow-up always rebuilds.
+const WAVE_FOLLOW_UP_MS = 3_500;
 const FILTER_DEBOUNCE_MS = 1_000;
 
 /**
@@ -49,7 +50,8 @@ export function LiveSync() {
     void queryClient.invalidateQueries({
       predicate: (query) => query.getObserversCount() > 0
         && query.state.fetchStatus !== "fetching"
-        && isBlockSyncedQueryKey(query.queryKey),
+        && isBlockSyncedQueryKey(query.queryKey)
+        && !isPinnedQuery(query),
       refetchType: "active",
     });
   }, [blockNumber.data, queryClient]);
@@ -66,7 +68,12 @@ export function LiveSync() {
       }
       // In-flight reads finish; the follow-up wave picks up anything they missed.
       void queryClient.invalidateQueries(
-        { predicate: (query) => isLiveQueryKey(query.queryKey), refetchType: "active" },
+        {
+          predicate: (query) => isLiveQueryKey(query.queryKey)
+            && !isPinnedQuery(query)
+            && !isDeepInfiniteData(query.state.data),
+          refetchType: "active",
+        },
         { cancelRefetch: false },
       );
       notifyLiveWave();

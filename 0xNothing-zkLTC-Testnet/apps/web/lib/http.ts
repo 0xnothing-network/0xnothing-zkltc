@@ -9,7 +9,7 @@ function responseError(payload: unknown): string | undefined {
 // The first read of a live data route may take the CDN's last copy, so a page paints at once.
 // Every later read of the same URL is a poll or a chain-event refresh and asks for current
 // data, which the route then answers without any stale-while-revalidate layer.
-const LIVE_DATA_ROUTE = /^\/(?:api\/pump\/|0xFi\/api\/data\/)/;
+const LIVE_DATA_ROUTE = /^\/(?:api\/pump\/|api\/marketplace\/activity|0xFi\/api\/data\/)/;
 const readLiveUrls = new Set<string>();
 
 /** `url`, with `fresh=1` when this page has read that live data route before. */

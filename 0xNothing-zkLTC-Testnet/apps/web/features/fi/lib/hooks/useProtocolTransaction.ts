@@ -14,7 +14,7 @@ import { getAccount } from "wagmi/actions";
 import { erc20Abi } from "@fi/lib/abis/erc20";
 import { deployment } from "@fi/config/deployment";
 import { readableError } from "@fi/lib/errors";
-import { isBlockSyncedQueryKey } from "@/lib/liveData";
+import { isBlockSyncedQueryKey, notifyLiveWave } from "@/lib/liveData";
 import { ReceiptConfirmationError, waitForProtocolReceipt } from "@/lib/transactionReceipt";
 import { deliveredTokenAmount } from "../../../../../../shared/transactions/tokenDelivery";
 
@@ -227,11 +227,15 @@ export function useProtocolTransaction() {
         setState({ phase: "error", message: readableError(error), hash: submittedHash, step: currentStep || undefined, totalSteps });
         return undefined;
       } finally {
-        if (confirmedStep) void queryClient.invalidateQueries({
-          predicate: (query) => isBlockSyncedQueryKey(query.queryKey)
-            || query.queryKey[0] === "fi-pools"
-            || query.queryKey[0] === "fi-activity",
-        });
+        if (confirmedStep) {
+          void queryClient.invalidateQueries({
+            predicate: (query) => isBlockSyncedQueryKey(query.queryKey)
+              || query.queryKey[0] === "fi-pools"
+              || query.queryKey[0] === "fi-activity",
+          });
+          // The chart loads outside React Query and otherwise waits for a socket event.
+          notifyLiveWave();
+        }
         inFlightRef.current = false;
       }
     },

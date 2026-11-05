@@ -18,6 +18,7 @@ function harness(options: { changeAt?: "simulation" | "receipt"; chainId?: numbe
   let state: { phase: string; message: string; hash?: string };
   let writes = 0;
   let invalidations = 0;
+  let waves = 0;
   let predicate: (query: { queryKey: readonly unknown[] }) => boolean = () => false;
   const wallet = {
     account: { address: options.signer ?? ACCOUNT },
@@ -60,12 +61,12 @@ function harness(options: { changeAt?: "simulation" | "receipt"; chainId?: numbe
       "@fi/lib/abis/erc20": { erc20Abi: [] },
       "@fi/config/deployment": { deployment: { chain: { id: 4441 } } },
       "@fi/lib/errors": { readableError: (error: Error) => error.message },
-      "@/lib/liveData": { isBlockSyncedQueryKey },
+      "@/lib/liveData": { isBlockSyncedQueryKey, notifyLiveWave: () => { waves += 1; } },
       "@/lib/transactionReceipt": { ReceiptConfirmationError, waitForProtocolReceipt },
       "../../../../../../shared/transactions/tokenDelivery": { deliveredTokenAmount },
     },
   );
-  return { tx: evaluated.useProtocolTransaction(), result: () => ({ state, writes, invalidations }), refreshes: (queryKey: readonly unknown[]) => predicate({ queryKey }) };
+  return { tx: evaluated.useProtocolTransaction(), result: () => ({ state, writes, invalidations, waves }), refreshes: (queryKey: readonly unknown[]) => predicate({ queryKey }) };
 }
 
 test("an account change while simulating cannot send the old account's request", async () => {
@@ -107,6 +108,7 @@ test("wallet chain and signer are rechecked immediately before broadcasting", as
     assert.equal(await run.tx.execute({ call }), undefined);
     assert.equal(run.result().writes, 0);
     assert.equal(run.result().state.phase, "error");
+    assert.equal(run.result().waves, 0);
   }
 });
 
@@ -125,6 +127,7 @@ test("an unchanged wallet completes the existing transaction flow", async () => 
   assert.equal(run.result().writes, 1);
   assert.equal(run.result().state.phase, "success");
   assert.equal(run.result().invalidations, 1);
+  assert.equal(run.result().waves, 1, "the chart, outside React Query, refreshes too");
   assert.equal(run.refreshes(["fi-pools"]), true);
   assert.equal(run.refreshes(["fi-activity", ACCOUNT]), true);
   assert.equal(run.refreshes(["readContract", { functionName: "getPosition" }]), true);

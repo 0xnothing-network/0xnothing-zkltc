@@ -49,3 +49,23 @@ test("loaders outside React Query hear every refresh wave until they unsubscribe
   live.notifyLiveWave();
   assert.equal(heard, 2);
 });
+
+test("an existing pair mapping is fixed, so block sweeps skip getPair", () => {
+  assert.equal(live.isBlockSyncedQueryKey(read("getPair")), false);
+});
+
+test("queries every observer pinned with staleTime Infinity are left out of refreshes", () => {
+  const observer = (staleTime?: unknown) => ({ options: { staleTime } });
+  assert.equal(live.isPinnedQuery({ observers: [observer(Infinity)] }), true);
+  assert.equal(live.isPinnedQuery({ observers: [observer("static"), observer(Infinity)] }), true);
+  assert.equal(live.isPinnedQuery({ observers: [observer(Infinity), observer(0)] }), false);
+  assert.equal(live.isPinnedQuery({ observers: [observer()] }), false);
+  assert.equal(live.isPinnedQuery({ observers: [] }), false);
+});
+
+test("waves skip infinite queries that show more than one page", () => {
+  assert.equal(live.isDeepInfiniteData({ pages: [1, 2], pageParams: ["", "a"] }), true);
+  assert.equal(live.isDeepInfiniteData({ pages: [1], pageParams: [""] }), false);
+  assert.equal(live.isDeepInfiniteData(undefined), false);
+  assert.equal(live.isDeepInfiniteData([1, 2]), false);
+});

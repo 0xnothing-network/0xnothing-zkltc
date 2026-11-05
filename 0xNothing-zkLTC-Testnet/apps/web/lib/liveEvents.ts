@@ -186,10 +186,14 @@ export function openLiveTransport(
   let finished = false;
   let opened = false;
   const waitingForOpen: Array<{ resolve: () => void; reject: (error: Error) => void }> = [];
+  // A handshake that hangs (black-holed TCP, stalled proxy) fails like any other
+  // error, so the session's backoff moves on to the next endpoint.
+  const openTimer = timers.setTimeout(() => finish(new Error("Live socket open timed out")), REQUEST_TIMEOUT_MS);
 
   const finish = (error: Error | undefined) => {
     if (finished) return;
     finished = true;
+    timers.clearTimeout(openTimer);
     timers.clearInterval(keepAlive);
     const closedError = error ?? new Error("Live socket closed");
     for (const waiter of waitingForOpen.splice(0)) waiter.reject(closedError);
@@ -209,6 +213,7 @@ export function openLiveTransport(
   };
 
   socket.addEventListener("open", () => {
+    timers.clearTimeout(openTimer);
     opened = true;
     for (const waiter of waitingForOpen.splice(0)) waiter.resolve();
   });
@@ -301,12 +306,15 @@ export function startLiveSocket({
   onStatus,
   open = (url) => openLiveTransport(url),
   timers = defaultTimers,
+  random = Math.random,
 }: {
   urls: readonly string[];
   onEvent: (log?: unknown) => void;
   onStatus: (connected: boolean) => void;
   open?: (url: string) => LiveTransport;
   timers?: Timers;
+  /** Backoff jitter source in [0, 1); 1 gives the full, unjittered delay. */
+  random?: () => number;
 }): LiveSocketSession {
   let addresses: readonly string[] = STATIC_LIVE_ADDRESSES;
   let account: Address | undefined;
@@ -347,7 +355,10 @@ export function startLiveSocket({
     if (disposed || failedGeneration !== generation) return;
     teardown();
     setConnected(false);
-    const delay = Math.min(RECONNECT_MAX_MS, RECONNECT_BASE_MS * 2 ** attempt);
+    // Up to 30% early, never later, so tabs dropped by one node restart do not reconnect
+    // (and refresh) in lockstep.
+    const base = Math.min(RECONNECT_MAX_MS, RECONNECT_BASE_MS * 2 ** attempt);
+    const delay = Math.round(base * (0.7 + random() * 0.3));
     attempt += 1;
     if (reconnectTimer !== undefined) timers.clearTimeout(reconnectTimer);
     reconnectTimer = timers.setTimeout(() => {

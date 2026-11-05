@@ -33,6 +33,9 @@ type Result = { pools?: PoolRow[] };
 const MAX_RPC_TAIL_BLOCKS = 5_000n;
 const MAX_FACTORY_PAIRS = 1_000;
 const POOLS_CACHE_TTL_MS = 12_000;
+// A poll or chain-event refresh takes a snapshot only this young, so a confirmed trade
+// shows on the next wave. Rebuilds stay coalesced into loadPoolsOnce().
+const POOLS_FRESH_READ_MAX_AGE_MS = 3_000;
 // A visitor after a quiet spell gets the last snapshot at once instead of waiting for a
 // full Goldsky + RPC reload; the response carries its generatedAt, and the client
 // refetches within seconds when the snapshot is old.
@@ -744,7 +747,7 @@ function poolsResponse(envelope: DataEnvelope<PoolPoint[]>, cacheStatus: "HIT" |
     headers: {
       ...(cacheStatus === "STALE"
         ? publicCdnCacheHeaders(POOLS_STALE_CACHE_CONTROL, 1, cdnStale)
-        : publicCdnCacheHeaders(POOLS_CACHE_CONTROL, 10, cdnStale)),
+        : publicCdnCacheHeaders(POOLS_CACHE_CONTROL, freshRead ? 2 : 10, cdnStale)),
       "X-0xFi-Cache": cacheStatus,
     },
   });
@@ -753,7 +756,7 @@ function poolsResponse(envelope: DataEnvelope<PoolPoint[]>, cacheStatus: "HIT" |
 export async function GET(request: Request) {
   const freshRead = isFreshRead(request);
   const cached = poolsCache.entry(POOLS_CACHE_KEY);
-  if (cached && cached.ageMs < POOLS_CACHE_TTL_MS) {
+  if (cached && cached.ageMs < (freshRead ? POOLS_FRESH_READ_MAX_AGE_MS : POOLS_CACHE_TTL_MS)) {
     return poolsResponse(cached.value, "HIT", freshRead);
   }
 

@@ -67,6 +67,8 @@ test("repeat reads of a live data route ask for current data; other URLs are unt
   assert.equal(liveReadUrl("/api/pump/stats"), "/api/pump/stats?fresh=1");
   assert.equal(liveReadUrl("/0xFi/api/data/pools"), "/0xFi/api/data/pools");
   assert.equal(liveReadUrl("/0xFi/api/data/pools"), "/0xFi/api/data/pools?fresh=1");
+  assert.equal(liveReadUrl("/api/marketplace/activity?type=ALL"), "/api/marketplace/activity?type=ALL");
+  assert.equal(liveReadUrl("/api/marketplace/activity?type=ALL"), "/api/marketplace/activity?type=ALL&fresh=1");
   assert.equal(liveReadUrl("/api/token-metadata?ids=1"), "/api/token-metadata?ids=1");
   assert.equal(liveReadUrl("/api/token-metadata?ids=1"), "/api/token-metadata?ids=1");
 });

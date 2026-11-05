@@ -1,7 +1,7 @@
 import { after, NextResponse } from "next/server";
 import { logsClient, publicClient } from "@/lib/contract";
 import { createBoundedCache } from "@/lib/boundedCache";
-import { CDN_STALE_SECONDS, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
+import { CDN_STALE_SECONDS, isFreshRead, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 import { NFT_NUSD_ADDRESS, NUSD_MARKETPLACE_ADDRESS, NUSD_SUBGRAPH_URL } from "@/lib/nusdMarketplaceConfig";
 import { PIXEL_COLLECTIONS } from "@/lib/pixelCollections";
 import deployment from "@/lib/nusdMarketplace.generated.json";
@@ -33,6 +33,9 @@ export async function GET(request: Request) {
   try { parseNusdActivityCursor(cursor); }
   catch { return NextResponse.json({ error: "Invalid activity cursor" }, { status: 400 }); }
   const force = params.get("force") === "1";
+  // A poll or chain-event refresh (see lib/http.ts) waits for a page older than
+  // ACTIVITY_FRESH_MS instead of taking it and refreshing behind the response.
+  const freshRead = isFreshRead(request);
   const key = `${NUSD_MARKETPLACE_ADDRESS}:${filter}:${cursor ?? "latest"}:${rawLimit}`;
   // The NUSD subgraph serves complete history cheaply; the verified RPC scan remains
   // the fallback while it is syncing, lagging or failing.
@@ -61,12 +64,16 @@ export async function GET(request: Request) {
       payload = await forcedActivityCache.load(key, load);
       activityCache.set(key, payload);
     } else if (cached?.fresh) {
-      if (cached.ageMs >= ACTIVITY_FRESH_MS) after(() => activityCache.refresh(key, load).then(() => undefined, () => undefined));
-      payload = cached.value;
+      if (cached.ageMs < ACTIVITY_FRESH_MS) payload = cached.value;
+      else if (freshRead) payload = await activityCache.refresh(key, load);
+      else {
+        after(() => activityCache.refresh(key, load).then(() => undefined, () => undefined));
+        payload = cached.value;
+      }
     } else {
       payload = await activityCache.refresh(key, load);
     }
-    return NextResponse.json(payload, { headers: force ? { "Cache-Control": "private, no-store" } : publicCdnCacheHeaders("public, max-age=0, s-maxage=5, stale-while-revalidate=5", 5, CDN_STALE_SECONDS) });
+    return NextResponse.json(payload, { headers: force ? { "Cache-Control": "private, no-store" } : publicCdnCacheHeaders("public, max-age=0, s-maxage=5, stale-while-revalidate=5", 5, freshRead ? 0 : CDN_STALE_SECONDS) });
   } catch {
     return NextResponse.json({ error: "NUSD marketplace activity is unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }

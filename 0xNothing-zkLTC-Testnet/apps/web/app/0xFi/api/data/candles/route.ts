@@ -15,6 +15,9 @@ import { PublicRouteError, publicErrorMessage } from "@/lib/server/publicError";
 const PERIODS = { "5m": 300, "1h": 3_600, "4h": 14_400, "1d": 86_400 } as const;
 type CandlePeriod = keyof typeof PERIODS;
 const CANDLES_CACHE_TTL_MS = 12_000;
+const CANDLES_FRESH_READ_MAX_AGE_MS = 3_000;
+/** CDN seconds for a fresh read; the server snapshot above already bounds upstream load. */
+const FRESH_READ_CDN_MAX_AGE = 2;
 const CANDLES_STALE_TTL_MS = 5 * 60_000;
 const MAX_CANDLES_CACHE_ENTRIES = 256;
 const CANDLES_CACHE_CONTROL = "public, s-maxage=10, stale-while-revalidate=30";
@@ -51,7 +54,7 @@ class CandleRouteError extends PublicRouteError {
 function candlesResponse(envelope: DataEnvelope<CandlePoint[]>, cacheStatus: string, freshRead: boolean): NextResponse {
   return NextResponse.json(envelope, {
     headers: {
-      ...publicCdnCacheHeaders(CANDLES_CACHE_CONTROL, 10, freshRead ? 0 : CDN_STALE_SECONDS),
+      ...publicCdnCacheHeaders(CANDLES_CACHE_CONTROL, freshRead ? FRESH_READ_CDN_MAX_AGE : 10, freshRead ? 0 : CDN_STALE_SECONDS),
       "X-0xFi-Cache": cacheStatus,
     },
   });
@@ -285,13 +288,19 @@ export async function GET(request: NextRequest) {
   const period = requestedPeriod as CandlePeriod;
   const cacheKey = `${pair}:${period}`;
   const freshRead = isFreshRead(request);
-  const fresh = candlesCache.get(cacheKey);
-  if (fresh) return candlesResponse(fresh, "HIT", freshRead);
+  // A poll or chain-event refresh takes a snapshot only this young, so a trade
+  // shows on the next wave; first-paint reads keep the full ttl.
+  const cached = candlesCache.entry(cacheKey);
+  if (cached && (freshRead ? cached.ageMs < CANDLES_FRESH_READ_MAX_AGE_MS : cached.fresh)) {
+    return candlesResponse(cached.value, "HIT", freshRead);
+  }
 
   const coalesced = Boolean(candlesCache.pending(cacheKey));
+  // refresh() rather than load(): load() would hand back the entry still inside its ttl.
+  const loader = () => loadCandles(pair, period, dynamicPool);
   try {
     return candlesResponse(
-      await candlesCache.load(cacheKey, () => loadCandles(pair, period, dynamicPool)),
+      await (freshRead ? candlesCache.refresh(cacheKey, loader) : candlesCache.load(cacheKey, loader)),
       coalesced ? "COALESCED" : "MISS",
       freshRead,
     );

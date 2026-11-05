@@ -3,8 +3,8 @@ import test from "node:test";
 import * as viem from "viem";
 import * as marketplace from "../../lib/nusdMarketplace.ts";
 import type { readNusdMarketActivity, NusdActivityPage } from "../../lib/nusdMarketplaceActivity.ts";
-import { createBoundedCache } from "../../lib/boundedCache.ts";
-import { publicCdnCacheHeaders } from "../../lib/server/cdnCache.ts";
+import { createBoundedCache, type BoundedCache } from "../../lib/boundedCache.ts";
+import { CDN_STALE_SECONDS, isFreshRead, publicCdnCacheHeaders } from "../../lib/server/cdnCache.ts";
 import { evaluateModule } from "../helpers/evaluateModule.ts";
 
 const MARKET = "0x0000000000000000000000000000000000000011";
@@ -14,9 +14,21 @@ const history = evaluateModule<{ parseNusdActivityCursor: (cursor: string | null
 function activityHarness(options: { configured?: boolean; fail?: boolean; subgraph?: "ok" | "fail" } = {}) {
   const calls: Parameters<typeof readNusdMarketActivity>[1][] = [];
   const subgraphCalls: { url: string; options: { cursor?: string | null; latestBlock?: bigint } }[] = [];
+  const background: Array<() => unknown> = [];
+  // Ages every cached page so tests can step past ACTIVITY_FRESH_MS without waiting.
+  let ageOffsetMs = 0;
+  const agingCache = <T,>(cacheOptions: Parameters<typeof createBoundedCache>[0]): BoundedCache<T> => {
+    const cache = createBoundedCache<T>(cacheOptions);
+    const entry: BoundedCache<T>["entry"] = (key) => {
+      const stored = cache.entry(key);
+      return stored && { ...stored, ageMs: stored.ageMs + ageOffsetMs };
+    };
+    // Delegate through the prototype so getters such as `size` stay live.
+    return Object.assign(Object.create(cache) as BoundedCache<T>, { entry });
+  };
   const route = evaluateModule<{ GET: (request: Request) => Promise<Response> }>(new URL("../../app/api/marketplace/activity/route.ts", import.meta.url), {
-    "next/server": { NextResponse: Response }, "@/lib/contract": { publicClient: { getBlockNumber: async () => 5000n }, logsClient: {} },
-    "@/lib/boundedCache": { createBoundedCache }, "@/lib/server/cdnCache": { publicCdnCacheHeaders },
+    "next/server": { NextResponse: Response, after: (task: () => unknown) => { background.push(task); } }, "@/lib/contract": { publicClient: { getBlockNumber: async () => 5000n }, logsClient: {} },
+    "@/lib/boundedCache": { createBoundedCache: agingCache }, "@/lib/server/cdnCache": { CDN_STALE_SECONDS, publicCdnCacheHeaders, isFreshRead },
     "@/lib/nusdMarketplaceConfig": { NUSD_MARKETPLACE_ADDRESS: options.configured === false ? undefined : MARKET, NFT_NUSD_ADDRESS: NUSD },
     "@/lib/pixelCollections": { PIXEL_COLLECTIONS: [{ address: NFT }] },
     "@/lib/nusdMarketplaceSubgraph": { readNusdActivityFromSubgraph: async (url: string, params: typeof subgraphCalls[number]["options"]): Promise<NusdActivityPage> => {
@@ -31,8 +43,31 @@ function activityHarness(options: { configured?: boolean; fail?: boolean; subgra
       return { events: [], nextCursor: "900:0", fromBlock: "900", throughBlock: "1000" };
     } },
   }, { URL, console: { warn() {} }, process: { env: options.subgraph ? { PIXEL_NUSD_SUBGRAPH_URL: " https://graph.test " } : {} } });
-  return { calls, subgraphCalls, get: (search = "") => route.GET(new Request(`https://app.test/api/marketplace/activity${search}`)) };
+  return {
+    calls, subgraphCalls, background,
+    age: (ms: number) => { ageOffsetMs += ms; },
+    get: (search = "") => route.GET(new Request(`https://app.test/api/marketplace/activity${search}`)),
+  };
 }
+
+test("activity API answers a fresh read with a current page and no CDN stale window", async () => {
+  const api = activityHarness();
+  const first = await api.get();
+  assert.match(first.headers.get("cloudflare-cdn-cache-control") ?? "", /stale-while-revalidate=600/);
+  api.age(6_000);
+  const firstPaint = await api.get();
+  assert.equal(api.calls.length, 1, "a first-paint read takes the cached page");
+  assert.equal(api.background.length, 1, "and refreshes it behind the response");
+  const fresh = await api.get("?fresh=1");
+  assert.equal(api.calls.length, 2, "a fresh read of an aged page waits for a new one");
+  assert.match(fresh.headers.get("cloudflare-cdn-cache-control") ?? "", /stale-while-revalidate=0\b/);
+  assert.equal(firstPaint.status, 200);
+  await api.get("?fresh=1");
+  assert.equal(api.calls.length, 3, "the page is still aged by the test offset");
+  api.age(-12_000);
+  await api.get("?fresh=1");
+  assert.equal(api.calls.length, 3, "a page younger than the freshness window is reused");
+});
 
 test("activity API validates filters, cursors and limits before RPC, with NUSD deployment bounds", async () => {
   const api = activityHarness();
