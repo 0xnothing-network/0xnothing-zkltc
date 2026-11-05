@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { LITVM_RPC_URL, PUBLIC_APP_URL } from "@/lib/publicConfig";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import { SkipLink } from "@/components/SkipLink";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -61,7 +62,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased">
-        <a href="#main-content" className="skip-link">Skip to content</a>
+        <SkipLink />
         <div id="main-content" tabIndex={-1}>{children}</div>
         {vercelAnalyticsEnabled ? <Analytics /> : null}
       </body>

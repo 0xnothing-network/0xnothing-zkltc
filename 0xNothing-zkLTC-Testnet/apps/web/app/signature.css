@@ -41,3 +41,6 @@
   .ox-tx-steps li[data-state="active"] span { animation: ox-step-pulse 1.4s var(--ease) infinite; }
   @keyframes ox-step-pulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 12%, transparent); } }
 }
+@media (prefers-reduced-motion: reduce) {
+  .ox-health-fill { transition: none; }
+}

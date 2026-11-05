@@ -342,7 +342,7 @@ export default function DevPage() {
         </div>
       </header>
 
-      <main className={styles.main} aria-busy={isSubmitting || isWriting || Boolean(txHash)}>
+      <main className={styles.main}>
         <section className={styles.hero}>
           <div>
             <span className={styles.eyebrow}>Operator surface / testnet</span>
@@ -357,14 +357,14 @@ export default function DevPage() {
         </section>
 
         {!isConnected ? (
-          <div className={styles.banner}><Wallet size={17} weight="bold" /><span>Connect a wallet to unlock operator context. This page never reads a private key and cannot bypass onchain authorization.</span><ConnectWalletButton className={styles.button} label="Connect wallet" /></div>
+          <div className={styles.banner}><Wallet size={17} weight="bold" aria-hidden="true" /><span>Connect a wallet to unlock operator context. This page never reads a private key and cannot bypass onchain authorization.</span><ConnectWalletButton className={styles.button} label="Connect wallet" /></div>
         ) : !onExpectedChain ? (
-          <div className={`${styles.banner} ${styles.bannerError}`}><Warning size={17} weight="bold" /><span>Wrong network. Switch to LitVM LiteForge (chain {litvm.id}) before signing an action. Reads may be unavailable until you switch.</span><button className={styles.button} onClick={() => switchChain.mutate({ chainId: litvm.id })} disabled={switchChain.isPending}>{switchChain.isPending ? "Switching" : "Switch network"}</button></div>
+          <div className={`${styles.banner} ${styles.bannerError}`}><Warning size={17} weight="bold" aria-hidden="true" /><span>Wrong network. Switch to LitVM LiteForge (chain {litvm.id}) before signing an action. Reads may be unavailable until you switch.</span><button className={styles.button} onClick={() => switchChain.mutate({ chainId: litvm.id })} disabled={switchChain.isPending}>{switchChain.isPending ? "Switching" : "Switch network"}</button></div>
         ) : null}
 
-        {actionError ? <div className={`${styles.banner} ${styles.bannerError}`} role="alert"><XCircle size={17} weight="bold" /><span>{actionError}</span></div> : null}
-        {actionSuccess ? <div className={styles.banner} role="status" aria-live="polite"><CheckCircle size={17} weight="bold" /><span>{actionSuccess}</span></div> : null}
-        {txHash ? <div className={styles.banner} role="status" aria-live="polite"><CircleNotch size={17} weight="bold" className="animate-spin" /><span>Transaction pending. <a className={styles.monoLink} href={`${deployment.chain.explorerUrl}/tx/${txHash}`} target="_blank" rel="noreferrer">View on explorer <ArrowSquareOut size={12} /></a></span></div> : null}
+        {actionError ? <div className={`${styles.banner} ${styles.bannerError}`} role="alert"><XCircle size={17} weight="bold" aria-hidden="true" /><span>{actionError}</span></div> : null}
+        {actionSuccess ? <div className={styles.banner} role="status" aria-live="polite"><CheckCircle size={17} weight="bold" aria-hidden="true" /><span>{actionSuccess}</span></div> : null}
+        {txHash ? <div className={styles.banner} role="status" aria-live="polite"><CircleNotch size={17} weight="bold" className="animate-spin" aria-hidden="true" /><span>Transaction pending. <a className={styles.monoLink} href={`${deployment.chain.explorerUrl}/tx/${txHash}`} target="_blank" rel="noreferrer">View on explorer <ArrowSquareOut size={12} aria-hidden="true" /></a></span></div> : null}
 
         <section className={styles.section}>
           <div className={styles.sectionHeader}><div><span className={styles.eyebrow}>Protocol revenue</span><h2>Where fees sit</h2></div><p className={styles.sectionNote}>Only balances and withdrawal methods exposed by the published ABIs appear here.</p></div>
@@ -399,7 +399,7 @@ export default function DevPage() {
               <strong className={styles.value}>{amount(pixelPending.data as bigint | undefined, "zkLTC")}</strong>
               <span className={styles.subvalue}>Pending withdrawal for connected wallet</span>
               <span className={styles.address}>Dev wallet: {shortAddress(pixelDevWallet.data as string | undefined)}<br />Contract balance: {pixelBalance.data ? `${formatUnits(pixelBalance.data.value, pixelBalance.data.decimals)} ${pixelBalance.data.symbol}` : "Loading"}</span>
-              <button className={styles.button} disabled={disableControls || !isPixelDev || (pixelPending.data as bigint | undefined ?? 0n) === 0n} onClick={() => submitContractWrite({ address: PIXEL_CLASSIC_ADDRESS, abi: PixelClassicABI, functionName: "withdraw", args: [] }, "pixel")}>Claim own Pixel balance</button>
+              <button className={styles.button} aria-busy={isSubmitting || isWriting || undefined} disabled={disableControls || !isPixelDev || (pixelPending.data as bigint | undefined ?? 0n) === 0n} onClick={() => submitContractWrite({ address: PIXEL_CLASSIC_ADDRESS, abi: PixelClassicABI, functionName: "withdraw", args: [] }, "pixel")}>Claim own Pixel balance</button>
               {!isPixelDev ? <span className={styles.subvalue}>Only the connected dev wallet can claim its own pending balance.</span> : null}
             </div>
             <div className={styles.card + " " + styles.formCard}>

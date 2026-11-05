@@ -48,6 +48,7 @@ export function ProductHeader({ product, nav, isActive, notify, className = "" }
   const walletButton = useRef<HTMLButtonElement>(null);
   const walletMenu = useRef<HTMLDivElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
   const { address, chainId, isConnected } = useAccount();
   const { connectors, connect, isPending: connecting } = useConnect();
   const { disconnect } = useDisconnect();
@@ -73,6 +74,7 @@ export function ProductHeader({ product, nav, isActive, notify, className = "" }
     const onPointer = (event: PointerEvent) => {
       const target = event.target as Node;
       if (walletOpen && !walletMenu.current?.contains(target) && !walletButton.current?.contains(target)) closeWallet();
+      if (menuOpen && !headerRef.current?.contains(target)) setMenuOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
@@ -86,6 +88,26 @@ export function ProductHeader({ product, nav, isActive, notify, className = "" }
       document.removeEventListener("keydown", onKey);
     };
   }, [closeWallet, menuOpen, walletOpen]);
+
+  // The menu takes focus on open, as role="menu" promises.
+  useEffect(() => {
+    if (walletOpen) walletMenu.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
+  }, [walletOpen]);
+
+  const onWalletMenuKey = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Tab") { closeWallet(); return; }
+    const items = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("[role=menuitem]"));
+    if (items.length === 0) return;
+    const index = items.indexOf(document.activeElement as HTMLElement);
+    let next: number;
+    if (event.key === "ArrowDown") next = (index + 1) % items.length;
+    else if (event.key === "ArrowUp") next = (index - 1 + items.length) % items.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = items.length - 1;
+    else return;
+    event.preventDefault();
+    items[next]?.focus();
+  };
 
   // viem's message runs on with "Details:" and "Version:" lines, and a prompt the
   // user closed is not a failure worth a toast.
@@ -127,7 +149,7 @@ export function ProductHeader({ product, nav, isActive, notify, className = "" }
   });
 
   return (
-    <header className={`ox-header ${className}`.trim()} data-product={product}>
+    <header ref={headerRef} className={`ox-header ${className}`.trim()} data-product={product}>
       <div className="ox-header-inner">
         <Link href="/" className="ox-wordmark" aria-label="0xNothing home">
           <span className="ox-wordmark-mark" aria-hidden="true">N</span>
@@ -143,15 +165,15 @@ export function ProductHeader({ product, nav, isActive, notify, className = "" }
         <nav className="ox-nav" aria-label={`0x${current.name} navigation`}>{navLinks(false)}</nav>
         <div className="ox-header-actions">
           {mounted && wrongChain ? (
-            <button type="button" className="ox-network-pill" data-state="wrong" disabled={switching} onClick={() => switchChain({ chainId: CHAIN_ID }, { onError: walletError("Network switch failed") })}>
-              <i aria-hidden="true" />{switching ? "Switching" : "Switch to LiteForge"}
+            <button type="button" className="ox-network-pill" data-state="wrong" disabled={switching} aria-busy={switching || undefined} onClick={() => switchChain({ chainId: CHAIN_ID }, { onError: walletError("Network switch failed") })}>
+              <i aria-hidden="true" /><span className="ox-network-label">{switching ? "Switching" : "Switch to LiteForge"}</span>
             </button>
           ) : (
             <span className="ox-network-pill" data-state="ok" title={`LiteForge testnet · chain ${CHAIN_ID}`}><i aria-hidden="true" />LiteForge</span>
           )}
           {mounted && isConnected && address ? (
-            <div className="ox-wallet">
-              <button ref={walletButton} type="button" className="ox-wallet-button" aria-expanded={walletOpen} aria-controls="ox-wallet-menu" title={address}
+            <div className="ox-wallet" onBlur={(event) => { const next = event.relatedTarget as Node | null; if (walletOpen && next && !event.currentTarget.contains(next)) closeWallet(); }}>
+              <button ref={walletButton} type="button" className="ox-wallet-button" aria-haspopup="menu" aria-expanded={walletOpen} aria-controls="ox-wallet-menu" title={address}
                 onClick={() => setWalletOpen((open) => !open)}>
                 {!wrongChain ? (
                   <span className="ox-wallet-balances" aria-label="Wallet balances">
@@ -164,7 +186,7 @@ export function ProductHeader({ product, nav, isActive, notify, className = "" }
                 <CaretDown size={12} aria-hidden="true" />
               </button>
               {walletOpen ? (
-                <div id="ox-wallet-menu" ref={walletMenu} className="ox-wallet-menu" role="menu">
+                <div id="ox-wallet-menu" ref={walletMenu} className="ox-wallet-menu" role="menu" onKeyDown={onWalletMenuKey}>
                   <div className="ox-wallet-menu-summary"><span>Connected wallet</span><strong>{shortenAddress(address)}</strong></div>
                   <button type="button" role="menuitem" onClick={() => void copyAddress()}><Copy size={15} aria-hidden="true" />Copy address</button>
                   <a role="menuitem" href={getAddressExplorerUrl(address)} target="_blank" rel="noopener noreferrer"><ArrowSquareOut size={15} aria-hidden="true" />View on explorer</a>
@@ -173,7 +195,7 @@ export function ProductHeader({ product, nav, isActive, notify, className = "" }
               ) : null}
             </div>
           ) : mounted ? (
-            <button type="button" className="ox-connect" disabled={connecting} onClick={connectWallet}>
+            <button type="button" className="ox-connect" disabled={connecting} aria-busy={connecting || undefined} onClick={connectWallet}>
               <Wallet size={16} aria-hidden="true" />{connecting ? "Connecting" : "Connect"}
             </button>
           ) : (
@@ -191,7 +213,7 @@ export function ProductHeader({ product, nav, isActive, notify, className = "" }
           <nav className="ox-mobile-nav" aria-label={`Mobile 0x${current.name} navigation`}>{navLinks(true)}</nav>
           <nav className="ox-switcher ox-switcher-mobile" aria-label="0xNothing products">
             {PRODUCTS.map((entry) => (
-              <Link key={entry.id} href={entry.href} data-product={entry.id} className={entry.id === product ? "active" : undefined} onClick={() => setMenuOpen(false)}>0x{entry.name}</Link>
+              <Link key={entry.id} href={entry.href} data-product={entry.id} className={entry.id === product ? "active" : undefined} aria-current={entry.id === product ? "true" : undefined} onClick={() => setMenuOpen(false)}>0x{entry.name}</Link>
             ))}
           </nav>
         </div>

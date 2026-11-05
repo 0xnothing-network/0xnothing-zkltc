@@ -42,7 +42,7 @@ export function TxSteps({ step, total, failed = false, done = false }: { step: n
       {Array.from({ length: total }, (_, index) => {
         const number = index + 1;
         const state = done || number < step ? "complete" : number === step ? (failed ? "failed" : "active") : "pending";
-        return <li key={number} data-state={state}><span>{number}</span></li>;
+        return <li key={number} data-state={state} aria-current={state === "active" ? "step" : undefined}><span>{number}</span></li>;
       })}
     </ol>
   );

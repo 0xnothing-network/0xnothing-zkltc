@@ -152,6 +152,7 @@
   .nothing-mosaic-tile:hover span { opacity: 1; }
   .nothing-x:hover, .nothing-footer-nav a:hover { color: var(--text-1); }
 }
+.nothing-mosaic-tile:focus-visible span { opacity: 1; }
 
 @media (max-width: 860px) {
   .nothing-stage { grid-template-columns: minmax(0, 1fr); align-items: start; }

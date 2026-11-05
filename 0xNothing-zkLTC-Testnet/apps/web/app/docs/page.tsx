@@ -591,7 +591,7 @@ export default function DocsPage() {
                 <div><strong>Synths</strong><span>nBTC and nETH use DIA prices, isolated collateral accounting, reserve support rules, and stale-feed guards.</span></div>
                 <div><strong>RWA</strong><span>Issuer tokens trade against a published reserve with a 1% fee. No issuer market is listed on testnet yet.</span></div>
               </div>
-              <div className="ox-docs-fee-table-wrap">
+              <div className="ox-docs-fee-table-wrap" tabIndex={0}>
                 <table>
                   <thead><tr><th>Swap</th><th>LP fee</th><th>Protocol fee</th><th>Nominal total</th></tr></thead>
                   <tbody>
@@ -628,7 +628,7 @@ export default function DocsPage() {
                 title="Integrate 0xFi swaps"
                 description="Choose the correct execution surface, quote against current state, simulate the exact request, then ask the wallet to sign."
               />
-              <div className="ox-docs-fee-table-wrap">
+              <div className="ox-docs-fee-table-wrap" tabIndex={0}>
                 <table>
                   <thead><tr><th>User action</th><th>Contract</th><th>Method</th></tr></thead>
                   <tbody>

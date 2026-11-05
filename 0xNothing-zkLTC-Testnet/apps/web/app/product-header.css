@@ -119,8 +119,12 @@
 .ox-network-pill i { width: 7px; height: 7px; border-radius: var(--r-pill); background: var(--positive); }
 .ox-network-pill[data-state="wrong"] { border-color: color-mix(in srgb, var(--warning) 45%, transparent); color: var(--warning); cursor: pointer; }
 .ox-network-pill[data-state="wrong"] i { background: var(--warning); box-shadow: none; }
+/* On a narrow row only the pill gives way, so the menu button stays reachable. */
+.ox-network-pill { min-width: 0; }
+.ox-network-pill i { flex: none; }
+.ox-network-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.ox-wallet { position: relative; }
+.ox-wallet { position: relative; flex: none; }
 .ox-wallet-button {
   display: inline-flex;
   align-items: center;
@@ -208,6 +212,10 @@
 }
 .ox-theme-toggle:hover, .ox-menu-button:hover { color: var(--text-1); border-color: var(--line-strong); }
 .ox-menu-button { display: none; }
+.ox-theme-toggle, .ox-menu-button { position: relative; }
+@media (pointer: coarse) {
+  .ox-theme-toggle::after, .ox-menu-button::after { content: ""; position: absolute; inset: -4px; }
+}
 .ox-header :is(a, button):focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
 
 .ox-mobile-panel { display: grid; gap: 12px; padding: 12px clamp(14px, 2.4vw, 32px) 16px; border-top: 1px solid var(--line); }
@@ -227,6 +235,9 @@
 @media (max-width: 900px) {
   .ox-nav { display: none; }
   .ox-menu-button { display: grid; }
+}
+@media (min-width: 901px) {
+  .ox-mobile-panel { display: none; }
 }
 @media (max-width: 560px) {
   .ox-network-pill[data-state="ok"] { display: none; }

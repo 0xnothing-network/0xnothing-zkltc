@@ -96,6 +96,23 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [dismiss]
   );
 
+  // Hover or focus holds a toast open so its reason and link can be read.
+  const pause = useCallback((id: string) => {
+    const timer = timersRef.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      timersRef.current.delete(id);
+    }
+  }, []);
+
+  const resume = useCallback(
+    (id: string, duration: number) => {
+      if (duration <= 0 || timersRef.current.has(id)) return;
+      timersRef.current.set(id, setTimeout(() => dismiss(id), 2000));
+    },
+    [dismiss]
+  );
+
   // Cleanup all timers on unmount.
   useEffect(() => {
     const timers = timersRef.current;
@@ -133,7 +150,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <ToastViewport toasts={toasts} onDismiss={dismiss} />
+      <ToastViewport toasts={toasts} onDismiss={dismiss} onPause={pause} onResume={resume} />
     </ToastContext.Provider>
   );
 }
@@ -149,18 +166,21 @@ export function useToast(): ToastContextValue {
 function ToastViewport({
   toasts,
   onDismiss,
+  onPause,
+  onResume,
 }: {
   toasts: ActiveToast[];
   onDismiss: (id: string) => void;
+  onPause: (id: string) => void;
+  onResume: (id: string, duration: number) => void;
 }) {
   return (
     <div
       aria-live="polite"
-      aria-atomic="true"
       className="pointer-events-none fixed z-[100] top-4 left-4 w-[calc(100dvw-2rem)] max-w-[calc(100dvw-2rem)] sm:left-auto sm:right-4 sm:w-full sm:max-w-sm flex flex-col gap-2"
     >
       {toasts.map((toast) => (
-        <ToastCard key={toast.id} toast={toast} onDismiss={onDismiss} />
+        <ToastCard key={toast.id} toast={toast} onDismiss={onDismiss} onPause={onPause} onResume={onResume} />
       ))}
     </div>
   );
@@ -192,16 +212,29 @@ const KIND_STYLES: Record<ToastKind, { ring: string; icon: string; iconColor: st
 function ToastCard({
   toast,
   onDismiss,
+  onPause,
+  onResume,
 }: {
   toast: ActiveToast;
   onDismiss: (id: string) => void;
+  onPause: (id: string) => void;
+  onResume: (id: string, duration: number) => void;
 }) {
   const styles = KIND_STYLES[toast.kind];
 
   return (
     <div
-      role="status"
+      role={toast.kind === "error" ? "alert" : undefined}
       data-toast-kind={toast.kind}
+      onMouseEnter={() => onPause(toast.id)}
+      onMouseLeave={(event) => {
+        if (!event.currentTarget.contains(document.activeElement)) onResume(toast.id, toast.duration);
+      }}
+      onFocus={() => onPause(toast.id)}
+      onBlur={(event) => {
+        if (event.currentTarget.contains(event.relatedTarget as Node | null) || event.currentTarget.matches(":hover")) return;
+        onResume(toast.id, toast.duration);
+      }}
       className={[
         "toast-card pointer-events-auto",
         "border backdrop-blur-md shadow-[6px_6px_0_0_var(--pixel-shadow),0_24px_70px_rgba(0,0,0,0.42)]",
@@ -214,6 +247,8 @@ function ToastCard({
         <div className={`flex-shrink-0 mt-0.5 ${styles.iconColor}`}>
           <svg
             className="w-4 h-4"
+            aria-hidden="true"
+            focusable="false"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
@@ -251,6 +286,8 @@ function ToastCard({
               <svg
                 width="9"
                 height="9"
+                aria-hidden="true"
+                focusable="false"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
@@ -268,9 +305,9 @@ function ToastCard({
           type="button"
           onClick={() => onDismiss(toast.id)}
           aria-label="Dismiss notification"
-          className="flex-shrink-0 -mr-1 -mt-1 flex h-6 w-6 items-center justify-center border border-(--text-1)/[0.08] text-(--text-3) transition-colors hover:bg-(--text-1)/10 hover:text-(--text-1)"
+          className="flex-shrink-0 -mr-1 -mt-1 flex h-6 w-6 items-center justify-center border border-(--text-1)/[0.08] text-(--text-3) transition-colors hover:bg-(--text-1)/10 hover:text-(--text-1) relative before:absolute before:-inset-2 before:content-['']"
         >
-          <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.4" viewBox="0 0 24 24">
+          <svg width="11" height="11" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.4" viewBox="0 0 24 24">
             <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
           </svg>
         </button>
