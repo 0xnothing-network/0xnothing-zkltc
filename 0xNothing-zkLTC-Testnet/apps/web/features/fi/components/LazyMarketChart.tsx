@@ -1,13 +1,15 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { memo } from "react";
 import { SkeletonRows } from "@fi/components/UiStates";
 
+type ChartToken = { symbol: string; imageUrl?: string };
 type LazyMarketChartProps = {
   pair: string;
   label?: string;
-  token0?: { symbol: string; imageUrl?: string };
-  token1?: { symbol: string; imageUrl?: string };
+  token0?: ChartToken;
+  token1?: ChartToken;
 };
 
 const MarketChart = dynamic(
@@ -19,6 +21,7 @@ const MarketChart = dynamic(
         <div className="fi-chart-heading">
           <div className="fi-chart-market"><h2>Market chart</h2></div>
         </div>
+        <div className="fi-chart-summary" aria-hidden="true" />
         <div className="fi-chart-frame">
           <div className="fi-chart-overlay"><SkeletonRows count={4} label="Loading price chart" /></div>
         </div>
@@ -27,6 +30,14 @@ const MarketChart = dynamic(
   },
 );
 
-export function LazyMarketChart(props: LazyMarketChartProps) {
-  return <MarketChart {...props} />;
+function sameToken(a?: ChartToken, b?: ChartToken) {
+  return a?.symbol === b?.symbol && a?.imageUrl === b?.imageUrl;
 }
+
+/** Pool pages pass fresh token objects on every keystroke; compare by value so the chart only renders on real changes. */
+export const LazyMarketChart = memo(function LazyMarketChart(props: LazyMarketChartProps) {
+  return <MarketChart {...props} />;
+}, (prev, next) => prev.pair === next.pair
+  && prev.label === next.label
+  && sameToken(prev.token0, next.token0)
+  && sameToken(prev.token1, next.token1));

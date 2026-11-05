@@ -211,13 +211,13 @@ export function BorrowWorkspace() {
       toast.show(labels[mode], "The lending account was updated on LitVM.", "success");
       setAmountText("");
       setRepayMaxSelected(false);
-      void reads.refetch();
-      void walletReads.refetch();
-      void collateralReads.refetch();
-      void walletNative.refetch();
-      void walletWrapped.refetch();
-      void walletCollateral.refetch();
-      void walletNusd.refetch();
+      void reads.refetch({ cancelRefetch: false });
+      void walletReads.refetch({ cancelRefetch: false });
+      void collateralReads.refetch({ cancelRefetch: false });
+      void walletNative.refetch({ cancelRefetch: false });
+      void walletWrapped.refetch({ cancelRefetch: false });
+      void walletCollateral.refetch({ cancelRefetch: false });
+      void walletNusd.refetch({ cancelRefetch: false });
     }
   }
 

@@ -39,6 +39,9 @@ export function usePools() {
     refetchInterval: (query) => query.state.data?.retrySoon ? OLD_SNAPSHOT_RETRY_MS : fiPollInterval("pools"),
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
+    // Fetch start/end alone must not re-render the swap form and market list. dataUpdatedAt stays
+    // so the tab-return refresh below still sees how fresh the snapshot is.
+    notifyOnChangeProps: ["data", "dataUpdatedAt", "error", "isPending", "isError"],
   });
   useFiVisibilityRefresh({
     key: "pools",
@@ -48,8 +51,11 @@ export function usePools() {
     maxAgeMs: FI_LIVE_MS,
   });
   return {
-    ...query,
     data: query.data?.pools,
     warning: query.data?.warning,
+    error: query.error,
+    isError: query.isError,
+    isPending: query.isPending,
+    refetch: query.refetch,
   };
 }

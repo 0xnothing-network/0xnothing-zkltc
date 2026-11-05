@@ -464,7 +464,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
     if (hash) {
       toast.show("Swap confirmed", `${swapSymbolIn}/${swapSymbolOut} settled.`, "success");
       setSwapAmountText("");
-      void pairData.refetch(); void reserveRead.refetch(); void walletBalances.refetch(); void swapQuote.refetch();
+      void pairData.refetch({ cancelRefetch: false }); void reserveRead.refetch({ cancelRefetch: false }); void walletBalances.refetch({ cancelRefetch: false }); void swapQuote.refetch({ cancelRefetch: false });
     }
   }
 
@@ -495,7 +495,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
     if (hash) {
       toast.show("Liquidity added", `${displaySymbolA}/${displaySymbolB} pool updated.`, "success");
       setAmountAText(""); setAmountBText("");
-      void pairData.refetch(); void reserveRead.refetch(); void walletBalances.refetch();
+      void pairData.refetch({ cancelRefetch: false }); void reserveRead.refetch({ cancelRefetch: false }); void walletBalances.refetch({ cancelRefetch: false });
     }
   }
 
@@ -520,7 +520,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
     });
     if (hash) {
       toast.show("Liquidity removed", `${displaySymbolA}/${displaySymbolB} assets returned.`, "success");
-      setLpText(""); void pairData.refetch(); void reserveRead.refetch(); void walletBalances.refetch();
+      setLpText(""); void pairData.refetch({ cancelRefetch: false }); void reserveRead.refetch({ cancelRefetch: false }); void walletBalances.refetch({ cancelRefetch: false });
     }
   }
 
@@ -565,10 +565,10 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
     if (hash) {
       toast.show("LP locked", `Your liquidity has been ${lockMode === "permanent" ? "permanently" : "temporarily"} locked.`, "success");
       setLockAmountText(""); setLockUnlockAt("");
-      void walletBalances.refetch();
-      void lockedLpRead.refetch();
-      void ownerLockIdsRead.refetch();
-      void locksRead.refetch();
+      void walletBalances.refetch({ cancelRefetch: false });
+      void lockedLpRead.refetch({ cancelRefetch: false });
+      void ownerLockIdsRead.refetch({ cancelRefetch: false });
+      void locksRead.refetch({ cancelRefetch: false });
     }
   }
 
@@ -594,8 +594,8 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
     if (hash) {
       toast.show("LP burned", "Liquidity sent to the dead address permanently.", "success");
       setBurnAmountText("");
-      void walletBalances.refetch();
-      void burnedLpRead.refetch();
+      void walletBalances.refetch({ cancelRefetch: false });
+      void burnedLpRead.refetch({ cancelRefetch: false });
     }
   }
 
@@ -611,9 +611,9 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
     });
     if (hash) {
       toast.show("LP withdrawn", "Your locked liquidity has been returned.", "success");
-      void walletBalances.refetch();
-      void lockedLpRead.refetch();
-      void locksRead.refetch();
+      void walletBalances.refetch({ cancelRefetch: false });
+      void lockedLpRead.refetch({ cancelRefetch: false });
+      void locksRead.refetch({ cancelRefetch: false });
     }
   }
 

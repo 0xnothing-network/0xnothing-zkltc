@@ -70,7 +70,7 @@ export function LendingWorkspace() {
     });
     if (hash) {
       toast.show(mode === "supply" ? "NUSD supplied" : "NUSD withdrawn", "The pooled lending position was confirmed.", "success");
-      setAmountText(""); void stats.refetch(); void walletStats.refetch(); void balance.refetch();
+      setAmountText(""); void stats.refetch({ cancelRefetch: false }); void walletStats.refetch({ cancelRefetch: false }); void balance.refetch({ cancelRefetch: false });
     }
   }
 

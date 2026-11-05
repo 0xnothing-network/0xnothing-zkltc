@@ -224,14 +224,14 @@ function FarmRow({
     });
     if (hash) {
       toast.show(mode === "stake" ? "LP staked" : "LP withdrawn", `${tokenA}/${tokenB} position updated.`, "success");
-      setAmountText(""); void stats.refetch(); void walletStats.refetch();
+      setAmountText(""); void stats.refetch({ cancelRefetch: false }); void walletStats.refetch({ cancelRefetch: false });
     }
   }
 
   async function claim() {
     if (!gauge || !earned || !walletReadsReady) return;
     const hash = await tx.execute({ call: { address: gauge, abi: farmGaugeAbi, functionName: "getReward" } });
-    if (hash) { toast.show("Rewards claimed", "Farm rewards were settled to your wallet.", "success"); void stats.refetch(); void walletStats.refetch(); }
+    if (hash) { toast.show("Rewards claimed", "Farm rewards were settled to your wallet.", "success"); void stats.refetch({ cancelRefetch: false }); void walletStats.refetch({ cancelRefetch: false }); }
   }
 
   function retryReads() {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, CaretUpDown, MagnifyingGlass } from "@phosphor-icons/react";
-import { useMemo, useState } from "react";
+import { memo, useDeferredValue, useMemo, useState } from "react";
 import type { Address } from "viem";
 import { TokenPairLogos } from "@fi/components/TokenLogo";
 import { EmptyState, ErrorState, SkeletonRows } from "@fi/components/UiStates";
@@ -109,7 +109,11 @@ function marketHref(pool: PoolPoint): string {
   return fiPath(`/pools/${pool.id.toLowerCase()}`);
 }
 
-function MarketRow({ pool, canonical }: { pool: PoolPoint; canonical: Set<string> }) {
+// Start the chart chunk on intent so the pool page does not wait for it after hydrating.
+const preloadMarketChart = () => { void import("@fi/components/MarketChart"); };
+
+// Rows keep their pool object across refreshes (structural sharing), so only changed markets re-render.
+const MarketRow = memo(function MarketRow({ pool, canonical }: { pool: PoolPoint; canonical: Set<string> }) {
   const type = marketType(pool, canonical);
   const live = hasLiquidity(pool);
   const change = pool.priceChange24h;
@@ -126,7 +130,7 @@ function MarketRow({ pool, canonical }: { pool: PoolPoint; canonical: Set<string
 
   return (
     <li className="fi-market-item">
-      <Link className="fi-market-row" href={marketHref(pool)}>
+      <Link className="fi-market-row" href={marketHref(pool)} onPointerEnter={preloadMarketChart} onFocus={preloadMarketChart}>
         <span className="fi-market-pair">
           <TokenPairLogos token0={displayToken0} token1={displayToken1} size="sm" />
           <span>
@@ -150,7 +154,7 @@ function MarketRow({ pool, canonical }: { pool: PoolPoint; canonical: Set<string
       </Link>
     </li>
   );
-}
+});
 
 export function PoolDirectory({
   tradeOnly = false,
@@ -160,6 +164,8 @@ export function PoolDirectory({
   title?: string;
 }) {
   const [search, setSearch] = useState("");
+  // The field shows each keystroke at once; filtering and sorting the list can trail by a frame.
+  const deferredSearch = useDeferredValue(search);
   const [filter, setFilter] = useState<MarketFilter>("all");
   const [sortKey, setSortKey] = useState<SortKey>("tvl");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
@@ -173,7 +179,7 @@ export function PoolDirectory({
 
   const canonical = useMemo(canonicalPoolAddresses, []);
   const markets = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const query = deferredSearch.trim().toLowerCase();
     return indexedPools
       .filter((pool) => {
         const type = marketType(pool, canonical);
@@ -197,7 +203,7 @@ export function PoolDirectory({
         if (difference === 0) return a.id.localeCompare(b.id);
         return sortDirection === "asc" ? difference : -difference;
       });
-  }, [canonical, filter, indexedPools, search, sortDirection, sortKey, tradeOnly]);
+  }, [canonical, deferredSearch, filter, indexedPools, sortDirection, sortKey, tradeOnly]);
 
   function chooseSort(next: SortKey) {
     if (sortKey === next) setSortDirection((current) => current === "asc" ? "desc" : "asc");

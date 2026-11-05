@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { getAddress, type Address } from "viem";
 import { assetList } from "@fi/config/assets";
 import type { ImportedTokenExplorerStatus, ImportedTokenMetadataSource } from "@fi/lib/importedToken";
@@ -36,6 +36,7 @@ const CORE_ASSETS: SwapAsset[] = assetList.map((asset) => ({
 
 export function useSwapAssets() {
   const poolsQuery = usePools();
+  const previousRef = useRef<SwapAsset[]>(CORE_ASSETS);
   const data = useMemo((): SwapAsset[] => {
       const known = new Set(CORE_ASSETS.map((asset) => asset.poolAddress?.toLowerCase()).filter(Boolean));
       const discovered: SwapAsset[] = [];
@@ -67,8 +68,17 @@ export function useSwapAssets() {
         }
       }
       discovered.sort((a, b) => a.symbol.localeCompare(b.symbol));
-      return [...CORE_ASSETS, ...discovered];
+      const next = [...CORE_ASSETS, ...discovered];
+      // Reserve and price moves give the pools a new identity; keep the asset list stable unless an asset changed.
+      const previous = previousRef.current;
+      const same = previous.length === next.length && next.every((asset, index) => {
+        const old = previous[index];
+        return old.id === asset.id && old.symbol === asset.symbol && old.name === asset.name
+          && old.decimals === asset.decimals && old.imageUrl === asset.imageUrl && old.graduated === asset.graduated;
+      });
+      if (!same) previousRef.current = next;
+      return previousRef.current;
   }, [poolsQuery.data]);
 
-  return { ...poolsQuery, data };
+  return { data };
 }

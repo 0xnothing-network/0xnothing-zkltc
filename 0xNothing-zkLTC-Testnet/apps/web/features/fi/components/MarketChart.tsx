@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createChart,
   ColorType,
@@ -201,6 +201,44 @@ function compact(value: number): string {
   });
 }
 
+/** The hidden OHLC table; memoized so crosshair moves and typing elsewhere do not rebuild it. */
+const ChartDataTable = memo(function ChartDataTable({
+  candles,
+  period,
+  title,
+  oracle,
+}: {
+  candles: CandlePoint[];
+  period: Period;
+  title: string;
+  oracle: boolean;
+}) {
+  return (
+    <div className="fi-table-wrap">
+      {oracle ? (
+        <table className="fi-table">
+          <caption>DIA oracle snapshot for {title}</caption>
+          <thead><tr><th scope="col">Updated</th><th scope="col">Price</th><th scope="col">Source</th></tr></thead>
+          <tbody><tr><td>{new Date(candles.at(-1)!.time * 1000).toLocaleString()}</td><td>{candles.at(-1)!.close}</td><td>DIA</td></tr></tbody>
+        </table>
+      ) : (
+        <table className="fi-table">
+          <caption>Most recent {Math.min(candles.length, 30)} {period} candles for {title}</caption>
+          <thead><tr><th scope="col">Time</th><th scope="col">Open</th><th scope="col">High</th><th scope="col">Low</th><th scope="col">Close</th><th scope="col">Volume</th></tr></thead>
+          <tbody>
+            {candles.slice(-30).reverse().map((candle) => (
+              <tr key={candle.time}>
+                <td>{new Date(candle.time * 1000).toLocaleString()}</td>
+                <td>{candle.open}</td><td>{candle.high}</td><td>{candle.low}</td><td>{candle.close}</td><td>{candle.volume}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+});
+
 export function MarketChart({
   pair,
   label,
@@ -225,6 +263,7 @@ export function MarketChart({
   const requestIdRef = useRef(0);
   const requestAbortRef = useRef<AbortController | null>(null);
   const lastUpdatedAtRef = useRef(0);
+  const candlesKeyRef = useRef("");
   const [period, setPeriod] = useState<Period>("1h");
   const [candles, setCandles] = useState<CandlePoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -252,7 +291,12 @@ export function MarketChart({
         "Chart request failed",
       );
       if (requestId !== requestIdRef.current) return;
-      setCandles(payload.data);
+      // An unchanged answer (most polls and waves) keeps the same array, so the series and table are not rebuilt.
+      const candlesKey = JSON.stringify(payload.data);
+      if (candlesKey !== candlesKeyRef.current) {
+        candlesKeyRef.current = candlesKey;
+        setCandles(payload.data);
+      }
       setPriceSource(payload.meta.priceSource ?? "dex");
       setOracleUpdatedAt(payload.meta.oracle?.updatedAt);
       lastUpdatedAtRef.current = Date.now();
@@ -271,23 +315,37 @@ export function MarketChart({
     let disposed = false;
     let generation = 0;
     let timer: number | undefined;
-    const pollInterval = fiPollInterval(`chart:${pair.toLowerCase()}:${period}`);
+    // A wave that lands mid-request waits for it instead of aborting it, so bursts cannot starve the chart.
+    let inFlight = false;
+    let waveQueued = false;
+    // Read at each scheduling so a socket that drops or reconnects changes the cadence.
+    const pollKey = `chart:${pair.toLowerCase()}:${period}`;
 
-    const schedule = (delay = pollInterval) => {
+    const schedule = (delay = fiPollInterval(pollKey)) => {
       if (disposed || document.visibilityState === "hidden") return;
       timer = window.setTimeout(() => void refresh(true), delay);
     };
     const refresh = async (background: boolean) => {
       const currentGeneration = ++generation;
       if (document.visibilityState === "hidden") return;
+      inFlight = true;
       await load(background);
-      if (!disposed && currentGeneration === generation) schedule();
+      if (currentGeneration === generation) inFlight = false;
+      if (disposed || currentGeneration !== generation) return;
+      if (waveQueued) {
+        waveQueued = false;
+        void refresh(true);
+        return;
+      }
+      schedule();
     };
     const onVisibilityChange = () => {
       if (timer !== undefined) window.clearTimeout(timer);
       timer = undefined;
       generation += 1;
       if (document.visibilityState === "hidden") {
+        inFlight = false;
+        waveQueued = false;
         requestAbortRef.current?.abort();
         return;
       }
@@ -295,13 +353,17 @@ export function MarketChart({
       if (age >= CHART_FRESH_MS) {
         void refresh(true);
       } else {
-        schedule(Math.max(500, pollInterval - age));
+        schedule(Math.max(500, fiPollInterval(pollKey) - age));
       }
     };
 
     // Chain events (swaps, liquidity) refresh the chart at once; the timer is the fallback.
     const unsubscribeWaves = subscribeLiveWaves(() => {
       if (document.visibilityState === "hidden") return;
+      if (inFlight) {
+        waveQueued = true;
+        return;
+      }
       if (timer !== undefined) window.clearTimeout(timer);
       timer = undefined;
       void refresh(true);
@@ -317,6 +379,7 @@ export function MarketChart({
       document.removeEventListener("visibilitychange", onVisibilityChange);
       requestAbortRef.current?.abort();
       requestIdRef.current += 1;
+      candlesKeyRef.current = "";
     };
   }, [load, pair, period]);
 
@@ -580,7 +643,7 @@ export function MarketChart({
             </>
           )}
         </div>
-      ) : null}
+      ) : initialLoading || (!loading && candles.length === 0) ? <div className="fi-chart-summary" aria-hidden="true" /> : null}
       <div className="fi-chart-frame">
         {candles.length > 0 ? (
           <div className="fi-chart" ref={hostRef} data-updating={loading || undefined} aria-hidden="true" />
@@ -592,28 +655,7 @@ export function MarketChart({
       {candles.length > 0 ? (
         <details className="fi-chart-a11y">
           <summary>{priceSource === "oracle" ? "Oracle snapshot" : "OHLC data"}</summary>
-          <div className="fi-table-wrap">
-            {priceSource === "oracle" ? (
-              <table className="fi-table">
-                <caption>DIA oracle snapshot for {title}</caption>
-                <thead><tr><th scope="col">Updated</th><th scope="col">Price</th><th scope="col">Source</th></tr></thead>
-                <tbody><tr><td>{new Date(candles.at(-1)!.time * 1000).toLocaleString()}</td><td>{candles.at(-1)!.close}</td><td>DIA</td></tr></tbody>
-              </table>
-            ) : (
-              <table className="fi-table">
-                <caption>Most recent {Math.min(candles.length, 30)} {period} candles for {title}</caption>
-                <thead><tr><th scope="col">Time</th><th scope="col">Open</th><th scope="col">High</th><th scope="col">Low</th><th scope="col">Close</th><th scope="col">Volume</th></tr></thead>
-                <tbody>
-                  {candles.slice(-30).reverse().map((candle) => (
-                    <tr key={candle.time}>
-                      <td>{new Date(candle.time * 1000).toLocaleString()}</td>
-                      <td>{candle.open}</td><td>{candle.high}</td><td>{candle.low}</td><td>{candle.close}</td><td>{candle.volume}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+          <ChartDataTable candles={candles} period={period} title={title} oracle={priceSource === "oracle"} />
         </details>
       ) : null}
     </section>

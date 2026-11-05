@@ -477,7 +477,7 @@ export function SwapWorkspace() {
       if (hash) {
         toast.show("Swap confirmed", `${amountText} ${assetIn.symbol} was swapped for ${assetOut.symbol}.`, "success");
         setAmountText("");
-        void nativeBalance.refetch(); void tokenBalance.refetch(); void mintQuote.refetch(); void redeemQuote.refetch();
+        void nativeBalance.refetch({ cancelRefetch: false }); void tokenBalance.refetch({ cancelRefetch: false }); void mintQuote.refetch({ cancelRefetch: false }); void redeemQuote.refetch({ cancelRefetch: false });
       }
       return;
     }
@@ -548,7 +548,7 @@ export function SwapWorkspace() {
       if (hash) {
         toast.show("Swap confirmed", `${amountText} ${assetIn.symbol} was settled on LitVM.`, "success");
         setAmountText("");
-        void nativeBalance.refetch(); void tokenBalance.refetch();
+        void nativeBalance.refetch({ cancelRefetch: false }); void tokenBalance.refetch({ cancelRefetch: false });
       }
       return;
     }
@@ -576,7 +576,7 @@ export function SwapWorkspace() {
     if (hash) {
       toast.show("Swap confirmed", `${amountText} ${assetIn.symbol} was settled on LitVM.`, "success");
       setAmountText("");
-      void nativeBalance.refetch(); void tokenBalance.refetch();
+      void nativeBalance.refetch({ cancelRefetch: false }); void tokenBalance.refetch({ cancelRefetch: false });
     }
   }
 

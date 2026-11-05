@@ -249,12 +249,12 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
         : "Vault position updated.";
       toast.show(labels[mode], detail, "success");
       setAmountText("");
-      void reads.refetch();
-      void walletReads.refetch();
-      void reserveReads.refetch();
-      void safetyReserveState.refetch();
-      void nusdBalance.refetch();
-      void synthBalance.refetch();
+      void reads.refetch({ cancelRefetch: false });
+      void walletReads.refetch({ cancelRefetch: false });
+      void reserveReads.refetch({ cancelRefetch: false });
+      void safetyReserveState.refetch({ cancelRefetch: false });
+      void nusdBalance.refetch({ cancelRefetch: false });
+      void synthBalance.refetch({ cancelRefetch: false });
     }
   }
 

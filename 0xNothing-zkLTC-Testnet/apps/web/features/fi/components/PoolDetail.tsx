@@ -196,7 +196,7 @@ export function PoolDetail({
     if (hash) {
       toast.show("Liquidity added", `Your share joined the shared ${pairLabel} pool.`, "success");
       setAmountAText(""); setAmountBText("");
-      void poolStats.refetch(); void lpBalanceRead.refetch(); void stakedLpRead.refetch(); void reserveRead.refetch(); void balanceA.refetch(); void balanceB.refetch();
+      void poolStats.refetch({ cancelRefetch: false }); void lpBalanceRead.refetch({ cancelRefetch: false }); void stakedLpRead.refetch({ cancelRefetch: false }); void reserveRead.refetch({ cancelRefetch: false }); void balanceA.refetch({ cancelRefetch: false }); void balanceB.refetch({ cancelRefetch: false });
     }
   }
 
@@ -226,7 +226,7 @@ export function PoolDetail({
     });
     if (hash) {
       toast.show("Liquidity removed", "LP tokens were burned and assets returned.", "success");
-      setLpText(""); void poolStats.refetch(); void lpBalanceRead.refetch(); void stakedLpRead.refetch(); void reserveRead.refetch(); void balanceA.refetch(); void balanceB.refetch();
+      setLpText(""); void poolStats.refetch({ cancelRefetch: false }); void lpBalanceRead.refetch({ cancelRefetch: false }); void stakedLpRead.refetch({ cancelRefetch: false }); void reserveRead.refetch({ cancelRefetch: false }); void balanceA.refetch({ cancelRefetch: false }); void balanceB.refetch({ cancelRefetch: false });
     }
   }
 

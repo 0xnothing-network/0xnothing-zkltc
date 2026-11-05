@@ -65,8 +65,8 @@ export function RevenuePanel() {
     const hash = await tx.execute({ call: { address: feeSplitter, abi: feeSplitterAbi, functionName: "harvest" } });
     if (hash) {
       toast.show("Fees distributed", "Waiting fees were collected and split; stakers' share starts streaming.", "success");
-      void reads.refetch();
-      void nativeTreasury.refetch();
+      void reads.refetch({ cancelRefetch: false });
+      void nativeTreasury.refetch({ cancelRefetch: false });
     }
   }
 

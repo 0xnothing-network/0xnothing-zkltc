@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { memo, useId } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { ActivityPoint, DataEnvelope } from "@fi/lib/data";
 import { deployment } from "@fi/config/deployment";
@@ -45,14 +45,14 @@ async function fetchActivity(pair: string, signal: AbortSignal): Promise<Activit
   return payload.data;
 }
 
-export function RecentActivity({ pair }: { pair: string }) {
+export const RecentActivity = memo(function RecentActivity({ pair }: { pair: string }) {
   const captionId = useId();
   const pollKey = `activity:${pair.toLowerCase()}`;
   const query = useQuery({
     queryKey: ["fi-activity", pair],
     queryFn: ({ signal }) => fetchActivity(pair, signal),
     staleTime: 12_000,
-    refetchInterval: fiPollInterval(pollKey),
+    refetchInterval: () => fiPollInterval(pollKey),
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
   });
@@ -95,4 +95,4 @@ export function RecentActivity({ pair }: { pair: string }) {
       ) : null}
     </section>
   );
-}
+});

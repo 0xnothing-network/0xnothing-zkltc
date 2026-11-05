@@ -33,6 +33,11 @@ export function useRwaMarket(config: RwaMarketConfig, buy: boolean, amount: bigi
       return { values, deadline: block.timestamp + 300n };
     },
     enabled: Boolean(client && amount && state.data && !state.isError && !state.data.paused && state.data.price),
+    // Keep the last quote on screen while a new amount is quoted (same market, wallet and side).
+    // RwaDashboard only enables trading when the quote is not fetching, so a placeholder is never submitted.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[2] === config.market && previousQuery.queryKey[3] === address && previousQuery.queryKey[4] === buy
+        ? previous : undefined,
     refetchInterval: 12_000, retry: false,
   });
   return { state, quote };

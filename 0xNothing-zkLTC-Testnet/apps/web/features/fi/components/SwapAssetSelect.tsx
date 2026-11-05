@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CaretDown, Check, MagnifyingGlass, X } from "@phosphor-icons/react";
 import type { AssetSelectOption } from "@fi/components/AssetSelect";
 import { TokenLogo } from "@fi/components/TokenLogo";
 import { useImportedSwapAsset } from "@fi/lib/hooks/useImportedSwapAsset";
+
+const EMPTY_RESULTS: readonly AssetSelectOption<string>[] = [];
 
 export function SwapAssetSelect({ id, label, value, assets, onChange, onAddressSelect }: {
   id: string;
@@ -24,14 +26,20 @@ export function SwapAssetSelect({ id, label, value, assets, onChange, onAddressS
   const isContractSearch = /^0x/i.test(query);
   const imported = useImportedSwapAsset(query, open && isContractSearch && Boolean(onAddressSelect));
   const selected = assets.find((asset) => asset.value === value);
-  const results: readonly AssetSelectOption<string>[] = isContractSearch && onAddressSelect
-    ? imported.status === "ready" && imported.asset
-      ? [{ value: imported.asset.id, symbol: imported.asset.symbol, name: imported.asset.name,
-          imageUrl: imported.asset.imageUrl, trustedCore: imported.asset.trustedCore,
-          detail: imported.address, badge: imported.asset.trustedCore ? undefined : "Imported" }]
-      : []
-    : assets.filter((asset) => [asset.symbol, asset.name, asset.detail, asset.value]
-      .some((text) => text?.toLowerCase().includes(query.toLowerCase())));
+  // Only filtered while open: the swap form re-renders on every amount keystroke with both pickers closed.
+  const results = useMemo<readonly AssetSelectOption<string>[]>(() => {
+    if (!open) return EMPTY_RESULTS;
+    if (isContractSearch && onAddressSelect) {
+      return imported.status === "ready" && imported.asset
+        ? [{ value: imported.asset.id, symbol: imported.asset.symbol, name: imported.asset.name,
+            imageUrl: imported.asset.imageUrl, trustedCore: imported.asset.trustedCore,
+            detail: imported.address, badge: imported.asset.trustedCore ? undefined : "Imported" }]
+        : EMPTY_RESULTS;
+    }
+    const needle = query.toLowerCase();
+    return assets.filter((asset) => [asset.symbol, asset.name, asset.detail, asset.value]
+      .some((text) => text?.toLowerCase().includes(needle)));
+  }, [open, isContractSearch, onAddressSelect, imported.status, imported.asset, imported.address, assets, query]);
   const listboxId = `${id}-listbox`;
   const statusId = `${id}-search-status`;
   const currentIndex = Math.min(activeIndex, Math.max(0, results.length - 1));
