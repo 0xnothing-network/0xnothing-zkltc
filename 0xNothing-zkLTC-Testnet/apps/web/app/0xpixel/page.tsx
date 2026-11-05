@@ -122,6 +122,7 @@ export default function PixelPage() {
     setHistory(historyRef.current);
   }, [gridSize]);
   const handleMintSuccess = useCallback(() => {}, []);
+  const openImporter = useCallback(() => setIsImporterOpen(true), []);
 
   return (
     <div style={{ fontFamily: "var(--font-ui)" }}>
@@ -155,7 +156,7 @@ export default function PixelPage() {
                 gridSize={gridSize}
                 onGridSizeChange={setGridSizeStable}
                 onClear={handleClear}
-                onImport={() => setIsImporterOpen(true)}
+                onImport={openImporter}
               />
             </div>
           </div>

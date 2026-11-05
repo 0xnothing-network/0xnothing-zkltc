@@ -6,6 +6,7 @@ import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUpRight, ArrowsClockwise } from "@phosphor-icons/react";
 import { formatUnits } from "viem";
 import { fetchJson } from "@/lib/http";
+import { livePollInterval } from "@/lib/liveData";
 import { getTokenExplorerUrl, getTransactionExplorerUrl, shortenAddress } from "@/lib/contract";
 import { getPixelImageUrl } from "@/lib/pixelImage";
 import { NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
@@ -30,7 +31,7 @@ export function NusdMarketplaceActivity() {
     queryFn: ({ pageParam, signal }) => fetchJson<NusdActivityPage>(`/api/marketplace/activity?type=${filter}&limit=24${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ""}`, { signal }),
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     enabled: Boolean(NUSD_MARKETPLACE_ADDRESS), staleTime: 5_000,
-    refetchInterval: (query) => (query.state.data?.pages.length ?? 0) > 1 ? false : 10_000,
+    refetchInterval: (query) => (query.state.data?.pages.length ?? 0) > 1 ? false : livePollInterval(10_000, 3),
     retry: 1, maxPages: 20,
   });
   const seen = new Set<string>();

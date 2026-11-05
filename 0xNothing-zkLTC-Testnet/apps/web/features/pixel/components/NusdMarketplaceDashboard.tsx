@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUpRight, ArrowsClockwise, Clock, Coins, ImageSquare, MagnifyingGlass, Plus, ShieldCheck, Stack, Wallet } from "@phosphor-icons/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatUnits, parseAbi, type Address } from "viem";
@@ -113,9 +113,25 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
     () => nusdArtworkRequests([...(listings ?? []), ...(offerRows ?? [])], NUSD_CATALOGUE_LIMIT + NUSD_MARKET_PAGE_SIZE),
     [listings, offerRows],
   );
+  // Names never change, but one listing more or less shifts every 20-id batch, so the key
+  // changes for the whole catalogue. Only ids this page has not resolved yet are fetched;
+  // a failed batch leaves its ids unknown so the next read tries them again.
+  const artworkNames = useRef<Record<string, { name: string } | null>>({});
   const artwork = useQuery({
     queryKey: ["pixel-nusd-artwork", artworkRequests.map((request) => request.url)],
-    queryFn: ({ signal }) => readNusdArtwork(artworkRequests, (url) => fetchJson(url, { signal })),
+    queryFn: async ({ signal }) => {
+      const known = artworkNames.current;
+      const pending = artworkRequests.flatMap((request) => {
+        const ids = request.ids.filter((id) => !(nusdArtworkKey(request.collection, id) in known));
+        return ids.length ? [{ collection: request.collection, ids, url: `/api/token-metadata?collection=${request.collection}&ids=${ids.join(",")}` }] : [];
+      });
+      const result = pending.length
+        ? await readNusdArtwork(pending, (url) => fetchJson(url, { signal }))
+        : { tokens: {}, failed: 0 };
+      // A null is a read that failed for now: leave it unknown so the next pass asks again.
+      artworkNames.current = { ...known, ...Object.fromEntries(Object.entries(result.tokens).filter(([, name]) => name !== null)) };
+      return { tokens: artworkNames.current, failed: result.failed };
+    },
     enabled: Boolean(NUSD_MARKETPLACE_ADDRESS && artworkRequests.length), staleTime: 60_000, retry: 1,
     placeholderData: (previous) => previous,
   });
@@ -132,9 +148,17 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
   const listedPrice = parseNusdPrice(listPrice);
   const offeredPrice = parseNusdPrice(offerPrice);
   const artworkTokens = artwork.data?.tokens;
+  // The search box updates at once; filtering up to a thousand listings follows it.
+  const deferredSearch = useDeferredValue(search);
   const filteredListings = useMemo(
-    () => filterNusdListings(listings ?? [], artworkTokens ?? {}, { search, collection, ownOnly, address, sort }),
-    [listings, artworkTokens, search, collection, ownOnly, address, sort],
+    () => filterNusdListings(listings ?? [], artworkTokens ?? {}, { search: deferredSearch, collection, ownOnly, address, sort }),
+    [listings, artworkTokens, deferredSearch, collection, ownOnly, address, sort],
+  );
+  // The activity feed takes no props; keep dashboard keystrokes and polls from re-rendering its rows.
+  const activitySection = useMemo(() => <NusdMarketplaceActivity />, []);
+  const offerListingOptions = useMemo(
+    () => (listings ?? []).filter((listing) => listing.seller.toLowerCase() !== address?.toLowerCase()).map((listing) => <option key={listing.id.toString()} value={listing.id.toString()}>{artworkTokens?.[nusdArtworkKey(listing.collection, listing.tokenId)]?.name || `0xPixel #${listing.tokenId}`} · {shortenAddress(listing.collection)}</option>),
+    [listings, artworkTokens, address],
   );
   const listingCount = state?.catalogueComplete ? BigInt(filteredListings.length) : state?.listingCount ?? 0n;
   const offerCount = offerPage.data?.offerCount ?? state?.offerCount ?? 0n;
@@ -339,7 +363,7 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
 
         <nav className={styles.pagination} aria-label="NUSD marketplace pages"><span>Page {safePage + 1} / {totalPages}<small>Up to 24 artworks and 24 offers per page</small></span><div><button className={styles.secondaryButton} disabled={page === 0 || busy} onClick={() => { setPage(Math.max(0, safePage - 1)); toListings(); }}>Previous</button><button className={styles.secondaryButton} disabled={busy || safePage + 1 >= totalPages} onClick={() => { setPage(safePage + 1); toListings(); }}>Next<ArrowRight size={16} aria-hidden="true" /></button></div></nav>
 
-        <NusdMarketplaceActivity />
+        {activitySection}
 
         <section className={styles.tradeSection} aria-labelledby="nusd-trade-title">
           <div className={styles.tradeHeading}>
@@ -423,7 +447,7 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
               });
             }}>
               <div className={styles.formHeading}><h3>Name your offer</h3><span>Escrowed in NUSD</span></div>
-              <label className={styles.artworkSelect}>NFT to offer on<select value={offerListing} onChange={(event) => { setOfferListing(event.target.value); if (event.target.value) setOfferTokenId(""); }} disabled={!ready || paused}><option value="">Choose the artwork you want</option>{state.listings.filter((listing) => listing.seller.toLowerCase() !== address?.toLowerCase()).map((listing) => <option key={listing.id.toString()} value={listing.id.toString()}>{nftName(listing.collection, listing.tokenId)} · {shortenAddress(listing.collection)}</option>)}</select></label>
+              <label className={styles.artworkSelect}>NFT to offer on<select value={offerListing} onChange={(event) => { setOfferListing(event.target.value); if (event.target.value) setOfferTokenId(""); }} disabled={!ready || paused}><option value="">Choose the artwork you want</option>{offerListingOptions}</select></label>
               <div className={styles.formRow}><label className={styles.artworkSelect}>Or any 0xPixel NFT<select value={offerCollection} onChange={(event) => setOfferCollection(event.target.value)} disabled={!ready || paused}>{PIXEL_COLLECTIONS.map((entry) => <option key={entry.address} value={entry.address}>{entry.name} · {shortenAddress(entry.address)}</option>)}</select></label><label className={styles.durationField}>Token ID<input inputMode="numeric" autoComplete="off" value={offerTokenId} onChange={(event) => { setOfferTokenId(event.target.value); if (event.target.value) setOfferListing(""); }} placeholder="#" maxLength={78} disabled={!ready || paused} /></label></div>
               <div className={styles.formRow}><label className={styles.priceField}>Offer price<div className={styles.amountInput}><input inputMode="decimal" autoComplete="off" enterKeyHint="done" value={offerPrice} onChange={(event) => setOfferPrice(event.target.value)} placeholder="0.00" disabled={busy} aria-describedby="nusd-offer-help" /><span aria-hidden="true"><Coins size={18} />NUSD</span></div></label><label className={styles.durationField}>Duration (hours)<input inputMode="numeric" autoComplete="off" value={duration} onChange={(event) => setDuration(event.target.value)} disabled={busy} aria-describedby="nusd-offer-help" /></label></div>
               <div className={styles.durationPresets} role="group" aria-label="Offer duration presets">{[{ hours: "24", label: "24 hours" }, { hours: "72", label: "3 days" }, { hours: "168", label: "7 days" }].map((preset) => <button type="button" key={preset.hours} aria-pressed={duration === preset.hours} disabled={busy} onClick={() => setDuration(preset.hours)}><Clock size={13} aria-hidden="true" />{preset.label}</button>)}</div>

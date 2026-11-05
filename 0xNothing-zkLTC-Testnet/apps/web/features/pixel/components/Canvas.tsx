@@ -74,6 +74,7 @@ export function Canvas({
   const currentToolRef = useRef<Tool>("pencil");
   const selectedColorRef = useRef(selectedColor);
   const pixelDataRef = useRef(pixelData);
+  const drawnRef = useRef<{ canvas: HTMLCanvasElement | null; data: string[][] | null; layout: string }>({ canvas: null, data: null, layout: "" });
 
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -128,92 +129,135 @@ export function Canvas({
         canvas.height = container.clientHeight;
       }
 
-      ctx.fillStyle = "#050505";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const data = pixelDataRef.current;
+      const paint = (rowStart: number, rowEnd: number) => {
+        ctx.fillStyle = "#050505";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = "#0f0f0f";
-      ctx.fillRect(offsetX, offsetY, gridDisplaySize, gridDisplaySize);
+        ctx.fillStyle = "#0f0f0f";
+        ctx.fillRect(offsetX, offsetY, gridDisplaySize, gridDisplaySize);
 
-      for (let y = 0; y < gridSize; y++) {
-        for (let x = 0; x < gridSize; x++) {
-          const color = pixelDataRef.current[y]?.[x];
-          if (color && color !== "transparent") {
-            ctx.fillStyle = color;
-            const px = offsetX + x * cs * zoom;
-            const py = offsetY + y * cs * zoom;
-            ctx.fillRect(px, py, cs * zoom, cs * zoom);
+        for (let y = rowStart; y <= rowEnd; y++) {
+          for (let x = 0; x < gridSize; x++) {
+            const color = data[y]?.[x];
+            if (color && color !== "transparent") {
+              ctx.fillStyle = color;
+              const px = offsetX + x * cs * zoom;
+              const py = offsetY + y * cs * zoom;
+              ctx.fillRect(px, py, cs * zoom, cs * zoom);
 
-            ctx.fillStyle = "rgba(255,255,255,0.12)";
-            ctx.fillRect(px, py, cs * zoom, 1);
-            ctx.fillRect(px, py, 1, cs * zoom);
+              ctx.fillStyle = "rgba(255,255,255,0.12)";
+              ctx.fillRect(px, py, cs * zoom, 1);
+              ctx.fillRect(px, py, 1, cs * zoom);
 
-            ctx.fillStyle = "rgba(0,0,0,0.18)";
-            ctx.fillRect(px, py + cs * zoom - 1, cs * zoom, 1);
-            ctx.fillRect(px + cs * zoom - 1, py, 1, cs * zoom);
+              ctx.fillStyle = "rgba(0,0,0,0.18)";
+              ctx.fillRect(px, py + cs * zoom - 1, cs * zoom, 1);
+              ctx.fillRect(px + cs * zoom - 1, py, 1, cs * zoom);
+            }
           }
         }
-      }
 
-      ctx.strokeStyle = zoom >= 1.5 ? "#303030" : "#242424";
-      ctx.lineWidth = zoom >= 1.5 ? 1 : 0.5;
-      for (let i = 0; i <= gridSize; i++) {
-        const px = offsetX + i * cs * zoom;
-        ctx.beginPath();
-        ctx.moveTo(px, offsetY);
-        ctx.lineTo(px, offsetY + gridDisplaySize);
-        ctx.stroke();
-
-        const py = offsetY + i * cs * zoom;
-        ctx.beginPath();
-        ctx.moveTo(offsetX, py);
-        ctx.lineTo(offsetX + gridDisplaySize, py);
-        ctx.stroke();
-      }
-
-      const centerH = offsetX + gridDisplaySize / 2;
-      const centerV = offsetY + gridDisplaySize / 2;
-
-      if (symmetry === "horizontal" || symmetry === "both") {
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.24)";
-        ctx.lineWidth = 1;
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        ctx.moveTo(centerH, offsetY);
-        ctx.lineTo(centerH, offsetY + gridDisplaySize);
-        ctx.stroke();
-      }
-
-      if (symmetry === "vertical" || symmetry === "both") {
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.24)";
-        ctx.lineWidth = 1;
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        ctx.moveTo(offsetX, centerV);
-        ctx.lineTo(offsetX + gridDisplaySize, centerV);
-        ctx.stroke();
-      }
-
-      if (subdivision > 0) {
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
-        ctx.lineWidth = 1;
-        ctx.setLineDash([2, 4]);
-        const subCount = gridSize / subdivision;
-        for (let i = 1; i < subCount; i++) {
-          const px = offsetX + i * subdivision * cs * zoom;
+        ctx.strokeStyle = zoom >= 1.5 ? "#303030" : "#242424";
+        ctx.lineWidth = zoom >= 1.5 ? 1 : 0.5;
+        for (let i = 0; i <= gridSize; i++) {
+          const px = offsetX + i * cs * zoom;
           ctx.beginPath();
           ctx.moveTo(px, offsetY);
           ctx.lineTo(px, offsetY + gridDisplaySize);
           ctx.stroke();
 
-          const py = offsetY + i * subdivision * cs * zoom;
+          const py = offsetY + i * cs * zoom;
           ctx.beginPath();
           ctx.moveTo(offsetX, py);
           ctx.lineTo(offsetX + gridDisplaySize, py);
           ctx.stroke();
         }
-      }
 
-      ctx.setLineDash([]);
+        const centerH = offsetX + gridDisplaySize / 2;
+        const centerV = offsetY + gridDisplaySize / 2;
+
+        if (symmetry === "horizontal" || symmetry === "both") {
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.24)";
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(centerH, offsetY);
+          ctx.lineTo(centerH, offsetY + gridDisplaySize);
+          ctx.stroke();
+        }
+
+        if (symmetry === "vertical" || symmetry === "both") {
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.24)";
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(offsetX, centerV);
+          ctx.lineTo(offsetX + gridDisplaySize, centerV);
+          ctx.stroke();
+        }
+
+        if (subdivision > 0) {
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
+          ctx.lineWidth = 1;
+          ctx.setLineDash([2, 4]);
+          const subCount = gridSize / subdivision;
+          for (let i = 1; i < subCount; i++) {
+            const px = offsetX + i * subdivision * cs * zoom;
+            ctx.beginPath();
+            ctx.moveTo(px, offsetY);
+            ctx.lineTo(px, offsetY + gridDisplaySize);
+            ctx.stroke();
+
+            const py = offsetY + i * subdivision * cs * zoom;
+            ctx.beginPath();
+            ctx.moveTo(offsetX, py);
+            ctx.lineTo(offsetX + gridDisplaySize, py);
+            ctx.stroke();
+          }
+        }
+
+        ctx.setLineDash([]);
+      };
+
+      // A stroke frame replaces only the rows it touched (paintPixels clones
+      // just those), so repaint those row bands inside an integer-aligned clip.
+      // Every operation still runs full-length in the same order, so pixels in
+      // the clip come out exactly as a full repaint would leave them. Anything
+      // else (new canvas, size, zoom, pan, symmetry, subdivision, grid size,
+      // many scattered rows) falls back to the full repaint.
+      const cell = cs * zoom;
+      const layout = `${canvas.width}x${canvas.height}|${gridSize}|${zoom}|${pan.x},${pan.y}|${symmetry}|${subdivision}|${cs}|${offsetX},${offsetY}`;
+      const drawn = drawnRef.current;
+      let bands: Array<[number, number]> | null = null;
+      if (drawn.canvas === canvas && drawn.data && drawn.layout === layout && drawn.data.length === data.length && data.length === gridSize) {
+        bands = [];
+        for (let y = 0; y < gridSize; y++) {
+          if (data[y] === drawn.data[y]) continue;
+          const last = bands[bands.length - 1];
+          if (last && last[1] === y - 1) last[1] = y;
+          else bands.push([y, y]);
+        }
+        if (bands.length > 8 || !Number.isFinite(cell) || cell <= 0) bands = null;
+      }
+      drawnRef.current = { canvas, data, layout };
+      if (bands && bands.length === 0) return;
+      if (!bands) {
+        paint(0, gridSize - 1);
+        return;
+      }
+      for (const [y0, y1] of bands) {
+        const top = Math.floor(offsetY + y0 * cell) - 2;
+        const bottom = Math.ceil(offsetY + (y1 + 1) * cell) + 2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, top, canvas.width, bottom - top);
+        ctx.clip();
+        paint(
+          Math.max(0, Math.floor((top - offsetY) / cell) - 1),
+          Math.min(gridSize - 1, Math.ceil((bottom - offsetY) / cell) + 1),
+        );
+        ctx.restore();
+      }
     });
   }, [gridSize, zoom, pan, symmetry, subdivision]);
 
@@ -363,19 +407,16 @@ export function Canvas({
 
     const newData = source.map(row => [...row]);
     const stack: [number, number][] = [[startX, startY]];
-    const visited = new Set<string>();
+    const visited = new Uint8Array(gridSize * gridSize);
 
     while (stack.length > 0) {
       const [x, y] = stack.pop()!;
-      const key = `${x},${y}`;
-      if (visited.has(key)) continue;
-      visited.add(key);
+      if (x < 0 || x >= gridSize || y < 0 || y >= gridSize) continue;
+      const index = y * gridSize + x;
+      if (visited[index]) continue;
+      visited[index] = 1;
 
-      if (
-        x < 0 || x >= gridSize ||
-        y < 0 || y >= gridSize ||
-        (newData[y]?.[x] || "transparent") !== targetColor
-      ) continue;
+      if ((newData[y]?.[x] || "transparent") !== targetColor) continue;
 
       newData[y][x] = fillColor;
       stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
@@ -525,15 +566,27 @@ export function Canvas({
 
     const tool = currentToolRef.current;
     if (tool === "pencil" || tool === "eraser") {
-      const currentPoint = { x: coords.x, y: coords.y };
-      const previousPoint = lastPaintPointRef.current ?? currentPoint;
-      paintPixels(
-        rasterizeGridLine(previousPoint, currentPoint),
-        tool,
-        selectedColorRef.current,
-        captureStrokeHistory,
-      );
-      lastPaintPointRef.current = currentPoint;
+      // Pens, touch and fast mice sample between frames; the browser folds those
+      // samples into one pointermove, so walk them to keep curves from cutting corners.
+      const native = (e as { nativeEvent?: PointerEvent }).nativeEvent;
+      const coalesced = typeof native?.getCoalescedEvents === "function" ? native.getCoalescedEvents() : [];
+      const samples: ReadonlyArray<{ clientX: number; clientY: number }> = coalesced.length > 0 ? coalesced : [e];
+      const points: GridPoint[] = [];
+      let previous = lastPaintPointRef.current;
+      for (const sample of samples) {
+        const c = sample === e ? coords : getGridCoords(sample.clientX, sample.clientY);
+        if (!c || c.x < 0 || c.x >= gridSize || c.y < 0 || c.y >= gridSize) {
+          previous = null;
+          continue;
+        }
+        const current = { x: c.x, y: c.y };
+        for (const p of rasterizeGridLine(previous ?? current, current)) points.push(p);
+        previous = current;
+      }
+      lastPaintPointRef.current = previous;
+      if (points.length > 0) {
+        paintPixels(points, tool, selectedColorRef.current, captureStrokeHistory);
+      }
     }
   }, [captureStrokeHistory, clearPreview, getGridCoords, zoom, gridSize, paintPixels, schedulePreview]);
 
@@ -547,7 +600,11 @@ export function Canvas({
     if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
       e.currentTarget.releasePointerCapture(e.pointerId);
     }
-  }, []);
+    // Strokes repaint only the rows they touch; one full pass at the end leaves the
+    // canvas exactly as a fresh draw would, anti-aliased grid lines included.
+    drawnRef.current = { canvas: null, data: null, layout: "" };
+    drawGrid();
+  }, [drawGrid]);
 
   const handlePointerLeave = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (activePointerRef.current !== null && activePointerRef.current !== e.pointerId) return;

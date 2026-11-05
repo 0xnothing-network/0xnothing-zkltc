@@ -90,6 +90,7 @@ function harness(options: { configured?: boolean; credit?: bigint; balance?: big
       useRef: (initial: unknown) => refs[refIndex++] ?? (refs[refIndex - 1] = { current: initial }),
       useEffect: () => {},
       useMemo: (factory: () => unknown) => factory(),
+      useDeferredValue: (value: unknown) => value,
     },
     "@tanstack/react-query": { useQueryClient: () => ({ invalidateQueries: async () => { invalidations += 1; } }), useQuery: (query: { enabled: boolean; queryKey: readonly unknown[] }) => {
       queryOptions.push(query);

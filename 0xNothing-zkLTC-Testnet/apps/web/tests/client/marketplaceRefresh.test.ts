@@ -44,6 +44,7 @@ function harness(options: { configured?: boolean; empty?: boolean; error?: boole
     "@tanstack/react-query": { useInfiniteQuery: (query: QueryOptions) => { queryOptions = query; return state; }, useQueryClient: () => ({ resetQueries: async () => { resets += 1; } }) },
     "@phosphor-icons/react": { ArrowUpRight: "svg", ArrowsClockwise: "svg" }, viem: { formatUnits },
     "@/lib/http": { fetchJson: async (url: string, { signal }: { signal: AbortSignal }) => { request = { url, signal }; return {}; } },
+    "@/lib/liveData": { livePollInterval: (base: number) => base },
     "@/lib/contract": { getTransactionExplorerUrl: () => "/tx", getTokenExplorerUrl: () => "/nft", shortenAddress: String }, "@/lib/pixelImage": { getPixelImageUrl },
     "@/lib/nusdMarketplaceConfig": { NUSD_MARKETPLACE_ADDRESS: options.configured === false ? undefined : NFT }, "./NusdMarketplaceDashboard.module.css": { default: {} },
   }, { encodeURIComponent });

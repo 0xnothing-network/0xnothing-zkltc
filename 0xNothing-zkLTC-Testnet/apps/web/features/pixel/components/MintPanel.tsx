@@ -94,7 +94,6 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
       setDebouncedPackedBytes("0x");
       return;
     }
-    setPreviewBase64("");
     setDebouncedPackedBytes("0x");
     const snapshot = pixelData;
     debounceTimerRef.current = setTimeout(() => {
