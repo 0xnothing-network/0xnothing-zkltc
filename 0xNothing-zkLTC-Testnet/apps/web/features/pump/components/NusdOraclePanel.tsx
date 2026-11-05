@@ -323,7 +323,7 @@ export function NusdOraclePanel() {
           })();
 
       await waitForProtocolReceipt(publicClient, hash);
-      await refresh();
+      // Confirm as soon as the receipt lands; the form stays held until the reads refresh.
       if (mode === "mint") {
         setMintAmount("");
         toast.success("NUSD minted", "NUSD is now available in your wallet.");
@@ -331,6 +331,7 @@ export function NusdOraclePanel() {
         setRedeemAmount("");
         toast.success("NUSD redeemed", "zkLTC was returned to your wallet.");
       }
+      await refresh();
     } catch (error) {
       toast.handleError(error, mode === "mint" ? "Could not mint NUSD" : "Could not redeem NUSD");
     } finally {

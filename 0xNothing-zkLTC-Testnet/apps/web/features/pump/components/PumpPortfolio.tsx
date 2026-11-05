@@ -8,6 +8,7 @@ import { formatRelativeTime, formatStatus, formatTokenAmount, formatWad } from "
 import type { PumpMarket } from "@/features/pump/types";
 import { PumpConfigNotice, PumpErrorState, PumpLoadingRows } from "@/features/pump/components/PumpStates";
 import { PumpTokenLogo } from "@/features/pump/components/PumpTokenLogo";
+import { useMinuteTick } from "@/features/pump/hooks/useMinuteTick";
 
 const PortfolioRowInner = memo(function PortfolioRowInner({
   market,
@@ -20,10 +21,9 @@ const PortfolioRowInner = memo(function PortfolioRowInner({
   value: string;
   currentValue?: bigint;
 }) {
-  const tradeAge = useMemo(
-    () => market.tradeCount > 0 ? formatRelativeTime(market.lastTradeAt) : "No trades",
-    [market.lastTradeAt, market.tradeCount],
-  );
+  // The row is memoised on data fields; the shared minute clock keeps its age moving.
+  useMinuteTick();
+  const tradeAge = market.tradeCount > 0 ? formatRelativeTime(market.lastTradeAt) : "No trades";
   const currentValueLabel = useMemo(
     () => currentValue !== undefined ? formatWad(currentValue) : "",
     [currentValue],

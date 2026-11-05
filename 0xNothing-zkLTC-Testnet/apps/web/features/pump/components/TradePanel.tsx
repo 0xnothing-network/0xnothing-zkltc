@@ -65,13 +65,19 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
   const { value: amountWei, pending: amountSettling } = useDebouncedValue(typedAmountWei);
   const configured = PUMP_CONFIGURED && NUSD_CONFIGURED;
 
+  const buyQuoteEnabled = configured && mode === "buy" && amountWei > 0n && market.status === "TRADING";
+  const sellQuoteEnabled = configured && mode === "sell" && amountWei > 0n && market.status !== "GRADUATED";
   const buyQuote = useReadContract({
     chainId: PUMP_CHAIN_ID,
     address: PUMP_FACTORY_ADDRESS,
     abi: zeroXPumpAbi,
     functionName: "quoteBuy",
     args: [market.tokenAddress, amountWei],
-    query: { enabled: configured && mode === "buy" && amountWei > 0n && market.status === "TRADING" },
+    query: {
+      enabled: buyQuoteEnabled,
+      // Placeholder data also applies to a disabled query, so only a live quote keeps it.
+      placeholderData: (previous) => (buyQuoteEnabled ? previous : undefined),
+    },
   });
   const sellQuote = useReadContract({
     chainId: PUMP_CHAIN_ID,
@@ -79,7 +85,11 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
     abi: zeroXPumpAbi,
     functionName: "quoteSell",
     args: [market.tokenAddress, amountWei],
-    query: { enabled: configured && mode === "sell" && amountWei > 0n && market.status !== "GRADUATED" },
+    query: {
+      enabled: sellQuoteEnabled,
+      // Placeholder data also applies to a disabled query, so only a live quote keeps it.
+      placeholderData: (previous) => (sellQuoteEnabled ? previous : undefined),
+    },
   });
   const nusdBalance = useReadContract({
     chainId: PUMP_CHAIN_ID,
@@ -129,18 +139,21 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
   // button either, and a new amount still gates it until its quote arrives.
   // The settling window counts as pending for the same reason: the quote on
   // screen belongs to the previous amount, not the one now in the field.
-  const quotePending = amountSettling || activeQuote.isLoading;
+  // A new amount keeps the previous quote on screen as placeholder data under the
+  // "Quoting" label instead of flashing zeros; it still counts as pending.
+  const quotePending = amountSettling || activeQuote.isLoading || activeQuote.isPlaceholderData;
   const quoteError = activeQuote.error;
   const tradeAllowed = market.status === "TRADING" || (market.status === "READY" && mode === "sell");
 
   const refresh = async () => {
+    // Market, chart, trades and holders reload in the background; only the wallet
+    // reads that the next trade depends on hold the form.
+    void invalidateAfterPumpTrade(queryClient, market.tokenAddress);
     await Promise.all([
       nusdBalance.refetch(),
       tokenBalance.refetch(),
       nusdAllowance.refetch(),
       tokenAllowance.refetch(),
-      activeQuote.refetch(),
-      invalidateAfterPumpTrade(queryClient, market.tokenAddress),
     ]);
     onComplete?.();
   };

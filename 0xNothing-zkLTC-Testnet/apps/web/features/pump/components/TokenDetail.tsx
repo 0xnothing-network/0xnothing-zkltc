@@ -296,7 +296,7 @@ export function TokenDetail({ token }: { token: Address }) {
           <LazyPumpChart token={market.tokenAddress} tokenName={market.name} />
           {metadata.data?.description ? <section className="pump-panel pump-about"><span className="pump-eyebrow">About</span><h2>{market.name}</h2><p>{metadata.data.description}</p><small>Created by {shortAddress(market.creator, 7, 6)}</small></section> : null}
         </div>
-        <TradePanel market={market} onComplete={() => void query.refetch()} />
+        <TradePanel market={market} />
       </div>
 
       <section className="pump-graduation-line">

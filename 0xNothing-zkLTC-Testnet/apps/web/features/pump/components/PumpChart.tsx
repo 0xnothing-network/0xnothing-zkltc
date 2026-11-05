@@ -180,26 +180,38 @@ function updateSeriesData<T extends { time: Time }>(
   setData: (points: T[]) => void,
   update: (point: T) => void,
 ) {
-  let firstDifference = 0;
-  const sharedLength = Math.min(previous.length, next.length);
+  // The API answers with the newest `limit` buckets, so a new bucket can push the oldest
+  // out of the window. The chart already holds it: align on the first shared bucket.
+  let base = 0;
+  if (previous.length && next.length && Number(next[0].time) > Number(previous[0].time)) {
+    base = previous.findIndex((point) => point.time === next[0].time);
+    if (base < 0) {
+      setData(next);
+      return;
+    }
+  }
+  const aligned = base ? previous.slice(base) : previous;
+  // A slid window re-opens its first bucket at its own price; keep the continuous open on screen.
+  let firstDifference = base ? 1 : 0;
+  const sharedLength = Math.min(aligned.length, next.length);
 
   while (
     firstDifference < sharedLength &&
-    pointsEqual(previous[firstDifference], next[firstDifference])
+    pointsEqual(aligned[firstDifference], next[firstDifference])
   ) {
     firstDifference += 1;
   }
 
-  if (firstDifference === previous.length && firstDifference === next.length) return;
+  if (firstDifference === aligned.length && firstDifference === next.length) return;
 
   // A live candle can change until its bucket closes. Updating only the tail
   // preserves the user's zoom and crosshair position during query refreshes.
   const tailOnlyChange =
-    previous.length > 0 &&
-    next.length >= previous.length &&
-    firstDifference >= previous.length - 1 &&
+    aligned.length > 0 &&
+    next.length >= aligned.length &&
+    firstDifference >= aligned.length - 1 &&
     firstDifference < next.length &&
-    Number(next[firstDifference].time) >= Number(previous[previous.length - 1].time);
+    Number(next[firstDifference].time) >= Number(aligned[aligned.length - 1].time);
 
   if (tailOnlyChange) {
     for (let index = firstDifference; index < next.length; index += 1) {
@@ -222,6 +234,7 @@ export function PumpChart({ token, tokenName }: { token: Address; tokenName: str
     volumes: [],
   });
   const priceFormatKeyRef = useRef("");
+  const paletteRef = useRef<ChartPalette | null>(null);
   const fitFrameRef = useRef<number | null>(null);
   const [period, setPeriod] = useState<PumpCandlePeriod>(DEFAULT_PUMP_CANDLE_PERIOD);
   const query = usePumpCandles(token, period);
@@ -231,6 +244,7 @@ export function PumpChart({ token, tokenName }: { token: Address; tokenName: str
     const container = containerRef.current;
     if (!container) return;
     const palette = chartPalette();
+    paletteRef.current = palette;
     const chart = createChart(container, {
       autoSize: true,
       height: container.clientHeight || 400,
@@ -304,9 +318,11 @@ export function PumpChart({ token, tokenName }: { token: Address; tokenName: str
     const candleSeries = candleSeriesRef.current;
     const volumeSeries = volumeSeriesRef.current;
     const candles = query.data?.candles;
-    if (!chart || !candleSeries || !volumeSeries || !candles) return;
+    // A period switch keeps the previous interval as placeholder data. Drawing it under the
+    // new context fitted the old bars and the real answer then landed without a refit.
+    if (!chart || !candleSeries || !volumeSeries || !candles || query.isPlaceholderData) return;
 
-    const points = buildChartPoints(candles, chartPalette());
+    const points = buildChartPoints(candles, paletteRef.current ?? chartPalette());
     const context = `${token.toLowerCase()}:${period}`;
     const previous = dataRef.current;
     const priceFormat = adaptivePriceFormat(points.candles);
@@ -351,7 +367,7 @@ export function PumpChart({ token, tokenName }: { token: Address; tokenName: str
         fitFrameRef.current = null;
       });
     }
-  }, [period, query.data?.candles, theme, token]);
+  }, [period, query.data?.candles, query.isPlaceholderData, theme, token]);
 
   return (
     <section className="pump-panel pump-chart-panel">

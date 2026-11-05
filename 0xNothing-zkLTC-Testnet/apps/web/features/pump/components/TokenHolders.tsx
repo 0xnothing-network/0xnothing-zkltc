@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import type { Address } from "viem";
 import { getAddressExplorerUrl } from "@/lib/explorer";
 import { formatSupplyPercentage, formatTokenAmount, shortAddress } from "@/features/pump/format";
@@ -8,7 +9,7 @@ import { PumpErrorState, PumpInlineLoading } from "@/features/pump/components/Pu
 
 const HOLDER_LIMIT = 10;
 
-export function TokenHolders({ token, symbol }: { token: Address; symbol: string }) {
+export const TokenHolders = memo(function TokenHolders({ token, symbol }: { token: Address; symbol: string }) {
   const query = usePumpHolders(token, HOLDER_LIMIT);
   const data = query.data;
 
@@ -86,7 +87,7 @@ export function TokenHolders({ token, symbol }: { token: Address; symbol: string
       )}
     </section>
   );
-}
+});
 
 function toBigInt(value: string) {
   try {

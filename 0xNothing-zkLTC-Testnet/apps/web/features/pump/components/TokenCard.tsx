@@ -3,6 +3,7 @@ import { memo, useMemo } from "react";
 import { formatDecimal, formatRelativeTime, formatStatus, formatWad } from "@/features/pump/format";
 import type { PumpMarket } from "@/features/pump/types";
 import { PumpTokenLogo } from "@/features/pump/components/PumpTokenLogo";
+import { useMinuteTick } from "@/features/pump/hooks/useMinuteTick";
 
 const progressStyleCache = new Map<number, { width: string }>();
 function getProgressStyle(progressBps: number) {
@@ -27,10 +28,9 @@ function TokenCardInner({ market, priority = false }: { market: PumpMarket; prio
   const priceLabel = useMemo(() => formatDecimal(market.priceNusd), [market.priceNusd]);
   const capLabel = useMemo(() => formatWad(market.marketCapNusd), [market.marketCapNusd]);
   const volumeLabel = useMemo(() => formatWad(market.volumeNusd), [market.volumeNusd]);
-  const tradeAge = useMemo(
-    () => market.tradeCount > 0 && market.lastTradeAt ? formatRelativeTime(market.lastTradeAt) : "No trades",
-    [market.lastTradeAt, market.tradeCount],
-  );
+  // The card is memoised on data fields; the shared minute clock keeps its age moving.
+  useMinuteTick();
+  const tradeAge = market.tradeCount > 0 && market.lastTradeAt ? formatRelativeTime(market.lastTradeAt) : "No trades";
 
   return (
     <Link href={`/0xPump/token/${market.tokenAddress}`} className="pump-token-card">
