@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { ActivityPoint, DataEnvelope } from "@fi/lib/data";
 import { deployment } from "@fi/config/deployment";
@@ -45,6 +46,7 @@ async function fetchActivity(pair: string, signal: AbortSignal): Promise<Activit
 }
 
 export function RecentActivity({ pair }: { pair: string }) {
+  const captionId = useId();
   const pollKey = `activity:${pair.toLowerCase()}`;
   const query = useQuery({
     queryKey: ["fi-activity", pair],
@@ -72,10 +74,10 @@ export function RecentActivity({ pair }: { pair: string }) {
         <EmptyState title="No activity yet" />
       ) : null}
       {activity.length ? (
-        <div className="fi-table-wrap">
+        <div className="fi-table-wrap" tabIndex={0} role="region" aria-labelledby={captionId}>
           <table className="fi-table">
-            <caption>Latest indexed activity for {pair}</caption>
-            <thead><tr><th>Type</th><th>Amount</th><th>Time</th><th>Tx</th></tr></thead>
+            <caption id={captionId}>Latest indexed activity for {pair}</caption>
+            <thead><tr><th scope="col">Type</th><th scope="col">Amount</th><th scope="col">Time</th><th scope="col">Tx</th></tr></thead>
             <tbody>
               {activity.map((event) => (
                 <tr key={event.id}>

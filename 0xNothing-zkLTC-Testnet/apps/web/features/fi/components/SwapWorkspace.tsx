@@ -620,11 +620,12 @@ export function SwapWorkspace() {
           balance={formatAmount(balance, assetIn?.decimals ?? 18)}
           error={validation}
           onAmountChange={setAmountText}
-          onAssetChange={chooseIn}
-          onAddressSelect={(address) => { setPayContract(address); resetAmount(); }}
-          onMax={spendableBalance !== undefined && spendableBalance > 0n ? () => setAmountText(formatUnits(spendableBalance, assetIn?.decimals ?? 18)) : undefined}
+          onAssetChange={(next) => { if (!tx.pending) chooseIn(next); }}
+          onAddressSelect={(address) => { if (tx.pending) return; setPayContract(address); resetAmount(); }}
+          onMax={!tx.pending && spendableBalance !== undefined && spendableBalance > 0n ? () => setAmountText(formatUnits(spendableBalance, assetIn?.decimals ?? 18)) : undefined}
+          readOnly={tx.pending}
         />
-        <button type="button" className="fi-icon-button fi-swap-arrow" onClick={flip} aria-label="Reverse swap direction"><ArrowsDownUp size={18} weight="regular" aria-hidden="true" /></button>
+        <button type="button" className="fi-icon-button fi-swap-arrow" onClick={flip} disabled={tx.pending} aria-label="Reverse swap direction"><ArrowsDownUp size={18} weight="regular" aria-hidden="true" /></button>
         <SwapAmountField
           id="swap-amount-out"
           assetSelectId="swap-out-token"
@@ -644,8 +645,8 @@ export function SwapWorkspace() {
             : !isOracleNusdRoute && swapRoute.kind === "unavailable"
               ? "No liquidity is available for this pair."
               : undefined}
-          onAssetChange={chooseOut}
-          onAddressSelect={(address) => { setReceiveContract(address); resetAmount(); }}
+          onAssetChange={(next) => { if (!tx.pending) chooseOut(next); }}
+          onAddressSelect={(address) => { if (tx.pending) return; setReceiveContract(address); resetAmount(); }}
           readOnly
         />
 

@@ -166,8 +166,8 @@ export function CreatePoolForm() {
               setTokenAddressText(event.target.value);
               tx.reset();
             }}
-            aria-invalid={Boolean(inputError)}
-            aria-describedby="create-pool-token-address-error"
+            aria-invalid={Boolean(inputError) || undefined}
+            aria-describedby={inputError ? "create-pool-token-address-error" : undefined}
           />
           {inputError ? (
             <span

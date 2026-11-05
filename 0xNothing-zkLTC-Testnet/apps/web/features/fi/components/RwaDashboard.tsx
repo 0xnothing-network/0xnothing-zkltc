@@ -82,7 +82,7 @@ function RwaMarketPanel({ config, admin }: { config: RwaMarketConfig; admin: boo
     {admin ? <div className="rwa-form">
       <p>Only the onchain owner can operate this reserve. Withdrawals go to the connected owner. Funding and reinvestment permanently commit funds to market liquidity.</p>
       <p>Withdrawable fees: {data ? cash(data.withdrawable) : "—"}. <a href={data ? explorerAddressUrl(data.owner) : explorerAddressUrl(config.market)} target="_blank" rel="noreferrer">View authority ↗</a></p>
-      <label>Reserve amount ({config.settlementSymbol})<input inputMode="decimal" value={reserveText} disabled={busy} onChange={(e) => setReserveText(e.target.value)} placeholder="0.00" /></label>
+      <label>Reserve amount ({config.settlementSymbol})<input type="text" inputMode="decimal" autoComplete="off" spellCheck={false} value={reserveText} disabled={busy} onChange={(e) => setReserveText(e.target.value)} placeholder="0.00" /></label>
       <div className="rwa-actions">
         <button disabled={!isOwner || !correctChain || state.isError || busy || !reserveAmount || !data || reserveAmount > data.withdrawable} onClick={() => void manage("withdrawFees")}>Withdraw fees</button>
         <button disabled={!isOwner || !correctChain || state.isError || busy || !reserveAmount || !data || reserveAmount > data.fees} onClick={() => void manage("reinvestFees")}>Reinvest fees permanently</button>
@@ -94,8 +94,8 @@ function RwaMarketPanel({ config, admin }: { config: RwaMarketConfig; admin: boo
         <button type="button" aria-pressed={buy} disabled={busy} onClick={() => { setBuy(true); tx.reset(); }}>{`Buy ${config.assetSymbol}`}</button>
         <button type="button" aria-pressed={!buy} disabled={busy} onClick={() => { setBuy(false); tx.reset(); }}>{`Sell ${config.assetSymbol}`}</button>
       </div>
-      <label>Asset amount ({config.assetSymbol})<input inputMode="decimal" value={amountText} disabled={busy} onChange={(e) => setAmountText(e.target.value)} placeholder="0.00" /></label>
-      {amountText && !amount ? <p role="alert">Enter a positive amount with at most {config.assetDecimals} decimal places.</p> : null}
+      <label>Asset amount ({config.assetSymbol})<input type="text" inputMode="decimal" autoComplete="off" spellCheck={false} value={amountText} disabled={busy} onChange={(e) => setAmountText(e.target.value)} placeholder="0.00" aria-invalid={Boolean(amountText && !amount) || undefined} aria-describedby={amountText && !amount ? `${config.market}-amount-error` : undefined} /></label>
+      {amountText && !amount ? <p id={`${config.market}-amount-error`} role="alert">Enter a positive amount with at most {config.assetDecimals} decimal places.</p> : null}
       {quote.data && !quote.isError && amount ? <dl className="rwa-metrics">
         <div><dt>Value before fee</dt><dd>{cash(quote.data.values[0])}</dd></div>
         <div><dt>Reserve fee · 1%</dt><dd>{cash(quote.data.values[1])}</dd></div>

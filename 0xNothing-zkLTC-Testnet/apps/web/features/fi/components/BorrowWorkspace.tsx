@@ -278,8 +278,8 @@ export function BorrowWorkspace() {
             </div>
           ) : null}
           <div className="fi-segmented" role="group" aria-label="Debt action">
-            <button type="button" className={mode === "borrow" ? "active" : ""} aria-pressed={mode === "borrow"} onClick={() => changeMode("borrow")}>Borrow</button>
-            <button type="button" className={mode === "repay" ? "active" : ""} aria-pressed={mode === "repay"} onClick={() => changeMode("repay")}>Repay</button>
+            <button type="button" className={mode === "borrow" ? "active" : ""} aria-pressed={mode === "borrow"} disabled={tx.pending} onClick={() => changeMode("borrow")}>Borrow</button>
+            <button type="button" className={mode === "repay" ? "active" : ""} aria-pressed={mode === "repay"} disabled={tx.pending} onClick={() => changeMode("repay")}>Repay</button>
           </div>
           <details className="fi-settings-details">
             <summary>
@@ -301,8 +301,8 @@ export function BorrowWorkspace() {
                 }}
               />
               <div className="fi-segmented" role="group" aria-label="Collateral action">
-                <button type="button" className={mode === "deposit" ? "active" : ""} aria-pressed={mode === "deposit"} onClick={() => changeMode("deposit")}>Deposit</button>
-                <button type="button" className={mode === "withdrawCollateral" ? "active" : ""} aria-pressed={mode === "withdrawCollateral"} onClick={() => changeMode("withdrawCollateral")}>Withdraw</button>
+                <button type="button" className={mode === "deposit" ? "active" : ""} aria-pressed={mode === "deposit"} disabled={tx.pending} onClick={() => changeMode("deposit")}>Deposit</button>
+                <button type="button" className={mode === "withdrawCollateral" ? "active" : ""} aria-pressed={mode === "withdrawCollateral"} disabled={tx.pending} onClick={() => changeMode("withdrawCollateral")}>Withdraw</button>
               </div>
             </div>
           </details>
@@ -313,8 +313,8 @@ export function BorrowWorkspace() {
             </summary>
             <div className="fi-section-stack fi-slippage-control fi-disclosure-body">
               <div className="fi-segmented" role="group" aria-label="Wrapped Litecoin action">
-                <button type="button" className={mode === "wrap" ? "active" : ""} aria-pressed={mode === "wrap"} onClick={() => changeMode("wrap")}>Wrap</button>
-                <button type="button" className={mode === "unwrap" ? "active" : ""} aria-pressed={mode === "unwrap"} onClick={() => changeMode("unwrap")}>Unwrap</button>
+                <button type="button" className={mode === "wrap" ? "active" : ""} aria-pressed={mode === "wrap"} disabled={tx.pending} onClick={() => changeMode("wrap")}>Wrap</button>
+                <button type="button" className={mode === "unwrap" ? "active" : ""} aria-pressed={mode === "unwrap"} disabled={tx.pending} onClick={() => changeMode("unwrap")}>Unwrap</button>
               </div>
             </div>
           </details>

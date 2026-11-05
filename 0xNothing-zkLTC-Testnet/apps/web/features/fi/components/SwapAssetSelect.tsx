@@ -46,8 +46,11 @@ export function SwapAssetSelect({ id, label, value, assets, onChange, onAddressS
     return () => document.removeEventListener("pointerdown", outside);
   }, [open]);
 
+  const keyNavRef = useRef(false);
   useEffect(() => {
-    if (open) document.getElementById(`${id}-option-${currentIndex}`)?.scrollIntoView({ block: "nearest" });
+    if (!open || !keyNavRef.current) return;
+    keyNavRef.current = false;
+    document.getElementById(`${id}-option-${currentIndex}`)?.scrollIntoView({ block: "nearest" });
   }, [currentIndex, id, open]);
 
   function close(restore = false) {
@@ -107,6 +110,7 @@ export function SwapAssetSelect({ id, label, value, assets, onChange, onAddressS
                 if (event.key === "Enter") { event.preventDefault(); choose(currentIndex); }
                 if ((event.key === "ArrowDown" || event.key === "ArrowUp") && results.length) {
                   event.preventDefault();
+                  keyNavRef.current = true;
                   setActiveIndex((currentIndex + (event.key === "ArrowDown" ? 1 : -1) + results.length) % results.length);
                 }
               }} />

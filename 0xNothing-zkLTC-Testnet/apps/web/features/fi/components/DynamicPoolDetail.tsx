@@ -696,11 +696,15 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
           ) : null}
           {swapsPaused.data ? <div className="fi-inline-state fi-inline-danger" role="alert"><div><strong>Swaps paused</strong></div></div> : null}
           <div className="fi-segmented" role="group" aria-label="Pool action">
-            <button type="button" className={mode === "swap" ? "active positive" : ""} aria-pressed={mode === "swap"} onClick={() => { setMode("swap"); tx.reset(); }}>Swap</button>
-            <button type="button" className={mode === "add" ? "active positive" : ""} aria-pressed={mode === "add"} onClick={() => { setMode("add"); tx.reset(); }}>Add</button>
-            <button type="button" className={mode === "remove" ? "active" : ""} aria-pressed={mode === "remove"} onClick={() => { setMode("remove"); tx.reset(); }}>Remove</button>
+            <button type="button" className={mode === "swap" ? "active positive" : ""} aria-pressed={mode === "swap"} disabled={tx.pending} onClick={() => { setMode("swap"); tx.reset(); }}>Swap</button>
+            <button type="button" className={mode === "add" ? "active positive" : ""} aria-pressed={mode === "add"} disabled={tx.pending} onClick={() => { setMode("add"); tx.reset(); }}>Add</button>
+            <button type="button" className={mode === "remove" ? "active" : ""} aria-pressed={mode === "remove"} disabled={tx.pending} onClick={() => { setMode("remove"); tx.reset(); }}>Remove</button>
           </div>
-          <div className="fi-form">
+          <form className="fi-form" onSubmit={(event) => {
+            event.preventDefault();
+            if (event.currentTarget.querySelector<HTMLButtonElement>("button[type=submit]")?.disabled) return;
+            void (mode === "swap" ? submitSwap() : mode === "add" ? submitAdd() : submitRemove());
+          }}>
             {mode === "swap" ? <>
               <AmountField
                 id="dynamic-swap-amount-in"
@@ -747,16 +751,15 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
             </details>
             {!isConnected ? <ConnectWalletButton /> : (
               <button
-                type="button"
+                type="submit"
                 className={`fi-button fi-button-block ${mode === "remove" ? "fi-button-muted" : "fi-button-primary"}`}
                 disabled={!poolReady || Boolean(error) || tx.pending || (mode === "swap" ? !poolHasLiquidity || !swapStateReady || Boolean(swapsPaused.data) || swapAmountSettling || swapQuote.isLoading || !swapAmountIn || !swapAmountOut : mode === "add" ? !amountA || !amountB || !expectedLiquidity : !poolHasLiquidity || !liquidity || removeAmountA === undefined || removeAmountB === undefined)}
-                onClick={() => void (mode === "swap" ? submitSwap() : mode === "add" ? submitAdd() : submitRemove())}
               >
                 {!poolReady ? poolLoading ? "Loading pool" : "Pool unavailable" : tx.pending ? "Processing" : mode === "swap" ? !poolHasLiquidity ? "No liquidity" : routeReadError ? "Route unavailable" : !swapStateReady ? "Checking route" : swapsPaused.data ? "Swaps paused" : "Swap" : mode === "add" ? "Add liquidity" : !poolHasLiquidity ? "No liquidity" : "Remove liquidity"}
               </button>
             )}
             <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
-          </div>
+          </form>
           {poolReady && (lpBalance !== undefined && lpBalance > 0n || hasLockedLp || hasBurnedLp) ? (
             <details className="fi-settings-details fi-lock-lp-details">
               <summary>
@@ -820,8 +823,8 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
                 ))}
                 {lpBalance !== undefined && lpBalance > 0n ? <>
                   <div className="fi-segmented" role="group" aria-label="LP action">
-                    <button type="button" className={lpActionMode === "lock" ? "active positive" : ""} aria-pressed={lpActionMode === "lock"} onClick={() => { setLpActionMode("lock"); tx.reset(); }}>Lock</button>
-                    <button type="button" className={lpActionMode === "burn" ? "active" : ""} aria-pressed={lpActionMode === "burn"} onClick={() => { setLpActionMode("burn"); tx.reset(); }}>Burn</button>
+                    <button type="button" className={lpActionMode === "lock" ? "active positive" : ""} aria-pressed={lpActionMode === "lock"} disabled={tx.pending} onClick={() => { setLpActionMode("lock"); tx.reset(); }}>Lock</button>
+                    <button type="button" className={lpActionMode === "burn" ? "active" : ""} aria-pressed={lpActionMode === "burn"} disabled={tx.pending} onClick={() => { setLpActionMode("burn"); tx.reset(); }}>Burn</button>
                   </div>
                   {lpActionMode === "lock" ? <>
                     <AmountField

@@ -273,10 +273,14 @@ export function PoolDetail({
           />
           {!configured ? <NotDeployed feature={`${pairLabel} liquidity`} /> : null}
           <div className="fi-segmented" role="group" aria-label="Liquidity action">
-            <button type="button" className={mode === "add" ? "active positive" : ""} aria-pressed={mode === "add"} onClick={() => { setMode("add"); tx.reset(); }}>Add LP</button>
-            <button type="button" className={mode === "remove" ? "active" : ""} aria-pressed={mode === "remove"} onClick={() => { setMode("remove"); tx.reset(); }}>Remove LP</button>
+            <button type="button" className={mode === "add" ? "active positive" : ""} aria-pressed={mode === "add"} disabled={tx.pending} onClick={() => { setMode("add"); tx.reset(); }}>Add LP</button>
+            <button type="button" className={mode === "remove" ? "active" : ""} aria-pressed={mode === "remove"} disabled={tx.pending} onClick={() => { setMode("remove"); tx.reset(); }}>Remove LP</button>
           </div>
-          <div className="fi-form">
+          <form className="fi-form" onSubmit={(event) => {
+            event.preventDefault();
+            if (event.currentTarget.querySelector<HTMLButtonElement>("button[type=submit]")?.disabled) return;
+            void (mode === "add" ? submitAdd() : submitRemove());
+          }}>
             {mode === "add" ? <>
               <AmountField id="pool-amount-a" label={tokenA} asset={tokenA} value={amountAText} balance={formatAmount(availableA)} onChange={updateAmountA} onMax={availableA && availableA > 0n ? () => updateAmountA(formatUnits(availableA, 18)) : undefined} error={error?.startsWith(tokenA) ? error : undefined} />
               <span className="fi-liquidity-plus" aria-hidden="true">+</span>
@@ -306,7 +310,7 @@ export function PoolDetail({
               <SlippageControl value={slippageBps} onChange={setSlippageBps} />
             </details>
             {!isConnected ? <ConnectWalletButton /> : (
-              <button type="button" className={`fi-button fi-button-block ${mode === "add" ? "fi-button-primary" : "fi-button-muted"}`} disabled={!configured || Boolean(error) || tx.pending || (mode === "add" ? !amountA || !amountB || !expectedLiquidity : !liquidity || removeAmountA === undefined || removeAmountB === undefined)} onClick={() => void (mode === "add" ? submitAdd() : submitRemove())}>
+              <button type="submit" className={`fi-button fi-button-block ${mode === "add" ? "fi-button-primary" : "fi-button-muted"}`} disabled={!configured || Boolean(error) || tx.pending || (mode === "add" ? !amountA || !amountB || !expectedLiquidity : !liquidity || removeAmountA === undefined || removeAmountB === undefined)}>
                 {!configured ? "Not deployed" : tx.pending ? "Processing" : mode === "add" ? "Add liquidity & receive LP" : "Remove liquidity"}
               </button>
             )}
@@ -316,7 +320,7 @@ export function PoolDetail({
                 Stake {formatAmount(lpBalance)} LP
               </Link>
             ) : null}
-          </div>
+          </form>
         </section>
       </div>
     </>

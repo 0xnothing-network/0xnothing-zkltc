@@ -317,6 +317,7 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
             label="Isolated vault"
             value={synth}
             options={SYNTHS}
+            disabled={tx.pending}
             onChange={(value) => {
               setSynth(value);
               setAmountText("");
@@ -324,8 +325,8 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
             }}
           />
           <div className="fi-segmented" role="group" aria-label="Synthetic debt action">
-            <button type="button" className={mode === "mint" ? "active" : ""} aria-pressed={mode === "mint"} onClick={() => changeMode("mint")}>Mint</button>
-            <button type="button" className={mode === "repay" ? "active" : ""} aria-pressed={mode === "repay"} onClick={() => changeMode("repay")}>Repay</button>
+            <button type="button" className={mode === "mint" ? "active" : ""} aria-pressed={mode === "mint"} disabled={tx.pending} onClick={() => changeMode("mint")}>Mint</button>
+            <button type="button" className={mode === "repay" ? "active" : ""} aria-pressed={mode === "repay"} disabled={tx.pending} onClick={() => changeMode("repay")}>Repay</button>
           </div>
           <details className="fi-settings-details">
             <summary>
@@ -334,8 +335,8 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
             </summary>
             <div className="fi-section-stack fi-slippage-control fi-disclosure-body">
               <div className="fi-segmented" role="group" aria-label="Synthetic collateral action">
-                <button type="button" className={mode === "topup" ? "active" : ""} aria-pressed={mode === "topup"} onClick={() => changeMode("topup")}>Top up</button>
-                <button type="button" className={mode === "withdraw" ? "active" : ""} aria-pressed={mode === "withdraw"} onClick={() => changeMode("withdraw")}>Withdraw</button>
+                <button type="button" className={mode === "topup" ? "active" : ""} aria-pressed={mode === "topup"} disabled={tx.pending} onClick={() => changeMode("topup")}>Top up</button>
+                <button type="button" className={mode === "withdraw" ? "active" : ""} aria-pressed={mode === "withdraw"} disabled={tx.pending} onClick={() => changeMode("withdraw")}>Withdraw</button>
               </div>
             </div>
           </details>

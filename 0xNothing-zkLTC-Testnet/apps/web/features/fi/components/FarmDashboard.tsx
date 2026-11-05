@@ -312,8 +312,8 @@ function FarmRow({
         </dl>
         <div className="fi-farm-actions">
           <div className="fi-segmented" role="group" aria-label={`${tokenA}/${tokenB} farm action`}>
-            <button type="button" className={mode === "stake" ? "active positive" : ""} aria-pressed={mode === "stake"} onClick={() => { setMode("stake"); setAmountText(""); tx.reset(); }}>Stake</button>
-            <button type="button" className={mode === "withdraw" ? "active" : ""} aria-pressed={mode === "withdraw"} onClick={() => { setMode("withdraw"); setAmountText(""); tx.reset(); }}>Withdraw</button>
+            <button type="button" className={mode === "stake" ? "active positive" : ""} aria-pressed={mode === "stake"} disabled={tx.pending} onClick={() => { setMode("stake"); setAmountText(""); tx.reset(); }}>Stake</button>
+            <button type="button" className={mode === "withdraw" ? "active" : ""} aria-pressed={mode === "withdraw"} disabled={tx.pending} onClick={() => { setMode("withdraw"); setAmountText(""); tx.reset(); }}>Withdraw</button>
           </div>
           {mode === "stake" && walletLp === 0n ? (
             <div className="fi-farm-no-lp">

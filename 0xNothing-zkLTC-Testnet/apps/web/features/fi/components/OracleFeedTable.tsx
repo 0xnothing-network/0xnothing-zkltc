@@ -31,7 +31,7 @@ export function OracleFeedTable({ compact = false }: { compact?: boolean }) {
       <div className={compact ? "fi-table-panel-heading" : ""}>
         <PanelHeading title="Oracle prices" label="Powered by DIA" />
       </div>
-      <div className="fi-table-wrap" tabIndex={0} aria-label="DIA oracle feed table">
+      <div className="fi-table-wrap" tabIndex={0} aria-label="DIA oracle feed table" aria-busy={query.isLoading || undefined}>
         <table className="fi-table fi-oracle-table">
           <caption>DIA prices and freshness used for 0xFi risk checks</caption>
           <thead><tr><th>Asset</th><th>Key</th><th>Price</th><th>Updated</th><th>Status</th></tr></thead>
@@ -51,7 +51,7 @@ export function OracleFeedTable({ compact = false }: { compact?: boolean }) {
                   <td className="fi-oracle-key-cell" data-label="Feed">{feed.key}</td>
                   <td data-label="Price">{value !== undefined && value > 0n ? `$${formatAmount(value, decimals, 4)}` : "--"}</td>
                   <td className="fi-oracle-updated-cell" data-label="Updated">{timestamp ? formatRelativeTimestamp(timestamp) : "--"}</td>
-                  <td data-label="Status"><span className="fi-status" data-state={fresh ? "live" : "offline"}>{fresh ? "Fresh" : "Unavailable"}</span></td>
+                  <td data-label="Status">{query.isLoading ? "--" : <span className="fi-status" data-state={fresh ? "live" : "offline"}>{fresh ? "Fresh" : "Unavailable"}</span>}</td>
                 </tr>
               );
             })}

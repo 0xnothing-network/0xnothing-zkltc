@@ -113,8 +113,8 @@ export function LendingWorkspace() {
             </div>
           ) : null}
           <div className="fi-segmented" role="group" aria-label="Lending action">
-            <button type="button" className={mode === "supply" ? "active" : ""} aria-pressed={mode === "supply"} onClick={() => { setMode("supply"); setAmountText(""); tx.reset(); }}>Supply</button>
-            <button type="button" className={mode === "withdraw" ? "active" : ""} aria-pressed={mode === "withdraw"} onClick={() => { setMode("withdraw"); setAmountText(""); tx.reset(); }}>Withdraw</button>
+            <button type="button" className={mode === "supply" ? "active" : ""} aria-pressed={mode === "supply"} disabled={tx.pending} onClick={() => { setMode("supply"); setAmountText(""); tx.reset(); }}>Supply</button>
+            <button type="button" className={mode === "withdraw" ? "active" : ""} aria-pressed={mode === "withdraw"} disabled={tx.pending} onClick={() => { setMode("withdraw"); setAmountText(""); tx.reset(); }}>Withdraw</button>
           </div>
           <form className="fi-form" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
             <AmountField id="lend-amount" label={mode === "supply" ? "Supply" : "Withdraw"} asset="NUSD" value={amountText} balance={formatAmount(sourceBalance)} onChange={setAmountText} onMax={sourceBalance && sourceBalance > 0n ? () => setAmountText(formatUnits(sourceBalance, 18)) : undefined} error={error} />

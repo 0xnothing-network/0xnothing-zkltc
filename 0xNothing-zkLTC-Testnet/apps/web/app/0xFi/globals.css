@@ -974,6 +974,11 @@
   text-align: right;
 }
 
+.fi-form-details dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .fi-swap-arrow {
   width: 40px;
   height: 40px;
@@ -3236,7 +3241,7 @@
 .fi-root .fi-amount-input .fi-swap-asset-search input { width: 100%; min-width: 0; height: 46px; padding: 0; border: 0; outline: 0; font-size: 14px; background: transparent; color: var(--fi-text); }
 .fi-swap-asset-search-status { flex: none; margin: 10px 0; font-size: 12px; line-height: 1.5; color: var(--fi-muted); }
 .fi-swap-asset-results { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
-.fi-swap-asset-address { overflow-wrap: anywhere; white-space: normal; }
+.fi-swap-asset-option-copy .fi-swap-asset-address { overflow: visible; text-overflow: clip; overflow-wrap: anywhere; white-space: normal; }
 @media (max-width: 640px) {
   .fi-swap-asset-picker { position: fixed; top: 12dvh; bottom: auto; right: 12px; left: 12px; width: auto; max-height: 70dvh; }
   .fi-root .fi-amount-input .fi-swap-asset-search input { font-size: 16px; }

@@ -562,7 +562,7 @@ export function MarketChart({
         )}
       </div>
       {readout ? (
-        <div className="fi-chart-summary" aria-live="polite">
+        <div className="fi-chart-summary" aria-live={hover ? "off" : "polite"}>
           <strong>{price(readout.close)}</strong>
           {priceSource === "oracle" ? (
             <>
