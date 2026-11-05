@@ -791,6 +791,7 @@
   color: var(--docs-muted);
   font-size: 12px;
   line-height: 1.65;
+  overflow-wrap: anywhere;
 }
 
 .ox-docs-method-list {
@@ -1369,3 +1370,16 @@
   .ox-docs-root .ox-docs-code pre { max-height: 420px; }
 }
 @media (prefers-reduced-motion: reduce) { .ox-docs-root :is(a, button) { transition: none !important; } }
+
+/* Developer guides: links inside tables and prose, indexer notes. */
+.ox-docs-fee-table-wrap a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent-text);
+  text-decoration: none;
+}
+.ox-docs-copy a { color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; }
+.ox-docs-fee-table-wrap a:hover, .ox-docs-copy a:hover { color: var(--docs-text); }
+.ox-docs-indexers p { grid-column: 1 / -1; margin: 0; color: var(--docs-muted); }
