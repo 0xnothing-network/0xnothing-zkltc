@@ -90,6 +90,7 @@ export default function GalleryPage() {
         <div
           className="mb-4 px-4 py-3 rounded-lg bg-(--warning)/10 border border-(--warning)/30 text-(--warning) text-sm"
           style={{ fontFamily: "var(--font-ui)" }}
+          role="status"
         >
           Marketplace is paused. New listings and purchases are temporarily disabled; you can still cancel listings and withdraw credits.
         </div>
@@ -223,6 +224,7 @@ function ErrorState({
   return (
     <div
       className="animate-fadeInUp text-center py-16 bg-(--surface-1) border border-(--negative)/30 rounded-2xl"
+      role="alert"
     >
       <p
         className="text-(--negative) mb-4"

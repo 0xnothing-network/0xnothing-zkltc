@@ -386,8 +386,8 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
               style={{ imageRendering: "pixelated" }}
             />
           ) : hasDrawing ? (
-            <div className="grid h-full w-full place-items-center" aria-label="Preparing preview">
-              <span className="h-7 w-7 animate-spin rounded-full border-2 border-(--text-1)/15 border-t-white/70" />
+            <div className="grid h-full w-full place-items-center" role="status" aria-label="Preparing preview">
+              <span aria-hidden="true" className="h-7 w-7 animate-spin rounded-full border-2 border-(--text-1)/15 border-t-white/70" />
             </div>
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center gap-2">
@@ -411,7 +411,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
             </div>
           )}
           {hasDrawing ? (
-            <div className="absolute top-2 right-2 flex items-center gap-1.5">
+            <div className="absolute top-2 right-2 flex items-center gap-1.5" role="status" aria-live="polite">
               {isCheckingOriginal ? (
                 <span
                   className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-black/40 text-(--accent-text)"
@@ -486,6 +486,9 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Artwork name"
                 maxLength={64}
+                aria-describedby="pixel-mint-bytes"
+                aria-invalid={pixelUtf8Bytes(name.trim()) > 64 || undefined}
+                autoComplete="off"
                 className="w-full bg-(--surface-1) border border-(--line) rounded-xl px-3.5 py-3 sm:py-2.5 text-(--text-1) placeholder-(--text-3) focus:outline-none focus:border-(--accent)/50 transition-all text-sm"
                 style={{ fontFamily: "var(--font-ui)" }}
               />
@@ -498,12 +501,14 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
                 placeholder="Description (stored on-chain)"
                 maxLength={1024}
                 rows={2}
+                aria-describedby="pixel-mint-bytes"
+                aria-invalid={pixelUtf8Bytes(description) > 1024 || undefined}
                 className="w-full bg-(--surface-1) border border-(--line) rounded-xl px-3.5 py-3 sm:py-2.5 text-(--text-1) placeholder-(--text-3) focus:outline-none focus:border-(--accent)/50 transition-all resize-none text-sm"
                 style={{ fontFamily: "var(--font-ui)" }}
               />
             </div>
 
-            <p className="text-xs text-(--text-2)">Name: {pixelUtf8Bytes(name.trim())}/64 UTF-8 bytes · Description: {pixelUtf8Bytes(description)}/1,024 UTF-8 bytes</p>
+            <p id="pixel-mint-bytes" className="text-xs text-(--text-2)">Name: {pixelUtf8Bytes(name.trim())}/64 UTF-8 bytes · Description: {pixelUtf8Bytes(description)}/1,024 UTF-8 bytes</p>
             <PixelButton
               variant="indigo"
               onClick={originalCheckFailed ? () => { void retryOriginalCheck(); } : handleMint}

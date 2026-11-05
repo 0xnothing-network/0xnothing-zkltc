@@ -50,6 +50,7 @@ export const Toolbar = memo(function Toolbar({
     >
       <>
           <button
+            type="button"
             onClick={onImport}
             className="w-full rounded-xl border border-(--accent)/40 bg-(--accent)/10 py-3 text-xs font-bold uppercase tracking-wider text-(--accent-text) transition-colors hover:bg-(--accent)/20"
           >
@@ -96,6 +97,7 @@ export const Toolbar = memo(function Toolbar({
             {/* Custom color input */}
             <div>
               <p
+                id="pixel-custom-color-label"
                 className="text-(--text-3) text-xs uppercase tracking-wider mb-1.5"
                 style={{ fontFamily: "var(--font-ui)" }}
               >
@@ -105,6 +107,7 @@ export const Toolbar = memo(function Toolbar({
                 <input
                   type="color"
                   value={customHex}
+                  aria-labelledby="pixel-custom-color-label"
                   onChange={(e) => {
                     setCustomHex(e.target.value);
                     handleColorSelect(e.target.value);
@@ -123,6 +126,12 @@ export const Toolbar = memo(function Toolbar({
                   }}
                   placeholder="#RRGGBB"
                   maxLength={7}
+                  aria-labelledby="pixel-custom-color-label"
+                  autoComplete="off"
+                  spellCheck={false}
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  aria-invalid={!/^#[0-9A-Fa-f]{6}$/.test(customHex) || undefined}
                   className="flex-1 min-w-0 w-full bg-(--surface-2) border border-(--line) rounded-xl px-3 py-2.5 sm:py-2 text-(--text-1) text-xs placeholder-(--text-3) focus:outline-none focus:border-(--accent) transition-all uppercase"
                   style={{ fontFamily: "var(--font-num)" }}
                 />
@@ -146,7 +155,7 @@ export const Toolbar = memo(function Toolbar({
                     type="button"
                     aria-pressed={selectedColor === color}
                     onClick={() => handleColorSelect(color)}
-                    className="w-6 h-6 rounded-md transition-all duration-100 hover:scale-110"
+                    className="relative w-6 h-6 rounded-md transition-all duration-100 motion-safe:hover:scale-110 after:absolute after:-inset-[3px]"
                     style={{
                       backgroundColor: color,
                       outline: selectedColor === color ? "2px solid var(--text-1)" : "2px solid transparent",
@@ -190,6 +199,7 @@ export const Toolbar = memo(function Toolbar({
 
           {/* Clear */}
           <button
+            type="button"
             onClick={onClear}
             className="w-full py-3 sm:py-2.5 rounded-xl bg-(--negative)/10 border border-(--negative)/20 text-(--negative) text-xs font-bold uppercase tracking-wider hover:bg-(--negative)/20 hover:border-(--negative)/30 active:translate-y-[1px] transition-all flex items-center justify-center gap-1.5"
             style={{ fontFamily: "var(--font-ui)" }}
@@ -201,6 +211,7 @@ export const Toolbar = memo(function Toolbar({
               stroke="currentColor"
               strokeWidth="2"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"

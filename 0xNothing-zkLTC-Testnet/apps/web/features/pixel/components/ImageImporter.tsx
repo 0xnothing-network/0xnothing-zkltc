@@ -17,7 +17,23 @@ export function ImageImporter({ gridSize, onApply, onClose }: ImageImporterProps
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    dialogRef.current?.querySelector<HTMLElement>("button")?.focus();
+    return () => opener?.focus?.();
+  }, []);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !busy) onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [busy, onClose]);
 
   const chooseFile = (nextFile: File | undefined) => {
     if (!nextFile) return;
@@ -42,11 +58,11 @@ export function ImageImporter({ gridSize, onApply, onClose }: ImageImporterProps
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4" role="dialog" aria-modal="true" aria-labelledby="pixel-import-title">
-      <div className="w-full max-w-lg rounded-2xl border border-(--line) bg-(--surface-2) p-5 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4" role="dialog" aria-modal="true" aria-labelledby="pixel-import-title" onClick={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
+      <div ref={dialogRef} className="w-full max-w-lg rounded-2xl border border-(--line) bg-(--surface-2) p-5 shadow-2xl">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div><p className="text-xs uppercase tracking-[0.2em] text-(--accent-text)">Your artwork</p><h2 id="pixel-import-title" className="mt-1 text-xl font-bold text-(--text-1)">Import image</h2></div>
-          <button onClick={onClose} className="text-xl text-(--text-3) hover:text-(--text-1)" aria-label="Close">×</button>
+          <button type="button" disabled={busy} onClick={onClose} className="relative text-xl text-(--text-3) hover:text-(--text-1) after:absolute after:-inset-x-3.5 after:-inset-y-1.5" aria-label="Close"><span aria-hidden="true">×</span></button>
         </div>
         <button onClick={() => inputRef.current?.click()} className="flex min-h-40 w-full items-center justify-center rounded-xl border border-dashed border-(--line-strong) bg-(--bg) p-4 text-sm text-(--text-2) hover:border-(--accent)">
           {preview ? (
@@ -60,11 +76,11 @@ export function ImageImporter({ gridSize, onApply, onClose }: ImageImporterProps
         </button>
         <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => chooseFile(event.target.files?.[0])} />
         <div className="mt-4 flex gap-2">
-          {(["fit", "fill"] as const).map((value) => <button key={value} onClick={() => setMode(value)} className={`flex-1 rounded-lg px-3 py-2 text-xs uppercase tracking-wider ${mode === value ? "bg-(--accent) text-(--accent-ink)" : "bg-(--surface-1) text-(--text-3)"}`}>{value}</button>)}
+          {(["fit", "fill"] as const).map((value) => <button key={value} type="button" aria-pressed={mode === value} aria-describedby="pixel-import-mode-help" onClick={() => setMode(value)} className={`flex-1 rounded-lg px-3 py-2 text-xs uppercase tracking-wider ${mode === value ? "bg-(--accent) text-(--accent-ink)" : "bg-(--surface-1) text-(--text-3)"}`}>{value}</button>)}
         </div>
-        <p className="mt-3 text-xs text-(--text-3)">{mode === "fit" ? "Keeps the full image with transparent padding." : "Fills the grid and crops the edges."}</p>
-        {error && <p className="mt-3 text-xs text-(--negative)">{error}</p>}
-        <div className="mt-5 flex justify-end gap-2"><button onClick={onClose} className="rounded-lg px-4 py-2 text-xs text-(--text-2)">Cancel</button><button disabled={!file || busy} onClick={apply} className="rounded-lg bg-(--accent) px-4 py-2 text-xs font-bold text-(--accent-ink) disabled:cursor-not-allowed disabled:opacity-40">{busy ? "Converting…" : "Apply to artwork"}</button></div>
+        <p id="pixel-import-mode-help" className="mt-3 text-xs text-(--text-3)">{mode === "fit" ? "Keeps the full image with transparent padding." : "Fills the grid and crops the edges."}</p>
+        {error && <p className="mt-3 text-xs text-(--negative)" role="alert">{error}</p>}
+        <div className="mt-5 flex justify-end gap-2"><button type="button" disabled={busy} onClick={onClose} className="rounded-lg px-4 py-2 text-xs text-(--text-2)">Cancel</button><button type="button" aria-busy={busy || undefined} disabled={!file || busy} onClick={apply} className="rounded-lg bg-(--accent) px-4 py-2 text-xs font-bold text-(--accent-ink) disabled:cursor-not-allowed disabled:opacity-40">{busy ? "Converting…" : "Apply to artwork"}</button></div>
       </div>
     </div>
   );

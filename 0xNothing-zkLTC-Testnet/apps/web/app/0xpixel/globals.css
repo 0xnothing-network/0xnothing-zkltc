@@ -101,6 +101,13 @@
   :where(.pixel-product) .canvas-tool-strip > * { width: 100%; min-width: 0; justify-content: center; }
   :where(.pixel-product) .canvas-tool-strip > :is(:first-child, :last-child) { grid-column: 1 / -1; }
   :where(.pixel-product) .canvas-tool-strip > :last-child > .pixel-btn { width: 100%; }
+  /* Invisible 40px-tall touch target; the drawn button keeps its size. */
+  :where(.pixel-product) .canvas-tool-strip > div > button:not(.pixel-btn) { position: relative; }
+  :where(.pixel-product) .canvas-tool-strip > div > button:not(.pixel-btn)::after {
+    content: "";
+    position: absolute;
+    inset: min(0px, calc((100% - 40px) / 2)) 0;
+  }
 }
 
 /* Grid entrance */

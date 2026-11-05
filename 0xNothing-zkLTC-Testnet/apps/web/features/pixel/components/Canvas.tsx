@@ -584,6 +584,7 @@ export function Canvas({
           <div className="w-px h-6 bg-(--surface-3) mx-0.5 self-center" />
 
           <button
+            type="button"
             onClick={onUndo}
             disabled={!canUndo}
             title="Undo (Ctrl+Z)"
@@ -596,6 +597,7 @@ export function Canvas({
         {/* Zoom */}
         <div className="flex flex-shrink-0 items-center gap-0.5 bg-(--surface-1) rounded-xl p-1 border border-(--line)">
           <button
+            type="button"
             onClick={() => setZoom(z => Math.max(z / 1.5, 0.5))}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-(--text-2) hover:text-(--text-1) hover:bg-(--text-1)/5 transition-all"
             title="Zoom Out"
@@ -608,6 +610,7 @@ export function Canvas({
             {Math.round(zoom * 100)}%
           </span>
           <button
+            type="button"
             onClick={() => setZoom(z => Math.min(z * 1.5, 10))}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-(--text-2) hover:text-(--text-1) hover:bg-(--text-1)/5 transition-all"
             title="Zoom In"
@@ -618,6 +621,7 @@ export function Canvas({
             </svg>
           </button>
           <button
+            type="button"
             onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-(--text-2) hover:text-(--text-1) hover:bg-(--text-1)/5 transition-all text-xs font-bold"
             title="Reset View"
@@ -633,6 +637,8 @@ export function Canvas({
           {BRUSH_SIZES.map(size => (
             <button
               key={size}
+              type="button"
+              aria-pressed={brushSize === size}
               onClick={() => setBrushSize(size)}
               title={`Brush ${size}x${size}`}
               className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
@@ -676,6 +682,8 @@ export function Canvas({
           {SUBDIVISION_OPTIONS.map(opt => (
             <button
               key={opt}
+              type="button"
+              aria-pressed={subdivision === opt}
               onClick={() => setSubdivision(opt)}
               title={opt === 0 ? "No grid" : `${opt}x${opt} sub-grid`}
               className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
@@ -825,6 +833,8 @@ function ExportMenu({ pixelData, gridSize }: { pixelData: string[][]; gridSize: 
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 12 });
   const ref = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const sheetCloseRef = useRef<HTMLButtonElement>(null);
   const hasDrawing = pixelData.some(row => row.some(cell => cell !== "transparent"));
 
   useEffect(() => {
@@ -843,9 +853,16 @@ function ExportMenu({ pixelData, gridSize }: { pixelData: string[][]; gridSize: 
   }, [open]);
 
   useEffect(() => {
+    if (open && window.matchMedia("(max-width: 639px)").matches) sheetCloseRef.current?.focus();
+  }, [open]);
+
+  useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -912,17 +929,20 @@ function ExportMenu({ pixelData, gridSize }: { pixelData: string[][]; gridSize: 
   return (
     <div ref={ref} className="relative">
       <button
+        ref={triggerRef}
+        type="button"
+        aria-expanded={open}
         onClick={toggleOpen}
         className="pixel-btn pixel-btn-secondary pixel-btn-sm flex items-center gap-1 text-(--text-3) hover:text-(--text-1)"
         style={{ fontFamily: "var(--font-ui)" }}
       >
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
           <polyline points="7 10 12 15 17 10" />
           <line x1="12" y1="15" x2="12" y2="3" />
         </svg>
         EXPORT
-        <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transition: "transform 80ms", transform: open ? "rotate(180deg)" : "" }}>
+        <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true" style={{ transition: "transform 80ms", transform: open ? "rotate(180deg)" : "" }}>
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
@@ -941,16 +961,20 @@ function ExportMenu({ pixelData, gridSize }: { pixelData: string[][]; gridSize: 
           </div>
 
           <div
-            className="fixed inset-0 z-[90] flex items-end bg-black/50 backdrop-blur-sm p-3 sm:hidden"
-            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-[90] flex items-end bg-black/50 p-3 sm:hidden"
+            onClick={() => { setOpen(false); triggerRef.current?.focus(); }}
           >
             <div
               className="w-full overflow-hidden rounded-2xl border border-(--line) bg-(--surface-2) shadow-2xl shadow-black/40"
               onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="pixel-export-title"
             >
               <div className="flex items-center justify-between border-b border-(--line) px-4 py-3">
                 <div>
                   <p
+                    id="pixel-export-title"
                     className="text-xs font-bold uppercase tracking-wider text-(--accent-text)"
                     style={{ fontFamily: "var(--font-ui)" }}
                   >
@@ -964,7 +988,9 @@ function ExportMenu({ pixelData, gridSize }: { pixelData: string[][]; gridSize: 
                   </p>
                 </div>
                 <button
-                  onClick={() => setOpen(false)}
+                  ref={sheetCloseRef}
+                  type="button"
+                  onClick={() => { setOpen(false); triggerRef.current?.focus(); }}
                   className="flex h-9 w-9 items-center justify-center rounded-lg border border-(--line) text-(--text-2) active:translate-y-px"
                   aria-label="Close export menu"
                 >
