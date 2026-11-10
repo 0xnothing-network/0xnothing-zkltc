@@ -8,6 +8,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract MockPriceOracle {
     uint256 public price;
     bool public broken;
+    /// @dev Zero means "updated this block".
+    uint256 public updatedAt;
 
     constructor(uint256 initialPrice) {
         price = initialPrice;
@@ -21,9 +23,13 @@ contract MockPriceOracle {
         broken = value;
     }
 
+    function setUpdatedAt(uint256 timestamp) external {
+        updatedAt = timestamp;
+    }
+
     function readPriceWad() external view returns (uint256, uint256, uint80) {
         require(!broken, "ORACLE_DOWN");
-        return (price, block.timestamp, 1);
+        return (price, updatedAt == 0 ? block.timestamp : updatedAt, 1);
     }
 }
 
