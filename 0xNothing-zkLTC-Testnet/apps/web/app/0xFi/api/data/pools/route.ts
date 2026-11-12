@@ -20,6 +20,7 @@ import { loadPairTail } from "@fi/lib/server/rpcTail";
 import { liveLogClient } from "@fi/lib/server/liveLogClient";
 import { tokenImageUrl } from "@fi/lib/tokenImage";
 import { createBoundedCache } from "@/lib/boundedCache";
+import { logRanges } from "@/lib/logRanges";
 import { hasPositiveBigInt, nonNegativeBigInt } from "@/lib/integer";
 import { CDN_STALE_SECONDS, isFreshRead, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 
@@ -435,12 +436,10 @@ async function loadRpcTail(indexedBlock: number | null): Promise<{
   // The caller answers a capped tail with full factory discovery, which already
   // lists every pair; scanning the capped window as well only adds a slow log read.
   if (capped) return { pools: [], fromBlock, toBlock: latest, capped };
-  const logs = await liveLogClient.getLogs({
-    address: factory,
-    event: pairCreatedEvent,
-    fromBlock,
-    toBlock: latest,
-  });
+  // In windows the RPC accepts: it refuses a range of more than 2,000 blocks.
+  const logs = (await Promise.all(logRanges(fromBlock, latest).map((range) =>
+    liveLogClient.getLogs({ address: factory, event: pairCreatedEvent, ...range }),
+  ))).flat();
 
   const pools = await mapWithConcurrency(logs, 12, async (log): Promise<PoolPoint | undefined> => {
     const { pair, protectedBootstrap, token0, token1 } = log.args;

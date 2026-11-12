@@ -42,6 +42,16 @@ export const logsClient = createPublicClient({
   transport: litvmTransport({ retryCount: 2, retryDelay: 300, timeout: 15_000 }),
 });
 
+/**
+ * Unbatched client for log scans that run against a deadline: no retry and a short
+ * timeout, so a window the scan has given up on is not still being retried on the
+ * RPC long after the response went out.
+ */
+export const scanLogsClient = createPublicClient({
+  chain: litvm,
+  transport: litvmTransport({ retryCount: 0, timeout: 5_000 }),
+});
+
 async function withRetry<T>(
   fn: () => Promise<T>,
   attempts = 5,
@@ -88,13 +98,19 @@ const enumerationTokens = createBoundedCache<symbol>({
   maxEntries: USER_NFT_CACHE_MAX,
 });
 
-export async function getUserTokenIds(address: string, collection: `0x${string}` = PIXEL_CLASSIC_CONTRACT_ADDRESS, force = false): Promise<bigint[]> {
+/**
+ * `max` bounds the work for a caller that shows only that many tokens: any address
+ * can be asked for, and enumeration costs one read per token held. A capped read
+ * returns the first `max` tokens in the contract's own order, cached under its own
+ * key so it is never mistaken for a complete inventory.
+ */
+export async function getUserTokenIds(address: string, collection: `0x${string}` = PIXEL_CLASSIC_CONTRACT_ADDRESS, force = false, max = Number.POSITIVE_INFINITY): Promise<bigint[]> {
   if (!address || typeof address !== "string" || !address.match(/^0x[0-9a-fA-F]{40}$/)) {
     return [];
   }
   const addr = address.toLowerCase() as `0x${string}`;
 
-  const cacheKey = `${collection.toLowerCase()}:${addr}`;
+  const cacheKey = `${collection.toLowerCase()}:${addr}${Number.isFinite(max) ? `:${max}` : ""}`;
   const cached = userNftCache.get(cacheKey);
   if (!force && cached) return cached;
   const requestToken = Symbol();
@@ -112,7 +128,7 @@ export async function getUserTokenIds(address: string, collection: `0x${string}`
     if (balance > BigInt(Number.MAX_SAFE_INTEGER)) {
       throw new Error("NFT balance is too large to enumerate safely");
     }
-    const n = Number(balance);
+    const n = Math.min(Number(balance), max);
 
     if (n === 0) {
       if (enumerationTokens.get(cacheKey) === requestToken) userNftCache.set(cacheKey, []);

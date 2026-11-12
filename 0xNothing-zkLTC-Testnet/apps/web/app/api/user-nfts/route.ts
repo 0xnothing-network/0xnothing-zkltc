@@ -30,6 +30,13 @@ const nftCache = createBoundedCache<NativeNft[]>({
   ttlMs: CACHE_TTL,
   maxInFlight: CACHE_MAX_ENTRIES,
 });
+// A token's name and art are fixed at mint, so they are read from the chain once
+// and not again on every 3-second poll of the wallet that holds it.
+const TOKEN_DETAIL_TTL = 10 * 60_000;
+const tokenDetailCache = createBoundedCache<{ name: string; hasImage: boolean }>({
+  maxEntries: 4_096,
+  ttlMs: TOKEN_DETAIL_TTL,
+});
 // `force=1` is public, so a forced read is shared for this long: callers still see
 // the chain after their own transaction, while repeating it cannot multiply RPC load.
 const FORCED_REUSE_MS = 2_000;
@@ -68,15 +75,22 @@ async function loadNativeNfts(address: string, fresh: boolean): Promise<NativeNf
 
 async function loadCollectionNfts(address: string, fresh: boolean, collection: `0x${string}`): Promise<NativeNft[]> {
   // Get token IDs first
-  const tokenIds = (await getUserTokenIds(address, collection, fresh)).slice(0, MAX_TOKENS_PER_COLLECTION);
+  const tokenIds = await getUserTokenIds(address, collection, fresh, MAX_TOKENS_PER_COLLECTION);
   if (tokenIds.length === 0) {
     return [];
   }
 
-  const tokens: NativeNft[] = [];
+  const detailKey = (tokenId: bigint) => `${collection.toLowerCase()}:${tokenId}`;
+  const details = new Map<bigint, { name: string; hasImage: boolean }>();
+  const unread: bigint[] = [];
+  for (const tokenId of tokenIds) {
+    const known = tokenDetailCache.get(detailKey(tokenId));
+    if (known) details.set(tokenId, known);
+    else unread.push(tokenId);
+  }
   const isPacked = isPackedPixelCollection(collection);
-  for (let offset = 0; offset < tokenIds.length; offset += NFT_DETAILS_BATCH_SIZE) {
-    const batch = tokenIds.slice(offset, offset + NFT_DETAILS_BATCH_SIZE);
+  for (let offset = 0; offset < unread.length; offset += NFT_DETAILS_BATCH_SIZE) {
+    const batch = unread.slice(offset, offset + NFT_DETAILS_BATCH_SIZE);
     // Read the packed getter directly: tokenData converts binary art to a
     // hex string on-chain and is needlessly expensive for wallet lists.
     const tokenDataResults = await publicClient.multicall({
@@ -94,7 +108,7 @@ async function loadCollectionNfts(address: string, fresh: boolean, collection: `
       }),
     });
 
-    tokens.push(...batch.map((tokenId, i): NativeNft => {
+    batch.forEach((tokenId, i) => {
       const tokenResult = tokenDataResults[i];
       const classic = tokenResult?.status === "success"
         ? tokenResult.result as readonly [string, bigint, string, string, bigint, string] : null;
@@ -103,20 +117,23 @@ async function loadCollectionNfts(address: string, fresh: boolean, collection: `
       const name = isPacked ? packed?.[0] : classic?.[0];
       const grid = isPacked ? packed?.[2] : classic?.[1];
       const pixels = isPacked ? packed?.[3] : classic?.[2];
-
-      return {
-        collection,
-        tokenId: tokenId.toString(),
-        name: name ?? "Untitled",
-        imageUrl: pixels && grid
-          ? getPixelImageUrl(tokenId, collection)
-          : "",
-        listing: null,
-      };
-    }));
+      const detail = { name: name ?? "Untitled", hasImage: Boolean(pixels && grid) };
+      details.set(tokenId, detail);
+      // A failed read is shown as a placeholder for this response only.
+      if (tokenResult?.status === "success") tokenDetailCache.set(detailKey(tokenId), detail);
+    });
   }
 
-  return tokens;
+  return tokenIds.map((tokenId): NativeNft => {
+    const detail = details.get(tokenId);
+    return {
+      collection,
+      tokenId: tokenId.toString(),
+      name: detail?.name ?? "Untitled",
+      imageUrl: detail?.hasImage ? getPixelImageUrl(tokenId, collection) : "",
+      listing: null,
+    };
+  });
 }
 
 export async function GET(request: Request) {
@@ -139,6 +156,15 @@ export async function GET(request: Request) {
     );
   } catch (err) {
     console.error("[user-nfts] request failed:", err);
+    // The last list read for this wallet beats an error on a poll. A forced read
+    // follows the caller's own transaction, so it must not be answered with it.
+    const last = force ? undefined : nftCache.entry(address.toLowerCase());
+    if (last) {
+      return NextResponse.json(
+        { tokens: last.value, count: last.value.length },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    }
     return NextResponse.json(
       { error: publicErrorMessage(err, "NFT data is temporarily unavailable") },
       { status: 500, headers: { "Cache-Control": "no-store" } }

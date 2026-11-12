@@ -4,6 +4,7 @@ import { createPublicClient, formatUnits, parseAbiItem, type Address, type Hex }
 import { isTransientRpcError, litvmTransport } from "@/lib/rpcTransport";
 import { deployment } from "@fi/config/deployment";
 import { createBoundedCache } from "@/lib/boundedCache";
+import { logRanges } from "@/lib/logRanges";
 import { liveLogClient } from "./liveLogClient";
 
 const MAX_TAIL_BLOCKS = 5_000n;
@@ -111,9 +112,10 @@ async function loadPairTailFromRpc(pool: Address, indexedBlock: number | null): 
 
   // One request for all four events. getLogs is the slowest call on this RPC, and
   // four scans of the same range failed the whole tail when any one of them timed out.
-  const logs = await liveLogClient.getLogs({
-    address: pool, events: [syncEvent, swapEvent, mintEvent, burnEvent], fromBlock, toBlock: latest,
-  });
+  // In windows the RPC accepts: it refuses a range of more than 2,000 blocks.
+  const logs = (await Promise.all(logRanges(fromBlock, latest).map((range) =>
+    liveLogClient.getLogs({ address: pool, events: [syncEvent, swapEvent, mintEvent, burnEvent], ...range }),
+  ))).flat();
   type TailLog = (typeof logs)[number];
   const named = <Name extends TailLog["eventName"]>(name: Name) =>
     logs.filter((log): log is Extract<TailLog, { eventName: Name }> => log.eventName === name);

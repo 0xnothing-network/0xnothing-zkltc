@@ -1,7 +1,9 @@
 import "server-only";
 
 import { getAddress, parseAbiItem, type Address } from "viem";
-import { publicClient } from "@/lib/contract";
+import { createBoundedCache } from "@/lib/boundedCache";
+import { publicClient, scanLogsClient } from "@/lib/contract";
+import { logRanges } from "@/lib/logRanges";
 import {
   PUMP_FACTORY_ADDRESS,
   PUMP_START_BLOCK,
@@ -11,24 +13,41 @@ import { pumpTokenAbi, zeroXPumpAbi } from "@/features/pump/abis";
 import type { PumpHoldersResponse } from "@/features/pump/types";
 import {
   MAX_RPC_HOLDER_CANDIDATES,
+  RPC_HOLDER_CACHE_TTL_MS,
   RPC_HOLDER_LOG_CONCURRENCY,
-  RPC_LOG_BLOCK_CHUNK,
+  RPC_SCAN_DEADLINE_MS,
 } from "./constants";
 import { mergeCreatorHolder } from "./holders";
 import type { RpcMarketState } from "./rpcMarkets";
 
 /**
- * Holder reconstruction without an index: collect every address that ever
- * touched the token from its Transfer logs, then read the live balances. The
- * candidate cap and the balance retry are reported back as warnings so the UI
- * can say the list is partial instead of showing it as authoritative.
+ * Holder reconstruction without an index: collect the addresses that touched the
+ * token from its Transfer logs, then read the live balances. The candidate cap and
+ * the balance retry are reported back as warnings so the UI can say the list is
+ * partial instead of showing it as authoritative.
+ *
+ * The scan walks 2,000-block windows from the newest block back and stops at a
+ * deadline. The chain is millions of blocks past the launchpad's first one, so the
+ * whole history cannot be read on the request path: the list covers recent
+ * activity, and every caller already labels it as a fallback.
  */
 
 const TOKEN_TRANSFER_EVENT = parseAbiItem(
   "event Transfer(address indexed from,address indexed to,uint256 value)",
 );
 
-export async function getRpcHolders(token: Address, limit: number): Promise<PumpHoldersResponse> {
+// Polls arrive every few seconds; one scan answers all of them for a while.
+const holderCache = createBoundedCache<PumpHoldersResponse>({
+  maxEntries: 64,
+  ttlMs: RPC_HOLDER_CACHE_TTL_MS,
+  maxInFlight: 8,
+});
+
+export function getRpcHolders(token: Address, limit: number): Promise<PumpHoldersResponse> {
+  return holderCache.load(`${token.toLowerCase()}:${limit}`, () => scanRpcHolders(token, limit));
+}
+
+async function scanRpcHolders(token: Address, limit: number): Promise<PumpHoldersResponse> {
   const state = await publicClient.multicall({
     allowFailure: true,
     contracts: [
@@ -79,31 +98,38 @@ export async function getRpcHolders(token: Address, limit: number): Promise<Pump
   };
   addCandidate(creator);
 
-  const logRanges: Array<{ fromBlock: bigint; toBlock: bigint }> = [];
-  for (let chunkFrom = fromBlock; chunkFrom <= latestBlock; chunkFrom += RPC_LOG_BLOCK_CHUNK) {
-    const chunkTo = chunkFrom + RPC_LOG_BLOCK_CHUNK - 1n > latestBlock
-      ? latestBlock
-      : chunkFrom + RPC_LOG_BLOCK_CHUNK - 1n;
-    logRanges.push({ fromBlock: chunkFrom, toBlock: chunkTo });
-  }
-  for (let start = 0; start < logRanges.length; start += RPC_HOLDER_LOG_CONCURRENCY) {
-    const pages = await Promise.all(
-      logRanges.slice(start, start + RPC_HOLDER_LOG_CONCURRENCY).map((range) =>
-        publicClient.getLogs({
+  const newestFirst = logRanges(fromBlock, latestBlock).reverse();
+  const scanStartedAt = Date.now();
+  let windowsRead = 0;
+  for (let start = 0; start < newestFirst.length; start += RPC_HOLDER_LOG_CONCURRENCY) {
+    if (candidatesTruncated || Date.now() - scanStartedAt >= RPC_SCAN_DEADLINE_MS) break;
+    // A window that fails is skipped: the list is a recent sample either way.
+    const pages = await Promise.allSettled(
+      newestFirst.slice(start, start + RPC_HOLDER_LOG_CONCURRENCY).map((range) =>
+        scanLogsClient.getLogs({
           address: token,
           event: TOKEN_TRANSFER_EVENT,
           fromBlock: range.fromBlock,
           toBlock: range.toBlock,
         })),
     );
-    for (const logs of pages) {
-      for (const log of logs) {
+    let readInBatch = 0;
+    for (const page of pages) {
+      if (page.status !== "fulfilled") continue;
+      readInBatch += 1;
+      for (const log of page.value) {
         if ((log.args.value ?? 0n) === 0n) continue;
         addCandidate(log.args.from);
         addCandidate(log.args.to);
       }
     }
+    windowsRead += readInBatch;
+    // The RPC is refusing or timing out: stop asking instead of sending more batches at it.
+    if (readInBatch === 0) break;
   }
+  // No window could be read, so there is no list to show. Failing here keeps a
+  // creator-only answer out of the cache and lets the route report the outage.
+  if (newestFirst.length > 0 && windowsRead === 0) throw new Error("Holder transfer logs are unavailable");
 
   const addresses = [...candidates.values()];
   const balances = new Map<string, bigint>();

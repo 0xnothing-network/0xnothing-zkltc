@@ -8,7 +8,13 @@ import "server-only";
 
 export const MAX_MARKETS = 500;
 export const RPC_TRADE_LOOKBACK = 100_000n;
-export const RPC_LOG_BLOCK_CHUNK = 16_384n;
+/** A history or holder scan answers with what it has collected once this much time has passed. */
+export const RPC_SCAN_DEADLINE_MS = 6_000;
+/** The reconstructed holder list is reused this long, so polls cannot restart the scan. */
+export const RPC_HOLDER_CACHE_TTL_MS = 15_000;
+/** A live tail that needed more log windows than this is reused for the long ttl below. */
+export const LIVE_TAIL_WIDE_SCAN_RANGES = 8;
+export const LIVE_TAIL_WIDE_SCAN_TTL_MS = 12_000;
 export const MAX_RPC_HOLDER_CANDIDATES = 10_000;
 export const RPC_HOLDER_LOG_CONCURRENCY = 4;
 export const RPC_TRADE_LOG_CONCURRENCY = 4;
