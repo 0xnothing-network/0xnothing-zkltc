@@ -18,16 +18,21 @@ export async function GET(
   } catch {
     return NextResponse.json({ error: "Invalid token address" }, { status: 400 });
   }
-  const payload = await withPumpCache(
-    `market:${token.toLowerCase()}`,
-    () => getPumpMarket(token),
-    { ttlMs: 2_000, staleMs: 8_000, fresh: isFreshRead(request) },
-  );
-  return NextResponse.json(payload, {
-    headers: publicCdnCacheHeaders(
-      "public, s-maxage=2, stale-while-revalidate=8",
-      2,
-      isFreshRead(request) ? 0 : CDN_STALE_SECONDS,
-    ),
-  });
+  try {
+    const payload = await withPumpCache(
+      `market:${token.toLowerCase()}`,
+      () => getPumpMarket(token),
+      { ttlMs: 2_000, staleMs: 8_000, fresh: isFreshRead(request) },
+    );
+    return NextResponse.json(payload, {
+      headers: publicCdnCacheHeaders(
+        "public, s-maxage=2, stale-while-revalidate=8",
+        2,
+        isFreshRead(request) ? 0 : CDN_STALE_SECONDS,
+      ),
+    });
+  } catch (error) {
+    console.error("[pump/market] market load failed:", error);
+    return NextResponse.json({ error: "Market data is temporarily unavailable" }, { status: 503 });
+  }
 }
