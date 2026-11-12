@@ -67,7 +67,27 @@ Wrangler deploys these settings from source control:
 - compatibility flag `nodejs_compat`;
 - Workers Logs enabled through observability configuration;
 - static assets from `.open-next/assets`;
-- Cloudflare Images binding named `IMAGES`.
+- Cloudflare Images binding named `IMAGES`;
+- Workers Cache (`"cache": { "enabled": true }`).
+
+### Workers Cache
+
+With Workers Cache on, Cloudflare answers a `GET` from its edge cache before the
+Worker runs. It reads `Cloudflare-CDN-Cache-Control` first and `Cache-Control`
+second, so the headers set in `apps/web/lib/server/cdnCache.ts` decide how long
+each read route is kept. Three rules follow from how it works:
+
+- A `200` with no `Cache-Control` is cached for two hours. Every route handler
+  must set the header, with `no-store` when the answer must not be shared.
+- The key is the path and query string. It does not include the host, cookies or
+  request headers other than those named in `Vary`. A public response must
+  depend only on its URL.
+- The Worker version is part of the key, so each deployment starts with an empty
+  cache.
+
+To check a route, request it twice and read `cf-cache-status`: `MISS`, then
+`HIT` (or `UPDATING` while a stale copy is refreshed). With the cache on, static
+asset requests are billed as Worker requests.
 
 Enable either the generated `workers.dev` hostname or a custom domain only
 after a successful deployment. Then set `UPLOAD_SIGNING_DOMAIN` to that exact

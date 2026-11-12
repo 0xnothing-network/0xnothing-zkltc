@@ -23,6 +23,15 @@
       "custom_domain": true
     }
   ],
+  // Workers Cache: Cloudflare answers from its edge cache before the Worker runs, by
+  // the Cache-Control each response already carries (Cloudflare-CDN-Cache-Control
+  // first, see lib/server/cdnCache.ts). Without it every isolate started cold and paid
+  // the full subgraph and RPC load itself. A deployment starts from an empty cache,
+  // since the Worker version is part of the key. With this on, static asset requests
+  // count as Worker requests on the bill.
+  "cache": {
+    "enabled": true
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
