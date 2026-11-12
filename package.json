@@ -8,7 +8,6 @@
     "clean:generated:dry": "node scripts/clean-generated.mjs --dry-run",
     "test:tooling": "node --test scripts/test/*.test.mjs",
     "dev": "npm --prefix 0xNothing-zkLTC-Testnet/apps/web run dev -- --port 3300",
-    "dev:fi": "npm --prefix 0xNothing-zkLTC-Testnet/apps/web run dev -- --port 3300",
     "build:web": "npm --prefix 0xNothing-zkLTC-Testnet/apps/web run build",
     "lint:web": "npm --prefix 0xNothing-zkLTC-Testnet/apps/web run lint",
     "typecheck:web": "npm --prefix 0xNothing-zkLTC-Testnet/apps/web run typecheck",

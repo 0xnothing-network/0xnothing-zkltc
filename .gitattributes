@@ -1,0 +1,11 @@
+# The repo is LF. Without this, a Windows tool that writes CRLF shows whole files as changed.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff2 binary
+*.zip binary
+*.jar binary

@@ -67,3 +67,7 @@ deployments/**/latest.local.json
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
+
+# --- Local media and browser-automation scratch (large, never part of the app) ---
+/output/
+/.playwright-mcp/

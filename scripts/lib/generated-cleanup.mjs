@@ -19,8 +19,11 @@ export const GENERATED_DIRECTORIES = Object.freeze([
   "0xNothing-zkLTC-Testnet/apps/web/.next",
   "0xNothing-zkLTC-Testnet/apps/web/.next-dev",
   "0xNothing-zkLTC-Testnet/apps/web/.open-next",
+  "0xNothing-zkLTC-Testnet/apps/web/.wrangler",
   "0xNothing-zkLTC-Testnet/contracts/cache",
   "0xNothing-zkLTC-Testnet/contracts/out",
+  "0xNothing-zkLTC-Testnet/subgraphs/0xpixel-nusd-market/build",
+  "0xNothing-zkLTC-Testnet/subgraphs/0xpixel-nusd-market/generated",
   "0xNothing-zkLTC-Testnet/subgraphs/0xpump/build",
   "0xNothing-zkLTC-Testnet/subgraphs/0xpump/generated",
 ]);

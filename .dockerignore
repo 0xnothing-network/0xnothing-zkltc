@@ -23,3 +23,5 @@ node_modules
 0xNothing-zkLTC-Testnet/graft
 0xNothing-zkLTC-Testnet/subgraphs
 
+output
+.playwright-mcp
