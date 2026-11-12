@@ -20,6 +20,7 @@ import {
   listPending,
   listConnections,
   newRequestId,
+  pruneResolutions,
   pushPending,
   rejectRequest,
   revokeConnection,
@@ -702,6 +703,7 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
 // under the queue lock so a request arriving now cannot be mistaken for one of them.
 const WORKER_STARTED_AT = Date.now();
 void takeExpiredPending(Date.now(), WORKER_STARTED_AT).then(async (expired) => {
+  await pruneResolutions().catch(() => undefined);
   await Promise.allSettled(expired.map((request) => rejectRequest(request.id, "Request expired")));
   const first = (await listPending())[0];
   if (!first) {

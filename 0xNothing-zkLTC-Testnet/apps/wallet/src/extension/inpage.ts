@@ -67,7 +67,10 @@ function initializeProvider(): void {
       }, PROVIDER_REQUEST_TIMEOUT_MS);
       waiting.set(id, { resolve, reject, timer });
       try {
-        window.postMessage({ channel: TO_CONTENT, id, call }, window.location.origin);
+        // "/" is this frame's own origin. Naming `location.origin` dropped the message
+        // in a sandboxed frame, whose real origin is opaque, and the dapp then waited
+        // out the whole timeout for an answer the worker gives at once.
+        window.postMessage({ channel: TO_CONTENT, id, call }, "/");
       } catch (error) {
         window.clearTimeout(timer);
         waiting.delete(id);

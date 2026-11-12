@@ -16,9 +16,8 @@ import { isUnlocked, readAccounts, readSettings, signerFor, WalletLockedError } 
  * wallet's single-flight read queue occupied for three 15-second attempts.
  */
 /**
- * The built-in LiteForge profile fails over to Caldera's public endpoint on the same
- * origin, so the wallet keeps working if the partner endpoint changes. User-added
- * networks use exactly the RPC the user entered.
+ * A built-in profile may list backup endpoints to fail over to (LiteForge has a
+ * single endpoint today). User-added networks use exactly the RPC the user entered.
  */
 function rpcTransport(network: WalletNetwork, options: HttpTransportConfig) {
   const backups = network.builtin ? network.fallbackRpcUrls ?? [] : [];

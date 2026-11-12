@@ -63,6 +63,8 @@ export interface DappResolution {
   /** EIP-1193 code; 4001 is the user rejecting. */
   code?: number;
   error?: string;
+  /** When it was stored; an answer no worker collected is dropped once this is old. */
+  at?: number;
 }
 
 export interface DappConnection {
@@ -512,6 +514,7 @@ async function readResolutions(): Promise<DappResolution[]> {
       : safeText(entry.result, MAX_DATA_LENGTH);
     const error = entry?.error === undefined ? undefined : safeText(entry.error, 512);
     const code = entry?.code === undefined ? undefined : Number(entry.code);
+    const at = typeof entry?.at === "number" ? entry.at : undefined;
     if (
       !id
       || (entry?.result !== undefined && result === undefined)
@@ -519,8 +522,19 @@ async function readResolutions(): Promise<DappResolution[]> {
       || (code !== undefined && !Number.isSafeInteger(code))
       || (result === undefined && error === undefined)
     ) return [];
-    return [{ id, result, error, code } satisfies DappResolution];
+    return [{ id, result, error, code, at } satisfies DappResolution];
   });
+}
+
+/**
+ * Answers still worth keeping. The worker that waits for one stops waiting after
+ * DAPP_REQUEST_TIMEOUT_MS, so an older answer (or one with no timestamp) has no
+ * reader left: its worker restarted or timed out. It may hold a signature, and
+ * must not sit in extension storage until twenty newer answers push it out.
+ */
+export function liveResolutions(list: DappResolution[], now: number): DappResolution[] {
+  // Absolute difference: a clock stepped back a moment must not drop a fresh answer.
+  return list.filter((entry) => Math.abs(now - (entry.at ?? Number.NaN)) < DAPP_REQUEST_TIMEOUT_MS);
 }
 
 async function writeResolution(
@@ -537,8 +551,9 @@ async function writeResolution(
       )
     ) return false;
 
-    const list = await readResolutions();
-    const next = [resolution, ...list.filter((entry) => entry.id !== resolution.id)];
+    const now = Date.now();
+    const list = liveResolutions(await readResolutions(), now);
+    const next = [{ ...resolution, at: now }, ...list.filter((entry) => entry.id !== resolution.id)];
     // Remove the executable request first. If the following resolution write
     // fails, the page may time out, but no second window can replay the action.
     await chromeSet(
@@ -584,11 +599,17 @@ async function consumeResolution(id: string): Promise<void> {
   if (!hasChrome) return;
   await withNamedLock(RESOLVED_LOCK, async () => {
     const list = await readResolutions();
-    const next = list.filter((entry) => entry.id !== id);
+    const next = liveResolutions(list, Date.now()).filter((entry) => entry.id !== id);
     if (next.length !== list.length) {
       await chromeSet("local", STORAGE_KEYS.resolved, next);
     }
   });
+}
+
+/** Drops answers no worker can still be waiting for. Run when a worker starts. */
+export async function pruneResolutions(): Promise<void> {
+  // No request has an empty id, so this removes only what has aged out.
+  await consumeResolution("");
 }
 
 

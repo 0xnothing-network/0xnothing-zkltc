@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "0xWallet",
   "short_name": "0xWallet",
-  "version": "1.0.6",
+  "version": "1.0.8",
   "description": "__MSG_extDescription__",
   "default_locale": "en",
   "minimum_chrome_version": "120",
@@ -28,7 +28,7 @@
   },
   "permissions": ["storage", "alarms"],
   "host_permissions": [
-    "https://liteforge.rpc.caldera.xyz/*",
+    "https://rpc.testnet.liteforge.zeeve.net/*",
     "https://0xnothing.xyz/*",
     "https://api.goldsky.com/*",
     "http://127.0.0.1/*",

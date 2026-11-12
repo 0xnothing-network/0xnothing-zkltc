@@ -3,6 +3,7 @@ import { LITVM_NETWORK, sanitizeCustomNetwork } from "../../config/networks";
 import { isLocaleCode, LOCALES, t } from "../../core/i18n";
 import type { WalletSettings } from "../../core/keyring/vault";
 import { isExtension, platform } from "../../core/platform/env";
+import { publicClientFor } from "../../core/rpc/client";
 import { Button, Icon, Note, Panel, PanelBody, Row, Rows } from "../components/kit";
 import { useActionGate } from "../hooks/useActionGate";
 import { rpcPermissionPattern } from "../lib/rpcPermission";
@@ -134,6 +135,22 @@ export function Settings(): ReactNode {
         setNetworkError(t("set.networkPermission"));
         return false;
       }
+      const releaseUnlessShared = async (): Promise<void> => {
+        const candidatePattern = rpcPermissionPattern(candidate.rpcUrl);
+        const usedBySavedProfile = candidatePattern !== null && settings.customNetworks.some(
+          (entry) => rpcPermissionPattern(entry.rpcUrl) === candidatePattern,
+        );
+        if (!usedBySavedProfile) await releaseRpcPermission(candidate.rpcUrl);
+      };
+      // Balances come from this RPC while signing uses the typed chain ID. Saved with
+      // the two disagreeing, every send fails in a way this form can no longer explain.
+      const servesChain = await publicClientFor(candidate).getChainId()
+        .then((chainId) => chainId === candidate.chainId, () => false);
+      if (!servesChain) {
+        await releaseUnlessShared();
+        setNetworkError(t("set.networkInvalid"));
+        return false;
+      }
       setNetworkError(null);
       try {
         await saveSettings({
@@ -141,11 +158,7 @@ export function Settings(): ReactNode {
           networkId: candidate.id,
         });
       } catch (cause) {
-        const candidatePattern = rpcPermissionPattern(candidate.rpcUrl);
-        const usedBySavedProfile = candidatePattern !== null && settings.customNetworks.some(
-          (entry) => rpcPermissionPattern(entry.rpcUrl) === candidatePattern,
-        );
-        if (!usedBySavedProfile) await releaseRpcPermission(candidate.rpcUrl);
+        await releaseUnlessShared();
         throw cause;
       }
       return true;

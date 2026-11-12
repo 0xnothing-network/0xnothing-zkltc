@@ -6,6 +6,7 @@ import {
   MAX_PENDING_PER_ORIGIN,
   MAX_PENDING_REQUESTS,
   type DappRequest,
+  liveResolutions,
   planPendingAdmission,
   planPendingClaim,
   planPendingClaimRelease,
@@ -77,6 +78,17 @@ test("a restarted worker drops unclaimed rows from its previous life", () => {
   assert.deepEqual(stale.map((entry) => entry.id), ["orphan", "expired"]);
   // Without a boot time only expiry counts, as before.
   assert.deepEqual(planStalePending([orphan, expired], bootedAt + 5).stale.map((entry) => entry.id), ["expired"]);
+});
+
+test("an answer no worker can still be waiting for is not kept", () => {
+  const now = 10_000_000;
+  const kept = liveResolutions([
+    { id: "fresh", result: "0xsig", at: now - 1_000 },
+    { id: "clock-stepped-back", result: "0xsig", at: now + 500 },
+    { id: "aged", result: "0xsig", at: now - DAPP_REQUEST_TIMEOUT_MS },
+    { id: "untimed", result: "0xsig" },
+  ], now);
+  assert.deepEqual(kept.map((entry) => entry.id), ["fresh", "clock-stepped-back"]);
 });
 
 test("only one approval window can claim a persisted request", () => {

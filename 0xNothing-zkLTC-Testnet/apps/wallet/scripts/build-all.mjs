@@ -1,10 +1,12 @@
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 /**
  * One command for the whole extension bundle:
  *   1. vite build            -> index.html + assets/ + background.js
  *   2. build-inject.mjs      -> content.js + inpage.js (IIFE)
+ *   3. worker graph check    -> fails if background.js can reach an import()
  *
  * Kept as a script rather than an npm chain so it behaves the same on
  * cmd.exe, PowerShell and bash.
@@ -37,5 +39,27 @@ for (const step of steps) {
   }
   console.log(`[wallet] ${step.label} ok (${((Date.now() - started) / 1000).toFixed(1)}s)`);
 }
+
+// MV3 refuses to register a service worker that contains import(), and the worker
+// shares bundler-chosen chunks with the popup, whose modules do use it. Nothing
+// else fails if one slips in: the build passes and every dapp request dies.
+const dist = new URL("../dist/", import.meta.url);
+const workerFiles = new Set();
+const pending = ["background.js"];
+while (pending.length > 0) {
+  const file = pending.pop();
+  if (workerFiles.has(file)) continue;
+  workerFiles.add(file);
+  const fileUrl = new URL(file, dist);
+  const source = readFileSync(fileUrl, "utf8");
+  if (/\bimport\s*\(|__vite__mapDeps/.test(source)) {
+    console.error(`[wallet] ${file} is in the service-worker graph and contains a dynamic import()`);
+    process.exit(1);
+  }
+  for (const [, specifier] of source.matchAll(/(?:\bfrom|\bimport)\s*["'](\.[^"']+)["']/g)) {
+    pending.push(new URL(specifier, fileUrl).href.slice(dist.href.length));
+  }
+}
+console.log(`[wallet] worker graph ok (${workerFiles.size} file${workerFiles.size === 1 ? "" : "s"}, no dynamic import)`);
 
 console.log("[wallet] dist/ ready — load it unpacked, or run `cap sync android`.");

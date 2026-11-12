@@ -1,6 +1,6 @@
 {
   "name": "0xnothing-zkltc-testnet-wallet",
-  "version": "1.0.6",
+  "version": "1.0.8",
   "private": true,
   "type": "module",
   "description": "0xNothing zkLTC testnet wallet — MV3 browser extension and Capacitor Android, sharing one React UI.",
@@ -25,12 +25,12 @@
     "qrcode": "1.5.4",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "viem": "2.57.10"
+    "viem": "2.57.16"
   },
   "devDependencies": {
     "@capacitor/android": "8.5.3",
     "@capacitor/cli": "8.5.3",
-    "@types/chrome": "0.3.6",
+    "@types/chrome": "0.3.7",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "typescript": "5.9.3",

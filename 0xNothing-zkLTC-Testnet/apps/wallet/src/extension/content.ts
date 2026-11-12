@@ -47,6 +47,9 @@ window.addEventListener("message", (event: MessageEvent) => {
 chrome.runtime.onMessage.addListener((message: unknown) => {
   const event = message as { kind?: string; name?: string; data?: unknown; origins?: readonly string[] } | null;
   if (event?.kind !== "provider-event" || typeof event.name !== "string") return;
-  if (!targetsOrigin(event.origins, window.location.origin)) return;
+  // `location.origin` comes from the URL, so a sandboxed frame loaded from a connected
+  // site's address still matches it. Its real origin is opaque ("null") and the worker
+  // refuses its requests, so it must not be told the connected account either.
+  if (self.origin === "null" || !targetsOrigin(event.origins, window.location.origin)) return;
   reply({ channel: TO_PAGE, event: { name: event.name, data: event.data } });
 });
