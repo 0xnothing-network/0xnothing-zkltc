@@ -1,0 +1,45 @@
+# Forge suites, run only when a contract root changes: they are slow (via_ir) and
+# the deployed contracts are not rebuilt by a web or wallet change.
+name: Contracts
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "0xNothing-zkLTC-Testnet/contracts/**"
+      - "0xNothing-zkLTC-Testnet/0xFi/contracts/**"
+      - "0xNothing-zkLTC-Mainnet/**"
+      - ".github/workflows/contracts.yml"
+  pull_request:
+    paths:
+      - "0xNothing-zkLTC-Testnet/contracts/**"
+      - "0xNothing-zkLTC-Testnet/0xFi/contracts/**"
+      - "0xNothing-zkLTC-Mainnet/**"
+      - ".github/workflows/contracts.yml"
+
+concurrency:
+  group: contracts-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  forge:
+    name: Forge (${{ matrix.root }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        root:
+          - 0xNothing-zkLTC-Testnet/contracts
+          - 0xNothing-zkLTC-Testnet/0xFi/contracts
+          - 0xNothing-zkLTC-Mainnet/contracts
+          - 0xNothing-zkLTC-Mainnet/0xFi/contracts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.7.1
+      - run: forge test --root ${{ matrix.root }}
