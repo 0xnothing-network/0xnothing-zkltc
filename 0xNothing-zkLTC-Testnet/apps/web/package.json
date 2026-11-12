@@ -20,31 +20,28 @@
     "@tanstack/react-query": "^5.60.0",
     "@vercel/analytics": "^2.0.1",
     "lightweight-charts": "^4.2.3",
-    "next": "15.5.28",
+    "next": "15.5.29",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "sharp": "0.35.5",
-    "viem": "2.57.10",
-    "wagmi": "3.7.9"
+    "viem": "2.57.16",
+    "wagmi": "3.7.11"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "1.20.13",
+    "@opennextjs/cloudflare": "1.20.16",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.0.0",
-    "eslint-config-next": "15.5.28",
-    "postcss": "8.5.31",
+    "eslint-config-next": "15.5.29",
+    "postcss": "8.5.32",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.0.0",
-    "wrangler": "4.151.0"
+    "wrangler": "4.157.0"
   },
   "overrides": {
     "postcss": "$postcss",
     "sharp": "0.35.5",
-    "miniflare": {
-      "undici": "7.30.1"
-    },
     "@node-minify/core": {
       "glob": "10.5.0"
     }
