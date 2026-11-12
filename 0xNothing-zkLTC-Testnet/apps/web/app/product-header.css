@@ -42,6 +42,11 @@
   font-weight: 700;
 }
 
+/*
+ * Links and buttons below are scoped under .ox-header so a product reset such as
+ * ".fi-root a { color: inherit }" cannot restyle the shared header per product.
+ */
+
 /* Product switcher: neutral pill group, current product marked by its dot. */
 .ox-switcher {
   display: flex;
@@ -53,7 +58,7 @@
   background: var(--surface-1);
   box-shadow: var(--edge-highlight);
 }
-.ox-switcher a {
+.ox-header .ox-switcher a {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -65,18 +70,18 @@
   font-weight: 500;
   white-space: nowrap;
 }
-.ox-switcher a::before { content: ""; width: 6px; height: 6px; border-radius: 2px; background: var(--line-strong); }
-.ox-switcher a[data-product="pump"]::before { background: var(--accent-pump); }
-.ox-switcher a[data-product="fi"]::before { background: var(--accent-fi); }
-.ox-switcher a[data-product="pixel"]::before { background: var(--accent-pixel); }
-.ox-switcher a[data-product="nusd"]::before { background: var(--accent-nusd); }
-.ox-switcher a:not(.active)::before { opacity: .45; }
-.ox-switcher a.active { background: var(--surface-3); color: var(--text-1); }
-.ox-switcher a:hover:not(.active) { color: var(--text-1); }
+.ox-header .ox-switcher a::before { content: ""; width: 6px; height: 6px; border-radius: 2px; background: var(--line-strong); }
+.ox-header .ox-switcher a[data-product="pump"]::before { background: var(--accent-pump); }
+.ox-header .ox-switcher a[data-product="fi"]::before { background: var(--accent-fi); }
+.ox-header .ox-switcher a[data-product="pixel"]::before { background: var(--accent-pixel); }
+.ox-header .ox-switcher a[data-product="nusd"]::before { background: var(--accent-nusd); }
+.ox-header .ox-switcher a:not(.active)::before { opacity: .45; }
+.ox-header .ox-switcher a.active { background: var(--surface-3); color: var(--text-1); }
+.ox-header .ox-switcher a:hover:not(.active) { color: var(--text-1); }
 
 /* Primary navigation: the active item carries the accent underline. */
 .ox-nav { display: flex; align-items: stretch; align-self: stretch; gap: 0; min-width: 0; margin-left: 4px; }
-.ox-nav-link {
+.ox-header .ox-nav-link {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -87,9 +92,9 @@
   font-weight: 500;
   white-space: nowrap;
 }
-.ox-nav-link:hover { color: var(--text-1); }
-.ox-nav-link.active { color: var(--text-1); }
-.ox-nav-link.active::after {
+.ox-header .ox-nav-link:hover { color: var(--text-1); }
+.ox-header .ox-nav-link.active { color: var(--text-1); }
+.ox-header .ox-nav-link.active::after {
   content: "";
   position: absolute;
   left: 10px;
@@ -125,7 +130,7 @@
 .ox-network-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .ox-wallet { position: relative; flex: none; }
-.ox-wallet-button {
+.ox-header .ox-wallet-button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -139,7 +144,7 @@
   font-family: var(--font-num);
   font-size: 13px;
 }
-.ox-wallet-button:hover { border-color: var(--line-strong); }
+.ox-header .ox-wallet-button:hover { border-color: var(--line-strong); }
 .ox-wallet-balances { display: inline-flex; gap: 10px; padding-right: 10px; border-right: 1px solid var(--line); }
 .ox-wallet-balances > span { display: inline-flex; align-items: baseline; gap: 4px; white-space: nowrap; }
 .ox-wallet-balances small { color: var(--text-3); font-family: var(--font-ui); font-size: 11px; }
@@ -163,7 +168,7 @@
 .ox-wallet-menu-summary { display: grid; gap: 2px; padding: 10px 10px 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
 .ox-wallet-menu-summary span { color: var(--text-3); font-size: 12px; }
 .ox-wallet-menu-summary strong { font-family: var(--font-num); font-size: 14px; font-weight: 500; }
-.ox-wallet-menu :is(button, a) {
+.ox-header .ox-wallet-menu :is(button, a) {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -178,10 +183,10 @@
   text-align: left;
   cursor: pointer;
 }
-.ox-wallet-menu :is(button, a):hover { background: var(--hover); }
-.ox-wallet-menu .danger { color: var(--negative); }
+.ox-header .ox-wallet-menu :is(button, a):hover { background: var(--hover); }
+.ox-header .ox-wallet-menu .danger { color: var(--negative); }
 
-.ox-connect {
+.ox-header .ox-connect {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -194,8 +199,8 @@
   font: 600 14px var(--font-ui);
   cursor: pointer;
 }
-.ox-connect:hover:not(:disabled) { filter: brightness(1.06); }
-.ox-connect:disabled { opacity: .6; cursor: progress; }
+.ox-header .ox-connect:hover:not(:disabled) { filter: brightness(1.06); }
+.ox-header .ox-connect:disabled { opacity: .6; cursor: progress; }
 .ox-wallet-placeholder { width: 110px; height: 34px; border-radius: var(--r-md); background: var(--surface-1); }
 .ox-theme-toggle,
 .ox-menu-button {
@@ -220,11 +225,11 @@
 
 .ox-mobile-panel { display: grid; gap: 12px; padding: 12px clamp(14px, 2.4vw, 32px) 16px; border-top: 1px solid var(--line); }
 .ox-mobile-nav { display: grid; gap: 2px; }
-.ox-mobile-nav .ox-nav-link { min-height: 44px; border-radius: var(--r-md); }
-.ox-mobile-nav .ox-nav-link.active { background: var(--surface-2); box-shadow: inset 2px 0 0 var(--accent); }
-.ox-mobile-nav .ox-nav-link.active::after { display: none; }
+.ox-header .ox-mobile-nav .ox-nav-link { min-height: 44px; border-radius: var(--r-md); }
+.ox-header .ox-mobile-nav .ox-nav-link.active { background: var(--surface-2); box-shadow: inset 2px 0 0 var(--accent); }
+.ox-header .ox-mobile-nav .ox-nav-link.active::after { display: none; }
 .ox-switcher-mobile { justify-content: space-between; }
-.ox-switcher-mobile a { flex: 1; justify-content: center; }
+.ox-header .ox-switcher-mobile a { flex: 1; justify-content: center; }
 
 @media (max-width: 1240px) {
   .ox-header-inner > .ox-switcher { display: none; }

@@ -258,3 +258,80 @@
   .ox-docs-root.ox-docs-root .ox-docs-hero { padding: 18px; }
   .fi-root.fi-root .fi-panel-heading, .pump-shell.pump-shell .pump-panel-heading { padding: 12px; }
 }
+
+/*
+ * Refinement pass (2026-11-12). Fixes drift between products: titles that sat off
+ * the content edge, stacked rules, controls of three different heights in one row,
+ * and notices coloured end to end.
+ */
+
+/* A padded panel already supplies the gutter; its heading must not add a second one. */
+.fi-root.fi-root .fi-panel:not(.fi-panel-flush) > .fi-panel-heading,
+.pump-shell.pump-shell .pump-panel > .pump-panel-heading { padding-top: 0; padding-inline: 0; }
+
+/* One page-top rhythm: every product title starts the same distance under the header. */
+.fi-root.fi-root .fi-page { padding-top: 36px; }
+.fi-root.fi-root .fi-page-heading { min-height: 0; }
+/* The page heading already draws the rule above the market toolbar. */
+.fi-root.fi-root .fi-page-heading + .fi-market-explorer { margin-top: 0; border-top: 0; }
+
+/* Notices: one hairline box. The tone colours the title and icon; the body stays readable. */
+.fi-root.fi-root .fi-inline-state {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+.fi-root.fi-root .fi-inline-state strong { color: var(--text-1); font-size: 13px; }
+.fi-root.fi-root .fi-inline-warning { border-color: color-mix(in srgb, var(--warning) 32%, var(--line)); }
+.fi-root.fi-root .fi-inline-warning :is(strong, svg) { color: var(--warning); }
+.fi-root.fi-root .fi-inline-danger { border-color: color-mix(in srgb, var(--negative) 32%, var(--line)); }
+.fi-root.fi-root .fi-inline-danger :is(strong, svg) { color: var(--negative); }
+.fi-root.fi-root .fi-market-explorer > .fi-inline-state { margin-bottom: 12px; }
+.ox-docs-root.ox-docs-root .ox-docs-warning {
+  border: 1px solid color-mix(in srgb, var(--warning) 32%, var(--line));
+  background: var(--surface-1);
+}
+.ox-docs-root.ox-docs-root .ox-docs-warning span { color: var(--text-2); }
+
+/* Segmented controls: readable labels and an active segment that reads as raised. */
+.fi-root.fi-root .fi-segmented button, .pump-shell.pump-shell .pump-segmented button { font-size: 13px; }
+.fi-root.fi-root .fi-segmented button.active,
+.pump-shell.pump-shell .pump-segmented button.active { box-shadow: var(--e-1), 0 0 0 1px var(--line-strong); }
+
+/* Filter rows: search, sort and segments share one 44px line. Touch keeps its larger targets. */
+@media (hover: hover) and (pointer: fine) {
+  .pump-shell.pump-shell .pump-market-controls .pump-segmented button,
+  .fi-root.fi-root .fi-market-toolbar .fi-segmented button { height: 34px; min-height: 34px; }
+  .pump-shell.pump-shell .pump-market-controls .pump-search,
+  .fi-root.fi-root .fi-market-toolbar .fi-market-search { height: 44px; min-height: 44px; }
+}
+
+/* NUSD reserve figures: one inset table like the Earn stats, not two full-bleed bands. */
+.pump-shell.pump-shell :is(.pump-vault-oracle-strip, .pump-vault-metrics) {
+  margin-inline: 0;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.pump-shell.pump-shell .pump-vault-oracle-strip { border-bottom: 0; border-radius: var(--r-md) var(--r-md) 0 0; }
+.pump-shell.pump-shell .pump-vault-oracle-strip > div { background: var(--surface-2); }
+.pump-shell.pump-shell .pump-vault-metrics { border-radius: 0 0 var(--r-md) var(--r-md); }
+
+/* Status tags hug their label inside table-like rows. */
+.pump-shell.pump-shell .pump-stats-market-list .pump-status { width: fit-content; justify-self: start; }
+
+/* 0xPixel content lines up with the shared header's gutter. */
+.pixel-product.pixel-product :is(.pixel-studio-intro-inner, .pixel-workspace, .pixel-collection-page) {
+  padding-inline: clamp(14px, 2.4vw, 32px);
+}
+
+/* Docs hero: the copy sets the height; no empty band above the title. */
+@media (min-width: 961px) {
+  .ox-docs-root.ox-docs-root .ox-docs-hero { min-height: 0; }
+  .ox-docs-root.ox-docs-root .ox-docs-hero > div { padding-block: 12px 16px; }
+}
+
+@media (max-width: 640px) {
+  /* Same 16px page gutter as 0xPump. */
+  .fi-root.fi-root .fi-page { width: calc(100% - 32px); padding-top: 24px; }
+}
