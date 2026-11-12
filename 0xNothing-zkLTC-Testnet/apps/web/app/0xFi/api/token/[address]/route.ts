@@ -87,7 +87,6 @@ function trustedClientKey(request: Request): string {
   return trustedProxyClientKey(
     request,
     process.env.FI_TRUSTED_PROXY_CLIENT_IP_HEADER,
-    process.env.VERCEL === "1",
     process.env.TRUSTED_PROXY_SHARED_SECRET,
     process.env.CLOUDFLARE_WORKERS === "true",
   );

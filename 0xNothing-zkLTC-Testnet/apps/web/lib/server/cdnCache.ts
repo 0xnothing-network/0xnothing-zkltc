@@ -13,9 +13,9 @@ export function isFreshRead(request: Request): boolean {
 }
 
 /**
- * `cacheControl` keeps its meaning for browsers. Vercel and Cloudflare each cache by
- * their own header, which browsers ignore, so a long CDN stale window never makes a
- * browser reuse an old answer.
+ * `cacheControl` keeps its meaning for browsers. Cloudflare caches by its own header,
+ * which browsers ignore, so a long CDN stale window never makes a browser reuse an
+ * old answer.
  */
 export function publicCdnCacheHeaders(
   cacheControl: string,
@@ -25,7 +25,6 @@ export function publicCdnCacheHeaders(
   const cdnCacheControl = `public, max-age=${maxAge}, stale-while-revalidate=${staleWhileRevalidate}`;
   return {
     "Cache-Control": cacheControl,
-    "Vercel-CDN-Cache-Control": cdnCacheControl,
     "Cloudflare-CDN-Cache-Control": cdnCacheControl,
   };
 }

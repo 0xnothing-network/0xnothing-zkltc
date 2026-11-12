@@ -11,7 +11,7 @@ export function middleware(request: NextRequest) {
   // When configured, this makes the Cloudflare-injected secret an origin
   // boundary. Railway's direct public hostname remains usable only for its
   // health probe, so Cloudflare WAF/rate limits cannot be bypassed by changing
-  // the Host URL. Leaving the variable empty preserves local and Vercel use.
+  // the Host URL. Leaving the variable empty preserves local and direct Worker use.
   if (
     pathname !== HEALTH_PATH
     && !trustedProxyRequest(request, process.env.TRUSTED_PROXY_SHARED_SECRET)

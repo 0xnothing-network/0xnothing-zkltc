@@ -28,7 +28,7 @@ Toàn bộ contract đã deploy là bất biến, không có proxy. Chúng khôn
 | **Oracle DIA trên LiteForge** (LTC, BTC, ETH; giới hạn tuổi giá 90 phút) | Mint/redeem NUSD, vay, mint synth, thanh lý, nhả thặng dư đều dừng (fail-closed). **Testnet v3:** nếu DIA chỉ đổi feed, owner trỏ oracle router sang adapter mới là xong. Nếu oracle chết hẳn, NUSD có `emergencyRedeem`: ai cũng báo lỗi oracle, sau 7 ngày người giữ NUSD rút zkLTC theo tỷ lệ, không cần giá, không ai chặn được (trang NUSD → Mint, `/nusd`, có panel "Emergency exit") | Cao, ngoài tầm kiểm soát |
 | RPC LiteForge (Zeeve, từ 2026-11-12; trước đó Caldera) | Chỉ có một endpoint `https://rpc.testnet.liteforge.zeeve.net`, không còn endpoint dự phòng; dữ liệu realtime của web đi qua WebSocket `/ws`, mất socket thì web tự quay về polling. Nếu đổi host RPC, cập nhật `LITVM_RPC_URL` / `LITVM_WS_URLS` trong `apps/web/lib/publicConfig.ts`, `apps/wallet/src/config/chain.ts`, `host_permissions` trong `apps/wallet/public/manifest.json`, `0xFi/config/liteforge-testnet.json`, **và `connect-src` của CSP trong `apps/web/next.config.ts`** (CSP chỉ cho trình duyệt gọi đúng host RPC; quên sửa thì web mất kết nối chain) | Thấp |
 | Goldsky (subgraph 0xPump, 0xFi, marketplace NUSD) | Mọi trang có đường dự phòng đọc RPC: Pump đọc markets/trades/holders, 0xFi có RPC tail, NUSD activity quét log. Chậm hơn nhưng không hỏng | Thấp |
-| Hosting (Railway, 1 replica, có healthcheck `/api/health`) | Web ngừng hiển thị; contract vẫn chạy và dùng được qua explorer | Trung bình: cần trả tiền đủ 2 năm |
+| Hosting (Cloudflare Worker `0xnothing-zkltc`, build từ `main`; có `/api/health`) | Web ngừng hiển thị; contract vẫn chạy và dùng được qua explorer | Trung bình: cần trả tiền đủ 2 năm |
 | Tên miền `0xnothing.xyz` | Web mất địa chỉ | Trung bình: gia hạn trước |
 | Pinata (IPFS upload, biến `PINATA_JWT`) | Tạo token Pump cần upload ảnh/metadata sẽ lỗi; giao dịch các token cũ vẫn bình thường | Trung bình |
 | Node.js | Docker image đã chuyển sang Node 24 LTS (hỗ trợ tới 04/2028). Node 22 EOL 04/2027 | Đã xử lý |
@@ -51,7 +51,7 @@ Ví `0x58633401dCc383F010688e950878000000000000` đang là owner, guardian và t
 4. **Pinata:** đảm bảo gói/khóa `PINATA_JWT` còn hiệu lực trong 2 năm, hoặc chấp nhận tạm dừng tạo token mới.
 5. **Farm v2:** ba gauge LP mới (WzkLTC, nBTC, nETH với NUSD) chưa có thưởng. Nạp NUSD qua `GaugeFactory.fundGauge` nếu muốn farm; nếu không, UI ghi "Unfunded".
 6. **Bộ cũ:** web không còn dùng v1 và v2. Ai còn stake ở `NusdPointsStaking` v1 hoặc `RewardStaking` v2 (`0x735D…CaE4`) rút gốc qua explorer khi đáo hạn; NUSD v2 vẫn redeem trực tiếp trên contract v2.
-7. **Hosting chạy v3:** đã xong. Từ 15/10/2026 `main` chứa v3; Vercel, Railway và Cloudflare build từ `main`, và ba subgraph trên Goldsky đã trỏ vào địa chỉ v3.
+7. **Hosting chạy v3:** đã xong. Từ 15/10/2026 `main` chứa v3; Cloudflare Workers Builds build từ `main` (Vercel và Railway đã ngừng từ 12/11/2026), và ba subgraph trên Goldsky đã trỏ vào địa chỉ v3.
 8. **Goldsky:** giữ tài khoản hoạt động; nếu subgraph bị xóa, web tự dùng RPC.
 9. **Thưởng khởi động (tùy chọn):** muốn người stake có thưởng sớm hơn phí thật thì chuyển NUSD từ quỹ vào `RewardStaking`. Contract tự nhận phần đó là thu nhập và rải đều trong 7 ngày.
 

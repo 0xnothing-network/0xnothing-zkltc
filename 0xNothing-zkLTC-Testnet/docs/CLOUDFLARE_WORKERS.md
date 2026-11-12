@@ -1,7 +1,8 @@
 # Direct Cloudflare Workers web deployment
 
-This is an additional deployment target. It does not replace the existing
-Vercel project or the Cloudflare-to-Railway standalone deployment.
+Since 2026-11-12 this Worker is the only host of the web app. It serves
+`0xnothing.app`, `0xnothing.network` and `www.0xnothing.network`; the Vercel
+project and the Cloudflare-to-Railway deployment are retired.
 
 ```text
 visitor -> Cloudflare Worker (OpenNext) -> LitVM RPC, subgraphs, and Pinata
@@ -12,7 +13,7 @@ visitor -> Cloudflare Worker (OpenNext) -> LitVM RPC, subgraphs, and Pinata
 The Worker is built with `@opennextjs/cloudflare`. `wrangler.jsonc` is the
 runtime source of truth and targets the existing Worker named
 `0xnothing-zkltc`. The normal `next build` and `output: "standalone"` remain in
-place for Vercel and Railway.
+place for local runs and the Docker image.
 
 Run these checks from `apps/web` before deployment:
 

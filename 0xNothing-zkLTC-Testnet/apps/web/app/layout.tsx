@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { LITVM_RPC_URL, PUBLIC_APP_URL } from "@/lib/publicConfig";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
@@ -22,8 +21,6 @@ const geistMono = Geist_Mono({
 // starts after hydration. Opening the socket while the document parses removes a
 // cold DNS and TLS round trip from the first on-chain number the page shows.
 const rpcOrigin = new URL(LITVM_RPC_URL).origin;
-
-const vercelAnalyticsEnabled = process.env.VERCEL === "1";
 
 export const metadata: Metadata = {
   metadataBase: new URL(PUBLIC_APP_URL),
@@ -64,7 +61,6 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <SkipLink />
         <div id="main-content" tabIndex={-1}>{children}</div>
-        {vercelAnalyticsEnabled ? <Analytics /> : null}
       </body>
     </html>
   );

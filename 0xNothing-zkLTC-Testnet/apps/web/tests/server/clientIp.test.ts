@@ -29,19 +29,18 @@ test("trustedProxyClientKey ignores spoofable forwarding headers by default", ()
       "x-forwarded-for": "203.0.113.7",
     },
   });
-  assert.equal(trustedProxyClientKey(request, undefined, false), "unidentified-client");
+  assert.equal(trustedProxyClientKey(request, undefined), "unidentified-client");
   assert.equal(
-    trustedProxyClientKey(request, "x-forwarded-for", false),
+    trustedProxyClientKey(request, "x-forwarded-for"),
     "x-forwarded-for:203.0.113.7",
   );
-  assert.equal(trustedProxyClientKey(request, undefined, true), "vercel:203.0.113.7");
 });
 
 test("an unidentified proxy client never becomes a shared IP rate-limit bucket", () => {
   assert.equal(trustedClientRateLimitKey("unidentified-client"), null);
   assert.equal(
-    trustedClientRateLimitKey("vercel:203.0.113.7"),
-    "ip:vercel:203.0.113.7",
+    trustedClientRateLimitKey("cf-connecting-ip:203.0.113.7"),
+    "ip:cf-connecting-ip:203.0.113.7",
   );
 });
 
@@ -55,7 +54,7 @@ test("trustedProxyClientKey authenticates a Cloudflare-provided client IP", () =
   });
 
   assert.equal(
-    trustedProxyClientKey(request, "cf-connecting-ip", false, secret),
+    trustedProxyClientKey(request, "cf-connecting-ip", secret),
     "cf-connecting-ip:2001:db8::7",
   );
 });
@@ -66,7 +65,7 @@ test("trustedProxyClientKey never trusts Cloudflare client IPs without origin au
   });
 
   assert.equal(
-    trustedProxyClientKey(request, "cf-connecting-ip", false),
+    trustedProxyClientKey(request, "cf-connecting-ip"),
     "unidentified-client",
   );
 });
@@ -77,7 +76,7 @@ test("trustedProxyClientKey trusts Cloudflare client IPs inside the Worker runti
   });
 
   assert.equal(
-    trustedProxyClientKey(request, "cf-connecting-ip", false, undefined, true),
+    trustedProxyClientKey(request, "cf-connecting-ip", undefined, true),
     "cf-connecting-ip:203.0.113.8",
   );
 });
@@ -94,11 +93,11 @@ test("trustedProxyClientKey rejects a configured proxy header without the shared
   });
 
   assert.equal(
-    trustedProxyClientKey(missingSecret, "cf-connecting-ip", false, "expected-secret"),
+    trustedProxyClientKey(missingSecret, "cf-connecting-ip", "expected-secret"),
     "unidentified-client",
   );
   assert.equal(
-    trustedProxyClientKey(wrongSecret, "cf-connecting-ip", false, "expected-secret"),
+    trustedProxyClientKey(wrongSecret, "cf-connecting-ip", "expected-secret"),
     "unidentified-client",
   );
 });

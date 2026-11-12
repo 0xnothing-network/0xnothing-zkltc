@@ -65,14 +65,13 @@ export function rightmostForwardedIp(value: string | null): string | undefined {
 
 /**
  * Build a non-spoofable client key. Forwarding headers are ignored unless the
- * deployment explicitly opts into one header or runs behind Vercel. When a
+ * deployment explicitly opts into one header. When a
  * shared proxy secret is configured, the selected header is accepted only
  * after the proxy-injected authentication header is verified.
  */
 export function trustedProxyClientKey(
   request: Request,
   configuredHeaderValue: string | undefined,
-  useVercelHeaders: boolean,
   configuredProxySecret?: string,
   trustCloudflareWorkerHeader = false,
 ): string {
@@ -92,13 +91,6 @@ export function trustedProxyClientKey(
       ? rightmostForwardedIp(value)
       : normalizeIp(value);
     if (address) return `${configuredHeader}:${address}`;
-  }
-
-  if (useVercelHeaders) {
-    const address = rightmostForwardedIp(request.headers.get("x-vercel-forwarded-for"))
-      ?? rightmostForwardedIp(request.headers.get("x-forwarded-for"))
-      ?? normalizeIp(request.headers.get("x-real-ip"));
-    if (address) return `vercel:${address}`;
   }
 
   return UNIDENTIFIED_CLIENT_KEY;

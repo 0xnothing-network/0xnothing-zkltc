@@ -172,9 +172,10 @@ const sections = [
     title: "Website hosting",
     body: (
       <p>
-        The website hosting this policy may use Vercel Web Analytics when enabled
-        to measure aggregate website performance. This website analytics service
-        is separate from 0xWallet and is not embedded in the extension.
+        The website hosting this policy is delivered through Cloudflare, which
+        processes request data such as IP addresses to serve and protect the
+        site. The website runs no analytics script. It is separate from 0xWallet
+        and is not embedded in the extension.
       </p>
     ),
   },
