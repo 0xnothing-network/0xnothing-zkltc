@@ -193,6 +193,11 @@ async function scanRpcHolders(token: Address, limit: number): Promise<PumpHolder
   const warnings = [
     !configuredStartBlock ? "Holder scan is limited because the pump start block is not configured." : "",
     candidatesTruncated ? `Holder scan reached the ${MAX_RPC_HOLDER_CANDIDATES.toLocaleString("en-US")} address safety limit.` : "",
+    // Windows left unread (deadline or a failed read) mean older holders are absent
+    // and holderCount below counts only the addresses that were found.
+    !candidatesTruncated && windowsRead < newestFirst.length
+      ? "Holder list covers recent transfers only; older holders may be missing."
+      : "",
     failedReads ? `${failedReads} holder balance${failedReads === 1 ? "" : "s"} could not be verified.` : "",
   ].filter(Boolean);
 
