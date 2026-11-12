@@ -27,7 +27,7 @@ import {
   takeExpiredPending,
 } from "../core/services/dapp";
 import { isBoundedRpcCall, type RpcCall } from "./protocol";
-import { createRpcIngressGate } from "./rpcIngress";
+import { createRpcIngressGate, createRpcSlotQueue } from "./rpcIngress";
 import { findApprovalWindowId } from "./approvalWindow";
 
 /**
@@ -93,10 +93,14 @@ const MAX_HEX_QUANTITY_LENGTH = 66;
 const MAX_SIGN_MESSAGE_LENGTH = 1_048_576;
 const MAX_RPC_REQUEST_LENGTH = 4_194_304;
 const MAX_RPC_RESPONSE_BYTES = 8_388_608;
-const MAX_RPC_IN_FLIGHT = 8;
-const MAX_RPC_WAITING = 64;
-let rpcInFlight = 0;
-const rpcWaiters: Array<() => void> = [];
+const rpcSlots = createRpcSlotQueue({ maxInFlight: 8, maxWaiting: 64 });
+// Scans that a node answers slowly wait in a narrow lane of their own first. Without
+// it, one page running eight log scans held every slot above for the length of the
+// timeout, and each other site's balance and call reads queued behind them.
+const SLOW_RPC_METHODS: ReadonlySet<string> = new Set(["eth_getLogs", "eth_getBlockReceipts"]);
+// Its line holds everything the ingress gates can admit (64), so a scan that was
+// let in waits its turn instead of being refused.
+const slowRpcSlots = createRpcSlotQueue({ maxInFlight: 2, maxWaiting: 62 });
 
 // Content scripts relay JSON-RPC messages but never need wallet storage. Keep
 // the encrypted vault metadata — and especially the in-session AES key — out of
@@ -121,27 +125,6 @@ async function activeNetwork(): Promise<WalletNetwork> {
     saved?.networkId,
     normalizeCustomNetworks(saved?.customNetworks),
   );
-}
-
-async function acquireRpcSlot(): Promise<boolean> {
-  if (rpcInFlight < MAX_RPC_IN_FLIGHT) {
-    rpcInFlight += 1;
-    return true;
-  }
-  if (rpcWaiters.length >= MAX_RPC_WAITING) return false;
-  await new Promise<void>((resolve) => rpcWaiters.push(resolve));
-  return true;
-}
-
-function releaseRpcSlot(): void {
-  const next = rpcWaiters.shift();
-  if (next) {
-    // Ownership transfers directly; keeping the count unchanged prevents a
-    // request arriving in this microtask gap from exceeding the concurrency cap.
-    next();
-    return;
-  }
-  rpcInFlight = Math.max(0, rpcInFlight - 1);
 }
 
 async function boundedRpcBody(response: Response): Promise<{
@@ -186,7 +169,17 @@ async function boundedRpcBody(response: Response): Promise<{
 
 /** Raw JSON-RPC: the worker deliberately does not build a viem client. */
 async function forward(call: RpcCall, network: WalletNetwork): Promise<Answer> {
-  if (!(await acquireRpcSlot())) return fail(-32005, "The RPC request queue is busy");
+  const slow = SLOW_RPC_METHODS.has(call.method);
+  if (slow && !(await slowRpcSlots.acquire())) return fail(-32005, "The RPC request queue is busy");
+  try {
+    return await forwardInSlot(call, network);
+  } finally {
+    if (slow) slowRpcSlots.release();
+  }
+}
+
+async function forwardInSlot(call: RpcCall, network: WalletNetwork): Promise<Answer> {
+  if (!(await rpcSlots.acquire())) return fail(-32005, "The RPC request queue is busy");
   try {
     const payload = JSON.stringify({
       jsonrpc: "2.0",
@@ -212,7 +205,7 @@ async function forward(call: RpcCall, network: WalletNetwork): Promise<Answer> {
   } catch (error) {
     return fail(-32603, error instanceof Error ? error.message : "RPC unreachable");
   } finally {
-    releaseRpcSlot();
+    rpcSlots.release();
   }
 }
 let approvalWindowId: number | undefined;

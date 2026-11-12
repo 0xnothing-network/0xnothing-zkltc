@@ -142,6 +142,15 @@ export async function deriveKey(
 }
 
 export async function encryptJson(value: unknown, password: string): Promise<EncryptedBlob> {
+  return (await sealJson(value, password)).blob;
+}
+
+/**
+ * Encrypts under a fresh salt and also returns the key that was derived for it.
+ * A caller that goes on to open a session needs that same key, and deriving it a
+ * second time from the blob costs another full PBKDF2 run for an identical result.
+ */
+export async function sealJson(value: unknown, password: string): Promise<{ blob: EncryptedBlob; key: CryptoKey }> {
   const salt = randomBytes(SALT_BYTES);
   const iv = randomBytes(IV_BYTES);
   const plaintext = new TextEncoder().encode(JSON.stringify(value));
@@ -154,12 +163,15 @@ export async function encryptJson(value: unknown, password: string): Promise<Enc
       plaintext,
     ));
     return {
-      v: 1,
-      kdf: "PBKDF2-SHA256",
-      iterations: PBKDF2_ITERATIONS,
-      salt: bytesToBase64(salt),
-      iv: bytesToBase64(iv),
-      data: bytesToBase64(ciphertext),
+      key,
+      blob: {
+        v: 1,
+        kdf: "PBKDF2-SHA256",
+        iterations: PBKDF2_ITERATIONS,
+        salt: bytesToBase64(salt),
+        iv: bytesToBase64(iv),
+        data: bytesToBase64(ciphertext),
+      },
     };
   } finally {
     plaintext.fill(0);

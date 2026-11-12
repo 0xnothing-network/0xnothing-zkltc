@@ -46,14 +46,45 @@ function executionContext(context?: TxExecutionContext): TxExecutionContext {
   return context ?? { network: activeNetwork, client: publicClient };
 }
 
+/** How long to wait before the second look for a transaction whose broadcast failed. */
+const BROADCAST_RECHECK_MS = 1_500;
+
+/**
+ * Runs one broadcast and returns its hash.
+ *
+ * A node can take a transaction and still fail to answer: the reply times out, the
+ * connection drops, or a repeat is refused as already known. The send then throws
+ * although the transaction is on its way. Its hash is known from the moment it was
+ * signed, so it is looked up before giving up. Otherwise the wallet reports a
+ * failure, writes no history row, and a retry signs a second copy with the next nonce.
+ */
+async function broadcast(
+  readClient: typeof publicClient,
+  send: (onSigned: (hash: Hex) => void) => Promise<Hex>,
+): Promise<Hex> {
+  let signedHash: Hex | undefined;
+  try {
+    return await send((hash) => { signedHash = hash; });
+  } catch (error) {
+    // Nothing was signed: the failure came before any transaction existed.
+    if (!signedHash) throw error;
+    const hash = signedHash;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, BROADCAST_RECHECK_MS));
+      if (await readClient.getTransaction({ hash }).then(() => true, () => false)) return hash;
+    }
+    throw error;
+  }
+}
+
 export async function writeCall(
   request: WriteRequest,
   context?: TxExecutionContext,
 ): Promise<Hex> {
   const { network, client: readClient, assertReady } = executionContext(context);
-  const hash = await withNamedLock(`tx:${request.from.toLowerCase()}`, async () => {
+  const hash = await withNamedLock(`tx:${request.from.toLowerCase()}`, () => broadcast(readClient, async (onSigned) => {
     await assertReady?.();
-    const client = await walletClientFor(request.from, network, assertReady);
+    const client = await walletClientFor(request.from, network, assertReady, onSigned);
     const { request: simulated } = await readClient.simulateContract({
       account: client.account,
       address: request.address,
@@ -64,7 +95,7 @@ export async function writeCall(
     });
     await assertReady?.();
     return client.writeContract(simulated);
-  });
+  }));
   await afterSubmit(request.from, hash, request.kind, request, network, readClient).catch(() => {});
   return hash;
 }
@@ -76,15 +107,15 @@ export async function sendNative(params: TxLine & {
 }): Promise<Hex> {
   const network = activeNetwork;
   const readClient = publicClient;
-  const hash = await withNamedLock(`tx:${params.from.toLowerCase()}`, async () => {
-    const client = await walletClientFor(params.from, network);
+  const hash = await withNamedLock(`tx:${params.from.toLowerCase()}`, () => broadcast(readClient, async (onSigned) => {
+    const client = await walletClientFor(params.from, network, undefined, onSigned);
     return client.sendTransaction({
       account: client.account,
       chain: client.chain,
       to: params.to,
       value: params.value,
     });
-  });
+  }));
   await afterSubmit(params.from, hash, "send", params, network, readClient).catch(() => {});
   return hash;
 }
@@ -145,8 +176,8 @@ export async function sendRaw(params: TxLine & {
   gas?: bigint;
 }, context?: TxExecutionContext): Promise<Hex> {
   const { network, client: readClient, assertReady } = executionContext(context);
-  const hash = await withNamedLock(`tx:${params.from.toLowerCase()}`, async () => {
-    const client = await walletClientFor(params.from, network, assertReady);
+  const hash = await withNamedLock(`tx:${params.from.toLowerCase()}`, () => broadcast(readClient, async (onSigned) => {
+    const client = await walletClientFor(params.from, network, assertReady, onSigned);
     return client.sendTransaction({
       account: client.account,
       chain: client.chain,
@@ -155,7 +186,7 @@ export async function sendRaw(params: TxLine & {
       data: params.data,
       gas: params.gas,
     });
-  });
+  }));
   await afterSubmit(params.from, hash, "dapp", params, network, readClient).catch(() => {});
   return hash;
 }

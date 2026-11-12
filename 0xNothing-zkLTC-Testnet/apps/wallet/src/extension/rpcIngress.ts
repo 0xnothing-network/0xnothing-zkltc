@@ -39,3 +39,44 @@ export function createRpcIngressGate(options: {
     active: () => ({ global, origins: perOrigin.size }),
   };
 }
+
+export interface RpcSlotQueue {
+  /** Resolves true once a slot is held, or false at once when the waiting line is full. */
+  acquire(): Promise<boolean>;
+  release(): void;
+}
+
+/** A fixed number of slots with a bounded first-come line behind them. */
+export function createRpcSlotQueue(options: { maxInFlight: number; maxWaiting: number }): RpcSlotQueue {
+  const { maxInFlight, maxWaiting } = options;
+  if (!Number.isSafeInteger(maxInFlight) || maxInFlight <= 0) {
+    throw new Error("maxInFlight must be a positive safe integer");
+  }
+  if (!Number.isSafeInteger(maxWaiting) || maxWaiting < 0) {
+    throw new Error("maxWaiting must be a non-negative safe integer");
+  }
+  let inFlight = 0;
+  const waiters: Array<() => void> = [];
+
+  return {
+    async acquire() {
+      if (inFlight < maxInFlight) {
+        inFlight += 1;
+        return true;
+      }
+      if (waiters.length >= maxWaiting) return false;
+      await new Promise<void>((resolve) => waiters.push(resolve));
+      return true;
+    },
+    release() {
+      const next = waiters.shift();
+      if (next) {
+        // Ownership transfers directly; keeping the count unchanged prevents a
+        // request arriving in this microtask gap from exceeding the concurrency cap.
+        next();
+        return;
+      }
+      inFlight = Math.max(0, inFlight - 1);
+    },
+  };
+}

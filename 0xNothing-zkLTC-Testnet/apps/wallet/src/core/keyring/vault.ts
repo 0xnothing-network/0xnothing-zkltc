@@ -14,7 +14,7 @@ import { withNamedLock } from "../platform/locks";
 import {
   decryptWithKey,
   type EncryptedBlob,
-  encryptJson,
+  sealJson,
   exportKey,
   importKey,
   keyForBlob,
@@ -383,14 +383,14 @@ export async function createVault(
     }
 
     const secret: VaultSecret = { mnemonic: checked.phrase, imported: [] };
-    const blob = await encryptJson(secret, password);
+    const { blob, key } = await sealJson(secret, password);
     const first = hdMeta(secret.mnemonic, 0);
     const accounts = { accounts: [first], active: first.address } satisfies AccountsState;
     await persistentStore.setMany([
       [STORAGE_KEYS.vault, blob],
       [STORAGE_KEYS.accounts, accounts],
     ]);
-    await putSession(await keyForBlob(blob, password));
+    await putSession(key);
     return { mnemonic: secret.mnemonic, accounts };
   });
 }
@@ -429,7 +429,7 @@ export async function importPrivateKey(
       throw new Error(`This wallet supports up to ${MAX_ACCOUNTS} accounts`);
     }
     const imported = [...secret.imported, privateKey];
-    const blob = await encryptJson({ ...secret, imported } satisfies VaultSecret, password);
+    const { blob, key } = await sealJson({ ...secret, imported } satisfies VaultSecret, password);
     const meta: AccountMeta = {
       address: account.address,
       label: label ?? "",
@@ -441,7 +441,7 @@ export async function importPrivateKey(
       [STORAGE_KEYS.vault, blob],
       [STORAGE_KEYS.accounts, accounts],
     ]);
-    await putSession(await keyForBlob(blob, password));
+    await putSession(key);
     return accounts;
   });
 }
@@ -527,9 +527,9 @@ export async function changePassword(current: string, next: string): Promise<voi
   await withNamedLock(VAULT_LOCK, async () => {
     assertNewPassword(next);
     const secret = await unlockUnderVaultLock(current);
-    const blob = await encryptJson(secret, next);
+    const { blob, key } = await sealJson(secret, next);
     await persistentStore.set(STORAGE_KEYS.vault, blob);
-    await putSession(await keyForBlob(blob, next));
+    await putSession(key);
   });
 }
 

@@ -1,4 +1,4 @@
-import { type Address, createPublicClient, createWalletClient, fallback, http, type HttpTransportConfig } from "viem";
+import { type Address, createPublicClient, createWalletClient, fallback, type Hex, http, type HttpTransportConfig, keccak256 } from "viem";
 import { toAccount } from "viem/accounts";
 import {
   LITVM_NETWORK,
@@ -66,11 +66,16 @@ export function publicClientFor(network: WalletNetwork) {
     : clientFor(network);
 }
 
-/** A signing client holds public metadata only, even while RPC preparation waits. */
+/**
+ * A signing client holds public metadata only, even while RPC preparation waits.
+ * `onSigned` is told the hash of each transaction as it is signed, before the node
+ * has answered, so the caller can still find it if that answer never arrives.
+ */
 export async function walletClientFor(
   address: Address,
   network: WalletNetwork = activeNetwork,
   assertReady?: () => Promise<void>,
+  onSigned?: (hash: Hex) => void,
 ) {
   const expectedNetwork = networkIdentity(network);
   async function signingAccount() {
@@ -97,7 +102,11 @@ export async function walletClientFor(
       return signer.signAuthorization(params);
     },
     signMessage: async (params) => (await signingAccount()).signMessage(params),
-    signTransaction: async (transaction, options) => (await signingAccount()).signTransaction(transaction, options),
+    signTransaction: async (transaction, options) => {
+      const serialized = await (await signingAccount()).signTransaction(transaction, options);
+      onSigned?.(keccak256(serialized));
+      return serialized;
+    },
     signTypedData: async (params) => (await signingAccount()).signTypedData(params),
   });
   return createWalletClient({

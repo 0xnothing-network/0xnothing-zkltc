@@ -94,3 +94,49 @@ test("writeCall rechecks its action session after simulation and before signing"
   assert.equal(checks, 2);
   assert.equal(signed, false);
 });
+
+test("a broadcast whose answer was lost is found by its signed hash instead of being reported as failed", async () => {
+  const signedHash = `0x${"ab".repeat(32)}`;
+  const lookups: string[] = [];
+  const records: string[] = [];
+  const service = (options: { signs: boolean; known: boolean }) => evaluateModule<{
+    sendNative: (params: unknown) => Promise<string>;
+  }>(new URL("../../src/core/services/tx.ts", import.meta.url), {
+    "../../abis": { erc20Abi: [] }, "../i18n": { t: (key: string) => key },
+    "../keyring/vault": { touchSession: async () => {} }, "../lib/errors": {},
+    "../platform/locks": { withNamedLock: async (_name: string, task: () => Promise<unknown>) => task() },
+    "../rpc/client": {
+      activeNetwork: { id: "litvm" },
+      publicClient: {
+        getTransaction: async ({ hash }: { hash: string }) => {
+          lookups.push(hash);
+          if (!options.known) throw new Error("Transaction not found");
+          return { hash };
+        },
+        waitForTransactionReceipt: async () => ({ status: "success" }),
+      },
+      walletClientFor: async (_from: string, _network: unknown, _ready: unknown, onSigned: (hash: string) => void) => ({
+        account: from,
+        sendTransaction: async () => {
+          if (options.signs) onSigned(signedHash);
+          throw new Error("The request took too long to respond.");
+        },
+      }),
+    },
+    "./history": { addRecord: async ({ hash }: { hash: string }) => { records.push(hash); }, setRecordStatus: async () => {} },
+  }, { setTimeout: (task: () => void) => { task(); return 0; }, Promise, Date });
+  const send = (options: { signs: boolean; known: boolean }) =>
+    service(options).sendNative({ from, to: from, value: 1n, label: { key: "tx.send" } });
+
+  // The node took the transaction: it is reported as sent and gets its history row.
+  assert.equal(await send({ signs: true, known: true }), signedHash);
+  assert.deepEqual(records, [signedHash]);
+  assert.deepEqual(lookups, [signedHash]);
+  // Nothing in the pool after two looks: the original error stands.
+  await assert.rejects(send({ signs: true, known: false }), /took too long/);
+  assert.equal(lookups.length, 3);
+  // A failure before signing is never looked up.
+  await assert.rejects(send({ signs: false, known: true }), /took too long/);
+  assert.equal(lookups.length, 3);
+  assert.deepEqual(records, [signedHash]);
+});
