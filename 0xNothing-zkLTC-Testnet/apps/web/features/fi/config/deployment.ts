@@ -44,11 +44,10 @@ export const deployment = {
   chain: {
     id: LITVM_CHAIN_ID,
     name: "LitVM LiteForge",
-    // Every client uses the infra-partner endpoint first (lib/rpcTransport adds the public fallback).
     rpcUrl: LITVM_RPC_URL,
     explorerUrl:
       process.env.NEXT_PUBLIC_LITVM_EXPLORER_URL?.trim() ||
-      "https://liteforge.explorer.caldera.xyz",
+      "https://explorer.testnet.liteforge.zeeve.net",
   },
   // Indexer coordinates follow the generated deployment unless overrides are enabled, so a stale
   // environment variable cannot point the app at another contract set's subgraph.

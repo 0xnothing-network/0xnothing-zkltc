@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import * as viem from "viem";
 import * as marketplace from "../../lib/nusdMarketplace.ts";
-import type { readNusdActivityFromSubgraph } from "../../lib/nusdMarketplaceSubgraph.ts";
+import type { mergeLaggingActivity, readNusdActivityFromSubgraph } from "../../lib/nusdMarketplaceSubgraph.ts";
 import { evaluateModule } from "../helpers/evaluateModule.ts";
 
 const NFT = "0x0000000000000000000000000000000000000033";
@@ -10,7 +10,7 @@ const SELLER = "0x0000000000000000000000000000000000000055";
 const BUYER = "0x0000000000000000000000000000000000000066";
 const HASH = `0x${"ab".repeat(32)}`;
 const activity = evaluateModule<Record<string, unknown>>(new URL("../../lib/nusdMarketplaceActivity.ts", import.meta.url), { viem, "./nusdMarketplace": marketplace }, { Error });
-const { readNusdActivityFromSubgraph: read } = evaluateModule<{ readNusdActivityFromSubgraph: typeof readNusdActivityFromSubgraph }>(
+const { readNusdActivityFromSubgraph: read, mergeLaggingActivity: merge } = evaluateModule<{ readNusdActivityFromSubgraph: typeof readNusdActivityFromSubgraph; mergeLaggingActivity: typeof mergeLaggingActivity }>(
   new URL("../../lib/nusdMarketplaceSubgraph.ts", import.meta.url), { viem, "./nusdMarketplaceActivity": activity }, { Error, AbortSignal, JSON },
 );
 
@@ -68,7 +68,33 @@ test("lagging, failing or malformed subgraph responses are rejected for the RPC 
     const api = server(body, init);
     await assert.rejects(read("https://graph.test", { filter: "ALL", limit: 2, latestBlock }, api.fetcher));
   }
+  // A lagging first page is rejected, but carries its rows for the caller to merge.
+  const lagging = server({ data: { activities: [row(100, 1)], _meta: meta } });
+  await assert.rejects(
+    read("https://graph.test", { filter: "ALL", limit: 2, latestBlock: 100n + 1_201n }, lagging.fetcher),
+    (error: { laggingPage?: { events: unknown[]; throughBlock: string } }) => error.laggingPage?.events.length === 1 && error.laggingPage.throughBlock === "100",
+  );
+  assert.equal(lagging.requests.length, 1);
   const lagWithCursor = server({ data: { activities: [], _meta: meta } });
   const page = await read("https://graph.test", { filter: "ALL", limit: 2, cursor: "50:0", latestBlock: 10_000n }, lagWithCursor.fetcher);
   assert.equal(page.events.length, 0);
+});
+
+test("a lagging subgraph fills the first page behind the recent RPC events", async () => {
+  const api = (rows: unknown[]) => server({ data: { activities: rows, _meta: { block: { number: 120 }, hasIndexingErrors: false } } }).fetcher;
+  // No latestBlock: the lag check is skipped, which is how the route reads a lagging subgraph.
+  const indexed = await read("https://graph.test", { filter: "ALL", limit: 3 }, api([row(100, 9), row(100, 8), row(99, 2), row(98, 1)]));
+  const recent = await read("https://graph.test", { filter: "ALL", limit: 3 }, api([row(500, 1), row(100, 9)]));
+  const page = merge({ ...recent, throughBlock: "600" }, indexed, 3)!;
+  assert.equal(page.events.map((event) => `${event.blockNumber}:${event.logIndex}`).join(" "), "500:1 100:9 100:8");
+  assert.equal(page.nextCursor, "100:8");
+  assert.equal(page.throughBlock, "600");
+  // A full recent page, or only one source, is returned untouched.
+  assert.equal(merge(indexed, recent, 3), indexed);
+  assert.equal(merge(undefined, indexed, 3), indexed);
+  assert.equal(merge(recent, undefined, 3), recent);
+  assert.equal(merge(undefined, undefined, 3), undefined);
+  // Nothing older left to page into: no cursor.
+  const short = await read("https://graph.test", { filter: "ALL", limit: 3 }, api([row(100, 9)]));
+  assert.equal(merge({ ...recent, events: [] }, short, 3)!.nextCursor, null);
 });

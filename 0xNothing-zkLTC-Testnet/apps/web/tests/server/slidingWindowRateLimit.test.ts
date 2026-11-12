@@ -19,6 +19,19 @@ test("multi-identity admission is atomic when one quota is full", () => {
   assert.equal(limiter.consume(["wallet:new"], 600), false);
 });
 
+test("a refunded attempt gives its quota back to every identity, once", () => {
+  const limiter = createSlidingWindowRateLimiter({ windowMs: 1_000, maxAttempts: 1, maxKeys: 8 });
+  assert.equal(limiter.consume(["wallet:a", "ip:a"], 100), true);
+  assert.equal(limiter.consume(["wallet:a"], 150), false);
+  limiter.refund(["wallet:a", "ip:a"], 100);
+  assert.equal(limiter.size(), 0);
+  // Refunding again, or refunding an attempt that was never recorded, changes nothing.
+  limiter.refund(["wallet:a", "ip:a"], 100);
+  assert.equal(limiter.consume(["wallet:a", "ip:a"], 200), true);
+  limiter.refund(["wallet:a"], 999);
+  assert.equal(limiter.consume(["wallet:a"], 250), false);
+});
+
 test("active shared identities survive bounded-key churn", () => {
   const limiter = createSlidingWindowRateLimiter({
     windowMs: 10_000,

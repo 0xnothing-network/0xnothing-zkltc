@@ -6,6 +6,8 @@ export interface SlidingWindowRateLimitOptions {
 
 export interface SlidingWindowRateLimiter {
   consume(keys: readonly string[], now?: number): boolean;
+  /** Gives back the attempt recorded at `timestamp`, for a request the server itself could not serve. */
+  refund(keys: readonly string[], timestamp: number): void;
   prune(now?: number): void;
   size(): number;
 }
@@ -72,6 +74,16 @@ export function createSlidingWindowRateLimiter(
     return true;
   }
 
+  function refund(keys: readonly string[], timestamp: number): void {
+    for (const key of new Set(keys)) {
+      const timestamps = history.get(key);
+      const index = timestamps?.lastIndexOf(timestamp) ?? -1;
+      if (!timestamps || index < 0) continue;
+      timestamps.splice(index, 1);
+      touch(key, timestamps);
+    }
+  }
+
   function prune(now = Date.now()): void {
     if (!Number.isFinite(now)) return;
     for (const key of [...history.keys()]) touch(key, recent(key, now));
@@ -79,6 +91,7 @@ export function createSlidingWindowRateLimiter(
 
   return {
     consume,
+    refund,
     prune,
     size: () => history.size,
   };

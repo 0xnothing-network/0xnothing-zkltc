@@ -29,7 +29,7 @@ async function run() {
   const key = suppliedKey.startsWith("0x") ? suppliedKey : `0x${suppliedKey}`;
   if (!/^0x[0-9a-fA-F]{64}$/.test(key)) throw new Error("Missing deployment key");
   const account = privateKeyToAccount(key);
-  const rpc = "https://liteforge.rpc.caldera.xyz/infra-partner-http";
+  const rpc = "https://rpc.testnet.liteforge.zeeve.net";
   const chain = defineChain({ id: 4441, name: "LiteForge", nativeCurrency: { name: "zkLTC", symbol: "zkLTC", decimals: 18 }, rpcUrls: { default: { http: [rpc] } } });
   const publicClient = createPublicClient({ chain, transport: http(rpc, { retryCount: 0, timeout: 30_000 }) });
   const wallet = createWalletClient({ account, chain, transport: http(rpc, { retryCount: 0, timeout: 30_000 }) });

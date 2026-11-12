@@ -32,10 +32,10 @@ STACK
 
 CHAIN
 - LitVM LiteForge testnet: id 4441, native currency zkLTC (18 decimals).
-- RPC HTTP: https://liteforge.rpc.caldera.xyz/infra-partner-http, fallback https://liteforge.rpc.caldera.xyz/http.
-- RPC WS: wss://liteforge.rpc.caldera.xyz/infra-partner-ws, fallback wss://liteforge.rpc.caldera.xyz/ws.
-- Explorer: https://liteforge.explorer.caldera.xyz.
-- Source: 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts:6-14. Define the chain with viem defineChain and a fallback() transport.
+- RPC HTTP: https://rpc.testnet.liteforge.zeeve.net.
+- RPC WS: wss://rpc.testnet.liteforge.zeeve.net/ws.
+- Explorer: https://explorer.testnet.liteforge.zeeve.net.
+- Source: 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts:6-9. Define the chain with viem defineChain and a fallback() transport.
 
 ADDRESSES (load, do not hard-code)
 - Copy 0xNothing-zkLTC-Testnet/apps/web/features/fi/config/testnet.generated.json into the project as a JSON module and pass every address through getAddress(). Keys used here:
@@ -99,7 +99,7 @@ FLOW
 11. Refresh balances and the quote.
 
 UI STATES
-not connected | wrong network | swaps paused | loading quote | no route | quote ready (show route, expected out, minimum received, fee breakdown: LP 0.5% per hop + router 0.1% or 0.3%, slippage) | insufficient balance (leave gas when paying native) | needs approval | approving | awaiting signature | pending (link https://liteforge.explorer.caldera.xyz/tx/<hash>) | success | reverted / error with the decoded error name. Disable the button while a transaction is in flight (no double submit).
+not connected | wrong network | swaps paused | loading quote | no route | quote ready (show route, expected out, minimum received, fee breakdown: LP 0.5% per hop + router 0.1% or 0.3%, slippage) | insufficient balance (leave gas when paying native) | needs approval | approving | awaiting signature | pending (link https://explorer.testnet.liteforge.zeeve.net/tx/<hash>) | success | reverted / error with the decoded error name. Disable the button while a transaction is in flight (no double submit).
 
 DO NOT
 - Do not call any /api/* or /0xFi/api/* route of the 0xNothing web app.
@@ -128,7 +128,7 @@ STACK
 
 CHAIN
 - LitVM LiteForge testnet, id 4441, native zkLTC (18 decimals).
-- RPC: https://liteforge.rpc.caldera.xyz/infra-partner-http, fallback https://liteforge.rpc.caldera.xyz/http (0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts:6-8). Explorer https://liteforge.explorer.caldera.xyz.
+- RPC: https://rpc.testnet.liteforge.zeeve.net (0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts:6). Explorer https://explorer.testnet.liteforge.zeeve.net.
 
 ADDRESSES (load, do not hard-code)
 - Copy 0xNothing-zkLTC-Testnet/apps/web/features/fi/config/testnet.generated.json, getAddress() every value, assert publicClient.getChainId() === 4441. Keys: dexRouter, dexFactory, nusd, wzkltc.
@@ -217,7 +217,7 @@ STACK
 - Next.js (App Router) + TypeScript (strict) + viem 2 + wagmi 2. bigint everywhere (LP and NUSD are 18 decimals).
 
 CHAIN
-- LitVM LiteForge testnet, id 4441, native zkLTC. RPC https://liteforge.rpc.caldera.xyz/infra-partner-http, fallback https://liteforge.rpc.caldera.xyz/http (apps/web/lib/publicConfig.ts:6-8).
+- LitVM LiteForge testnet, id 4441, native zkLTC. RPC https://rpc.testnet.liteforge.zeeve.net (apps/web/lib/publicConfig.ts:6).
 
 ADDRESSES (load, do not hard-code)
 - Copy 0xNothing-zkLTC-Testnet/apps/web/features/fi/config/testnet.generated.json, getAddress() every value, assert chain id 4441. Keys: farmFactory (GaugeFactory), dexFactory, nusd, and the known pairs/gauges wzkLtcNusdPair/wzkLtcNusdGauge, nbtcNusdPair/nbtcNusdGauge, nethNusdPair/nethNusdGauge.
@@ -283,7 +283,7 @@ STACK
 - Next.js (App Router) + TypeScript (strict) + viem 2 + wagmi 2. bigint for every amount (NUSD, WzkLTC, nBTC, nETH are 18 decimals; read decimals() live anyway).
 
 CHAIN
-- LitVM LiteForge testnet, id 4441, native zkLTC. RPC https://liteforge.rpc.caldera.xyz/infra-partner-http, fallback https://liteforge.rpc.caldera.xyz/http (apps/web/lib/publicConfig.ts:6-8). Explorer https://liteforge.explorer.caldera.xyz.
+- LitVM LiteForge testnet, id 4441, native zkLTC. RPC https://rpc.testnet.liteforge.zeeve.net (apps/web/lib/publicConfig.ts:6). Explorer https://explorer.testnet.liteforge.zeeve.net.
 
 ADDRESSES (load, do not hard-code)
 - Copy 0xNothing-zkLTC-Testnet/apps/web/features/fi/config/testnet.generated.json, getAddress() every value, assert chain id 4441. Keys: lendingPool (PooledNUSDLendingPoolV2), nusd, wzkltc, nbtc, neth, ltcOracle, btcOracle, ethOracle.
@@ -378,7 +378,7 @@ STACK
 - Next.js (App Router) + TypeScript (strict) + viem 2 + wagmi 2. bigint for every amount (NUSD 18 decimals; read nBTC/nETH decimals() live).
 
 CHAIN
-- LitVM LiteForge testnet, id 4441, native zkLTC. RPC https://liteforge.rpc.caldera.xyz/infra-partner-http, fallback https://liteforge.rpc.caldera.xyz/http (apps/web/lib/publicConfig.ts:6-8).
+- LitVM LiteForge testnet, id 4441, native zkLTC. RPC https://rpc.testnet.liteforge.zeeve.net (apps/web/lib/publicConfig.ts:6).
 
 ADDRESSES (load, do not hard-code)
 - Copy 0xNothing-zkLTC-Testnet/apps/web/features/fi/config/testnet.generated.json, getAddress() every value, assert chain id 4441. Keys: nbtcVault + nbtc + btcOracle, nethVault + neth + ethOracle, nusd, synthSafetyReserve.
@@ -486,7 +486,7 @@ query PoolChart($pool: Bytes!, $since: BigInt!) {
 }
 
 UI STATES
-loading | empty (no pool or no candles yet) | ready (chart with period selector, swaps table with explorer links https://liteforge.explorer.caldera.xyz/tx/<hash>, liquidity events) | subgraph error (show a retry; do not block the rest of the page) | stale (show the latest indexed timestamp).
+loading | empty (no pool or no candles yet) | ready (chart with period selector, swaps table with explorer links https://explorer.testnet.liteforge.zeeve.net/tx/<hash>, liquidity events) | subgraph error (show a retry; do not block the rest of the page) | stale (show the latest indexed timestamp).
 
 DO NOT
 - No /api/* or /0xFi/api/* calls of the 0xNothing web app, no API keys (the endpoint is public), no subgraph values passed into contract writes.

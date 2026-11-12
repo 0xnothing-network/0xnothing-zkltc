@@ -41,11 +41,10 @@ Paths are relative to the `0xNothing-zkLTC-Testnet/` folder.
 |---|---|---|
 | Chain id | `4441` | `contracts/deployments/v3-core.json:3` |
 | Native currency | zkLTC, 18 decimals (gas only) | |
-| RPC (HTTP) | `https://liteforge.rpc.caldera.xyz/infra-partner-http` | `apps/web/lib/publicConfig.ts:6` |
-| RPC (HTTP, fallback) | `https://liteforge.rpc.caldera.xyz/http` | `apps/web/lib/publicConfig.ts:8` |
-| RPC (WebSocket) | `wss://liteforge.rpc.caldera.xyz/infra-partner-ws`, then `wss://liteforge.rpc.caldera.xyz/ws` | `apps/web/lib/publicConfig.ts:10-13` |
-| Explorer | `https://liteforge.explorer.caldera.xyz` | `apps/web/lib/publicConfig.ts:14` |
-| Multicall3 | `0xca11bde05977b3631167028862be2a173976ca11` | `apps/web/lib/publicConfig.ts:15` |
+| RPC (HTTP) | `https://rpc.testnet.liteforge.zeeve.net` | `apps/web/lib/publicConfig.ts:6` |
+| RPC (WebSocket) | `wss://rpc.testnet.liteforge.zeeve.net/ws` | `apps/web/lib/publicConfig.ts:8` |
+| Explorer | `https://explorer.testnet.liteforge.zeeve.net` | `apps/web/lib/publicConfig.ts:9` |
+| Multicall3 | `0xca11bde05977b3631167028862be2a173976ca11` | `apps/web/lib/publicConfig.ts:10` |
 
 ## Contracts and addresses
 
@@ -57,8 +56,8 @@ contain.
 
 | Contract | Address | Manifest key |
 |---|---|---|
-| 0xPixel V2 (new mints) | `0xd83cb7aCEF921f98b6B983cBB712a583869Da9eB` | `pixelV2` in `contracts/deployments/v3-core.json:13`; `PIXEL_NFT_ADDRESS` in `apps/web/lib/publicConfig.ts:19` |
-| 0xPixel Classic (V1, legacy) | `0x33A32b9b2BEe864f9e42BFa39cA7BDC72f655988` | `pixelV1` in `contracts/deployments/v3-core.json:12`; `PIXEL_CLASSIC_ADDRESS` in `apps/web/lib/publicConfig.ts:17` |
+| 0xPixel V2 (new mints) | `0xd83cb7aCEF921f98b6B983cBB712a583869Da9eB` | `pixelV2` in `contracts/deployments/v3-core.json:13`; `PIXEL_NFT_ADDRESS` in `apps/web/lib/publicConfig.ts:14` |
+| 0xPixel Classic (V1, legacy) | `0x33A32b9b2BEe864f9e42BFa39cA7BDC72f655988` | `pixelV1` in `contracts/deployments/v3-core.json:12`; `PIXEL_CLASSIC_ADDRESS` in `apps/web/lib/publicConfig.ts:12` |
 | NUSD NFT marketplace (`NusdNftMarketplaceV2`) | `0xd219EfFe076B68934e212313C8d468b994d6e52E` | `nusdMarketplace` in `contracts/deployments/v3-core.json:10`; `address` in `apps/web/lib/nusdMarketplace.generated.json:3` |
 | NUSD (settlement token, 18 decimals) | `0x69320A82ACCeC1b8A5EF59fd02b217e7ea4aEa19` | `nusd` in `contracts/deployments/v3-core.json:9`; `nusd` in `apps/web/lib/nusdMarketplace.generated.json:4` |
 
@@ -66,8 +65,8 @@ Other values you need:
 
 | Item | Value | Source |
 |---|---|---|
-| V2 deployment block | `56305414` | `PIXEL_START_BLOCK`, `apps/web/lib/publicConfig.ts:20` |
-| Classic deployment block | `24867130` | `PIXEL_CLASSIC_START_BLOCK`, `apps/web/lib/publicConfig.ts:22` |
+| V2 deployment block | `56305414` | `PIXEL_START_BLOCK`, `apps/web/lib/publicConfig.ts:15` |
+| Classic deployment block | `24867130` | `PIXEL_CLASSIC_START_BLOCK`, `apps/web/lib/publicConfig.ts:17` |
 | Marketplace deployment block | `61141428` | `deploymentBlock`, `apps/web/lib/nusdMarketplace.generated.json:13` |
 | Marketplace `IMPLEMENTATION_ID` | `0xcacabae418335c9bc3d401a0085ac7f27c4ec267a89868777e5712e9d9653739` (`keccak256("0xpixel.nusd.marketplace.v2")`) | `apps/web/lib/nusdMarketplace.generated.json:12`; `contracts/src/0xpixel/NusdNftMarketplaceV2.sol:57` |
 | Collections allowed on the market | Classic and V2 | `collections`, `apps/web/lib/nusdMarketplace.generated.json:8-11` |
@@ -105,11 +104,11 @@ export const liteforge = defineChain({
   nativeCurrency: { name: "zkLTC", symbol: "zkLTC", decimals: 18 },
   rpcUrls: {
     default: {
-      http: ["https://liteforge.rpc.caldera.xyz/infra-partner-http", "https://liteforge.rpc.caldera.xyz/http"],
-      webSocket: ["wss://liteforge.rpc.caldera.xyz/infra-partner-ws", "wss://liteforge.rpc.caldera.xyz/ws"],
+      http: ["https://rpc.testnet.liteforge.zeeve.net"],
+      webSocket: ["wss://rpc.testnet.liteforge.zeeve.net/ws"],
     },
   },
-  blockExplorers: { default: { name: "Caldera", url: "https://liteforge.explorer.caldera.xyz" } },
+  blockExplorers: { default: { name: "LiteForge Explorer", url: "https://explorer.testnet.liteforge.zeeve.net" } },
   contracts: { multicall3: { address: "0xca11bde05977b3631167028862be2a173976ca11" } },
 });
 
@@ -127,8 +126,7 @@ if (getAddress(market.address) !== MARKET || getAddress(market.nusd) !== NUSD)
 export const publicClient = createPublicClient({
   chain: liteforge,
   transport: fallback([
-    http("https://liteforge.rpc.caldera.xyz/infra-partner-http"),
-    http("https://liteforge.rpc.caldera.xyz/http"),
+    http("https://rpc.testnet.liteforge.zeeve.net"),
   ]),
 });
 

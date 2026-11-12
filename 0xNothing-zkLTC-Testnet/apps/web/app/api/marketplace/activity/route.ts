@@ -6,7 +6,7 @@ import { NFT_NUSD_ADDRESS, NUSD_MARKETPLACE_ADDRESS, NUSD_SUBGRAPH_URL } from "@
 import { PIXEL_COLLECTIONS } from "@/lib/pixelCollections";
 import deployment from "@/lib/nusdMarketplace.generated.json";
 import { parseNusdActivityCursor, readNusdMarketActivity, type NusdActivityFilter, type NusdActivityPage } from "@/lib/nusdMarketplaceActivity";
-import { readNusdActivityFromSubgraph } from "@/lib/nusdMarketplaceSubgraph";
+import { mergeLaggingActivity, readNusdActivityFromSubgraph } from "@/lib/nusdMarketplaceSubgraph";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +21,8 @@ const ACTIVITY_RETAIN_MS = 5 * 60_000;
 const activityCache = createBoundedCache<NusdActivityPage>({ maxEntries: 256, ttlMs: ACTIVITY_RETAIN_MS, maxInFlight: 32 });
 // `force=1` is public: a forced read is reused for 2 s so repeating it cannot multiply upstream load.
 const forcedActivityCache = createBoundedCache<NusdActivityPage>({ maxEntries: 256, ttlMs: 2_000, maxInFlight: 32 });
+// With a lagging subgraph page in hand, the RPC scan may hold the response only this long.
+const RPC_SCAN_GRACE_MS = 3_000;
 const filters = new Set<NusdActivityFilter>(["ALL", "BOUGHT", "MINTED", "LISTED", "CANCELLED", "OFFERS"]);
 
 export async function GET(request: Request) {
@@ -41,21 +43,43 @@ export async function GET(request: Request) {
   // the fallback while it is syncing, lagging or failing.
   const subgraphUrl = process.env.PIXEL_NUSD_SUBGRAPH_URL?.trim() || NUSD_SUBGRAPH_URL;
   const load = async () => {
+    // Set when the subgraph answered with valid history that is only behind the chain.
+    let laggingPage: NusdActivityPage | undefined;
     if (subgraphUrl) {
       try {
         const latestBlock = cursor ? undefined : await publicClient.getBlockNumber();
         return await readNusdActivityFromSubgraph(subgraphUrl, { filter, cursor, limit: Number(rawLimit), latestBlock });
       } catch (error) {
+        laggingPage = (error as { laggingPage?: NusdActivityPage } | null)?.laggingPage;
         console.warn("[marketplace] NUSD subgraph unavailable; using RPC:", error instanceof Error ? error.message : error);
       }
     }
-    return readNusdMarketActivity(activityClient, {
+    const scan = readNusdMarketActivity(activityClient, {
       market: NUSD_MARKETPLACE_ADDRESS!,
       nusd: NFT_NUSD_ADDRESS,
       collections: PIXEL_COLLECTIONS.map((entry) => entry.address),
       deploymentBlock: deployment.address.toLowerCase() === NUSD_MARKETPLACE_ADDRESS!.toLowerCase() ? BigInt(deployment.deploymentBlock) : 0n,
       cursor, filter, limit: Number(rawLimit),
     });
+    // Later pages come from one source, so only the first page is merged.
+    if (!subgraphUrl || cursor) return scan;
+    // Reached only when the subgraph lags or failed. A lagging read already brought its
+    // page. After any other failure the reader is asked once more without latestBlock,
+    // which skips its lag check, so a healthy-but-behind subgraph still supplies history.
+    // The scan of recent blocks then gets a short grace to add newer events on top.
+    const scanned = scan.then((page) => ({ page }), (error: unknown) => ({ error }));
+    const indexed = laggingPage
+      ?? await readNusdActivityFromSubgraph(subgraphUrl, { filter, cursor, limit: Number(rawLimit) }).catch(() => undefined);
+    if (!indexed) {
+      const result = await scanned;
+      if ("error" in result) throw result.error;
+      return result.page;
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const grace = new Promise<undefined>((resolve) => { timer = setTimeout(() => resolve(undefined), RPC_SCAN_GRACE_MS); });
+    const recent = await Promise.race([scanned, grace]);
+    clearTimeout(timer);
+    return mergeLaggingActivity(recent && "page" in recent ? recent.page : undefined, indexed, Number(rawLimit))!;
   };
   try {
     let payload: NusdActivityPage;
@@ -75,6 +99,10 @@ export async function GET(request: Request) {
     }
     return NextResponse.json(payload, { headers: force ? { "Cache-Control": "private, no-store" } : publicCdnCacheHeaders("public, max-age=0, s-maxage=5, stale-while-revalidate=5", 5, freshRead ? 0 : CDN_STALE_SECONDS) });
   } catch {
+    // A page still inside its retention window beats an error: the reader keeps a
+    // list that is a few minutes old instead of losing it to one failed refresh.
+    const retained = force ? undefined : activityCache.entry(key);
+    if (retained?.fresh) return NextResponse.json(retained.value, { headers: publicCdnCacheHeaders("public, max-age=0, s-maxage=5, stale-while-revalidate=5", 5, 0) });
     return NextResponse.json({ error: "NUSD marketplace activity is unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
 }

@@ -25,8 +25,8 @@ You are adding a read-only 0xPump market explorer to a Next.js (App Router) + Ty
 
 Network (define it with viem defineChain):
 - id 4441, name "LitVM LiteForge", native currency zkLTC (18 decimals).
-- HTTP RPC, in order: https://liteforge.rpc.caldera.xyz/infra-partner-http then https://liteforge.rpc.caldera.xyz/http (from apps/web/lib/publicConfig.ts:6-8). Use viem fallback().
-- Explorer: https://liteforge.explorer.caldera.xyz. Multicall3: 0xca11bde05977b3631167028862be2a173976ca11 (set contracts.multicall3 on the chain).
+- HTTP RPC: https://rpc.testnet.liteforge.zeeve.net (from apps/web/lib/publicConfig.ts:6). Use viem fallback().
+- Explorer: https://explorer.testnet.liteforge.zeeve.net. Multicall3: 0xca11bde05977b3631167028862be2a173976ca11 (set contracts.multicall3 on the chain).
 
 Addresses: copy apps/web/features/fi/config/testnet.generated.json into the project and read keys `pump` (ZeroXPumpV2), `nusd`, `pumpGoldskyEndpoint` and `deploymentBlock` from it. Pass addresses through getAddress. Do not hard-code addresses anywhere else.
 
@@ -66,7 +66,7 @@ Acceptance checklist (verify each item and report file:line for it):
 ```text
 You are building a 0xPump buy/sell panel in a Next.js + TypeScript app with viem and wagmi. 0xPump (ZeroXPumpV2) sells a token along a NUSD bonding curve on the LitVM LiteForge testnet.
 
-Network: viem defineChain with id 4441, name "LitVM LiteForge", native currency zkLTC (18 decimals), HTTP RPC https://liteforge.rpc.caldera.xyz/infra-partner-http then https://liteforge.rpc.caldera.xyz/http (apps/web/lib/publicConfig.ts:6-8), explorer https://liteforge.explorer.caldera.xyz.
+Network: viem defineChain with id 4441, name "LitVM LiteForge", native currency zkLTC (18 decimals), HTTP RPC https://rpc.testnet.liteforge.zeeve.net (apps/web/lib/publicConfig.ts:6), explorer https://explorer.testnet.liteforge.zeeve.net.
 
 Addresses: copy apps/web/features/fi/config/testnet.generated.json and read `pump` (the launchpad and the ERC-20 spender) and `nusd` (NUSD, 18 decimals). Use getAddress. No other hard-coded addresses.
 
@@ -117,7 +117,7 @@ Acceptance checklist (report file:line for each):
 ```text
 You are building a "launch a token" form for 0xPump (ZeroXPumpV2) in a Next.js + TypeScript app with viem and wagmi, on the LitVM LiteForge testnet.
 
-Network: defineChain id 4441, "LitVM LiteForge", zkLTC native (18 decimals), RPC https://liteforge.rpc.caldera.xyz/infra-partner-http then https://liteforge.rpc.caldera.xyz/http (apps/web/lib/publicConfig.ts:6-8).
+Network: defineChain id 4441, "LitVM LiteForge", zkLTC native (18 decimals), RPC https://rpc.testnet.liteforge.zeeve.net (apps/web/lib/publicConfig.ts:6).
 
 Addresses: copy apps/web/features/fi/config/testnet.generated.json and read `pump` and `nusd` with getAddress. Nothing else hard-coded.
 
@@ -164,7 +164,7 @@ Acceptance checklist (report file:line for each):
 ```text
 You are adding a "Graduate to 0xFi" button to a 0xPump market page in a Next.js + TypeScript app with viem and wagmi, LitVM LiteForge testnet.
 
-Network: defineChain id 4441, "LitVM LiteForge", zkLTC native (18 decimals), RPC https://liteforge.rpc.caldera.xyz/infra-partner-http then https://liteforge.rpc.caldera.xyz/http.
+Network: defineChain id 4441, "LitVM LiteForge", zkLTC native (18 decimals), RPC https://rpc.testnet.liteforge.zeeve.net.
 
 Addresses: copy apps/web/features/fi/config/testnet.generated.json; read `pump`, `pumpGraduationController`, `pumpGraduationRouter`, `pumpGraduationAdapter` with getAddress.
 

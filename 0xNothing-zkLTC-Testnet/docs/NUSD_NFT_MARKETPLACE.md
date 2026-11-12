@@ -58,7 +58,7 @@ forge test --match-contract NusdNftMarketplaceTest -vv
 forge build --sizes --skip DeployTestnet
 $env:PIXEL_NUSD_MARKET_OWNER = '<reviewed owner address>'
 $env:PIXEL_NUSD_MARKET_TREASURY = '<reviewed treasury address>'
-$env:LITVM_RPC_URL = 'https://liteforge.rpc.caldera.xyz/infra-partner-http'
+$env:LITVM_RPC_URL = 'https://rpc.testnet.liteforge.zeeve.net'
 forge script script/DeployNusdMarketplace.s.sol:DeployNusdMarketplace --rpc-url $env:LITVM_RPC_URL
 ```
 

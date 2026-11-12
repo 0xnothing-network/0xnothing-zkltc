@@ -1,10 +1,10 @@
 {
   "name": "LitVM LiteForge Testnet",
   "chainId": 4441,
-  "rpcUrl": "https://liteforge.rpc.caldera.xyz/infra-partner-http",
-  "fallbackRpcUrl": "https://liteforge.rpc.caldera.xyz/http",
-  "websocketUrl": "wss://liteforge.rpc.caldera.xyz/ws",
-  "explorerUrl": "https://liteforge.explorer.caldera.xyz",
+  "rpcUrl": "https://rpc.testnet.liteforge.zeeve.net",
+  "fallbackRpcUrl": "https://rpc.testnet.liteforge.zeeve.net",
+  "websocketUrl": "wss://rpc.testnet.liteforge.zeeve.net/ws",
+  "explorerUrl": "https://explorer.testnet.liteforge.zeeve.net",
   "nativeCurrency": {
     "name": "zkLTC",
     "symbol": "zkLTC",

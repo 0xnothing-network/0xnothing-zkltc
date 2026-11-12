@@ -44,6 +44,13 @@ const requestRateLimiter = createSlidingWindowRateLimiter({
   maxAttempts: RATE_MAX_ATTEMPTS,
   maxKeys: MAX_RATE_LIMIT_KEYS,
 });
+// Attempts given back after an RPC failure are themselves capped, so an outage
+// cannot be used to repeat image validation and RPC reads without limit.
+const refundRateLimiter = createSlidingWindowRateLimiter({
+  windowMs: RATE_WINDOW_MS,
+  maxAttempts: RATE_MAX_ATTEMPTS,
+  maxKeys: MAX_RATE_LIMIT_KEYS,
+});
 const consumedSignatures = new Map<string, number>();
 const inFlightSignatures = new Set<string>();
 const inFlightContentHashes = new Set<string>();
@@ -245,6 +252,9 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("[ipfs/upload] Reservation check failed:", error);
+    // The RPC failed, not the creator, so this attempt does not count toward their quota.
+    // A Pinata failure further down stays counted: that call is the one the quota protects.
+    if (refundRateLimiter.consume(rateKeys, now)) requestRateLimiter.refund(rateKeys, now);
     return jsonError("Could not verify the on-chain creation reservation", 503);
   }
   if (!reserved) {
@@ -362,6 +372,7 @@ function normalizeUploadDomain(value: string): string | null {
 
 function pruneTransientState(now: number) {
   requestRateLimiter.prune(now);
+  refundRateLimiter.prune(now);
   for (const [signature, timestamp] of consumedSignatures) {
     // A signature stays valid until `signedAt + SIGNATURE_TTL_MS`, and it may be
     // consumed up to FUTURE_CLOCK_SKEW_MS *before* `signedAt`. Retaining only

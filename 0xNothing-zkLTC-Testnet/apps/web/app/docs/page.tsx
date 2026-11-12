@@ -18,7 +18,6 @@ import { deployment } from "@fi/config/deployment";
 import testnet from "@fi/config/testnet.generated.json";
 import { NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
 import {
-  LITVM_RPC_FALLBACK_URL,
   PIXEL_CLASSIC_ADDRESS,
   PIXEL_NFT_ADDRESS,
   PUMP_FACTORY_ADDRESS,
@@ -111,7 +110,7 @@ export const litvmTestnet = defineChain({
   name: "LitVM LiteForge",
   nativeCurrency: { name: "zkLTC", symbol: "zkLTC", decimals: 18 },
   rpcUrls: {
-    default: { http: ["${deployment.chain.rpcUrl}", "${LITVM_RPC_FALLBACK_URL}"] },
+    default: { http: ["${deployment.chain.rpcUrl}"] },
   },
   blockExplorers: {
     default: { name: "LiteForge Explorer", url: "${deployment.chain.explorerUrl}" },
@@ -360,10 +359,10 @@ STACK
 
 CHAIN
 - LitVM LiteForge testnet: id 4441, native currency zkLTC (18 decimals).
-- RPC HTTP: https://liteforge.rpc.caldera.xyz/infra-partner-http, fallback https://liteforge.rpc.caldera.xyz/http.
-- RPC WS: wss://liteforge.rpc.caldera.xyz/infra-partner-ws, fallback wss://liteforge.rpc.caldera.xyz/ws.
-- Explorer: https://liteforge.explorer.caldera.xyz.
-- Source: 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts:6-14. Define the chain with viem defineChain and a fallback() transport.
+- RPC HTTP: https://rpc.testnet.liteforge.zeeve.net.
+- RPC WS: wss://rpc.testnet.liteforge.zeeve.net/ws.
+- Explorer: https://explorer.testnet.liteforge.zeeve.net.
+- Source: 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts:6-9. Define the chain with viem defineChain and a fallback() transport.
 
 ADDRESSES (load, do not hard-code)
 - Copy 0xNothing-zkLTC-Testnet/apps/web/features/fi/config/testnet.generated.json into the project as a JSON module and pass every address through getAddress(). Keys used here:
@@ -427,7 +426,7 @@ FLOW
 11. Refresh balances and the quote.
 
 UI STATES
-not connected | wrong network | swaps paused | loading quote | no route | quote ready (show route, expected out, minimum received, fee breakdown: LP 0.5% per hop + router 0.1% or 0.3%, slippage) | insufficient balance (leave gas when paying native) | needs approval | approving | awaiting signature | pending (link https://liteforge.explorer.caldera.xyz/tx/<hash>) | success | reverted / error with the decoded error name. Disable the button while a transaction is in flight (no double submit).
+not connected | wrong network | swaps paused | loading quote | no route | quote ready (show route, expected out, minimum received, fee breakdown: LP 0.5% per hop + router 0.1% or 0.3%, slippage) | insufficient balance (leave gas when paying native) | needs approval | approving | awaiting signature | pending (link https://explorer.testnet.liteforge.zeeve.net/tx/<hash>) | success | reverted / error with the decoded error name. Disable the button while a transaction is in flight (no double submit).
 
 DO NOT
 - Do not call any /api/* or /0xFi/api/* route of the 0xNothing web app.
@@ -447,7 +446,7 @@ Cite the source file and line for every address, function signature and fee valu
 
 const PUMP_TRADE_PROMPT = `You are building a 0xPump buy/sell panel in a Next.js + TypeScript app with viem and wagmi. 0xPump (ZeroXPumpV2) sells a token along a NUSD bonding curve on the LitVM LiteForge testnet.
 
-Network: viem defineChain with id 4441, name "LitVM LiteForge", native currency zkLTC (18 decimals), HTTP RPC https://liteforge.rpc.caldera.xyz/infra-partner-http then https://liteforge.rpc.caldera.xyz/http (apps/web/lib/publicConfig.ts:6-8), explorer https://liteforge.explorer.caldera.xyz.
+Network: viem defineChain with id 4441, name "LitVM LiteForge", native currency zkLTC (18 decimals), HTTP RPC https://rpc.testnet.liteforge.zeeve.net (apps/web/lib/publicConfig.ts:6), explorer https://explorer.testnet.liteforge.zeeve.net.
 
 Addresses: copy apps/web/features/fi/config/testnet.generated.json and read \`pump\` (the launchpad and the ERC-20 spender) and \`nusd\` (NUSD, 18 decimals). Use getAddress. No other hard-coded addresses.
 
@@ -500,9 +499,9 @@ STACK
 
 CHAIN
 - LitVM LiteForge testnet: id 4441, native currency zkLTC (18 decimals).
-- RPC HTTP: https://liteforge.rpc.caldera.xyz/infra-partner-http, fallback https://liteforge.rpc.caldera.xyz/http.
-- RPC WS: wss://liteforge.rpc.caldera.xyz/infra-partner-ws, fallback wss://liteforge.rpc.caldera.xyz/ws.
-- Source: 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts:6-12. Define the chain with viem defineChain and a fallback() transport.
+- RPC HTTP: https://rpc.testnet.liteforge.zeeve.net.
+- RPC WS: wss://rpc.testnet.liteforge.zeeve.net/ws.
+- Source: 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts:6-8. Define the chain with viem defineChain and a fallback() transport.
 
 ADDRESSES (load, do not hard-code)
 - Read 0xNothing-zkLTC-Testnet/contracts/deployments/v3-core.json at build time (copy it into the project as a JSON module). Assert chainId === 4441. Use keys:
@@ -563,7 +562,7 @@ FLOW: REDEEM
 5. writeContract, waitForTransactionReceipt, require status "success", decode RedeemedAtOracle, refresh.
 
 UI STATES
-not connected | wrong network | loading quote | quote ready (show rate, min received, slippage, backing ratio) | mint paused | price stale | insufficient balance | above supply ceiling (show available from SupplyCeilingExceeded) | awaiting signature | pending (link https://liteforge.explorer.caldera.xyz/tx/<hash>) | success | reverted / error with the decoded error name. Disable the button while a transaction is in flight (no double submit).
+not connected | wrong network | loading quote | quote ready (show rate, min received, slippage, backing ratio) | mint paused | price stale | insufficient balance | above supply ceiling (show available from SupplyCeilingExceeded) | awaiting signature | pending (link https://explorer.testnet.liteforge.zeeve.net/tx/<hash>) | success | reverted / error with the decoded error name. Disable the button while a transaction is in flight (no double submit).
 
 DO NOT
 - Do not call any /api/* or /0xFi/api/* route of the 0xNothing web app.
@@ -586,7 +585,7 @@ const PIXEL_MINT_PROMPT = `Build a "0xPixel mint studio" page in my Next.js (App
 
 CHAIN
 - Define the chain with viem defineChain: id 4441, name "LitVM LiteForge", native currency zkLTC (18 decimals).
-- RPC http: "https://liteforge.rpc.caldera.xyz/infra-partner-http", fallback "https://liteforge.rpc.caldera.xyz/http". WebSocket: "wss://liteforge.rpc.caldera.xyz/infra-partner-ws". Explorer: "https://liteforge.explorer.caldera.xyz". Multicall3: 0xca11bde05977b3631167028862be2a173976ca11. These come from 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts.
+- RPC http: "https://rpc.testnet.liteforge.zeeve.net". WebSocket: "wss://rpc.testnet.liteforge.zeeve.net/ws". Explorer: "https://explorer.testnet.liteforge.zeeve.net". Multicall3: 0xca11bde05977b3631167028862be2a173976ca11. These come from 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts.
 
 ADDRESSES
 - Load the collection address from 0xNothing-zkLTC-Testnet/contracts/deployments/v3-core.json key "pixelV2" (check "chainId" is 4441). Copy that JSON into my repo as config/0xnothing/v3-core.json and import it. Do not hard-code the address in components.

@@ -29,7 +29,7 @@ Prompts for AI coding agents are in [prompts/0xpump.md](./prompts/0xpump.md).
 | Fee recipient `FeeSplitter` | `0xAea1Ef82Dbe800BB3683009630813457D990a9B0` | `feeSplitter` in both files |
 | 0xFi DEX router (trading after graduation) | `0x1cda4793122a223A09be54ED5f664ba222eEe042` | `dexRouter` in `testnet.generated.json` |
 
-The web app reads the same keys through `apps/web/lib/publicConfig.ts:25-31`
+The web app reads the same keys through `apps/web/lib/publicConfig.ts:20-26`
 (`PUMP_FACTORY_ADDRESS`, `PUMP_NUSD_ADDRESS`, `PUMP_GRADUATION_ROUTER_ADDRESS`,
 `PUMP_GRADUATION_ADAPTER_ADDRESS`, `PUMP_GRADUATION_CONTROLLER_ADDRESS`,
 `PUMP_START_BLOCK`, `PUMP_SUBGRAPH_URL`).
@@ -338,7 +338,7 @@ export async function readMarket(token: Address) {
 
 `multicall` needs `contracts.multicall3` on the chain object, which the shared
 `liteforge` chain sets (`0xca11bde05977b3631167028862be2a173976ca11`,
-`apps/web/lib/publicConfig.ts:15`).
+`apps/web/lib/publicConfig.ts:10`).
 
 ## Flow: quote
 

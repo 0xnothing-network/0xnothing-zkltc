@@ -24,7 +24,7 @@ Build a "0xPixel mint studio" page in my Next.js (App Router) + TypeScript app u
 
 CHAIN
 - Define the chain with viem defineChain: id 4441, name "LitVM LiteForge", native currency zkLTC (18 decimals).
-- RPC http: "https://liteforge.rpc.caldera.xyz/infra-partner-http", fallback "https://liteforge.rpc.caldera.xyz/http". WebSocket: "wss://liteforge.rpc.caldera.xyz/infra-partner-ws". Explorer: "https://liteforge.explorer.caldera.xyz". Multicall3: 0xca11bde05977b3631167028862be2a173976ca11. These come from 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts.
+- RPC http: "https://rpc.testnet.liteforge.zeeve.net". WebSocket: "wss://rpc.testnet.liteforge.zeeve.net/ws". Explorer: "https://explorer.testnet.liteforge.zeeve.net". Multicall3: 0xca11bde05977b3631167028862be2a173976ca11. These come from 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts.
 
 ADDRESSES
 - Load the collection address from 0xNothing-zkLTC-Testnet/contracts/deployments/v3-core.json key "pixelV2" (check "chainId" is 4441). Copy that JSON into my repo as config/0xnothing/v3-core.json and import it. Do not hard-code the address in components.
@@ -74,7 +74,7 @@ ACCEPTANCE CHECKLIST
 Build a read-only "0xPixel gallery" in my Next.js (App Router) + TypeScript app with viem. It shows a wallet's 0xPixel V2 tokens and a detail page per token. No transactions.
 
 CHAIN
-- viem defineChain: id 4441, "LitVM LiteForge", zkLTC 18 decimals, RPC "https://liteforge.rpc.caldera.xyz/infra-partner-http" with fallback "https://liteforge.rpc.caldera.xyz/http", Multicall3 0xca11bde05977b3631167028862be2a173976ca11 (from 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts). Use a public client with batch.multicall enabled.
+- viem defineChain: id 4441, "LitVM LiteForge", zkLTC 18 decimals, RPC "https://rpc.testnet.liteforge.zeeve.net", Multicall3 0xca11bde05977b3631167028862be2a173976ca11 (from 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts). Use a public client with batch.multicall enabled.
 
 ADDRESSES
 - Copy 0xNothing-zkLTC-Testnet/contracts/deployments/v3-core.json into config/0xnothing/v3-core.json. V2 collection = "pixelV2", Classic (legacy, read-only) = "pixelV1". Assert chainId 4441.
@@ -113,7 +113,7 @@ ACCEPTANCE CHECKLIST
 Build a "0xPixel NUSD marketplace" listing/buying panel in my Next.js (App Router) + TypeScript app using viem + wagmi. Contract: NusdNftMarketplaceV2 on LitVM LiteForge testnet. Prices are in NUSD (ERC-20, 18 decimals). zkLTC pays gas only; no call sends value.
 
 CHAIN
-- defineChain id 4441, "LitVM LiteForge", zkLTC 18 decimals, RPC "https://liteforge.rpc.caldera.xyz/infra-partner-http" (fallback "https://liteforge.rpc.caldera.xyz/http"), Multicall3 0xca11bde05977b3631167028862be2a173976ca11 (from 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts).
+- defineChain id 4441, "LitVM LiteForge", zkLTC 18 decimals, RPC "https://rpc.testnet.liteforge.zeeve.net", Multicall3 0xca11bde05977b3631167028862be2a173976ca11 (from 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts).
 
 ADDRESSES
 - Copy 0xNothing-zkLTC-Testnet/contracts/deployments/v3-core.json (keys "nusdMarketplace", "nusd", "pixelV1", "pixelV2") and 0xNothing-zkLTC-Testnet/apps/web/lib/nusdMarketplace.generated.json (keys "address", "nusd", "implementation", "collections", "deploymentBlock") into config/0xnothing/. At start-up assert both have chainId 4441 and agree on market and NUSD addresses; otherwise disable trading.
@@ -189,7 +189,7 @@ ACCEPTANCE CHECKLIST
 Build an "offers" panel for the 0xPixel NUSD marketplace (NusdNftMarketplaceV2) in my Next.js (App Router) + TypeScript app with viem + wagmi. Users make escrowed NUSD offers on any token of an allowed collection; owners accept them.
 
 CHAIN
-- defineChain id 4441, "LitVM LiteForge", zkLTC 18 decimals, RPC "https://liteforge.rpc.caldera.xyz/infra-partner-http" (fallback "https://liteforge.rpc.caldera.xyz/http"), Multicall3 0xca11bde05977b3631167028862be2a173976ca11 (from 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts).
+- defineChain id 4441, "LitVM LiteForge", zkLTC 18 decimals, RPC "https://rpc.testnet.liteforge.zeeve.net", Multicall3 0xca11bde05977b3631167028862be2a173976ca11 (from 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts).
 
 ADDRESSES
 - Copy 0xNothing-zkLTC-Testnet/contracts/deployments/v3-core.json ("nusdMarketplace", "nusd", "pixelV1", "pixelV2") and 0xNothing-zkLTC-Testnet/apps/web/lib/nusdMarketplace.generated.json ("implementation") into config/0xnothing/. Assert chainId 4441 and matching addresses.
@@ -256,7 +256,7 @@ ACCEPTANCE CHECKLIST
 Build a "NUSD credits and market activity" section for the 0xPixel NUSD marketplace in my Next.js (App Router) + TypeScript app with viem + wagmi. It shows the user's withdrawable market credits with a Withdraw button, and a public activity feed from the Goldsky subgraph.
 
 CHAIN
-- defineChain id 4441, "LitVM LiteForge", zkLTC 18 decimals, RPC "https://liteforge.rpc.caldera.xyz/infra-partner-http" (fallback "https://liteforge.rpc.caldera.xyz/http") (from 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts).
+- defineChain id 4441, "LitVM LiteForge", zkLTC 18 decimals, RPC "https://rpc.testnet.liteforge.zeeve.net" (from 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts).
 
 ADDRESSES AND ENDPOINT
 - Market and NUSD: copy 0xNothing-zkLTC-Testnet/contracts/deployments/v3-core.json ("nusdMarketplace", "nusd") and 0xNothing-zkLTC-Testnet/apps/web/lib/nusdMarketplace.generated.json ("implementation") into config/0xnothing/.

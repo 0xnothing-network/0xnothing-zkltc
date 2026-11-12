@@ -158,7 +158,7 @@
     "subgraphUrl": "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxpump-testnet/staging/gn",
     "sourceVerification": {
       "status": "verified",
-      "explorer": "https://liteforge.explorer.caldera.xyz",
+      "explorer": "https://explorer.testnet.liteforge.zeeve.net",
       "compiler": "v0.8.34+commit.80d5c536",
       "optimizerRuns": 20000,
       "evmVersion": "paris",

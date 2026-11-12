@@ -53,9 +53,8 @@ Paths are relative to the `0xNothing-zkLTC-Testnet/` folder.
 | --- | --- | --- |
 | Chain id | `4441` | `contracts/deployments/v3-core.json:3`; `apps/web/features/pump/config.ts:26` |
 | Native currency | zkLTC, 18 decimals (gas, and NUSD collateral) | |
-| RPC (HTTP) | `https://liteforge.rpc.caldera.xyz/infra-partner-http` | `apps/web/lib/publicConfig.ts:6` |
-| RPC (HTTP, fallback) | `https://liteforge.rpc.caldera.xyz/http` | `apps/web/lib/publicConfig.ts:8` |
-| RPC (WebSocket) | `wss://liteforge.rpc.caldera.xyz/infra-partner-ws`, then `wss://liteforge.rpc.caldera.xyz/ws` | `apps/web/lib/publicConfig.ts:10-12` |
+| RPC (HTTP) | `https://rpc.testnet.liteforge.zeeve.net` | `apps/web/lib/publicConfig.ts:6` |
+| RPC (WebSocket) | `wss://rpc.testnet.liteforge.zeeve.net/ws` | `apps/web/lib/publicConfig.ts:8` |
 
 ## Contracts and addresses
 

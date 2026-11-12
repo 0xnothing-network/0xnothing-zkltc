@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createPublicClient, formatUnits, parseAbiItem, type Address, type Hex } from "viem";
-import { litvmTransport } from "@/lib/rpcTransport";
+import { isTransientRpcError, litvmTransport } from "@/lib/rpcTransport";
 import { deployment } from "@fi/config/deployment";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { liveLogClient } from "./liveLogClient";
@@ -10,6 +10,8 @@ const MAX_TAIL_BLOCKS = 5_000n;
 const BLOCK_TIMESTAMP_CONCURRENCY = 16;
 const PAIR_TAIL_CACHE_TTL_MS = 4_000;
 const STATIC_RPC_CACHE_TTL_MS = 10 * 60_000;
+/** How long an assumed 18 decimals stands in for a read that failed in transit. */
+const TRANSIENT_FAILURE_TTL_MS = 15_000;
 const NEGATIVE_FACTORY_PAIR_CACHE_TTL_MS = 5_000;
 const MAX_PAIR_TAIL_CACHE_ENTRIES = 64;
 const MAX_BLOCK_TIMESTAMP_CACHE_ENTRIES = 2_048;
@@ -37,7 +39,9 @@ const tokenDecimalsAbi = [
 const client = createPublicClient({
   transport: litvmTransport({
     batch: { batchSize: 100, wait: 10 },
-    retryCount: 0,
+    // One retry: token0()/token1() below have no fallback value, so a single
+    // dropped request would otherwise fail the whole tail.
+    retryCount: 1,
     timeout: 5_000,
   }, deployment.chain.rpcUrl),
 });
@@ -105,12 +109,18 @@ async function loadPairTailFromRpc(pool: Address, indexedBlock: number | null): 
   const capped = latest - requestedFromBlock + 1n > MAX_TAIL_BLOCKS;
   const fromBlock = capped ? latest - MAX_TAIL_BLOCKS + 1n : requestedFromBlock;
 
-  const [syncLogs, swapLogs, mintLogs, burnLogs] = await Promise.all([
-    liveLogClient.getLogs({ address: pool, event: syncEvent, fromBlock, toBlock: latest }),
-    liveLogClient.getLogs({ address: pool, event: swapEvent, fromBlock, toBlock: latest }),
-    liveLogClient.getLogs({ address: pool, event: mintEvent, fromBlock, toBlock: latest }),
-    liveLogClient.getLogs({ address: pool, event: burnEvent, fromBlock, toBlock: latest }),
-  ]);
+  // One request for all four events. getLogs is the slowest call on this RPC, and
+  // four scans of the same range failed the whole tail when any one of them timed out.
+  const logs = await liveLogClient.getLogs({
+    address: pool, events: [syncEvent, swapEvent, mintEvent, burnEvent], fromBlock, toBlock: latest,
+  });
+  type TailLog = (typeof logs)[number];
+  const named = <Name extends TailLog["eventName"]>(name: Name) =>
+    logs.filter((log): log is Extract<TailLog, { eventName: Name }> => log.eventName === name);
+  const syncLogs = named("Sync");
+  const swapLogs = named("Swap");
+  const mintLogs = named("Mint");
+  const burnLogs = named("Burn");
 
   const rawEvents = [
     ...syncLogs.map((log) => ({
@@ -201,17 +211,28 @@ export interface PairTokenMetadata {
 }
 
 export async function pairTokenMetadata(pool: Address): Promise<PairTokenMetadata> {
-  return pairMetadataCache.load(pool.toLowerCase(), () => loadPairTokenMetadata(pool));
+  // Wrong decimals scale every amount by orders of magnitude, so a guess made
+  // because the RPC was slow must not be kept for the full ten minutes.
+  let transient = false;
+  return pairMetadataCache.load(
+    pool.toLowerCase(),
+    () => loadPairTokenMetadata(pool, () => { transient = true; }),
+    () => transient ? TRANSIENT_FAILURE_TTL_MS : STATIC_RPC_CACHE_TTL_MS,
+  );
 }
 
-async function loadPairTokenMetadata(pool: Address): Promise<PairTokenMetadata> {
+async function loadPairTokenMetadata(pool: Address, onTransientFailure: () => void): Promise<PairTokenMetadata> {
   const [token0, token1] = await Promise.all([
     client.readContract({ address: pool, abi: pairTokensAbi, functionName: "token0" }),
     client.readContract({ address: pool, abi: pairTokensAbi, functionName: "token1" }),
   ]);
+  const assume18 = (error: unknown) => {
+    if (isTransientRpcError(error)) onTransientFailure();
+    return 18;
+  };
   const [decimals0, decimals1] = await Promise.all([
-    client.readContract({ address: token0, abi: tokenDecimalsAbi, functionName: "decimals" }).catch(() => 18),
-    client.readContract({ address: token1, abi: tokenDecimalsAbi, functionName: "decimals" }).catch(() => 18),
+    client.readContract({ address: token0, abi: tokenDecimalsAbi, functionName: "decimals" }).catch(assume18),
+    client.readContract({ address: token1, abi: tokenDecimalsAbi, functionName: "decimals" }).catch(assume18),
   ]);
   return { token0, token1, decimals0, decimals1 };
 }

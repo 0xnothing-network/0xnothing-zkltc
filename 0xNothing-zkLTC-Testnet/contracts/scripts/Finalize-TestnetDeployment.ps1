@@ -387,7 +387,7 @@ $verifiedGraduationState = [ordered]@{
 }
 $pendingSourceVerification = [ordered]@{
     status = "pending"
-    explorer = "https://liteforge.explorer.caldera.xyz"
+    explorer = "https://explorer.testnet.liteforge.zeeve.net"
     compiler = "v0.8.34+commit.80d5c536"
     optimizerRuns = 20000
     evmVersion = "paris"

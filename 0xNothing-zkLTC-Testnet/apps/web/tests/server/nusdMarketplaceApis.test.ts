@@ -11,7 +11,7 @@ const MARKET = "0x0000000000000000000000000000000000000011";
 const NUSD = "0x0000000000000000000000000000000000000022";
 const NFT = "0x0000000000000000000000000000000000000033";
 const history = evaluateModule<{ parseNusdActivityCursor: (cursor: string | null) => unknown }>(new URL("../../lib/nusdMarketplaceActivity.ts", import.meta.url), { viem, "./nusdMarketplace": marketplace }, { Error });
-function activityHarness(options: { configured?: boolean; fail?: boolean; subgraph?: "ok" | "fail" } = {}) {
+function activityHarness(options: { configured?: boolean; fail?: boolean; subgraph?: "ok" | "fail" | "lag" } = {}) {
   const calls: Parameters<typeof readNusdMarketActivity>[1][] = [];
   const subgraphCalls: { url: string; options: { cursor?: string | null; latestBlock?: bigint } }[] = [];
   const background: Array<() => unknown> = [];
@@ -31,9 +31,10 @@ function activityHarness(options: { configured?: boolean; fail?: boolean; subgra
     "@/lib/boundedCache": { createBoundedCache: agingCache }, "@/lib/server/cdnCache": { CDN_STALE_SECONDS, publicCdnCacheHeaders, isFreshRead },
     "@/lib/nusdMarketplaceConfig": { NUSD_MARKETPLACE_ADDRESS: options.configured === false ? undefined : MARKET, NFT_NUSD_ADDRESS: NUSD },
     "@/lib/pixelCollections": { PIXEL_COLLECTIONS: [{ address: NFT }] },
-    "@/lib/nusdMarketplaceSubgraph": { readNusdActivityFromSubgraph: async (url: string, params: typeof subgraphCalls[number]["options"]): Promise<NusdActivityPage> => {
+    "@/lib/nusdMarketplaceSubgraph": { mergeLaggingActivity: (recent?: NusdActivityPage, indexed?: NusdActivityPage) => recent ?? indexed, readNusdActivityFromSubgraph: async (url: string, params: typeof subgraphCalls[number]["options"]): Promise<NusdActivityPage> => {
       subgraphCalls.push({ url, options: params });
       if (options.subgraph === "fail") throw new Error("subgraph lagging");
+      if (options.subgraph === "lag") throw Object.assign(new Error("behind"), { laggingPage: { events: [], nextCursor: null, fromBlock: "0", throughBlock: "100" } });
       return { events: [], nextCursor: null, fromBlock: "0", throughBlock: "5000" };
     } },
     "@/lib/nusdMarketplace.generated.json": { default: { address: MARKET, deploymentBlock: "900" } },
@@ -42,7 +43,7 @@ function activityHarness(options: { configured?: boolean; fail?: boolean; subgra
       if (options.fail) throw new Error("secret RPC diagnostic");
       return { events: [], nextCursor: "900:0", fromBlock: "900", throughBlock: "1000" };
     } },
-  }, { URL, console: { warn() {} }, process: { env: options.subgraph ? { PIXEL_NUSD_SUBGRAPH_URL: " https://graph.test " } : {} } });
+  }, { URL, setTimeout, clearTimeout, console: { warn() {} }, process: { env: options.subgraph ? { PIXEL_NUSD_SUBGRAPH_URL: " https://graph.test " } : {} } });
   return {
     calls, subgraphCalls, background,
     age: (ms: number) => { ageOffsetMs += ms; },
@@ -150,9 +151,28 @@ test("activity API prefers the NUSD subgraph and falls back to the verified RPC 
   assert.equal(indexed.subgraphCalls[1].options.latestBlock, undefined);
   const fallback = activityHarness({ subgraph: "fail" });
   assert.equal((await fallback.get()).status, 200);
-  assert.equal(fallback.subgraphCalls.length, 1);
+  // The strict read fails, then the scan runs beside a second read that accepts lag.
+  assert.equal(fallback.subgraphCalls.length, 2);
+  assert.equal(fallback.subgraphCalls[1].options.latestBlock, undefined);
   assert.equal(fallback.calls.length, 1);
   const unconfigured = activityHarness();
   await unconfigured.get();
   assert.equal(unconfigured.subgraphCalls.length, 0);
+});
+
+test("activity API reuses a lagging subgraph page and keeps a retained page through a failed refresh", async () => {
+  const lagging = activityHarness({ subgraph: "lag" });
+  assert.equal((await lagging.get()).status, 200);
+  assert.equal(lagging.subgraphCalls.length, 1, "the lagging read's own page is merged, not fetched again");
+  assert.equal(lagging.calls.length, 1);
+
+  const options: { fail?: boolean } = {};
+  const api = activityHarness(options);
+  assert.equal((await api.get()).status, 200);
+  options.fail = true;
+  api.age(6_000);
+  const retained = await api.get("?fresh=1");
+  assert.equal(retained.status, 200, "a failed refresh answers with the retained page");
+  assert.equal((await retained.json()).nextCursor, "900:0");
+  assert.equal((await api.get("?force=1")).status, 503, "a forced read still reports the failure");
 });

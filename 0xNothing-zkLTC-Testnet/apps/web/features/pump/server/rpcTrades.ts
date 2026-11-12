@@ -72,13 +72,23 @@ export async function getRpcTrades(
   return hydratePumpTradeLogs(selected);
 }
 
+const LIVE_TAIL_DEADLINE_MS = 4_000;
+
 export async function getRpcTradesAfterBlock(
   token: Address | undefined,
   indexedBlock: bigint,
   trader?: Address,
 ): Promise<{ trades: PumpTrade[]; truncated: boolean }> {
   const key = `${token?.toLowerCase() ?? "all"}:${trader?.toLowerCase() ?? "all"}:${indexedBlock}`;
-  return liveTailCache.load(key, () => loadRpcTradesAfterBlock(token, indexedBlock, trader));
+  const tail = liveTailCache.load(key, () => loadRpcTradesAfterBlock(token, indexedBlock, trader));
+  // The live tail is optional: callers keep their indexed data and show a delay
+  // warning. A slow log backend must not hold the response through its retries;
+  // the scan keeps running and a later poll picks it up from the cache.
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("Live trade tail timed out")), LIVE_TAIL_DEADLINE_MS);
+  });
+  return Promise.race([tail, deadline]).finally(() => clearTimeout(timer));
 }
 
 async function loadRpcTradesAfterBlock(

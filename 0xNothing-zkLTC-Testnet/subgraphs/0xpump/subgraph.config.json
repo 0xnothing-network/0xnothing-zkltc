@@ -1,7 +1,7 @@
 {
   "network": "liteforge",
   "chainId": 4441,
-  "rpcUrl": "https://liteforge.rpc.caldera.xyz/infra-partner-http",
+  "rpcUrl": "https://rpc.testnet.liteforge.zeeve.net",
   "contractAddress": "0x0239baec3c695a6ea893ad90a7608112e0580526",
   "startBlock": 61141414,
   "deploymentName": "zeroxpump-testnet",

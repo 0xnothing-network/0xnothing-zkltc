@@ -60,6 +60,26 @@ function event(row: Row): NusdActivityEvent {
 }
 
 /**
+ * First page while the subgraph lags the chain: the RPC scan only reaches the most
+ * recent blocks, so its events lead and the indexed history fills the rest of the
+ * page. Events between the two ranges appear once the subgraph catches up.
+ */
+export function mergeLaggingActivity(recent: NusdActivityPage | undefined, indexed: NusdActivityPage | undefined, limit: number): NusdActivityPage | undefined {
+  if (!recent || !indexed || recent.events.length >= limit) return recent ?? indexed;
+  const seen = new Set(recent.events.map((event) => `${event.transactionHash}:${event.logIndex}`));
+  const older = indexed.events.filter((event) => !seen.has(`${event.transactionHash}:${event.logIndex}`));
+  const events = [...recent.events, ...older].slice(0, limit);
+  const last = events[events.length - 1];
+  const more = recent.events.length + older.length > limit || indexed.nextCursor !== null;
+  return {
+    events,
+    nextCursor: more && last ? `${last.blockNumber}:${last.logIndex}` : null,
+    fromBlock: last?.blockNumber ?? indexed.fromBlock,
+    throughBlock: recent.throughBlock,
+  };
+}
+
+/**
  * Reads NUSD marketplace history from the dedicated NUSD subgraph. Cursors use
  * the same "block:logIndex" format as the RPC reader, so the client can page
  * across either source. Throws (for an RPC fallback) on indexing errors, lag on
@@ -91,14 +111,19 @@ export async function readNusdActivityFromSubgraph(
   const rows = json.data?.activities;
   if (!meta?.block || typeof meta.block.number !== "number" || meta.hasIndexingErrors || !Array.isArray(rows)) throw new Error("NUSD subgraph is unavailable");
   const head = BigInt(meta.block.number);
-  if (!cursor && options.latestBlock !== undefined && options.latestBlock > head + NUSD_SUBGRAPH_MAX_LAG_BLOCKS) throw new Error("NUSD subgraph is behind the chain");
   if (rows.length > options.limit + 1) throw new Error("NUSD subgraph returned too many rows");
   const events = rows.slice(0, options.limit).map(event);
   const last = events[events.length - 1];
-  return {
+  const page: NusdActivityPage = {
     events,
     nextCursor: rows.length > options.limit && last ? `${last.blockNumber}:${last.logIndex}` : null,
     fromBlock: last?.blockNumber ?? "0",
     throughBlock: (cursor?.block ?? head).toString(),
   };
+  if (!cursor && options.latestBlock !== undefined && options.latestBlock > head + NUSD_SUBGRAPH_MAX_LAG_BLOCKS) {
+    // The page is valid history, only not current. It travels with the error so the
+    // caller can merge it under a recent RPC scan without asking the subgraph again.
+    throw Object.assign(new Error("NUSD subgraph is behind the chain"), { laggingPage: page });
+  }
+  return page;
 }

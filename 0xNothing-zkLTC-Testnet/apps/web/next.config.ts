@@ -15,7 +15,7 @@ const contentSecurityPolicy = [
   // Browser code talks only to this origin and the LiteForge RPC (HTTP reads, log
   // subscriptions); everything else is proxied, so an injected script cannot post
   // data to an arbitrary host.
-  `connect-src 'self' https://liteforge.rpc.caldera.xyz wss://liteforge.rpc.caldera.xyz${isDevelopment ? " http: ws:" : ""}`,
+  `connect-src 'self' https://rpc.testnet.liteforge.zeeve.net wss://rpc.testnet.liteforge.zeeve.net${isDevelopment ? " http: ws:" : ""}`,
   "worker-src 'self' blob:",
   "manifest-src 'self'",
   ...(isDevelopment ? [] : ["upgrade-insecure-requests"]),

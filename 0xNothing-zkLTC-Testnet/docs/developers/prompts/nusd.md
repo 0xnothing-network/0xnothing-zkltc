@@ -26,9 +26,9 @@ STACK
 
 CHAIN
 - LitVM LiteForge testnet: id 4441, native currency zkLTC (18 decimals).
-- RPC HTTP: https://liteforge.rpc.caldera.xyz/infra-partner-http, fallback https://liteforge.rpc.caldera.xyz/http.
-- RPC WS: wss://liteforge.rpc.caldera.xyz/infra-partner-ws, fallback wss://liteforge.rpc.caldera.xyz/ws.
-- Source: 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts:6-12. Define the chain with viem defineChain and a fallback() transport.
+- RPC HTTP: https://rpc.testnet.liteforge.zeeve.net.
+- RPC WS: wss://rpc.testnet.liteforge.zeeve.net/ws.
+- Source: 0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts:6-8. Define the chain with viem defineChain and a fallback() transport.
 
 ADDRESSES (load, do not hard-code)
 - Read 0xNothing-zkLTC-Testnet/contracts/deployments/v3-core.json at build time (copy it into the project as a JSON module). Assert chainId === 4441. Use keys:
@@ -89,7 +89,7 @@ FLOW: REDEEM
 5. writeContract, waitForTransactionReceipt, require status "success", decode RedeemedAtOracle, refresh.
 
 UI STATES
-not connected | wrong network | loading quote | quote ready (show rate, min received, slippage, backing ratio) | mint paused | price stale | insufficient balance | above supply ceiling (show available from SupplyCeilingExceeded) | awaiting signature | pending (link https://liteforge.explorer.caldera.xyz/tx/<hash>) | success | reverted / error with the decoded error name. Disable the button while a transaction is in flight (no double submit).
+not connected | wrong network | loading quote | quote ready (show rate, min received, slippage, backing ratio) | mint paused | price stale | insufficient balance | above supply ceiling (show available from SupplyCeilingExceeded) | awaiting signature | pending (link https://explorer.testnet.liteforge.zeeve.net/tx/<hash>) | success | reverted / error with the decoded error name. Disable the button while a transaction is in flight (no double submit).
 
 DO NOT
 - Do not call any /api/* or /0xFi/api/* route of the 0xNothing web app.
@@ -119,7 +119,7 @@ STACK
 
 CHAIN
 - LitVM LiteForge testnet, id 4441, native zkLTC (18 decimals).
-- RPC: https://liteforge.rpc.caldera.xyz/infra-partner-http, fallback https://liteforge.rpc.caldera.xyz/http (0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts:6-8).
+- RPC: https://rpc.testnet.liteforge.zeeve.net (0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts:6).
 
 ADDRESSES
 - Load 0xNothing-zkLTC-Testnet/contracts/deployments/v3-core.json, assert chainId 4441, use `nusd` and `ltcOracle`. Do not hard-code.
@@ -160,7 +160,7 @@ FLOW
 5. Reported, grace passed, still not fresh -> amount input. Read balance, totalSupply, totalCollateralWei fresh. quote = amount * reserve / supply. minOut = quote * (10000n - slippageBps) / 10000n (default 50n). simulateContract emergencyRedeem(amount, minOut, account), writeContract, waitForTransactionReceipt, require "success", decode EmergencyRedeemed.
 
 UI STATES
-not connected | wrong network | oracle healthy | failure not reported | reported, waiting (countdown to opensAt) | exit open (amount, quote, min received) | awaiting signature | pending (explorer link https://liteforge.explorer.caldera.xyz/tx/<hash>) | success | error with decoded name (show availableAt from OracleFailureGracePending as a date).
+not connected | wrong network | oracle healthy | failure not reported | reported, waiting (countdown to opensAt) | exit open (amount, quote, min received) | awaiting signature | pending (explorer link https://explorer.testnet.liteforge.zeeve.net/tx/<hash>) | success | error with decoded name (show availableAt from OracleFailureGracePending as a date).
 
 DO NOT
 - No /api/* routes of the 0xNothing web app, no subgraph data for amounts, no secrets.
@@ -185,7 +185,7 @@ STACK
 
 CHAIN
 - LitVM LiteForge testnet, id 4441, native zkLTC (18 decimals).
-- RPC: https://liteforge.rpc.caldera.xyz/infra-partner-http, fallback https://liteforge.rpc.caldera.xyz/http (0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts:6-8).
+- RPC: https://rpc.testnet.liteforge.zeeve.net (0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts:6).
 
 ADDRESSES
 - Load 0xNothing-zkLTC-Testnet/contracts/deployments/v3-core.json, assert chainId 4441, use keys `nusd` and `rewardStaking`. Do not hard-code. Do NOT use `nusdPointsStaking` from 0xFi/contracts/deployments/latest.json: that is the retired v1 xPoints module.
@@ -248,7 +248,7 @@ FLOW: WITHDRAW
 3. simulate + write withdraw(positionId), wait, require "success", refresh.
 
 UI STATES
-not connected | wrong network | loading | no positions | position list (amount, lock, multiplier, unlock date in UTC, Locked/Matured/Withdrawn) | needs approval -> approving (pending) -> approved | staking pending | claim available / nothing to claim | awaiting signature | pending (explorer link https://liteforge.explorer.caldera.xyz/tx/<hash>) | success | error with decoded name (show PositionLocked unlockTime as a date). Disable buttons while any transaction is in flight.
+not connected | wrong network | loading | no positions | position list (amount, lock, multiplier, unlock date in UTC, Locked/Matured/Withdrawn) | needs approval -> approving (pending) -> approved | staking pending | claim available / nothing to claim | awaiting signature | pending (explorer link https://explorer.testnet.liteforge.zeeve.net/tx/<hash>) | success | error with decoded name (show PositionLocked unlockTime as a date). Disable buttons while any transaction is in flight.
 
 DO NOT
 - No /api/* or /0xFi/api/* routes of the 0xNothing web app. No subgraph (none indexes RewardStaking). No secrets.
@@ -274,7 +274,7 @@ STACK
 - Next.js (App Router) + TypeScript (strict) + viem 2. bigint for every amount; format with formatUnits(value, 18).
 
 CHAIN
-- LitVM LiteForge testnet, id 4441. RPC https://liteforge.rpc.caldera.xyz/infra-partner-http with fallback https://liteforge.rpc.caldera.xyz/http; WS wss://liteforge.rpc.caldera.xyz/infra-partner-ws then wss://liteforge.rpc.caldera.xyz/ws (0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts:6-12).
+- LitVM LiteForge testnet, id 4441. RPC https://rpc.testnet.liteforge.zeeve.net; WS wss://rpc.testnet.liteforge.zeeve.net/ws (0xNothing-zkLTC-Testnet/apps/web/lib/publicConfig.ts:6-8).
 
 ADDRESSES
 - Load 0xNothing-zkLTC-Testnet/contracts/deployments/v3-core.json (assert chainId 4441): `nusd`, `ltcOracle`, `rewardStaking`, `scriptBlock` (first block for log scans, 61141328).

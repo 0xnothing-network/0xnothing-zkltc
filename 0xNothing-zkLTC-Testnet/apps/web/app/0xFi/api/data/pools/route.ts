@@ -6,7 +6,7 @@ import {
   parseAbiItem,
   type Address,
 } from "viem";
-import { litvmTransport } from "@/lib/rpcTransport";
+import { isTransientRpcError, litvmTransport } from "@/lib/rpcTransport";
 import { deployment } from "@fi/config/deployment";
 import { communityLiquidityLockerAbi } from "@fi/lib/abis/locker";
 import { tokenMetadataRegistryAbi } from "@fi/lib/abis/metadata";
@@ -48,6 +48,8 @@ const DEAD_ADDRESS: Address = "0x000000000000000000000000000000000000dEaD";
 const TOKEN_POINT_TTL_MS = 5 * 60_000;
 const MAX_TOKEN_POINT_CACHE_ENTRIES = 2_048;
 const REGISTRY_IMAGE_TTL_MS = 5 * 60_000;
+/** How long a placeholder stands in for a read that failed in transit. */
+const TRANSIENT_FAILURE_TTL_MS = 15_000;
 const MAX_REGISTRY_IMAGE_CACHE_ENTRIES = 2_048;
 const lifecycleAbi = [{
   type: "function", name: "status", stateMutability: "view",
@@ -65,8 +67,9 @@ const client = createPublicClient({
   transport: litvmTransport({
     batch: { batchSize: 100, wait: 10 },
     // Indexed values and existing warnings are the fallback for display reads.
-    // A refresh must not stall through multiple long RPC retry windows.
-    retryCount: 0,
+    // A refresh must not stall through multiple long RPC retry windows: one retry,
+    // so a single dropped request does not turn a token into its placeholder.
+    retryCount: 1,
     timeout: 5_000,
   }, deployment.chain.rpcUrl),
 });
@@ -275,19 +278,30 @@ const registryImageCache = createBoundedCache<string>({
   maxInFlight: MAX_REGISTRY_IMAGE_CACHE_ENTRIES,
 });
 
-async function loadTokenPoint(address: Address): Promise<PoolTokenPoint> {
+async function loadTokenPoint(address: Address, onTransientFailure: () => void): Promise<PoolTokenPoint> {
   const fallback = `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const or = <T,>(placeholder: T) => (error: unknown) => {
+    if (isTransientRpcError(error)) onTransientFailure();
+    return placeholder;
+  };
   const [symbol, name, decimals, imageURI] = await Promise.all([
-    client.readContract({ address, abi: erc20Abi, functionName: "symbol" }).catch(() => fallback),
-    client.readContract({ address, abi: erc20Abi, functionName: "name" }).catch(() => "Unknown token"),
-    client.readContract({ address, abi: erc20Abi, functionName: "decimals" }).catch(() => 18),
-    client.readContract({ address, abi: tokenImageAbi, functionName: "imageURI" }).catch(() => ""),
+    client.readContract({ address, abi: erc20Abi, functionName: "symbol" }).catch(or(fallback)),
+    client.readContract({ address, abi: erc20Abi, functionName: "name" }).catch(or("Unknown token")),
+    client.readContract({ address, abi: erc20Abi, functionName: "decimals" }).catch(or(18)),
+    client.readContract({ address, abi: tokenImageAbi, functionName: "imageURI" }).catch(or("")),
   ]);
   return { id: address, symbol, name, decimals, imageUrl: tokenImageUrl(imageURI) };
 }
 
 async function tokenPoint(address: Address): Promise<PoolTokenPoint> {
-  return tokenPointCache.load(address.toLowerCase(), () => loadTokenPoint(address));
+  // A token that reverts or lacks a getter keeps its placeholder for the full window.
+  // A read lost to a slow RPC is retried soon, so one bad moment is not shown for minutes.
+  let transient = false;
+  return tokenPointCache.load(
+    address.toLowerCase(),
+    () => loadTokenPoint(address, () => { transient = true; }),
+    () => transient ? TRANSIENT_FAILURE_TTL_MS : TOKEN_POINT_TTL_MS,
+  );
 }
 
 async function enrichPumpTokenImages(pools: PoolPoint[]): Promise<void> {
@@ -340,15 +354,19 @@ async function enrichRegistryImages(pools: PoolPoint[]): Promise<void> {
 }
 
 async function registryImage(registry: Address, token: Address): Promise<string> {
+  let transient = false;
   return registryImageCache.load(token.toLowerCase(), async () => {
     const imageURI = await client.readContract({
       address: registry,
       abi: tokenMetadataRegistryAbi,
       functionName: "imageURI",
       args: [token],
-    }).catch(() => "");
+    }).catch((error: unknown) => {
+      transient = isTransientRpcError(error);
+      return "";
+    });
     return tokenImageUrl(imageURI) ?? "";
-  });
+  }, () => transient ? TRANSIENT_FAILURE_TTL_MS : REGISTRY_IMAGE_TTL_MS);
 }
 
 async function enrichLockBurnBadges(pools: PoolPoint[]): Promise<void> {
@@ -414,6 +432,9 @@ async function loadRpcTail(indexedBlock: number | null): Promise<{
   }
   const capped = latest - requestedFrom + 1n > MAX_RPC_TAIL_BLOCKS;
   const fromBlock = capped ? latest - MAX_RPC_TAIL_BLOCKS + 1n : requestedFrom;
+  // The caller answers a capped tail with full factory discovery, which already
+  // lists every pair; scanning the capped window as well only adds a slow log read.
+  if (capped) return { pools: [], fromBlock, toBlock: latest, capped };
   const logs = await liveLogClient.getLogs({
     address: factory,
     event: pairCreatedEvent,

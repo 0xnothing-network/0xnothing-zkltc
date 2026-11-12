@@ -11,7 +11,7 @@ const require = createRequire(path.join(root, "apps/web/package.json"));
 const { createPublicClient, createWalletClient, http, defineChain, keccak256,
   formatEther, encodeDeployData, decodeEventLog } = require("viem");
 const { privateKeyToAccount } = require("viem/accounts");
-const RPC = "https://liteforge.rpc.caldera.xyz/infra-partner-http";
+const RPC = "https://rpc.testnet.liteforge.zeeve.net";
 const CHAIN_ID = 4441;
 const MAX_TRANSACTION_COST = 50_000_000_000_000_000n; // 0.05 testnet zkLTC.
 const chain = defineChain({ id: CHAIN_ID, name: "LitVM LiteForge",

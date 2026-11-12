@@ -5,12 +5,21 @@
   "compatibility_date": "2026-08-31",
   "compatibility_flags": ["nodejs_compat"],
   "keep_vars": true,
-  // The custom domain is the only public host: a workers.dev twin skips the zone's
+  // The custom domains are the only public hosts: a workers.dev twin skips the zone's
   // WAF, rate limits and cache, and cannot sign uploads (UPLOAD_SIGNING_DOMAIN).
+  // Every host listed here must also be listed in UPLOAD_SIGNING_DOMAIN below.
   "workers_dev": false,
   "routes": [
     {
       "pattern": "0xnothing.app",
+      "custom_domain": true
+    },
+    {
+      "pattern": "0xnothing.network",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.0xnothing.network",
       "custom_domain": true
     }
   ],
@@ -23,7 +32,7 @@
   },
   "vars": {
     "CLOUDFLARE_WORKERS": "true",
-    "UPLOAD_SIGNING_DOMAIN": "0xnothing.app",
+    "UPLOAD_SIGNING_DOMAIN": "0xnothing.app,0xnothing.network,www.0xnothing.network",
     "UPLOAD_TRUSTED_PROXY_CLIENT_IP_HEADER": "cf-connecting-ip",
     "FI_TRUSTED_PROXY_CLIENT_IP_HEADER": "cf-connecting-ip"
   },

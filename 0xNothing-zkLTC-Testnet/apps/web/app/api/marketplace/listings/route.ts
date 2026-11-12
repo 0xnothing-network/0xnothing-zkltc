@@ -159,7 +159,8 @@ async function fetchPixelTokensOnchain(
           }
         : null;
     }
-    pixelTokenCache.set(pixelTokenKey(collection, tokenId), metadata);
+    // A failed read is retried soon; only a token read successfully keeps the full window.
+    pixelTokenCache.set(pixelTokenKey(collection, tokenId), metadata, result?.status === "success" ? undefined : 2_000);
     output[tokenId] = metadata;
   }
 

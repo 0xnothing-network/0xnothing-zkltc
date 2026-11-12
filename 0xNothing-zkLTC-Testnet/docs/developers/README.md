@@ -28,11 +28,10 @@ addresses.
 | Chain | LitVM LiteForge (testnet) | `apps/web/config/wagmi.ts` |
 | Chain id | `4441` | `apps/web/features/fi/config/deployment.ts:5` |
 | Native gas token | zkLTC, 18 decimals | `apps/web/config/wagmi.ts` (`nativeCurrency`) |
-| RPC (primary) | `https://liteforge.rpc.caldera.xyz/infra-partner-http` | `apps/web/lib/publicConfig.ts:6` |
-| RPC (fallback) | `https://liteforge.rpc.caldera.xyz/http` | `apps/web/lib/publicConfig.ts:8` |
-| WebSocket (in order) | `wss://liteforge.rpc.caldera.xyz/infra-partner-ws`, then `wss://liteforge.rpc.caldera.xyz/ws` | `apps/web/lib/publicConfig.ts:10-13` |
-| Explorer | `https://liteforge.explorer.caldera.xyz` | `apps/web/lib/publicConfig.ts:14` |
-| Multicall3 | `0xca11bde05977b3631167028862be2a173976ca11` | `apps/web/lib/publicConfig.ts:15` |
+| RPC (HTTP) | `https://rpc.testnet.liteforge.zeeve.net` | `apps/web/lib/publicConfig.ts:6` |
+| WebSocket | `wss://rpc.testnet.liteforge.zeeve.net/ws` | `apps/web/lib/publicConfig.ts:8` |
+| Explorer | `https://explorer.testnet.liteforge.zeeve.net` | `apps/web/lib/publicConfig.ts:9` |
+| Multicall3 | `0xca11bde05977b3631167028862be2a173976ca11` | `apps/web/lib/publicConfig.ts:10` |
 
 LiteForge produces a block about every 0.25 s (`apps/web/lib/wagmi.ts:12-13`),
 so receipts arrive quickly. Poll at about 1 s.
@@ -63,7 +62,7 @@ are relative to `0xNothing-zkLTC-Testnet/`.
 | 0xFi | `0xFi/contracts/deployments/v3-fi.json` | DEX, lending, synth, farm, graduation adapter/controller |
 | 0xPump details and graduation state | `deployments/liteforge-testnet/deployments.json` | `pump.launchpad`, `pump.configuration`, `pump.graduation` |
 | NUSD marketplace | `apps/web/lib/nusdMarketplace.generated.json` | `address`, `nusd`, `burnBps`, `creatorBps`, `collections`, `deploymentBlock` |
-| 0xPixel collections | `apps/web/lib/publicConfig.ts:17-23` | `PIXEL_NFT_ADDRESS` (V2, new mints), `PIXEL_CLASSIC_ADDRESS` (Classic, read-only), start blocks |
+| 0xPixel collections | `apps/web/lib/publicConfig.ts:12-18` | `PIXEL_NFT_ADDRESS` (V2, new mints), `PIXEL_CLASSIC_ADDRESS` (Classic, read-only), start blocks |
 | RWA markets | `shared/rwa/markets.json` | `markets` (empty: no RWA market is deployed yet) |
 
 `0xFi/contracts/deployments/latest.json` and the `v1`/`v2` files are older
@@ -127,24 +126,22 @@ export const liteforge = defineChain({
   rpcUrls: {
     default: {
       http: [
-        "https://liteforge.rpc.caldera.xyz/infra-partner-http",
-        "https://liteforge.rpc.caldera.xyz/http",
+        "https://rpc.testnet.liteforge.zeeve.net",
       ],
       webSocket: [
-        "wss://liteforge.rpc.caldera.xyz/infra-partner-ws",
-        "wss://liteforge.rpc.caldera.xyz/ws",
+        "wss://rpc.testnet.liteforge.zeeve.net/ws",
       ],
     },
   },
   blockExplorers: {
-    default: { name: "LiteForge Explorer", url: "https://liteforge.explorer.caldera.xyz" },
+    default: { name: "LiteForge Explorer", url: "https://explorer.testnet.liteforge.zeeve.net" },
   },
   contracts: {
     multicall3: { address: "0xca11bde05977b3631167028862be2a173976ca11", blockCreated: 1 },
   },
 });
 
-// Reads: primary endpoint, then the public fallback (same as apps/web/lib/rpcTransport.ts).
+// Reads go through fallback() so a second endpoint can be added to the list later.
 export const publicClient = createPublicClient({
   chain: liteforge,
   transport: fallback(liteforge.rpcUrls.default.http.map((url) => http(url, { timeout: 15_000 })), {
