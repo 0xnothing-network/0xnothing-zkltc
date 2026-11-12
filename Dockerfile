@@ -12,7 +12,7 @@ FROM node:24-alpine AS builder
 WORKDIR /repo/0xNothing-zkLTC-Testnet/apps/web
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Railway only exposes service variables to Docker build steps when the
+# Some hosts only expose service variables to Docker build steps when the
 # corresponding ARG is declared. These are public values embedded by Next.js;
 # server-only secrets such as PINATA_JWT remain runtime-only.
 ARG NEXT_PUBLIC_ALLOW_DEPLOYMENT_OVERRIDES
@@ -71,5 +71,5 @@ COPY --from=builder --chown=node:node /repo/0xNothing-zkLTC-Testnet/apps/web/.ne
 USER node
 EXPOSE 3000
 
-# Next's standalone server reads Railway's injected PORT automatically.
+# Next's standalone server reads the host's injected PORT automatically.
 CMD ["node", "server.js"]

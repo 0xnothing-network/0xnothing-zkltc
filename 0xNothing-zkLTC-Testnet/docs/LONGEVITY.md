@@ -46,7 +46,7 @@ Ví `0x58633401dCc383F010688e950878000000000000` đang là owner, guardian và t
 ## 4. Việc cần làm trước khi rời đi (chỉ chủ dự án làm được)
 
 1. **Key:** sao lưu seed của ví owner ở nơi offline; không để private key nằm trong `.env.local` trên máy dùng hằng ngày. Cân nhắc chuyển owner/guardian sang multisig nếu LiteForge có Safe.
-2. **Hosting:** trả trước Railway đủ 2 năm, hoặc chuyển sang Cloudflare Workers (xem `CLOUDFLARE_WORKERS.md`).
+2. **Hosting:** web chạy trên Cloudflare Workers (xem `CLOUDFLARE_WORKERS.md`); giữ gói Workers Paid và thẻ thanh toán còn hạn đủ 2 năm.
 3. **Tên miền:** bật tự gia hạn, hoặc trả trước tới sau ngày trở về.
 4. **Pinata:** đảm bảo gói/khóa `PINATA_JWT` còn hiệu lực trong 2 năm, hoặc chấp nhận tạm dừng tạo token mới.
 5. **Farm v2:** ba gauge LP mới (WzkLTC, nBTC, nETH với NUSD) chưa có thưởng. Nạp NUSD qua `GaugeFactory.fundGauge` nếu muốn farm; nếu không, UI ghi "Unfunded".

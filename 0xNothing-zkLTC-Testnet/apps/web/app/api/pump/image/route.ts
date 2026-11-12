@@ -29,7 +29,7 @@ interface PumpImage {
 }
 
 // A logo is immutable by CID, so its body is kept once fetched: without a CDN in front
-// (Railway) every visitor paid the gateway wait. Concurrent requests for one CID share a
+// (a long-lived server process) every visitor paid the gateway wait. Concurrent requests for one CID share a
 // single gateway fetch.
 // shortcut: bounded by entry count, not bytes (128 x 2 MB worst case, ~50 KB typical); move
 // to a byte budget if listed markets grow past a few hundred.

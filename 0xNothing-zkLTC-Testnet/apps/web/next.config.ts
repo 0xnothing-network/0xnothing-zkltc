@@ -41,7 +41,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  // Produce the minimal self-hosted server consumed by the Railway image.
+  // Produce the minimal self-hosted server that the root Dockerfile packages.
   output: "standalone",
   // Dev chunks live under their own prefix so a cache that marked /_next immutable never serves them.
   assetPrefix: process.env.NODE_ENV === "development" ? "/_0xfi-dev" : undefined,

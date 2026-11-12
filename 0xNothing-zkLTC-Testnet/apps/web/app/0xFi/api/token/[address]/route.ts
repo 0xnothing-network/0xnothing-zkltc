@@ -110,7 +110,7 @@ function pruneRateLimitBuckets(now: number): void {
 }
 
 function consumeLookupToken(request: Request): { allowed: true } | { allowed: false; retryAfter: number } {
-  // Without a trusted client identity (Railway before its proxy header is set) every
+  // Without a trusted client identity (a self-hosted origin before its proxy header is set) every
   // visitor would share one bucket that one script keeps empty; the lookup cache and
   // MAX_ACTIVE_LOOKUPS still bound the work.
   const key = trustedClientRateLimitKey(trustedClientKey(request));

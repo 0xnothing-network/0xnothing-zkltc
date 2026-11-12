@@ -2,7 +2,8 @@
 
 Since 2026-11-12 this Worker is the only host of the web app. It serves
 `0xnothing.app`, `0xnothing.network` and `www.0xnothing.network`; the Vercel
-project and the Cloudflare-to-Railway deployment are retired.
+project and the Railway deployment are retired. The root `Dockerfile` still
+builds a standalone image for self-hosting if the Worker ever has to be replaced.
 
 ```text
 visitor -> Cloudflare Worker (OpenNext) -> LitVM RPC, subgraphs, and Pinata
@@ -58,7 +59,9 @@ both Workers Builds variables and Runtime variables. Never expose
 `PINATA_JWT` as a build variable or a `NEXT_PUBLIC_*` value.
 
 Leave `TRUSTED_PROXY_SHARED_SECRET` unset for this direct Worker. That secret
-belongs only to the Cloudflare-to-Railway origin boundary.
+belongs only to a self-hosted origin behind a reverse proxy: with it set, the
+middleware rejects requests that lack the matching `x-0xnothing-proxy-secret`
+header.
 
 ## Runtime settings
 
