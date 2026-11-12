@@ -1,6 +1,12 @@
 export { LITVM_EXPLORER_URL } from "@/lib/publicConfig";
 import { LITVM_EXPLORER_URL } from "@/lib/publicConfig";
 
+export function shortenAddress(addr: string, head = 6, tail = 4): string {
+  if (!addr) return "";
+  if (addr.length < head + tail + 2) return addr;
+  return `${addr.slice(0, head)}...${addr.slice(-tail)}`;
+}
+
 export function getAddressExplorerUrl(address: string): string {
   return `${LITVM_EXPLORER_URL}/address/${encodeURIComponent(address)}`;
 }

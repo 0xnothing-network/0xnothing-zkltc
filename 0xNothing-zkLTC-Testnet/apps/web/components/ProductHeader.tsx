@@ -5,7 +5,9 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { ArrowSquareOut, CaretDown, Copy, List, SignOut, Wallet, X } from "@phosphor-icons/react";
 import { formatUnits } from "viem";
 import { useAccount, useBalance, useConnect, useDisconnect, useReadContract, useSwitchChain } from "wagmi";
-import { getAddressExplorerUrl, shortenAddress } from "@/lib/contract";
+// From lib/explorer, not lib/contract: that module builds two RPC clients on load,
+// and this header is in every product layout.
+import { getAddressExplorerUrl, shortenAddress } from "@/lib/explorer";
 import { normalizeError } from "@/lib/errors";
 import { PUMP_NUSD_ADDRESS } from "@/lib/publicConfig";
 import { ThemeToggle } from "./ThemeToggle";

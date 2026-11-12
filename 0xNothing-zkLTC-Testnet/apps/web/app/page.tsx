@@ -39,7 +39,7 @@ export default function Home() {
                 alt="0xNothing"
                 width={32}
                 height={32}
-                priority
+                unoptimized
                 className="nothing-mark-image"
               />
             </span>

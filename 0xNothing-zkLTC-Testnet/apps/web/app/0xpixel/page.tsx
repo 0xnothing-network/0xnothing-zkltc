@@ -17,8 +17,13 @@ function makeEmptyGrid(gridSize: number): string[][] {
   );
 }
 
+const loadCanvas = () => import("@/features/pixel/components/Canvas").then((m) => m.Canvas);
+// The canvas is this page's main content, but Next never preloads an `ssr: false`
+// chunk. Starting it here downloads it while the page hydrates, not after.
+if (typeof window !== "undefined") void loadCanvas().catch(() => undefined);
+
 const Canvas = dynamic(
-  () => import("@/features/pixel/components/Canvas").then((m) => m.Canvas),
+  loadCanvas,
   { ssr: false, loading: () => <CanvasSkeleton /> }
 );
 const MintPanel = dynamic(

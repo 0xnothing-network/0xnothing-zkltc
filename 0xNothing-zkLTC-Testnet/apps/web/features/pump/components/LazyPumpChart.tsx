@@ -5,8 +5,13 @@ import { memo } from "react";
 import { PumpInlineLoading } from "@/features/pump/components/PumpStates";
 import type { Address } from "viem";
 
+const loadPumpChart = () => import("@/features/pump/components/PumpChart").then((module) => module.PumpChart);
+// Next never preloads an `ssr: false` chunk, so the chart code was only requested after
+// hydration and the market response. Starting it here downloads it alongside both.
+if (typeof window !== "undefined") void loadPumpChart().catch(() => undefined);
+
 const PumpChart = dynamic(
-  () => import("@/features/pump/components/PumpChart").then((module) => module.PumpChart),
+  loadPumpChart,
   {
     ssr: false,
     loading: () => (

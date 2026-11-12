@@ -12,8 +12,13 @@ type LazyMarketChartProps = {
   token1?: ChartToken;
 };
 
+const loadMarketChart = () => import("@fi/components/MarketChart").then((module) => module.MarketChart);
+// Next never preloads an `ssr: false` chunk, so the chart code was only requested after
+// hydration. Both pages that import this file always show the chart, so it starts here.
+if (typeof window !== "undefined") void loadMarketChart().catch(() => undefined);
+
 const MarketChart = dynamic(
-  () => import("@fi/components/MarketChart").then((module) => module.MarketChart),
+  loadMarketChart,
   {
     ssr: false,
     loading: () => (
