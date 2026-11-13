@@ -18,7 +18,7 @@ interface IFeeSplitter {
 /// @title Pooled NUSD lending v2
 /// @notice A pooled NUSD money market with isolated collateral configuration and socialized supplier yield/loss.
 ///         v1 lending with one change: protocol interest can no longer be withdrawn by the owner.
-///         Anyone may sweep it to the immutable fee splitter (50% staker reward pool / 50% treasury).
+///         Anyone may sweep it to the immutable fee splitter, which splits it in the same call.
 contract PooledNUSDLendingPoolV2 is ERC20, EmergencyGuardian, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -50,7 +50,12 @@ contract PooledNUSDLendingPoolV2 is ERC20, EmergencyGuardian, ReentrancyGuard {
     uint256 public constant LENDER_APR_BPS = 400;
     uint256 public constant PROTOCOL_APR_BPS = 50;
     uint256 public constant CLOSE_FACTOR_BPS = 5000;
-    uint256 public constant MAX_COLLATERAL_ASSETS = 8;
+    /// @notice This pool takes one collateral asset, for good. Its liquidation reads the feed of
+    ///         every asset an account holds, so a second asset would let one stale feed and a wei
+    ///         of that asset hold up the liquidation of a whole account, and it has no safe way to
+    ///         value a synthetic whose vault carries bad debt (2026-11 audit, D-03 and D-04). A
+    ///         pool for another asset is another deployment.
+    uint256 public constant MAX_COLLATERAL_ASSETS = 1;
     uint256 public constant SECONDS_PER_YEAR = 365 days;
     uint256 public constant MINIMUM_LOCKED_SHARES = 1000;
     bytes32 public constant IMPLEMENTATION_ID = keccak256("0xfi.lending.fixed-4.5-4-0.5.80-85-90.paused-bootstrap.v2");
@@ -248,6 +253,9 @@ contract PooledNUSDLendingPoolV2 is ERC20, EmergencyGuardian, ReentrancyGuard {
         if (!activated && (!pauseSupply || !pauseBorrow || !pauseCollateralWithdrawal)) {
             revert MarketNotActivated();
         }
+        // Collateral is never held while borrowing is open: an account could repay everything,
+        // take its collateral out and borrow the same amount again on less.
+        if (pauseCollateralWithdrawal && !pauseBorrow) revert InvalidConfiguration();
         supplyPaused = pauseSupply;
         borrowPaused = pauseBorrow;
         collateralWithdrawalPaused = pauseCollateralWithdrawal;

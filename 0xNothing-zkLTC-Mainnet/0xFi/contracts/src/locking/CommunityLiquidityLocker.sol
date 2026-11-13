@@ -40,8 +40,14 @@ contract CommunityLiquidityLocker is ReentrancyGuard {
     Lock[] private _locks;
     mapping(address => uint256[]) private _ownerLocks;
 
-    /// @notice Total LP still locked per pair (permanent locks plus un-withdrawn finite locks).
+    /// @notice Total LP still held per pair: permanent locks plus finite locks that have not been
+    ///         withdrawn. A finite lock counts here until its owner takes it out, however short it
+    ///         was and however long ago it expired, so this figure is not evidence that liquidity
+    ///         cannot be pulled. `permanentLockedByToken` is.
     mapping(address => uint256) public activeLockedByToken;
+
+    /// @notice LP locked for good per pair: the part of `activeLockedByToken` that can never leave.
+    mapping(address => uint256) public permanentLockedByToken;
 
     event LiquidityLocked(
         uint256 indexed id,
@@ -141,6 +147,7 @@ contract CommunityLiquidityLocker is ReentrancyGuard {
         );
         _ownerLocks[msg.sender].push(id);
         activeLockedByToken[lpToken] += received;
+        if (permanent) permanentLockedByToken[lpToken] += received;
 
         emit LiquidityLocked(id, msg.sender, lpToken, received, unlockAt, permanent);
     }

@@ -21,8 +21,10 @@ interface IFeeSplitter {
 ///         If the input is a base asset the fee comes out of the input. Otherwise the router takes
 ///         delivery of the base asset after the first hop, keeps the fee and forwards the rest, so
 ///         `amountOutMin` is always checked against what the user really receives.
-///         Accrued NUSD fees go to the fee splitter (50% reward pool / 50% treasury) and WzkLTC fees
-///         to the treasury, through a permissionless call. There is no admin.
+///         Accrued NUSD fees go to the fee splitter, which splits them in the same call, and WzkLTC
+///         fees to the `treasury` address, through a permissionless call. (The mainnet deployment
+///         passes the fee splitter as `treasury` too: it unwraps WzkLTC fees into the NUSD reserve.)
+///         There is no admin.
 contract ZeroXFiRouterV2 is ReentrancyGuard {
     using SafeERC20 for IERC20;
 

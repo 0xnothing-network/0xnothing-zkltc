@@ -150,6 +150,9 @@ contract ZeroXFiPair is ERC20, ReentrancyGuard {
         emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
     }
 
+    /// @dev Skimming never changes the reserves, so it stays open on a pair without liquidity
+    ///      unless that pair is waiting for its bootstrapper: it is the only way to take an
+    ///      oversized donation back out of an empty pair.
     function skim(address to) external nonReentrant {
         if (to == address(0)) revert InvalidRecipient();
         if (totalSupply() == 0 && bootstrapper != address(0) && msg.sender != bootstrapper) revert Forbidden();
@@ -157,8 +160,11 @@ contract ZeroXFiPair is ERC20, ReentrancyGuard {
         IERC20(token1).safeTransfer(to, IERC20(token1).balanceOf(address(this)) - reserve1);
     }
 
+    /// @dev While a pair has no liquidity only its bootstrapper (if it has one) may sync.
+    ///      Otherwise anyone could donate a wei and sync, giving an empty pair reserves that the
+    ///      router would then treat as its price or could not add liquidity to at all.
     function sync() external nonReentrant {
-        if (totalSupply() == 0 && bootstrapper != address(0) && msg.sender != bootstrapper) revert Forbidden();
+        if (totalSupply() == 0 && (bootstrapper == address(0) || msg.sender != bootstrapper)) revert Forbidden();
         _updateReserves(
             IERC20(token0).balanceOf(address(this)), IERC20(token1).balanceOf(address(this)), reserve0, reserve1
         );

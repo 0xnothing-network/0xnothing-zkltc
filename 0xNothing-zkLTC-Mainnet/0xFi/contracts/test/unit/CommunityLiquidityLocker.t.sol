@@ -225,6 +225,28 @@ contract CommunityLiquidityLockerTest is TestBase {
         assertEq(lpToken.balanceOf(ALICE), 1 ether, "fuzzed boundary withdrawal succeeds");
     }
 
+    /// The figure a reader should show as locked is the permanent one. A finite lock counts in
+    /// activeLockedByToken until its owner withdraws it, however short it was and however long ago
+    /// it expired (second review of the 2026-11 audit, R2-F-02).
+    function testPermanentFigureCountsOnlyWhatCanNeverLeave() public {
+        _fundAndApprove(ALICE, lpToken, 1000 ether);
+        uint256 start = block.timestamp;
+        vm.startPrank(ALICE);
+        locker.lockPermanent(address(lpToken), 100 ether);
+        uint256 id = locker.lockUntil(address(lpToken), 900 ether, uint64(start + 1));
+        vm.stopPrank();
+        assertEq(locker.activeLockedByToken(address(lpToken)), 1000 ether, "everything is held");
+        assertEq(locker.permanentLockedByToken(address(lpToken)), 100 ether, "only the permanent lock is locked for good");
+
+        vm.warp(start + 365 days);
+        assertEq(locker.activeLockedByToken(address(lpToken)), 1000 ether, "a lock that expired a year ago still counts as held");
+        vm.prank(ALICE);
+        locker.withdraw(id);
+        assertEq(lpToken.balanceOf(ALICE), 900 ether, "its owner takes it out in one call");
+        assertEq(locker.activeLockedByToken(address(lpToken)), 100 ether, "and only then does the figure fall");
+        assertEq(locker.permanentLockedByToken(address(lpToken)), 100 ether, "the permanent figure never falls");
+    }
+
     function _fundAndApprove(address account, MockERC20 token, uint256 amount) private {
         token.mint(account, amount);
         vm.prank(account);

@@ -415,18 +415,21 @@ contract SyntheticVaultTest is TestBase {
         vault.setMintPaused(true);
         vault.setWithdrawPaused(true);
 
+        // Collateral that still backs debt is held by the pause.
+        vm.expectRevert(SyntheticVault.WithdrawPaused.selector);
+        vm.prank(ALICE);
+        vault.withdrawCollateral(1 ether, ALICE);
+
         vm.prank(ALICE);
         vault.repay(type(uint256).max, ALICE);
         assertEq(vault.totalDebtSynthetic(), 0, "repay remains open");
-        vm.expectRevert(SyntheticVault.WithdrawPaused.selector);
-        vm.prank(ALICE);
-        vault.withdrawCollateral(150_000 ether, ALICE);
 
-        vault.setWithdrawPaused(false);
+        // An account that owes nothing leaves during the pause, and needs no oracle for it.
         btcOracle.setReadReverts(true);
         vm.prank(ALICE);
         vault.withdrawCollateral(150_000 ether, ALICE);
         assertEq(nusd.balanceOf(ALICE), 999_900 ether, "debt-free exit preserves the paid mint fee");
+        assertTrue(vault.withdrawPaused(), "the pause was never lifted");
     }
 
     function testMintFeeIsExtraAndNeverBecomesCollateralOrReserve() public {

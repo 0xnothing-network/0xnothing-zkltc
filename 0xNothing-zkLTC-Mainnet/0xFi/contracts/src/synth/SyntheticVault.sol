@@ -246,6 +246,10 @@ contract SyntheticVault is EmergencyGuardian, ReentrancyGuard {
         uint256 maximumBaseValueNusd =
             Math.mulDiv(availableCollateral, BPS_DENOMINATOR, BPS_DENOMINATOR + LIQUIDATION_BONUS_BPS);
         uint256 collateralLimitedRepay = Math.mulDiv(maximumBaseValueNusd, WAD, priceWad);
+        // Collateral worth less than one unit of the synthetic rounds to zero here. Left at zero it
+        // would make the position impossible to liquidate, so its debt could never be written
+        // off. One unit takes the dust, and the write-off follows.
+        if (collateralLimitedRepay == 0) collateralLimitedRepay = 1;
         bool exhaustsCollateral = collateralLimitedRepay <= repaidSynthetic;
         repaidSynthetic = _min(repaidSynthetic, collateralLimitedRepay);
         if (repaidSynthetic == 0) revert InsufficientCollateral();
@@ -345,6 +349,11 @@ contract SyntheticVault is EmergencyGuardian, ReentrancyGuard {
         emit MintPauseUpdated(true);
     }
 
+    /// @notice Holds the collateral of every account that has debt, and stops minting with it, so
+    ///         that an account's own collateral behind debt can only grow (a share put in by the
+    ///         Safety Reserve is not held by this pause). Repaying, liquidating and leaving without
+    ///         debt stay open; liquidators need synthetic that already circulates. Only the owner
+    ///         lifts the pause.
     function pauseWithdrawals() external onlyOwnerOrGuardian {
         withdrawPaused = true;
         emit WithdrawPauseUpdated(true);
@@ -550,7 +559,9 @@ contract SyntheticVault is EmergencyGuardian, ReentrancyGuard {
         internal
     {
         if (!activated) revert MarketNotActivated();
-        if (mintPaused) revert MintPaused();
+        // No debt is opened while withdrawals are held: otherwise an account repays everything,
+        // takes its collateral out and mints the same debt again on less.
+        if (mintPaused || withdrawPaused) revert MintPaused();
         if (amountSynthetic == 0) revert InvalidAmount();
         if (recipient == address(0)) revert InvalidRecipient();
         if (badDebtSyntheticByAccount[account] != 0) revert AccountHasBadDebt();
@@ -612,9 +623,11 @@ contract SyntheticVault is EmergencyGuardian, ReentrancyGuard {
     }
 
     function _withdrawCollateral(address account, uint256 amountNusd, address recipient) internal {
-        if (withdrawPaused) revert WithdrawPaused();
         if (recipient == address(0) || recipient == address(this)) revert InvalidRecipient();
         Position storage accountPosition = positions[account];
+        // The pause holds collateral that still backs debt. An account that owes nothing can always
+        // leave, also in the same call that repays the last of its debt.
+        if (withdrawPaused && accountPosition.debtSynthetic != 0) revert WithdrawPaused();
         if (amountNusd == 0 || amountNusd > accountPosition.userCollateralNusd) revert InvalidAmount();
 
         uint256 userAfter = accountPosition.userCollateralNusd - amountNusd;

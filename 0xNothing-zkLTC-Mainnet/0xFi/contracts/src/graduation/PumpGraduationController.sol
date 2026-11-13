@@ -40,7 +40,6 @@ interface IControlledZeroXPump {
         external
         returns (GraduationResult memory result);
     function setPaused(bool paused) external;
-    function withdrawProtocolFees(address recipient, uint256 amountNusd) external;
     function transferAdmin(address newAdmin) external;
     function acceptAdmin() external;
 }
@@ -72,8 +71,9 @@ interface IControlledGraduationRouter {
 }
 
 /// @notice Permissionless automation boundary for READY 0xPump markets.
-/// @dev The controller is intended to become the Pump admin. Governance retains the
-///      remaining Pump admin powers through a timelock, while the guardian can only pause.
+/// @dev The controller is intended to become the Pump admin. Governance retains the remaining
+///      Pump admin powers and the guardian can only pause. Nothing here delays governance: if a
+///      delay is wanted, the governance address itself has to be a timelock.
 contract PumpGraduationController is ReentrancyGuard {
     error InvalidConfiguration();
     error InvalidGraduationPreview();
@@ -117,7 +117,6 @@ contract PumpGraduationController is ReentrancyGuard {
     event RouterAdapterScheduled(address indexed adapter);
     event RouterDisableRouted(address indexed caller);
     event RouterEnableScheduled();
-    event ProtocolFeesWithdrawalRouted(address indexed recipient, uint256 amountNusd);
     event ReadyMarketGraduated(
         address indexed caller,
         address indexed token,
@@ -229,16 +228,22 @@ contract PumpGraduationController is ReentrancyGuard {
         emit RouterAdminAccepted(msg.sender);
     }
 
-    /// @notice Completes both two-step handovers in a single transaction.
+    /// @notice Completes whichever of the two handovers is still pending and requires both to be
+    ///         done afterwards.
+    /// @dev The single accept functions above are open to anyone, so one of the two may already
+    ///      have been accepted when this is called; that must not make it fail.
     function acceptProtocolAdmin() external nonReentrant {
-        if (pump.pendingAdmin() != address(this) || router.pendingAdmin() != address(this)) {
-            revert PendingAdminMismatch();
+        if (pump.admin() != address(this)) {
+            if (pump.pendingAdmin() != address(this)) revert PendingAdminMismatch();
+            pump.acceptAdmin();
+            emit PumpAdminAccepted(msg.sender);
         }
-        pump.acceptAdmin();
-        router.acceptAdmin();
+        if (router.admin() != address(this)) {
+            if (router.pendingAdmin() != address(this)) revert PendingAdminMismatch();
+            router.acceptAdmin();
+            emit RouterAdminAccepted(msg.sender);
+        }
         if (pump.admin() != address(this) || router.admin() != address(this)) revert PendingAdminMismatch();
-        emit PumpAdminAccepted(msg.sender);
-        emit RouterAdminAccepted(msg.sender);
     }
 
     /// @notice The guardian and governance may stop Pump activity immediately; neither path can unpause here.
@@ -256,13 +261,22 @@ contract PumpGraduationController is ReentrancyGuard {
         }
     }
 
+    /// @notice Pauses or reopens the Pump. Pausing it also holds graduations. Reopening it leaves
+    ///         the graduation pause as it is: that one is lifted on its own, with
+    ///         setGraduationsPaused(false), so reopening the Pump never lifts a graduation pause
+    ///         that was set for another reason.
     function setPumpPaused(bool paused) external onlyGovernance nonReentrant {
-        graduationsPaused = paused;
+        if (paused && !graduationsPaused) {
+            graduationsPaused = true;
+            emit GraduationsPauseUpdated(true);
+        }
         pump.setPaused(paused);
-        emit GraduationsPauseUpdated(paused);
         emit PumpPauseRouted(msg.sender, paused);
     }
 
+    /// @notice Holds or reopens graduations. It also works while the Pump is paused: the Pump does
+    ///         not hold graduations by itself, so reopening them under a paused Pump lets READY
+    ///         markets graduate while buying stays closed. That is governance's call to make.
     function setGraduationsPaused(bool paused) external onlyGovernance {
         graduationsPaused = paused;
         emit GraduationsPauseUpdated(paused);
@@ -286,11 +300,6 @@ contract PumpGraduationController is ReentrancyGuard {
     function disableRouter() external onlyGovernance nonReentrant {
         router.disableRouter();
         emit RouterDisableRouted(msg.sender);
-    }
-
-    function withdrawProtocolFees(address recipient, uint256 amountNusd) external onlyGovernance nonReentrant {
-        pump.withdrawProtocolFees(recipient, amountNusd);
-        emit ProtocolFeesWithdrawalRouted(recipient, amountNusd);
     }
 
     function transferPumpAdmin(address newAdmin) external onlyGovernance nonReentrant {
