@@ -23,6 +23,11 @@ contract DIAOracleV2Adapter is IPriceOracle {
     uint256 public constant WAD = 1e18;
     uint256 public constant MINIMUM_PRICE_AGE = 5 minutes;
     uint256 public constant MAXIMUM_PRICE_AGE = 1 days;
+    /// @notice How far a round's timestamp may run ahead of the chain's clock and still be read,
+    ///         as fresh as of now. The feeder stamps a round with its own clock, which can lead
+    ///         a block's timestamp by seconds; without this every read, redemption included,
+    ///         would fail until the chain caught up. A round further ahead is rejected.
+    uint256 public constant MAX_FUTURE_SKEW = 1 minutes;
 
     IDIAAggregatorV3 public immutable feed;
     bytes32 public immutable feedKeyHash;
@@ -69,7 +74,11 @@ contract DIAOracleV2Adapter is IPriceOracle {
         if (answeredInRound < roundId) revert IncompleteOracleRound();
         // Oracle freshness must be measured against the canonical chain timestamp.
         // forge-lint: disable-next-line(block-timestamp)
-        if (updatedAt > block.timestamp) revert FutureOracleTimestamp();
+        if (updatedAt > block.timestamp) {
+            // forge-lint: disable-next-line(block-timestamp)
+            if (updatedAt - block.timestamp > MAX_FUTURE_SKEW) revert FutureOracleTimestamp();
+            updatedAt = block.timestamp;
+        }
         // forge-lint: disable-next-line(block-timestamp)
         if (block.timestamp - updatedAt > maxPriceAge) {
             revert StaleOraclePrice(updatedAt, block.timestamp);

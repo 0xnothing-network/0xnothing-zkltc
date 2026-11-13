@@ -87,7 +87,7 @@ contract AuditNUSDTest is TestBase {
             if (kind == ZERO_ANSWER) feed.setRound(round, 0, nowTime, round);
             else if (kind == ABOVE_BOUNDS) feed.setRound(round, 1_001e8, nowTime, round);
             else if (kind == INCOMPLETE) feed.setRound(round, 250e8, nowTime, round - 1);
-            else feed.setRound(round, 250e8, nowTime + 1, round);
+            else feed.setRound(round, 250e8, nowTime + 61, round); // past the adapter skew of a minute
         }
         assertFalse(router.isFresh(), "the oracle cannot price in this block");
     }

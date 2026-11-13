@@ -34,6 +34,7 @@ contract FeeSplitter is TwoStepAdmin, ReentrancyGuard {
     uint256 public constant MAX_TREASURY_BPS = 2_000;
     uint256 public constant MAX_SOURCES = 8;
     /// @notice Gas forwarded to each source during a harvest, so one broken source cannot starve it.
+    ///         A source's return data is never copied, so its size costs the harvest nothing.
     uint256 public constant SOURCE_GAS = 600_000;
 
     struct Source {
@@ -90,7 +91,15 @@ contract FeeSplitter is TwoStepAdmin, ReentrancyGuard {
         uint256 count = _sources.length;
         for (uint256 index; index < count; ++index) {
             Source storage source = _sources[index];
-            (bool ok,) = source.target.call{gas: SOURCE_GAS}(source.data);
+            address target = source.target;
+            bytes memory data = source.data;
+            uint256 gasCap = SOURCE_GAS;
+            bool ok;
+            // The answer is not read, so it is not copied either: a source's return data must
+            // not be able to price the harvest out of the gas a staker's call forwards.
+            assembly ("memory-safe") {
+                ok := call(gasCap, target, 0, add(data, 0x20), mload(data), 0, 0)
+            }
             if (ok) ++sourcesSucceeded;
         }
         // Mints straight to the staking pool and the treasury when the reserve allows it.
