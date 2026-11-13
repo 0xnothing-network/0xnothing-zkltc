@@ -57,10 +57,10 @@ Không có timelock. Mọi giới hạn nằm cứng trong contract.
 | --- | --- | --- |
 | OwnerTreasury | Rút mọi token và zkLTC trong quỹ (đổi owner theo 2 bước) | — |
 | NUSD | Tạm dừng mint; phí mint/redeem ≤ 0.5%; trần cung (≥ cung hiện có); ngưỡng thặng dư (sàn ≥ 1,5×, kích hoạt ≥ sàn + 0,1×); bên nhận thặng dư (quỹ ≤ 20%) | Dừng redeem, chặn lối thoát khi oracle chết, mint ngoài luật, động vào dự trữ |
-| OracleRouter (LTC/BTC/ETH) | Đổi nguồn giá (giới hạn 25% khi nguồn cũ còn sống) | Đặt giá tùy ý |
+| OracleRouter (LTC/BTC/ETH) | Đổi nguồn giá (mỗi lần lệch tối đa 25% khi nguồn cũ còn sống). Nguồn mới là contract do owner chọn, nên trên thực tế owner quyết định được giá | — |
 | FeeSplitter | Tỷ lệ chia (quỹ ≤ 20%), bên nhận, danh sách tối đa 8 nguồn phí (không được trỏ vào tài sản hay bên nhận) | Rút phí đang nằm trong splitter |
 | RewardStaking | Không có quyền gì | — |
-| Pump | Điều khoản cho market mới (qua `paramAdmin`); tạm dừng tạo/mua qua graduation controller (bán luôn mở) | Rút phí, sửa market đã tạo |
+| Pump | Điều khoản cho market mới (qua `paramAdmin`); tạm dừng tạo/mua qua graduation controller (bán luôn mở); qua governance của controller, lấy lại quyền admin của Pump và router rồi đưa một adapter graduation mới vào sau 1 giờ, adapter đó nhận toàn bộ dự trữ của market đang READY | Rút phí, sửa điều khoản của market đã tạo |
 | Router, factory, lending, synth, marketplace | Như v2: tạm dừng, cấu hình rủi ro, bật/tắt collection | Rút phí, rút lãi giao thức, động vào escrow |
 
 ## Địa chỉ chính
