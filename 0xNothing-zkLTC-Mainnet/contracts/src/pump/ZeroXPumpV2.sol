@@ -576,7 +576,8 @@ contract ZeroXPumpV2 is TwoStepAdmin, ReentrancyGuard {
         if (maxNusdIn == 0) return (0, 0, 0, 0, false);
         uint256 reserveThreshold = params.graduationReserveThresholdNusd;
         uint256 remainingNusd = reserveThreshold - market.realNusdReserve;
-        uint256 maximumGross = ((remainingNusd * BPS_DENOMINATOR) - 1) / (BPS_DENOMINATOR - params.tradeFeeBps);
+        // The largest payment whose share after the fee still fits below the threshold.
+        uint256 maximumGross = (remainingNusd * BPS_DENOMINATOR) / (BPS_DENOMINATOR - params.tradeFeeBps);
         userNusdAmount = MathX.min(maxNusdIn, maximumGross);
         feeNusd = MathX.mulDiv(userNusdAmount, params.tradeFeeBps, BPS_DENOMINATOR);
         curveNusdAmount = userNusdAmount - feeNusd;

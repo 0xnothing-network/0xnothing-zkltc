@@ -252,6 +252,7 @@ contract ZeroXPixelV2Test is TestBase, IERC721Receiver {
         assertTrue(nft.supportsInterface(0x80ac58cd), "ERC721");
         assertTrue(nft.supportsInterface(0x5b5e139f), "ERC721 metadata");
         assertTrue(nft.supportsInterface(0x2a55205a), "ERC2981");
+        assertTrue(nft.supportsInterface(nft.listingEpoch.selector), "IListingEpoch, which the marketplace requires");
         assertFalse(nft.supportsInterface(0xffffffff), "invalid interface");
         vm.expectRevert(); nft.tokenData(1);
         vm.expectRevert(); nft.tokenPackedData(1);

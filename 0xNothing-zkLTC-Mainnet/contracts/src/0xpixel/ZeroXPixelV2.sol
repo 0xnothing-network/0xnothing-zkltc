@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {PixelERC721} from "./PixelERC721.sol";
+import {ListingEpochERC721} from "./ListingEpochERC721.sol";
 import {IERC2981} from "@openzeppelin/contracts/interfaces/IERC2981.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {PixelBase64} from "./PixelBase64.sol";
@@ -10,7 +11,7 @@ import {PixelRenderer} from "./PixelRenderer.sol";
 
 /// @notice Free, immutable, fully on-chain pixel art NFTs with bounded 256x256 canvases.
 /// @dev A run is [x, y, countMinusOne, red, green, blue]. Unpainted cells are transparent.
-contract ZeroXPixelV2 is PixelERC721, IERC2981 {
+contract ZeroXPixelV2 is ListingEpochERC721, IERC2981 {
     uint256 public constant VERSION = 2;
     uint256 public constant MAX_GRID = 256;
     uint256 public constant MAX_NAME_LENGTH = 64;
@@ -151,7 +152,7 @@ contract ZeroXPixelV2 is PixelERC721, IERC2981 {
         return (_art[tokenId].creator, salePrice / 100);
     }
 
-    function supportsInterface(bytes4 interfaceId) public view override(PixelERC721, IERC165) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view override(ListingEpochERC721, IERC165) returns (bool) {
         return interfaceId == type(IERC2981).interfaceId || super.supportsInterface(interfaceId);
     }
 

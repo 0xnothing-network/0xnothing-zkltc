@@ -2,6 +2,7 @@ pragma solidity ^0.8.24;
 
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { PixelERC721 } from "../../src/0xpixel/PixelERC721.sol";
+import { ListingEpochERC721 } from "../../src/0xpixel/ListingEpochERC721.sol";
 import { IERC2981 } from "@openzeppelin/contracts/interfaces/IERC2981.sol";
 
 contract MarketplaceNusdMock is ERC20 {
@@ -22,7 +23,7 @@ contract MarketplaceNusdMock is ERC20 {
     }
 }
 
-contract MarketplaceNftMock is PixelERC721 {
+contract MarketplaceNftMock is ListingEpochERC721 {
     address public royaltyReceiver;
     uint256 public royaltyBps;
     bool public royalties = true;

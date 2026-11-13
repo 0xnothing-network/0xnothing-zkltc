@@ -117,9 +117,9 @@ contract TreasuryAndFeeSplitterTest is TestBase {
         assertEq(nusd.lastSurplusReleaseAt(), vm.getBlockTimestamp(), "surplus released");
         assertEq(nusd.balanceOf(address(source)), 0, "fees collected");
         assertEq(nusd.balanceOf(address(splitter)), 0, "and split");
-        // Fees first: 70 to stakers, 20 burned, 10 to treasury. Then the surplus against the
-        // 80 NUSD left: 400/3 - 80 = 53.33, split 80/20.
-        uint256 surplus = uint256(400 ether) * 10_000 / 30_000 - 80 ether;
+        // Fees first: 70 to stakers, 20 burned, 10 to treasury. Then one step of surplus against
+        // the 80 NUSD left (5.0x is far above the trigger): a tenth of it, split 80/20.
+        uint256 surplus = 8 ether;
         uint256 surplusTreasury = surplus * 2_000 / 10_000;
         assertEq(nusd.balanceOf(address(staking)), 70 ether + surplus - surplusTreasury, "stakers");
         assertEq(nusd.balanceOf(address(treasury)), 10 ether + surplusTreasury, "treasury");

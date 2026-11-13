@@ -11,6 +11,8 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 
+import { IListingEpoch } from "./ListingEpochERC721.sol";
+
 interface INusdBurnable {
     function burn(uint256 amount) external;
 }
@@ -19,6 +21,16 @@ interface INusdBurnable {
 /// @notice Same escrow/credit model as v1 with a fixed sale fee: 0.1% of the price is burned
 ///         (NUSD supply really shrinks) and 0.4% is credited to the artwork's creator. There is
 ///         no platform fee and no separate royalty.
+///         A listing is bound to the ownership and approval it was created under: every allowed
+///         collection reports a number that changes when a token is transferred or approved, and
+///         a listing whose number has moved can no longer be bought, only removed. A token that
+///         left its seller, or whose approval was withdrawn, never comes back on sale at an old
+///         price.
+///         An offer is a standing bid on one token, escrowed until it is accepted, cancelled or
+///         expired. An account has one live offer per token (a new one replaces it), and a sale
+///         through the market ends the offer its buyer or its seller still had on that token, so
+///         nobody is left bidding on a token they have just held: the next owner could fill such
+///         a bid against them.
 contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
     using SafeERC20 for IERC20;
 
@@ -28,6 +40,8 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
         uint256 price;
         address seller;
         bool active;
+        /// @dev The collection's listingEpoch for this token and this market when it was listed.
+        uint256 epoch;
     }
 
     struct Offer {
@@ -73,6 +87,10 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
     mapping(uint256 => Offer) public offers;
     mapping(address => uint256) public credits;
     mapping(address => mapping(uint256 => uint256)) public tokenToListingId;
+    /// @notice The offer an account has on a token, zero if it has none. An offer keeps its slot
+    ///         until it is cancelled, expired by a call, replaced, accepted or ended by a sale, so
+    ///         a reader must check `expiresAt` to know whether it can still be accepted.
+    mapping(address collection => mapping(uint256 tokenId => mapping(address offerer => uint256))) public offerIdOf;
     uint256[] private _activeListings;
     uint256[] private _activeOffers;
     mapping(uint256 => uint256) private _listingIndex;
@@ -112,13 +130,13 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
         if (!_ownsAndApproves(collection, tokenId, msg.sender)) revert NotPurchasable();
         uint256 previousId = tokenToListingId[collection][tokenId];
         if (previousId != 0 && listings[previousId].active) {
-            Listing memory previous = listings[previousId];
-            if (_ownsAndApproves(collection, tokenId, previous.seller)) revert AlreadyListed();
+            if (_purchasable(listings[previousId])) revert AlreadyListed();
             _removeListing(previousId);
             emit ListingInvalidated(previousId);
         }
         listingId = ++listingCount;
-        listings[listingId] = Listing(collection, tokenId, price, msg.sender, true);
+        listings[listingId] =
+            Listing(collection, tokenId, price, msg.sender, true, IListingEpoch(collection).listingEpoch(tokenId, address(this)));
         tokenToListingId[collection][tokenId] = listingId;
         _listingIndex[listingId] = _activeListings.length;
         _activeListings.push(listingId);
@@ -131,7 +149,7 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
         if (listing.seller != msg.sender) revert Unauthorized();
         _requireCollection(listing.collection);
         _requirePrice(price);
-        if (!_ownsAndApproves(listing.collection, listing.tokenId, listing.seller)) revert NotPurchasable();
+        if (!_purchasable(listing)) revert NotPurchasable();
         listing.price = price;
         emit ListingPriceUpdated(listingId, price);
     }
@@ -146,7 +164,7 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
     function invalidateListing(uint256 listingId) external nonReentrant {
         Listing memory listing = listings[listingId];
         if (!listing.active) revert Inactive();
-        if (collectionAllowed[listing.collection] && _ownsAndApproves(listing.collection, listing.tokenId, listing.seller)) revert NotPurchasable();
+        if (collectionAllowed[listing.collection] && _purchasable(listing)) revert NotPurchasable();
         _removeListing(listingId);
         emit ListingInvalidated(listingId);
     }
@@ -157,8 +175,11 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
         if (listing.price != expectedPrice) revert PriceChanged();
         if (listing.seller == msg.sender) revert Unauthorized();
         _requireCollection(listing.collection);
-        if (!_ownsAndApproves(listing.collection, listing.tokenId, listing.seller)) revert NotPurchasable();
+        if (!_purchasable(listing)) revert NotPurchasable();
         _removeListing(listingId);
+        // The buyer's own offer on this token ends here, and its escrow pays for the purchase
+        // before the wallet does.
+        _refundOwnOffer(listing.collection, listing.tokenId, msg.sender);
         _fund(msg.sender, listing.price, maxWalletPayment);
         _settle(listing.collection, listing.tokenId, listing.seller, msg.sender, listing.price, 0);
         emit Bought(listingId, msg.sender, listing.price);
@@ -171,10 +192,14 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
         _requirePrice(price);
         if (expiresAt <= block.timestamp || uint256(expiresAt) > block.timestamp + MAX_OFFER_DURATION) revert InvalidExpiry();
         if (IERC721(collection).ownerOf(tokenId) == msg.sender) revert Unauthorized();
+        // One live offer per account and token: the old escrow becomes credit, which pays for the
+        // new offer before the wallet does.
+        _refundOwnOffer(collection, tokenId, msg.sender);
         _fund(msg.sender, price, maxWalletPayment);
         escrowedNusd += price;
         offerId = ++offerCount;
         offers[offerId] = Offer(collection, tokenId, msg.sender, price, expiresAt, true);
+        offerIdOf[collection][tokenId][msg.sender] = offerId;
         _offerIndex[offerId] = _activeOffers.length;
         _activeOffers.push(offerId);
         emit OfferCreated(offerId, collection, tokenId, msg.sender, price, expiresAt);
@@ -268,6 +293,9 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
         totalCreditsNusd += sellerProceeds + creatorFee;
         totalVolumeNusd += price;
         ++totalSales;
+        // An offer the seller made before the token was theirs ends with the sale. Left standing,
+        // the buyer could put the token straight back to them at that old price.
+        _refundOwnOffer(collection, tokenId, seller);
         // The sale price is already held here (wallet payment, buyer credit or offer escrow).
         if (burnAmount != 0) INusdBurnable(address(nusd)).burn(burnAmount);
         IERC721(collection).safeTransferFrom(seller, buyer, tokenId);
@@ -301,6 +329,12 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
         emit OfferCancelled(offerId, offer.offerer, offer.price);
     }
 
+    /// @dev Turns the escrow of the offer `account` has on the token, if any, back into credit.
+    function _refundOwnOffer(address collection, uint256 tokenId, address account) private {
+        uint256 offerId = offerIdOf[collection][tokenId][account];
+        if (offerId != 0) _refundOffer(offerId);
+    }
+
     function _removeListing(uint256 listingId) private {
         Listing storage listing = listings[listingId];
         listing.active = false;
@@ -314,7 +348,10 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
     }
 
     function _removeOffer(uint256 offerId) private {
-        offers[offerId].active = false;
+        Offer storage offer = offers[offerId];
+        offer.active = false;
+        // Every way an offer ends comes through here, so the slot is taken exactly while it lives.
+        delete offerIdOf[offer.collection][offer.tokenId][offer.offerer];
         uint256 index = _offerIndex[offerId];
         uint256 lastId = _activeOffers[_activeOffers.length - 1];
         _activeOffers[index] = lastId;
@@ -333,7 +370,12 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
     }
 
     function _allowCollection(address collection, bool allowed) private {
-        if (collection.code.length == 0 || (allowed && !ERC165Checker.supportsInterface(collection, type(IERC721).interfaceId))) revert InvalidConfiguration();
+        if (
+            collection.code.length == 0
+                || (allowed
+                    && (!ERC165Checker.supportsInterface(collection, type(IERC721).interfaceId)
+                        || !ERC165Checker.supportsInterface(collection, type(IListingEpoch).interfaceId)))
+        ) revert InvalidConfiguration();
         collectionAllowed[collection] = allowed;
         emit CollectionAllowed(collection, allowed);
     }
@@ -344,6 +386,17 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
 
     function _requirePrice(uint256 price) private pure {
         if (price == 0 || price > MAX_PRICE) revert InvalidPrice();
+    }
+
+    /// @dev A listing can be bought while its seller still owns and approves the token and nothing
+    ///      has happened to the token or the approval since it was listed.
+    function _purchasable(Listing memory listing) private view returns (bool) {
+        if (!_ownsAndApproves(listing.collection, listing.tokenId, listing.seller)) return false;
+        try IListingEpoch(listing.collection).listingEpoch(listing.tokenId, address(this)) returns (uint256 epoch) {
+            return epoch == listing.epoch;
+        } catch {
+            return false;
+        }
     }
 
     function _ownsAndApproves(address collection, uint256 tokenId, address seller) private view returns (bool) {

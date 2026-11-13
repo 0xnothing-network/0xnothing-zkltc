@@ -63,9 +63,11 @@ contract OracleNUSDv2Test is TestBase {
         assertEq(nusd.quoteRedeem(99.5 ether), 0.990025 ether, "oracle value minus fee");
 
         vm.expectRevert(OracleNUSDv2.InvalidFee.selector);
-        nusd.setFees(51, 0);
+        nusd.setFees(201, 0);
         vm.expectRevert(OracleNUSDv2.InvalidFee.selector);
-        nusd.setFees(0, 51);
+        nusd.setFees(0, 201);
+        nusd.setFees(200, 200);
+        assertEq(nusd.mintFeeBps(), 200, "fees reach 2% for coarse feeds");
     }
 
     function testMintGuards() public {
@@ -210,10 +212,17 @@ contract OracleNUSDv2Test is TestBase {
         vm.expectRevert(abi.encodeWithSelector(OracleNUSDv2.SurplusTooSoon.selector, nextAt));
         nusd.releaseSurplus();
 
+        // Far above the trigger a release is still one step: what a release exactly at the trigger
+        // mints, a tenth of the supply. The rest follows a week at a time.
         vm.warp(nextAt);
-        nusd.releaseSurplus();
+        (capacity,) = nusd.surplusMintCapacity();
+        assertEq(capacity, 11 ether, "a tenth of 110 NUSD, not the 223.33 that 9.09x has room for");
+        assertEq(nusd.releaseSurplus(), 11 ether, "one step");
+        assertEq(nusd.balanceOf(STAKING), 8 ether + 8.8 ether, "80% of it to stakers");
+        vm.warp(nextAt + 7 days);
+        assertEq(nusd.releaseSurplus(), 12.1 ether, "the next step a week later, on the larger supply");
+        assertEq(nusd.totalSupply(), 133.1 ether, "100 + 10 + 11 + 12.1");
         assertGe(nusd.backingRatioWad(), 3e18, "never below the floor");
-        assertLe(nusd.backingRatioWad(), 3e18 + 1e9, "lands on the floor");
     }
 
     function testSurplusWaitsForRecipientsAndHonoursItsBounds() public {
@@ -244,14 +253,17 @@ contract OracleNUSDv2Test is TestBase {
         assertEq(nusd.surplusFloorBps(), 20_000, "floor");
         assertEq(nusd.surplusTriggerBps(), 21_000, "trigger");
 
-        // A zero treasury share sends everything to the stakers.
+        // A zero treasury share sends everything to the stakers. The step follows the two ratios:
+        // at 2.1x over 2.0x a release mints a twentieth of the supply.
         nusd.setSurplusRecipients(STAKING, TREASURY, 0);
         nusd.releaseSurplus();
         assertEq(nusd.balanceOf(TREASURY), 0, "no treasury share");
-        assertEq(nusd.balanceOf(STAKING), 400 ether, "$1,000 reserve at 2.0x is 500 NUSD");
+        assertEq(nusd.balanceOf(STAKING), 5 ether, "one step of 100 NUSD at 2.1x over 2.0x");
     }
 
-    function testSurplusStopsAtTheSupplyCeiling() public {
+    /// A release is never cut down to what the ceiling has room for: it waits until all of it
+    /// fits, and it lifts the ceiling when a mint of one wei would.
+    function testSurplusWaitsForRoomUnderTheSupplyCeiling() public {
         OracleNUSDv2 token = _deploy(105 ether);
         token.setSurplusRecipients(STAKING, TREASURY, 2_000);
         _mint(token, ALICE, 1 ether); // 100 NUSD, ceiling raised to 210 by the 80% rule
@@ -259,10 +271,78 @@ contract OracleNUSDv2Test is TestBase {
         token.setSupplyCeiling(105 ether);
 
         oracle.setPrice(1_000 ether);
-        assertEq(token.releaseSurplus(), 5 ether, "only the headroom");
-        assertEq(token.totalSupply(), 105 ether, "at the ceiling");
-        assertEq(token.balanceOf(STAKING), 4 ether, "80%");
-        assertEq(token.balanceOf(TREASURY), 1 ether, "20%");
+        (uint256 capacity, bool ready) = token.surplusMintCapacity();
+        assertEq(capacity, 0, "the step of 10 does not fit in a headroom of 5");
+        assertFalse(ready, "so nothing is released");
+        vm.expectRevert(abi.encodeWithSelector(OracleNUSDv2.SurplusBelowTrigger.selector, 1_000 ether, 100 ether));
+        token.releaseSurplus();
+        assertEq(token.lastSurplusReleaseAt(), 0, "and the week is not used up");
+
+        // The admin makes room for exactly one step: it goes out whole and fills the ceiling.
+        token.setSupplyCeiling(110 ether);
+        assertEq(token.releaseSurplus(), 10 ether, "the whole step once it fits exactly");
+        assertEq(token.totalSupply(), 110 ether, "at the ceiling");
+        assertEq(token.balanceOf(STAKING), 8 ether, "80%");
+        assertEq(token.balanceOf(TREASURY), 2 ether, "20%");
+        vm.prank(BOB);
+        vm.expectRevert(abi.encodeWithSelector(OracleNUSDv2.SupplyCeilingExceeded.selector, 1_000 ether, 0));
+        token.mintAtOracle{value: 1 ether}(0, BOB);
+
+        // A week after the last raise the next release lifts the ceiling itself, as a mint would.
+        vm.warp(vm.getBlockTimestamp() + 7 days);
+        assertEq(token.releaseSurplus(), 11 ether, "a tenth of 110, with nobody minting first");
+        assertEq(token.supplyCeilingNusd(), 220 ether, "doubled by the release");
+        assertEq(token.lastCeilingRaiseAt(), vm.getBlockTimestamp(), "and counted as this week's raise");
+    }
+
+    function testSurplusCountsRedeemedSupplyForOneToTwoWeeks() public {
+        nusd.setSurplusRecipients(STAKING, TREASURY, 2_000);
+        _mint(nusd, ALICE, 1 ether); // 100 NUSD
+        nusd.coverReserve{value: 2.2 ether}(); // $320 behind 100 NUSD: 3.2x, below the trigger
+        assertEq(nusd.surplusSupplyBasis(), 100 ether, "no redemption yet: the supply itself");
+
+        vm.prank(ALICE);
+        nusd.redeemAtOracle(10 ether, 0, ALICE); // $310 behind 90 NUSD: 3.44x on the raw supply
+        assertEq(nusd.surplusSupplyBasis(), 100 ether, "the supply the redemption started from");
+        (, bool ready) = nusd.surplusMintCapacity();
+        assertFalse(ready, "3.1x against the remembered 100 NUSD");
+        vm.expectRevert(abi.encodeWithSelector(OracleNUSDv2.SurplusBelowTrigger.selector, 310 ether, 100 ether));
+        nusd.releaseSurplus();
+
+        // Epochs are whole weeks of chain time. Still remembered throughout the next one ...
+        uint256 epoch = vm.getBlockTimestamp() / 7 days;
+        vm.warp((epoch + 2) * 7 days - 1);
+        assertEq(nusd.surplusSupplyBasis(), 100 ether, "remembered through the following epoch");
+        // ... and forgotten the moment the one after it begins.
+        vm.warp((epoch + 2) * 7 days);
+        assertEq(nusd.surplusSupplyBasis(), 90 ether, "then only the real supply counts");
+        assertEq(nusd.releaseSurplus(), 9 ether, "one step of the lasting supply (3.44x has room for 13.33)");
+    }
+
+    function testPlainBurnCountsTowardTheSurplusAtOnce() public {
+        nusd.setSurplusRecipients(STAKING, TREASURY, 2_000);
+        _mint(nusd, ALICE, 1 ether); // 100 NUSD
+        nusd.coverReserve{value: 2.2 ether}(); // 3.2x
+
+        // A burn leaves its collateral in the reserve, so it cannot be undone by minting back.
+        vm.prank(ALICE);
+        nusd.burn(4 ether);
+        assertEq(nusd.surplusSupplyBasis(), 96 ether, "not remembered");
+        assertEq(nusd.releaseSurplus(), 9.6 ether, "3.33x releases one step of the 96 NUSD left");
+    }
+
+    function testMintPauseAlsoStopsTheSurplusRelease() public {
+        nusd.setSurplusRecipients(STAKING, TREASURY, 2_000);
+        _mint(nusd, ALICE, 1 ether);
+        oracle.setPrice(400 ether);
+        nusd.setMintPaused(true);
+        (, bool ready) = nusd.surplusMintCapacity();
+        assertFalse(ready, "paused");
+        vm.expectRevert(OracleNUSDv2.MintPaused.selector);
+        nusd.releaseSurplus();
+
+        nusd.setMintPaused(false);
+        assertGt(nusd.releaseSurplus(), 0, "released once minting is open again");
     }
 
     function testSurplusFailsClosedWhileTheOracleIsDown() public {
@@ -311,8 +391,10 @@ contract OracleNUSDv2Test is TestBase {
 
     function testOracleRecoveryClosesTheExit() public {
         _mint(nusd, ALICE, 1 ether);
+        assertEq(nusd.oracleFailureExitAt(), 0, "no report, no exit time");
         oracle.setBroken(true);
         nusd.reportOracleFailure();
+        assertEq(nusd.oracleFailureExitAt(), vm.getBlockTimestamp() + 7 days, "seven days from the report");
         vm.expectRevert(OracleNUSDv2.OracleUnavailable.selector);
         nusd.clearOracleFailure();
 
@@ -325,6 +407,61 @@ contract OracleNUSDv2Test is TestBase {
         vm.prank(STRANGER);
         nusd.clearOracleFailure();
         assertEq(nusd.oracleFailureReportedAt(), 0, "clock cleared");
+    }
+
+    function testEveryPricedCallClearsTheFailureReport() public {
+        nusd.setSurplusRecipients(STAKING, TREASURY, 2_000);
+        _mint(nusd, ALICE, 1 ether);
+
+        oracle.setBroken(true);
+        nusd.reportOracleFailure();
+        oracle.setBroken(false);
+        _mint(nusd, BOB, 1 ether);
+        assertEq(nusd.oracleFailureReportedAt(), 0, "a mint");
+
+        oracle.setBroken(true);
+        nusd.reportOracleFailure();
+        oracle.setBroken(false);
+        vm.prank(ALICE);
+        nusd.redeemAtOracle(1 ether, 0, ALICE);
+        assertEq(nusd.oracleFailureReportedAt(), 0, "a redemption");
+
+        oracle.setBroken(true);
+        nusd.reportOracleFailure();
+        oracle.setBroken(false);
+        vm.warp(vm.getBlockTimestamp() + 14 days);
+        oracle.setPrice(1_000 ether);
+        nusd.releaseSurplus();
+        assertEq(nusd.oracleFailureReportedAt(), 0, "a surplus release");
+    }
+
+    function testATransferVoidsAReportOnlyWhileTheOraclePrices() public {
+        _mint(nusd, ALICE, 1 ether);
+        oracle.setBroken(true);
+        nusd.reportOracleFailure();
+        uint256 reportedAt = vm.getBlockTimestamp();
+
+        vm.prank(ALICE);
+        nusd.transfer(BOB, 10 ether);
+        assertEq(nusd.oracleFailureReportedAt(), reportedAt, "the oracle is down: the report stands");
+
+        oracle.setBroken(false);
+        vm.prank(ALICE);
+        nusd.approve(STRANGER, 5 ether);
+        assertEq(nusd.oracleFailureReportedAt(), reportedAt, "an approval moves nothing");
+        vm.prank(STRANGER);
+        nusd.transferFrom(ALICE, BOB, 5 ether);
+        assertEq(nusd.oracleFailureReportedAt(), 0, "NUSD moved while the oracle priced: the report is void");
+        assertEq(nusd.balanceOf(BOB), 15 ether, "and the transfer itself is unaffected");
+
+        // A price of zero is not a price.
+        oracle.setBroken(true);
+        nusd.reportOracleFailure();
+        oracle.setBroken(false);
+        oracle.setPrice(0);
+        vm.prank(BOB);
+        nusd.transfer(ALICE, 1 ether);
+        assertGt(nusd.oracleFailureReportedAt(), 0, "a zero price leaves the report standing");
     }
 
     // ---------------------------------------------------------------- reserve
@@ -344,6 +481,124 @@ contract OracleNUSDv2Test is TestBase {
 
         vm.expectRevert(OracleNUSDv2.InvalidAmount.selector);
         nusd.coverReserve();
+    }
+
+    // ---------------------------------------------------------------- oracle-lag guards
+
+    function testMintNeedsAFreshPrice() public {
+        nusd.setMintGuards(10 minutes, 1_000_000 ether);
+        oracle.setUpdatedAt(vm.getBlockTimestamp() - 11 minutes);
+        vm.prank(ALICE);
+        vm.expectRevert(
+            abi.encodeWithSelector(OracleNUSDv2.StaleMintPrice.selector, vm.getBlockTimestamp() - 11 minutes, 10 minutes)
+        );
+        nusd.mintAtOracle{value: 1 ether}(0, ALICE);
+
+        oracle.setUpdatedAt(vm.getBlockTimestamp() - 10 minutes);
+        assertEq(_mint(nusd, ALICE, 1 ether), 100 ether, "fresh enough");
+
+        // Redemption never waits for a fresher price; against an old one it pays the maximum fee.
+        nusd.setFees(0, 50);
+        assertEq(nusd.quoteRedeem(100 ether), 0.995 ether, "fresh: the 0.5% redeem fee");
+        oracle.setUpdatedAt(vm.getBlockTimestamp() - 10 minutes - 1);
+        assertEq(nusd.quoteRedeem(100 ether), 0.98 ether, "one second too old to mint against: 2%");
+        vm.prank(ALICE);
+        assertEq(nusd.redeemAtOracle(100 ether, 0, ALICE), 0.98 ether, "redeem stays open");
+        assertEq(nusd.totalCollateralWei(), 0.02 ether, "and the fee stays in the reserve");
+    }
+
+    function testSurplusReleaseNeedsAFreshPriceToo() public {
+        nusd.setSurplusRecipients(STAKING, TREASURY, 2_000);
+        nusd.setMintGuards(10 minutes, 1_000_000 ether);
+        _mint(nusd, ALICE, 1 ether);
+        oracle.setPrice(1_000 ether);
+        oracle.setUpdatedAt(vm.getBlockTimestamp() - 1 hours);
+        vm.expectRevert(
+            abi.encodeWithSelector(OracleNUSDv2.StaleMintPrice.selector, vm.getBlockTimestamp() - 1 hours, 10 minutes)
+        );
+        nusd.releaseSurplus();
+    }
+
+    function testMintBudgetRefillsOverAnHour() public {
+        nusd.setMintGuards(90 minutes, 150 ether);
+        _mint(nusd, ALICE, 1 ether);
+        assertEq(nusd.mintAvailableInWindow(), 50 ether, "100 of 150 used");
+        vm.prank(BOB);
+        vm.expectRevert(abi.encodeWithSelector(OracleNUSDv2.MintRateLimited.selector, 100 ether, 50 ether));
+        nusd.mintAtOracle{value: 1 ether}(0, BOB);
+        _mint(nusd, BOB, 0.5 ether);
+        assertEq(nusd.mintAvailableInWindow(), 0, "budget spent");
+
+        vm.warp(vm.getBlockTimestamp() + 20 minutes);
+        assertEq(nusd.mintAvailableInWindow(), 50 ether, "a third is back after a third of the hour");
+        _mint(nusd, BOB, 0.5 ether);
+        assertEq(nusd.mintAvailableInWindow(), 0, "and can be spent as it returns");
+
+        vm.warp(vm.getBlockTimestamp() + 1 hours);
+        assertEq(nusd.mintAvailableInWindow(), 150 ether, "whole again an hour after the last mint");
+        _mint(nusd, BOB, 1 ether);
+        assertEq(nusd.mintedInWindow(), 100 ether, "counted from an empty budget");
+
+        // Lowering the limit below what is counted stops minting until it has drained.
+        nusd.setMintGuards(90 minutes, 60 ether);
+        assertEq(nusd.mintAvailableInWindow(), 0, "100 counted against a budget of 60");
+        vm.warp(vm.getBlockTimestamp() + 50 minutes);
+        assertEq(nusd.mintAvailableInWindow(), 10 ether, "50 of the 100 drained at the new rate");
+    }
+
+    /// With the reserve well above 1x (the designed state), a trade against a lagging price does
+    /// not pay while the lag is within the fee of the leg it uses: the mint leg yields no more
+    /// NUSD than the deposit is worth at the market, the redeem leg no more zkLTC than the NUSD is
+    /// worth at the market. The lag is measured from the oracle price, like a feed's threshold.
+    function testFuzzLagWithinTheFeeOfALegIsUnprofitable(uint256 rawFee, uint256 rawLag, uint256 rawDeposit) public {
+        uint256 fee = bound(rawFee, 0, 200);
+        uint256 lag = bound(rawLag, 0, fee);
+        uint256 deposit = bound(rawDeposit, 0.01 ether, 100 ether);
+        nusd.setFees(fee, fee);
+        _mint(nusd, BOB, 300 ether);
+        nusd.coverReserve{value: 600 ether}(); // about 3x: the pro-rata leg never caps a payout
+
+        // Mint leg: the market is `lag` below the oracle.
+        uint256 minted = _mint(nusd, ALICE, deposit);
+        assertLe(minted, deposit * (PRICE * (10_000 - lag) / 10_000) / 1e18 + 1, "the mint leg paid");
+
+        // Redeem leg: the market is `lag` above the oracle.
+        vm.prank(ALICE);
+        uint256 out = nusd.redeemAtOracle(minted, 0, ALICE);
+        assertLe(out, minted * 1e18 / (PRICE * (10_000 + lag) / 10_000) + 1, "the redeem leg paid");
+    }
+
+    /// A round trip across one price update never pays while the move is within the two fees
+    /// together: mint at the old price, redeem at the new one, and get back no more zkLTC.
+    function testFuzzRoundTripWithinBothFeesIsUnprofitable(uint256 rawFee, uint256 rawDrop, uint256 rawDeposit)
+        public
+    {
+        uint256 fee = bound(rawFee, 0, 200);
+        // (1 - f)^2 <= 1 - d  <=>  d <= 2f - f^2 (in bps: 2f - f^2 / 10_000, the last term rounded up)
+        uint256 drop = bound(rawDrop, 0, 2 * fee - (fee * fee + 9_999) / 10_000);
+        uint256 deposit = bound(rawDeposit, 0.01 ether, 100 ether);
+        nusd.setFees(fee, fee);
+        _mint(nusd, BOB, 300 ether);
+        nusd.coverReserve{value: 600 ether}(); // about 3x, so nothing but the fees stands in the way
+        uint256 minted = _mint(nusd, ALICE, deposit);
+        oracle.setPrice(PRICE * (10_000 - drop) / 10_000);
+        vm.prank(ALICE);
+        uint256 out = nusd.redeemAtOracle(minted, 0, ALICE);
+        assertLe(out, deposit + 1, "lag inside the fees paid out");
+    }
+
+    function testMintGuardBounds() public {
+        vm.expectRevert(OracleNUSDv2.InvalidMintGuards.selector);
+        nusd.setMintGuards(59, 1 ether);
+        vm.expectRevert(OracleNUSDv2.InvalidMintGuards.selector);
+        nusd.setMintGuards(1 days + 1, 1 ether);
+        vm.expectRevert(OracleNUSDv2.InvalidMintGuards.selector);
+        nusd.setMintGuards(10 minutes, 0);
+        vm.prank(STRANGER);
+        vm.expectRevert();
+        nusd.setMintGuards(10 minutes, 1 ether);
+        assertEq(nusd.mintMaxPriceAge(), 90 minutes, "default age");
+        assertEq(nusd.mintLimitPerWindow(), type(uint96).max, "unlimited until set");
     }
 
     // ---------------------------------------------------------------- fuzz
@@ -378,8 +633,11 @@ contract OracleNUSDv2Test is TestBase {
         (uint256 capacity, bool ready) = nusd.surplusMintCapacity();
         if (!ready) return;
 
+        uint256 supplyBefore = nusd.totalSupply();
         uint256 released = nusd.releaseSurplus();
         assertEq(released, capacity, "capacity");
+        assertLe(released, supplyBefore / 10, "more than one step");
+        assertGe(released + 1, supplyBefore / 10, "above the trigger a release is the whole step");
         assertGe(nusd.backingRatioWad(), 3e18, "below 3.0x");
         assertEq(nusd.balanceOf(STAKING) + nusd.balanceOf(TREASURY), released, "split loses NUSD");
         assertLe(nusd.balanceOf(TREASURY), released / 5, "treasury above 20%");

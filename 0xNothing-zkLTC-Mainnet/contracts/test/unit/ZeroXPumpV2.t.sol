@@ -184,8 +184,7 @@ contract ZeroXPumpV2Test is TestBase {
         pump.buy(early, 5_000 ether, 0, _deadline());
         assertEq(pump.status(early), 2, "ready at its own 1,500 target");
         (,, uint256 earlyReserve,,,,,,,,) = pump.markets(early);
-        assertGe(earlyReserve, RESERVE_TARGET, "reached");
-        assertLe(earlyReserve, RESERVE_TARGET + 1, "and stopped there");
+        assertEq(earlyReserve, RESERVE_TARGET, "reached, and stopped exactly there");
 
         vm.prank(TRADER);
         pump.buy(late, 1_600 ether, 0, _deadline());
