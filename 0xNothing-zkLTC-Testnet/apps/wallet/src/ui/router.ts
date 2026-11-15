@@ -72,3 +72,20 @@ export function navigate(path: string): void {
 export function goHome(): void {
   navigate("#/home");
 }
+
+export type BackAction = "escape" | "home" | "leave";
+
+/**
+ * What the Android Back press does (the native shell asks `__walletBack`). An
+ * open sheet closes first, through the Escape its own listener already honours
+ * (a busy sheet ignores it, so Back cannot cancel a send in flight, and the
+ * press still counts as handled). A pushed screen returns to Home. Home, the
+ * approval route and every screen before the vault opens (onboarding, the lock
+ * screen) leave: the shell sends the app to the background, never finishes it.
+ */
+export function backAction(input: { ready: boolean; route: RouteName; modalOpen: boolean }): BackAction {
+  if (!input.ready) return "leave";
+  if (input.modalOpen) return "escape";
+  if (input.route === "home" || input.route === "approve") return "leave";
+  return "home";
+}

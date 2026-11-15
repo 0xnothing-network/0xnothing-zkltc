@@ -446,6 +446,14 @@
   padding: 10px var(--w-gutter) calc(14px + env(safe-area-inset-bottom));
 }
 
+/* The recipient in full, in groups of four, so a look-alike address differs
+   on screen: the value wraps between its groups instead of ending in "...". */
+.w-root .w-swap-review .w-row dd .w-review-address {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .w-root .w-swap-review > :is(.w-swap-review-hero, .w-summary) {
   margin: 4px var(--w-gutter) 0;
 }
@@ -543,6 +551,11 @@
   font-size: 11px;
 }
 
+/* A token that only borrows a built-in symbol says so under its name. */
+.w-root .w-token-option-copy .w-token-warn {
+  color: var(--negative);
+}
+
 .w-root .w-token-ca {
   width: 28px;
   height: 28px;
@@ -570,4 +583,62 @@
 /* A lock chip is one line: "180d ×1.5" fits its 72px column once the grid track stops shrinking it. */
 .w-root .w-earn-lock-option > span {
   white-space: nowrap;
+}
+
+/* Send: recent recipients under an empty recipient field. A tap only fills it. */
+.w-root .w-recents {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.w-root .w-recents-label {
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.w-root .w-recent {
+  height: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-xs);
+  padding: 0 8px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-family: var(--font-num);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+/* A saved name is up to 24 characters; it never pushes the row sideways. */
+.w-root .w-recent {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.w-root .w-recent:hover:not(:disabled),
+.w-root .w-recent:focus-visible {
+  border-color: var(--text-3);
+  color: var(--text-1);
+}
+
+/* Send: the restored-draft line with its Clear button. */
+.w-root .w-draft {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.w-root .w-draft > .w-btn {
+  flex: 0 0 auto;
+}
+
+/* The review Total: a token send stacks the token line over the fee line. */
+.w-root .w-swap-review .w-row dd .w-review-total {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
 }

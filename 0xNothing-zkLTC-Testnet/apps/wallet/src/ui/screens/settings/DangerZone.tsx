@@ -1,9 +1,10 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { t } from "../../../core/i18n";
 import { describeError } from "../../../core/lib/errors";
 import { wipeWallet } from "../../../core/keyring/vault";
 import { Button, Icon, Note, Panel, PanelBody } from "../../components/kit";
 import { useActionGate } from "../../hooks/useActionGate";
+import { releaseCustomRpcPermissions, releaseNotificationsBeforeErase } from "./rpcRelease";
 
 /**
  * Wiping the wallet. The confirmation has to be typed because there is no
@@ -23,6 +24,7 @@ export function DangerZone(): ReactNode {
   const [busy, setBusy] = useState(false);
   const actionGate = useActionGate();
   const [error, setError] = useState<string | null>(null);
+  const errorId = useId();
   const confirmWord = t("wipe.word");
 
   const ready = typed.trim().toUpperCase() === confirmWord.toUpperCase();
@@ -32,6 +34,10 @@ export function DangerZone(): ReactNode {
     setBusy(true);
     setError(null);
     try {
+      // The custom RPC host grants go first, while the profiles naming them
+      // can still be read; this never throws. So does the notifications release.
+      await releaseNotificationsBeforeErase();
+      await releaseCustomRpcPermissions();
       await wipeWallet();
       window.location.reload();
     } catch (cause) {
@@ -68,10 +74,11 @@ export function DangerZone(): ReactNode {
                 className="w-input"
                 value={typed}
                 autoFocus
-                disabled={busy}
+                readOnly={busy}
                 spellCheck={false}
                 autoComplete="off"
                 aria-invalid={typed.length > 0 && !ready}
+                aria-describedby={error !== null ? errorId : undefined}
                 onChange={(event) => {
                   setTyped(event.target.value);
                   setError(null);
@@ -83,7 +90,7 @@ export function DangerZone(): ReactNode {
             </label>
             <Note tone="warn">{t("danger.warning")}</Note>
             {error !== null ? (
-              <div role="alert">
+              <div role="alert" id={errorId}>
                 <Note tone="error">{error}</Note>
               </div>
             ) : null}

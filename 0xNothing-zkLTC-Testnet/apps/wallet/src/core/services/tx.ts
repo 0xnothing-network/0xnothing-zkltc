@@ -3,9 +3,10 @@ import { erc20Abi } from "../../abis";
 import type { WalletNetwork } from "../../config/networks";
 import { t } from "../i18n";
 import { touchSession } from "../keyring/vault";
-import { describeError } from "../lib/errors";
+import { BroadcastUnknownError, describeError } from "../lib/errors";
 import { withNamedLock } from "../platform/locks";
-import { activeNetwork, publicClient, walletClientFor } from "../rpc/client";
+import { activeNetwork, publicClient, type SignedCall, walletClientFor } from "../rpc/client";
+import { noteSignedApproval } from "./approvals";
 import { addRecord, setRecordStatus, type TxKind, type TxLabel } from "./history";
 
 /**
@@ -40,6 +41,13 @@ export interface TxExecutionContext {
   client: typeof publicClient;
   /** Optional action-specific session check, repeated after async simulation. */
   assertReady?: () => Promise<void>;
+  /**
+   * Told the hash once the transaction is signed, before it is broadcast. Never
+   * called when the action failed earlier, so a caller that sees no call knows
+   * nothing was sent; after a call the outcome may be unknown and the same intent
+   * must not be signed again.
+   */
+  onSigned?: (hash: Hex) => void;
 }
 
 function executionContext(context?: TxExecutionContext): TxExecutionContext {
@@ -49,22 +57,30 @@ function executionContext(context?: TxExecutionContext): TxExecutionContext {
 /** How long to wait before the second look for a transaction whose broadcast failed. */
 const BROADCAST_RECHECK_MS = 1_500;
 
+type Signed = (hash: Hex, nonce?: number, call?: SignedCall) => void;
+
 /**
  * Runs one broadcast and returns its hash.
  *
  * A node can take a transaction and still fail to answer: the reply times out, the
  * connection drops, or a repeat is refused as already known. The send then throws
  * although the transaction is on its way. Its hash is known from the moment it was
- * signed, so it is looked up before giving up. Otherwise the wallet reports a
- * failure, writes no history row, and a retry signs a second copy with the next nonce.
+ * signed, so it is looked up before giving up. When it is not found either, the
+ * wallet does not know: it throws BroadcastUnknownError with the hash rather than
+ * the send's error, which would read as a failure and invite a retry that signs a
+ * second copy with the next nonce.
  */
 async function broadcast(
   readClient: typeof publicClient,
-  send: (onSigned: (hash: Hex) => void) => Promise<Hex>,
+  send: (onSigned: Signed) => Promise<Hex>,
+  signed: Signed,
 ): Promise<Hex> {
   let signedHash: Hex | undefined;
   try {
-    return await send((hash) => { signedHash = hash; });
+    return await send((hash, nonce, call) => {
+      signedHash = hash;
+      signed(hash, nonce, call);
+    });
   } catch (error) {
     // Nothing was signed: the failure came before any transaction existed.
     if (!signedHash) throw error;
@@ -73,15 +89,61 @@ async function broadcast(
       if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, BROADCAST_RECHECK_MS));
       if (await readClient.getTransaction({ hash }).then(() => true, () => false)) return hash;
     }
-    throw error;
+    throw new BroadcastUnknownError(hash, error);
   }
+}
+
+/**
+ * The history row of one submission, written the moment its transaction is
+ * signed, before the node has answered. A page closed mid-broadcast, or an
+ * answer that never comes, still leaves a pending row the History screen
+ * settles; the stored nonce lets it tell a transaction that can no longer be
+ * mined from one that is merely slow.
+ */
+function submission(
+  from: Address,
+  kind: TxKind,
+  line: TxLine,
+  network: WalletNetwork,
+  onSigned?: (hash: Hex) => void,
+) {
+  let written: Promise<void> = Promise.resolve();
+  let signedNonce: number | undefined;
+  const record = (hash: Hex) => addRecord({
+    hash,
+    account: from,
+    networkId: network.id,
+    kind,
+    status: "pending",
+    at: Date.now(),
+    label: line.label,
+    detail: line.detail,
+    detailLabel: line.detailLabel,
+    nonce: signedNonce,
+  }).catch(() => {});
+  const signed: Signed = (hash, nonce, call) => {
+    signedNonce = nonce;
+    written = record(hash);
+    // Token approvals are noted from the signed bytes for the approvals list. A
+    // recording fault must not turn a signed transaction into an unsent one either.
+    try { void noteSignedApproval(from, network, hash, call).catch(() => {}); } catch { /* ignored */ }
+    // A listener's fault must not turn a signed transaction into an unsent one.
+    try { onSigned?.(hash); } catch { /* ignored */ }
+  };
+  return {
+    signed,
+    /** Waits for the early row, so the hash or the error reaches the caller after it. */
+    settled: () => written,
+    record,
+  };
 }
 
 export async function writeCall(
   request: WriteRequest,
   context?: TxExecutionContext,
 ): Promise<Hex> {
-  const { network, client: readClient, assertReady } = executionContext(context);
+  const { network, client: readClient, assertReady, onSigned: told } = executionContext(context);
+  const row = submission(request.from, request.kind, request, network, told);
   const hash = await withNamedLock(`tx:${request.from.toLowerCase()}`, () => broadcast(readClient, async (onSigned) => {
     await assertReady?.();
     const client = await walletClientFor(request.from, network, assertReady, onSigned);
@@ -95,8 +157,8 @@ export async function writeCall(
     });
     await assertReady?.();
     return client.writeContract(simulated);
-  }));
-  await afterSubmit(request.from, hash, request.kind, request, network, readClient).catch(() => {});
+  }, row.signed)).finally(row.settled);
+  await afterSubmit(request.from, hash, network, readClient, row).catch(() => {});
   return hash;
 }
 
@@ -107,6 +169,7 @@ export async function sendNative(params: TxLine & {
 }): Promise<Hex> {
   const network = activeNetwork;
   const readClient = publicClient;
+  const row = submission(params.from, "send", params, network);
   const hash = await withNamedLock(`tx:${params.from.toLowerCase()}`, () => broadcast(readClient, async (onSigned) => {
     const client = await walletClientFor(params.from, network, undefined, onSigned);
     return client.sendTransaction({
@@ -115,8 +178,8 @@ export async function sendNative(params: TxLine & {
       to: params.to,
       value: params.value,
     });
-  }));
-  await afterSubmit(params.from, hash, "send", params, network, readClient).catch(() => {});
+  }, row.signed)).finally(row.settled);
+  await afterSubmit(params.from, hash, network, readClient, row).catch(() => {});
   return hash;
 }
 
@@ -175,7 +238,8 @@ export async function sendRaw(params: TxLine & {
   data?: Hex;
   gas?: bigint;
 }, context?: TxExecutionContext): Promise<Hex> {
-  const { network, client: readClient, assertReady } = executionContext(context);
+  const { network, client: readClient, assertReady, onSigned: told } = executionContext(context);
+  const row = submission(params.from, "dapp", params, network, told);
   const hash = await withNamedLock(`tx:${params.from.toLowerCase()}`, () => broadcast(readClient, async (onSigned) => {
     const client = await walletClientFor(params.from, network, assertReady, onSigned);
     return client.sendTransaction({
@@ -186,35 +250,25 @@ export async function sendRaw(params: TxLine & {
       data: params.data,
       gas: params.gas,
     });
-  }));
-  await afterSubmit(params.from, hash, "dapp", params, network, readClient).catch(() => {});
+  }, row.signed)).finally(row.settled);
+  await afterSubmit(params.from, hash, network, readClient, row).catch(() => {});
   return hash;
 }
 
 async function afterSubmit(
   from: Address,
   hash: Hex,
-  kind: TxKind,
-  line: TxLine,
   network: WalletNetwork,
   client: typeof publicClient,
+  row: ReturnType<typeof submission>,
 ): Promise<void> {
   // The hash is already accepted by the node. Metadata must never turn a
   // successful submission into a rejected call (which would make UI retries
-  // submit the same intent a second time).
+  // submit the same intent a second time). The row is written again in case
+  // the early write at signing failed; the rewrite keeps the hash and nonce.
   await Promise.all([
     touchSession().catch(() => {}),
-    addRecord({
-      hash,
-      account: from,
-      networkId: network.id,
-      kind,
-      status: "pending",
-      at: Date.now(),
-      label: line.label,
-      detail: line.detail,
-      detailLabel: line.detailLabel,
-    }).catch(() => {}),
+    row.record(hash),
   ]);
   void client
     .waitForTransactionReceipt({ hash, timeout: 120_000 })

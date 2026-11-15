@@ -3,6 +3,8 @@ dist/
 /android/
 ios/
 *.zip
+# A release archive unpacked next to it, for loading the extension unpacked.
+/0xWallet-*/
 *.tsbuildinfo
 .vite/
 .DS_Store

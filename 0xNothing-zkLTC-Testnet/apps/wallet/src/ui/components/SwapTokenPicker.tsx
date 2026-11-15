@@ -1,10 +1,11 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { getAddress, isAddress, type Address } from "viem";
-import type { WalletToken } from "../../config/assets";
+import { impersonatesBuiltin, type WalletToken } from "../../config/assets";
 import { t } from "../../core/i18n";
 import { shortenAddress } from "../../core/lib/format";
 import type { SwapMarketSource } from "../../core/services/marketCatalog";
 import { useActionGate } from "../hooks/useActionGate";
+import { useSheetFocus } from "../hooks/useSheetFocus";
 import { TokenLogo } from "./TokenLogo";
 import { Icon } from "./kit";
 import { VerifiedMark } from "./VerifiedMark";
@@ -53,6 +54,7 @@ export function SwapTokenPicker({
 }): ReactNode {
   const searchId = useId();
   const [open, setOpen] = useState(false);
+  const sheetRef = useSheetFocus<HTMLDivElement>(open);
   const [query, setQuery] = useState("");
   const [choosing, setChoosing] = useState(false);
   const actionGate = useActionGate();
@@ -165,8 +167,10 @@ export function SwapTokenPicker({
           }}
         >
           <div
+            ref={sheetRef}
             className="w-sheet-body w-token-sheet"
             role="dialog"
+            tabIndex={-1}
             aria-modal="true"
             aria-labelledby={searchId}
             aria-busy={choosing}
@@ -231,6 +235,9 @@ export function SwapTokenPicker({
                       <VerifiedMark verified={option.token.verified} />
                     </strong>
                     <span>{option.token.name}</span>
+                    {impersonatesBuiltin(option.token)
+                      ? <span className="w-token-warn">{t("tok.notOfficial")}</span>
+                      : null}
                   </span>
                   <span
                     className="w-token-source"

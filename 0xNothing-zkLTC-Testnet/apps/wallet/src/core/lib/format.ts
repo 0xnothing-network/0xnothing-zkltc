@@ -9,6 +9,18 @@ export function shortenAddress(address: string, head = 6, tail = 4): string {
 }
 
 /**
+ * The whole address, in groups of four after the 0x: "0x 1234 abcd …". Review
+ * screens are where address poisoning is caught, and a poisoned address shares
+ * its head and tail with the real one, so the review never hides the middle.
+ * Lists keep `shortenAddress`.
+ */
+export function groupHex(address: string): string {
+  const body = address.startsWith("0x") || address.startsWith("0X") ? address.slice(2) : address;
+  const groups = body.match(/.{1,4}/gu) ?? [];
+  return [address.slice(0, address.length - body.length), ...groups].filter(Boolean).join(" ");
+}
+
+/**
  * Groups the integer part and trims trailing zeros. Deliberately never uses
  * scientific notation: a wallet that shows "1e-7 NUSD" is unreadable.
  */
@@ -18,6 +30,17 @@ export function formatAmount(value: bigint, decimals: number, maxFractionDigits 
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/gu, ",");
   const trimmed = fraction.slice(0, maxFractionDigits).replace(/0+$/u, "");
   return trimmed.length > 0 ? `${grouped}.${trimmed}` : grouped;
+}
+
+/**
+ * A network fee. LiteForge fees are a few 1e-7 of a coin, which six decimals
+ * would show as "0" on every review. Eight decimals, and a non-zero fee below
+ * that is said to be below it rather than rounded to nothing.
+ */
+export function formatFee(wei: bigint, decimals: number): string {
+  if (wei <= 0n) return "0";
+  const shown = formatAmount(wei, decimals, 8);
+  return shown === "0" ? "< 0.00000001" : shown;
 }
 
 /** Keeps small balances legible: more decimals the smaller the number. */

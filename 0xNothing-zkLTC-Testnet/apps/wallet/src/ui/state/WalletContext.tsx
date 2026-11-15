@@ -10,10 +10,10 @@ import {
 } from "react";
 import type { Address } from "viem";
 import type { WalletToken } from "../../config/assets";
-import { LITVM_NETWORK, networkHex, resolveNetwork, type WalletNetwork } from "../../config/networks";
-import { setLocale, t } from "../../core/i18n";
+import { LITVM_NETWORK, resolveNetwork, type WalletNetwork } from "../../config/networks";
+import { loadLocale, setLocale, t } from "../../core/i18n";
 import { describeError } from "../../core/lib/errors";
-import { persistentStore } from "../../core/platform/storage";
+import { persistentStore, sessionStore } from "../../core/platform/storage";
 import { STORAGE_KEYS } from "../../core/platform/storageKeys";
 import {
   type AccountMeta,
@@ -28,10 +28,12 @@ import {
   type WalletSettings,
   writeSettings,
 } from "../../core/keyring/vault";
-import { setConnectedAccount } from "../../core/services/dapp";
 import { listTokens } from "../../core/services/tokens";
 import { announceToPages } from "../../core/services/walletEvents";
 import { configureRpcClient } from "../../core/rpc/client";
+import { resolveTheme, systemPrefersLight } from "../lib/theme";
+import { markVersionSeen } from "../lib/uiMemoryStore";
+import { showToast, type ToastTone } from "./toastStore";
 
 /**
  * The only global state: which account is active, what the asset list is, and
@@ -44,15 +46,7 @@ import { configureRpcClient } from "../../core/rpc/client";
  */
 export type Phase = "loading" | "onboarding" | "locked" | "ready";
 
-export type ToastTone = "info" | "ok" | "error";
-
-export interface Toast {
-  id: number;
-  message: string;
-  tone: ToastTone;
-  /** Explorer link shown next to the message. */
-  href?: string;
-}
+export type { Toast, ToastTone } from "./toastStore";
 export interface WalletValue {
   phase: Phase;
   accounts: AccountMeta[];
@@ -72,24 +66,26 @@ export interface WalletValue {
   lockWallet: () => Promise<void>;
   /** Called by Onboarding and Unlock once the vault is open. */
   openWallet: () => Promise<void>;
-  toast: Toast | null;
+  /** Shows a toast. The toast itself lives in toastStore, read by ToastBar alone. */
   notify: (message: string, tone?: ToastTone, href?: string) => void;
-  dismiss: () => void;
 }
 
 const WalletContext = createContext<WalletValue | null>(null);
 
 /** How often the UI checks whether the auto-lock deadline has passed. */
 const LOCK_CHECK_MS = 20_000;
-const TOAST_MS = 5_000;
 /** A deliberate action pushes the deadline out at most this often. */
 const TOUCH_THROTTLE_MS = 30_000;
 const THEME_STORAGE_KEY = "0xn.wallet.theme";
 
-/** Keep the pre-paint theme hint and the live document theme in lock-step. */
+/**
+ * Keep the pre-paint theme hint and the live document theme in lock-step. The
+ * mirror keeps the setting itself ("system" included, theme-boot.js resolves
+ * it); the document gets the resolved dark or light.
+ */
 function applyTheme(theme: WalletSettings["theme"]): void {
   try {
-    document.documentElement.dataset.theme = theme;
+    document.documentElement.dataset.theme = resolveTheme(theme, systemPrefersLight());
   } catch {
     // The persisted wallet setting remains authoritative if the DOM is absent.
   }
@@ -121,15 +117,47 @@ function keepIdentity<T>(previous: T, next: T): T {
   }
 }
 
+/**
+ * What a change to the session record means here. Removed while open: another
+ * surface or the worker's alarm locked the wallet, so stop showing balances now
+ * rather than at the next 20 s check. Written while locked: it was unlocked
+ * elsewhere, so this surface opens too instead of asking for the password again.
+ * A write while open (reveal, import, change) changes nothing.
+ */
+export function sessionChange(phase: Phase, value: unknown): "lock" | "open" | null {
+  if (value === undefined || value === null) return phase === "ready" ? "lock" : null;
+  return phase === "locked" ? "open" : null;
+}
+
+/** Callers that overlap share the run already in flight instead of starting another. */
+export function shareInFlight(run: () => Promise<void>): () => Promise<void> {
+  let current: Promise<void> | null = null;
+  return () => {
+    current ??= run().finally(() => {
+      current = null;
+    });
+    return current;
+  };
+}
+
 export function WalletProvider({ children }: { children: ReactNode }): ReactNode {
   const [phase, setPhase] = useState<Phase>("loading");
+  /** Read by the session subscription, which is set up once. */
+  const phaseRef = useRef<Phase>("loading");
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+  // A wallet made on this version (a fresh install, or after an erase)
+  // has nothing to catch up on, so this version counts as seen.
+  useEffect(() => {
+    if (phase === "onboarding") void markVersionSeen(__WALLET_VERSION__);
+  }, [phase]);
   const [accounts, setAccounts] = useState<AccountMeta[]>([]);
   const [address, setAddress] = useState<Address | null>(null);
   const [settings, setSettings] = useState<WalletSettings>(DEFAULT_SETTINGS);
   const [network, setNetwork] = useState<WalletNetwork>(LITVM_NETWORK);
   const [tokens, setTokens] = useState<WalletToken[]>([]);
   const [tick, setTick] = useState(0);
-  const [toast, setToast] = useState<Toast | null>(null);
   const settingsQueueRef = useRef<Promise<void>>(Promise.resolve());
   const settingsRevisionRef = useRef(0);
   /** Invalidates a slower storage/RPC read when a newer reload or write wins. */
@@ -142,8 +170,9 @@ export function WalletProvider({ children }: { children: ReactNode }): ReactNode
       readAccounts(),
       settingsQueueRef.current.then(readSettings),
     ]);
-    const selected = resolveNetwork(saved.networkId, saved.customNetworks);
-    const list = await listTokens(selected);
+    const selected = resolveNetwork(saved.networkId, saved.customNetworks, saved.litvmRpcUrl);
+    // The stored language's catalog is read here, so setLocale below can apply it.
+    const [list] = await Promise.all([listTokens(selected), loadLocale(saved.locale)]);
     if (
       generation !== reloadGenerationRef.current
       || revision !== settingsRevisionRef.current
@@ -180,7 +209,7 @@ export function WalletProvider({ children }: { children: ReactNode }): ReactNode
         ? phaseResult.reason
         : null;
       if (failure !== null) {
-        setToast({ id: Date.now(), message: describeError(failure), tone: "error" });
+        showToast(describeError(failure), "error");
       }
     })();
     return () => {
@@ -198,7 +227,7 @@ export function WalletProvider({ children }: { children: ReactNode }): ReactNode
       STORAGE_KEYS.tokens,
     ].map((key) => persistentStore.subscribe(key, () => {
       void reload().catch((cause: unknown) => {
-        setToast({ id: Date.now(), message: describeError(cause), tone: "error" });
+        showToast(describeError(cause), "error");
       });
     }));
     return () => unwatch.forEach((stop) => stop());
@@ -208,6 +237,12 @@ export function WalletProvider({ children }: { children: ReactNode }): ReactNode
    * Auto-lock is enforced by the vault itself — the session record carries the
    * deadline — so the UI only has to notice, which it does on a timer and on
    * every return to the foreground.
+   *
+   * The return check is what locks the Android app after time away: a hidden
+   * WebView throttles or freezes the timer, but the vault compares the stored
+   * wall-clock deadline with Date.now(), so a phone left in the background past
+   * the auto-lock setting comes back locked. Activity cannot rescue it first,
+   * because touchSession refuses a deadline that has already passed.
    */
   useEffect(() => {
     if (phase !== "ready") return;
@@ -255,30 +290,24 @@ export function WalletProvider({ children }: { children: ReactNode }): ReactNode
       window.removeEventListener("keydown", onActivity);
     };
   }, [phase]);
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), TOAST_MS);
-    return () => clearTimeout(timer);
-  }, [toast]);
-
   const notify = useCallback((message: string, tone: ToastTone = "info", href?: string) => {
-    setToast({ id: Date.now(), message, tone, href });
+    showToast(message, tone, href);
   }, []);
 
   const refresh = useCallback(() => setTick((value) => value + 1), []);
 
   /**
-   * Switching account re-points every granted origin at the new address and
-   * tells the pages, so a dapp never keeps signing for the account the user just
-   * left. Only ever one address is exposed.
+   * Switching account leaves every site's connections as the user made them and
+   * only pings the pages. A site connected to the new account then sees it; every
+   * other site sees no account until the user connects this one to it, so a switch
+   * never ties two addresses together for a site, nor signs for the one just left.
    */
   const selectAccount = useCallback(
     async (next: Address) => {
       const state = await setActiveAccount(next);
       setAccounts(state.accounts);
       setAddress(state.active);
-      await setConnectedAccount(next);
-      await announceToPages("accountsChanged", [next]);
+      await announceToPages("accountsChanged");
       setTick((value) => value + 1);
     },
     [],
@@ -290,13 +319,14 @@ export function WalletProvider({ children }: { children: ReactNode }): ReactNode
     const task = settingsQueueRef.current.then(async () => {
       const before = patch.networkId === undefined ? null : (await readSettings()).networkId;
       const next = await writeSettings(patch);
-      const selected = resolveNetwork(next.networkId, next.customNetworks);
+      const selected = resolveNetwork(next.networkId, next.customNetworks, next.litvmRpcUrl);
       // The worker announces the switches dapps ask for; a network picked here would
       // otherwise leave connected pages reading and signing for a stale chainId.
       if (before !== null && before !== next.networkId) {
-        void announceToPages("chainChanged", networkHex(selected.chainId));
+        void announceToPages("chainChanged");
       }
-      const list = await listTokens(selected);
+      // A language picked in Settings shows once its catalog is read (English if it cannot be).
+      const [list] = await Promise.all([listTokens(selected), loadLocale(next.locale)]);
       // Writes run in this queue, so successful results are applied in the
       // exact same order in which the controls produced them.
       if (
@@ -317,7 +347,7 @@ export function WalletProvider({ children }: { children: ReactNode }): ReactNode
     settingsQueueRef.current = task.catch(() => {});
     return task.catch((cause: unknown) => {
       if (revision === settingsRevisionRef.current) {
-        setToast({ id: Date.now(), message: describeError(cause), tone: "error" });
+        showToast(describeError(cause), "error");
       }
       throw cause;
     });
@@ -328,11 +358,37 @@ export function WalletProvider({ children }: { children: ReactNode }): ReactNode
     setPhase("locked");
   }, []);
 
-  const openWallet = useCallback(async () => {
+  // This surface's own Unlock and the session event below both open the wallet
+  // after one unlock; they share one reload, and a late second call is a no-op.
+  const openWallet = useMemo(() => shareInFlight(async () => {
+    if (phaseRef.current === "ready") return;
     await reload();
+    phaseRef.current = "ready";
     setPhase("ready");
     setTick((value) => value + 1);
-  }, [reload]);
+  }), [reload]);
+
+  useEffect(() => {
+    let alive = true;
+    const stop = sessionStore.subscribe(STORAGE_KEYS.session, (value) => {
+      const action = sessionChange(phaseRef.current, value);
+      if (action === "lock") {
+        setPhase((current) => (current === "ready" ? "locked" : current));
+      } else if (action === "open") {
+        void decidePhase()
+          .then((next) => {
+            if (alive && next === "ready" && phaseRef.current === "locked") return openWallet();
+          })
+          .catch((cause: unknown) => {
+            if (alive) showToast(describeError(cause), "error");
+          });
+      }
+    });
+    return () => {
+      alive = false;
+      stop();
+    };
+  }, [decidePhase, openWallet]);
 
   const active = useMemo(
     () => accounts.find((meta) => meta.address === address) ?? accounts[0] ?? null,
@@ -359,9 +415,7 @@ export function WalletProvider({ children }: { children: ReactNode }): ReactNode
       saveSettings,
       lockWallet,
       openWallet,
-      toast,
       notify,
-      dismiss: () => setToast(null),
     }),
     [
       accounts,
@@ -376,7 +430,6 @@ export function WalletProvider({ children }: { children: ReactNode }): ReactNode
       selectAccount,
       settings,
       tick,
-      toast,
       tokens,
       network,
       networks,

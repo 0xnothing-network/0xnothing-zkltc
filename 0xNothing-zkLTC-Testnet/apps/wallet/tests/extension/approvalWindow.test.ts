@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { findApprovalWindowId } from "../../src/extension/approvalWindow.ts";
+import { findApprovalWindowId, shouldForceFocus } from "../../src/extension/approvalWindow.ts";
 
 const route = "chrome-extension://wallet-id/index.html#/approve";
 
@@ -20,4 +20,12 @@ test("an approval popup survives service-worker restarts without being duplicate
   assert.equal(findApprovalWindowId([
     { id: 9, tabs: [{ url: `${route}-lookalike?id=request-3` }] },
   ], route), undefined);
+});
+
+test("a page asking again and again pulls the approval window forward at most every 10 s", () => {
+  const now = 5_000_000;
+  assert.equal(shouldForceFocus(now, now - 5_000), false);
+  assert.equal(shouldForceFocus(now, now - 9_999), false);
+  assert.equal(shouldForceFocus(now, now - 10_000), true);
+  assert.equal(shouldForceFocus(now, Number.NEGATIVE_INFINITY), true);
 });

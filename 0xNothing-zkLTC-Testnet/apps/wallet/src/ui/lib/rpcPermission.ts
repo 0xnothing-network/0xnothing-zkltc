@@ -18,3 +18,31 @@ export function rpcPermissionPattern(rpcUrl: string): string | null {
     return null;
   }
 }
+
+/** The `host[:port]` named in the "needs your permission" note. */
+export function rpcHost(rpcUrl: string): string {
+  try {
+    return new URL(rpcUrl).host;
+  } catch {
+    return rpcUrl;
+  }
+}
+
+/**
+ * True only when the extension can tell the RPC host is NOT granted. Loopback
+ * moved to optional_host_permissions, and Chrome may drop the old grant of a
+ * saved local RPC on update, so the UI asks again rather than failing reads.
+ * No API, no pattern or a failed check is "not missing": never nag on a guess.
+ */
+export async function rpcAccessMissing(
+  rpcUrl: string,
+  permissions: { contains(request: { origins: string[] }): Promise<boolean> } | undefined,
+): Promise<boolean> {
+  const pattern = rpcPermissionPattern(rpcUrl);
+  if (permissions === undefined || pattern === null) return false;
+  try {
+    return !(await permissions.contains({ origins: [pattern] }));
+  } catch {
+    return false;
+  }
+}

@@ -45,8 +45,40 @@ export function newProviderUuid(): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-export function targetsOrigin(origins: readonly string[] | undefined, origin: string): boolean {
-  return origins === undefined || origins.includes(origin);
+/**
+ * What a frame's provider reports: its chain and the accounts its site may see. The
+ * worker answers it per frame after a ping (provider-state), from the origin the
+ * browser reports, so it is never more than eth_chainId and eth_accounts would say.
+ * The chain is left out for a site without a connection, whose provider then emits
+ * no chainChanged, as in 1.0.9.
+ */
+export interface ProviderState {
+  chainId?: string;
+  accounts: string[];
+}
+
+const STATE_CHAIN_ID = /^0x[0-9a-fA-F]{1,64}$/u;
+const STATE_ACCOUNT = /^0x[0-9a-fA-F]{40}$/u;
+const MAX_STATE_ACCOUNTS = 8;
+
+/** The state as the provider may apply it, or null for anything else. */
+export function readProviderState(value: unknown): ProviderState | null {
+  const state = value as { chainId?: unknown; accounts?: unknown } | null;
+  if (!state || typeof state !== "object") return null;
+  if (state.chainId !== undefined && (typeof state.chainId !== "string" || !STATE_CHAIN_ID.test(state.chainId))) return null;
+  if (!Array.isArray(state.accounts) || state.accounts.length > MAX_STATE_ACCOUNTS) return null;
+  const accounts: string[] = [];
+  for (const account of state.accounts) {
+    if (typeof account !== "string" || !STATE_ACCOUNT.test(account)) return null;
+    accounts.push(account);
+  }
+  return state.chainId === undefined ? { accounts } : { chainId: state.chainId, accounts };
+}
+
+/** Same accounts in the same order, whatever the letter case of the checksum. */
+export function sameAccounts(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length
+    && left.every((account, index) => account.toLowerCase() === right[index]?.toLowerCase());
 }
 
 /** The brand mark as an inline SVG: EIP-6963 requires a data URI icon. */
@@ -59,13 +91,22 @@ export const PROVIDER_ICON =
 
 export interface RpcCall {
   method: string;
-  params?: unknown[];
+  /** An object only for wallet_watchAsset (EIP-747); an array for every other method. */
+  params?: unknown[] | Record<string, unknown>;
 }
 
 export interface RpcFailure {
   code: number;
   message: string;
 }
+
+/**
+ * What a page is told (code 4900) when the worker stopped before it answered:
+ * Chrome's own rejection text ("A listener indicated an asynchronous
+ * response...", "Receiving end does not exist") describes its internals and
+ * means nothing to the person using the dapp.
+ */
+export const WALLET_STOPPED_MESSAGE = "The wallet stopped before it answered. Try the request again.";
 
 /** Sent by the page for every provider request. */
 export interface PageMessage {
@@ -74,13 +115,16 @@ export interface PageMessage {
   call: RpcCall;
 }
 
-/** Sent back to the page: either an answer to `id`, or a provider event. */
+/**
+ * Sent back to the page: either an answer to `id`, or the frame's state pulled
+ * after a ping, from which the provider emits only the events that changed.
+ */
 export interface ContentMessage {
   channel: typeof TO_PAGE;
   id?: string;
   result?: unknown;
   error?: RpcFailure;
-  event?: { name: string; data: unknown; origins?: readonly string[] };
+  state?: ProviderState;
 }
 
 function jsonStringBytes(value: string, remaining: number): number | null {
@@ -199,7 +243,11 @@ export function isBoundedRpcCall(value: unknown): value is RpcCall {
       && typeof call.method === "string"
       && call.method.length > 0
       && call.method.length <= MAX_PROVIDER_METHOD_LENGTH
-      && (call.params === undefined || Array.isArray(call.params))
+      && (call.params === undefined
+        || Array.isArray(call.params)
+        // EIP-747 and viem send watchAsset's params as `{ type, options }`; the
+        // JSON check below refuses anything but a plain object.
+        || (call.method === "wallet_watchAsset" && call.params !== null && typeof call.params === "object"))
       && isBoundedJson(call, MAX_PROVIDER_CALL_BYTES);
   } catch {
     return false;

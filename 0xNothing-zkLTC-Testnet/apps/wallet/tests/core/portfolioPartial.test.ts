@@ -16,14 +16,18 @@ interface PortfolioModule {
   rowReadError(rows: Row[] | undefined, tokenId: string): string | null;
 }
 
-function load(failing: (address: string) => boolean): PortfolioModule {
+function load(
+  failing: (address: string) => boolean,
+  balanceOf: (address: string) => bigint = () => 3n,
+  prices: Map<string, { priceWad: bigint; source: string; stale: boolean }> = new Map(),
+): PortfolioModule {
   const client = {
     getBalance: async () => 5n,
     getBlockNumber: async () => 7n,
     multicall: async ({ contracts }: { contracts: { address: string }[] }) => contracts.map((call) =>
       failing(call.address)
         ? { status: "failure", error: new Error(`revert ${call.address}`) }
-        : { status: "success", result: 3n }),
+        : { status: "success", result: balanceOf(call.address) }),
   };
   const imports: Record<string, unknown> = {
     "../../abis": { erc20Abi: [], lendingPoolAbi: [] },
@@ -39,7 +43,7 @@ function load(failing: (address: string) => boolean): PortfolioModule {
       activeNetwork: { id: "test", rpcUrl: "https://rpc.invalid", builtin: true },
       publicClient: client,
     },
-    "./prices": { loadPrices: async () => new Map() },
+    "./prices": { loadPrices: async () => prices },
   };
   const file = new URL("../../src/core/services/portfolio.ts", import.meta.url);
   const code = ts.transpileModule(readFileSync(file, "utf8"), {
@@ -69,4 +73,23 @@ test("one unreadable token keeps every other row and reads as unknown, not 0", a
 test("every balance leg down still rejects so the last good snapshot stays", async () => {
   const portfolio = load(() => true);
   await assert.rejects(portfolio.loadPortfolio(owner, [native, good, bad]), /revert/u);
+});
+
+test("an unpriced token with a zero balance does not hold the 24h change back", async () => {
+  const priced = new Map([
+    [native.id, { priceWad: 1n, source: "oracle", stale: false }],
+    [good.id, { priceWad: 1n, source: "pool", stale: false }],
+    // A token whose price could not be read: stale, never a confident zero.
+    [bad.id, { priceWad: 0n, source: "none", stale: true }],
+  ]);
+  const empty = load(() => false, (address) => address === bad.address ? 0n : 3n, priced);
+  assert.equal((await empty.loadPortfolio(owner, [native, good, bad])).complete, true);
+
+  // The same stale price on a balance the user holds still keeps it out.
+  const held = load(() => false, () => 3n, priced);
+  assert.equal((await held.loadPortfolio(owner, [native, good, bad])).complete, false);
+
+  // A zero that was never read is not a zero balance.
+  const unread = load((address) => address === bad.address, () => 0n, priced);
+  assert.equal((await unread.loadPortfolio(owner, [native, good, bad])).complete, false);
 });

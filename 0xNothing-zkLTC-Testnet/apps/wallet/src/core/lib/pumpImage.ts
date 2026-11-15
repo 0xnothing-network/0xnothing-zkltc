@@ -21,14 +21,23 @@ const TRUSTED_IMAGE_HOST_SUFFIXES = [
  * source. IPFS is served through the site's bounded proxy; arbitrary URLs are
  * never accepted just because a token contract returned them.
  */
-export function pumpTokenImageUrl(uri: string | undefined, symbol = ""): string | undefined {
+export function pumpTokenImageUrl(
+  uri: string | undefined,
+  symbol = "",
+  allowBundled = false,
+): string | undefined {
   const value = uri?.trim();
   if (!value || value.length > MAX_IMAGE_URI_LENGTH || /[\u0000-\u001f\u007f]/.test(value)) {
     return undefined;
   }
 
-  // Built-in assets are shipped with the wallet and are not remote input.
-  if (/^tokens\/[a-zA-Z0-9._~-]+$/.test(value)) return value;
+  // Built-in assets are shipped with the wallet and are not remote input, but
+  // an imported token's logo is: a contract's imageURI() or a catalog entry
+  // could name "tokens/NUSD_LOGO.jpg" and wear the official art. Only a
+  // built-in token may show a bundled image.
+  if (/^tokens\//.test(value)) {
+    return allowBundled && /^tokens\/[a-zA-Z0-9._~-]+$/.test(value) ? value : undefined;
+  }
 
   // 0xFi's pool catalog already returns the same bounded proxy as a relative
   // URL. Re-validate its CID and rebuild it against the public app origin so an

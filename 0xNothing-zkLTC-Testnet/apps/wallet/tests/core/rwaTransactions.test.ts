@@ -85,6 +85,7 @@ test("writeCall rechecks its action session after simulation and before signing"
       "../keyring/vault": { touchSession: async () => {} }, "../lib/errors": {},
       "../platform/locks": { withNamedLock: async (_name: string, task: () => Promise<unknown>) => task() },
       "../rpc/client": { walletClientFor: async () => ({ account: from, writeContract: async () => { signed = true; } }) },
+      "./approvals": { noteSignedApproval: async () => {} },
       "./history": {},
     },
   );
@@ -95,15 +96,22 @@ test("writeCall rechecks its action session after simulation and before signing"
   assert.equal(signed, false);
 });
 
+/** Stand-in for lib/errors' class: the module under test runs in its own realm. */
+class BroadcastUnknownError extends Error {
+  readonly hash: string;
+  constructor(hash: string, cause: unknown) { super("err.broadcastUnknown", { cause }); this.hash = hash; }
+}
+
 test("a broadcast whose answer was lost is found by its signed hash instead of being reported as failed", async () => {
   const signedHash = `0x${"ab".repeat(32)}`;
   const lookups: string[] = [];
-  const records: string[] = [];
+  // Rows keyed by hash, as history.addRecord deduplicates them.
+  const records = new Map<string, { status: string; nonce?: number }>();
   const service = (options: { signs: boolean; known: boolean }) => evaluateModule<{
     sendNative: (params: unknown) => Promise<string>;
   }>(new URL("../../src/core/services/tx.ts", import.meta.url), {
     "../../abis": { erc20Abi: [] }, "../i18n": { t: (key: string) => key },
-    "../keyring/vault": { touchSession: async () => {} }, "../lib/errors": {},
+    "../keyring/vault": { touchSession: async () => {} }, "../lib/errors": { BroadcastUnknownError },
     "../platform/locks": { withNamedLock: async (_name: string, task: () => Promise<unknown>) => task() },
     "../rpc/client": {
       activeNetwork: { id: "litvm" },
@@ -115,28 +123,91 @@ test("a broadcast whose answer was lost is found by its signed hash instead of b
         },
         waitForTransactionReceipt: async () => ({ status: "success" }),
       },
-      walletClientFor: async (_from: string, _network: unknown, _ready: unknown, onSigned: (hash: string) => void) => ({
+      walletClientFor: async (
+        _from: string, _network: unknown, _ready: unknown, onSigned: (hash: string, nonce?: number) => void,
+      ) => ({
         account: from,
         sendTransaction: async () => {
-          if (options.signs) onSigned(signedHash);
+          if (options.signs) onSigned(signedHash, 7);
           throw new Error("The request took too long to respond.");
         },
       }),
     },
-    "./history": { addRecord: async ({ hash }: { hash: string }) => { records.push(hash); }, setRecordStatus: async () => {} },
+    "./approvals": { noteSignedApproval: async () => {} },
+    "./history": {
+      addRecord: async ({ hash, status, nonce }: { hash: string; status: string; nonce?: number }) => {
+        records.set(hash, { status, nonce });
+      },
+      setRecordStatus: async () => {},
+    },
   }, { setTimeout: (task: () => void) => { task(); return 0; }, Promise, Date });
   const send = (options: { signs: boolean; known: boolean }) =>
     service(options).sendNative({ from, to: from, value: 1n, label: { key: "tx.send" } });
 
   // The node took the transaction: it is reported as sent and gets its history row.
   assert.equal(await send({ signs: true, known: true }), signedHash);
-  assert.deepEqual(records, [signedHash]);
+  assert.deepEqual([...records.keys()], [signedHash]);
   assert.deepEqual(lookups, [signedHash]);
-  // Nothing in the pool after two looks: the original error stands.
-  await assert.rejects(send({ signs: true, known: false }), /took too long/);
+  // Nothing in the pool after two looks: the wallet does not know. It says so,
+  // with the hash, and the pending row (with its nonce) stays for History to settle.
+  records.clear();
+  await assert.rejects(send({ signs: true, known: false }), (error: unknown) => {
+    assert.ok(error instanceof BroadcastUnknownError);
+    assert.equal(error.hash, signedHash);
+    assert.match(String((error.cause as Error).message), /took too long/);
+    return true;
+  });
   assert.equal(lookups.length, 3);
-  // A failure before signing is never looked up.
+  assert.deepEqual([...records.entries()], [[signedHash, { status: "pending", nonce: 7 }]]);
+  // A failure before signing is never looked up, writes no row and keeps its own error.
+  records.clear();
   await assert.rejects(send({ signs: false, known: true }), /took too long/);
   assert.equal(lookups.length, 3);
-  assert.deepEqual(records, [signedHash]);
+  assert.equal(records.size, 0);
+});
+
+test("a dapp context is told the signed hash once, and never when the failure came before signing", async () => {
+  const signedHash = `0x${"cd".repeat(32)}`;
+  const run = async (options: { signs: boolean; answered: boolean }) => {
+    const told: string[] = [];
+    const service = evaluateModule<{ sendRaw: (params: unknown, context: unknown) => Promise<string> }>(
+      new URL("../../src/core/services/tx.ts", import.meta.url), {
+        "../../abis": { erc20Abi: [] }, "../i18n": { t: (key: string) => key },
+        "../keyring/vault": { touchSession: async () => {} }, "../lib/errors": { BroadcastUnknownError },
+        "../platform/locks": { withNamedLock: async (_name: string, task: () => Promise<unknown>) => task() },
+        "../rpc/client": {
+          walletClientFor: async (
+            _from: string, _network: unknown, _ready: unknown, onSigned: (hash: string, nonce?: number) => void,
+          ) => ({
+            account: from,
+            sendTransaction: async () => {
+              if (!options.signs) throw new Error("execution reverted");
+              onSigned(signedHash, 3);
+              if (!options.answered) throw new Error("The request took too long to respond.");
+              return signedHash;
+            },
+          }),
+        },
+        "./approvals": { noteSignedApproval: async () => {} },
+        "./history": { addRecord: async () => {}, setRecordStatus: async () => {} },
+      }, { setTimeout: (task: () => void) => { task(); return 0; }, Promise, Date });
+    const client = {
+      getTransaction: async () => { throw new Error("Transaction not found"); },
+      waitForTransactionReceipt: async () => ({ status: "success" }),
+    };
+    const result = service.sendRaw({ from, to: from, label: { key: "tx.dapp" } }, {
+      network: { id: "litvm" }, client, onSigned: (hash: string) => { told.push(hash); },
+    }).then((hash) => hash, (error: unknown) => error);
+    return { result: await result, told };
+  };
+
+  const sent = await run({ signs: true, answered: true });
+  assert.equal(sent.result, signedHash);
+  assert.deepEqual(sent.told, [signedHash]);
+  const unknown = await run({ signs: true, answered: false });
+  assert.ok(unknown.result instanceof BroadcastUnknownError);
+  assert.deepEqual(unknown.told, [signedHash]);
+  const refused = await run({ signs: false, answered: false });
+  assert.match(String((refused.result as Error).message), /execution reverted/);
+  assert.deepEqual(refused.told, []);
 });

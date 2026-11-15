@@ -3,6 +3,16 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
+import { chainScope, cleartextRpcUrl, normalizeRpcUrl } from "../../src/config/networks.ts";
+import { withCreateClient } from "../helpers/viemClients.ts";
+
+/** The real chain scoping, anchored to this fixture's stand-in LitVM id. */
+function chainScoping(litvmId: string) {
+  return {
+    chainScope,
+    onNetworkChain: (stored: string | undefined, id: string) => chainScope(stored ?? litvmId) === chainScope(id),
+  };
+}
 
 // Run the real service code with controlled storage/RPC promises. No signing,
 // browser storage, or external requests are involved in these regressions.
@@ -43,11 +53,12 @@ test("live read budgets do not shorten signing transport retries", async () => {
     publicClient: Client;
     walletClientFor(address: string): Promise<Client>;
   }>("../../src/core/rpc/client.ts", {
-    viem: {
+    viem: withCreateClient({
       createPublicClient: (options: Client) => options,
       createWalletClient: (options: Client) => options,
       http: (_url: string, options: Transport) => options,
-    },
+    }),
+    "viem/actions": {},
     "viem/accounts": { toAccount: (source: unknown) => source },
     "../i18n": { t: (key: string) => key },
     "../../config/networks": {
@@ -62,6 +73,7 @@ test("live read budgets do not shorten signing transport retries", async () => {
       readSettings: async () => ({ networkId: originalNetwork.id, customNetworks: [] }),
       isUnlocked: async () => true,
     },
+    "../services/rpcProbe": { probeChainId: async () => null },
   });
   assert.equal(rpc.publicClient.transport.timeout, 5_000);
   assert.equal(rpc.publicClient.transport.retryCount, 0);
@@ -80,11 +92,12 @@ test("profile read clients reuse the active RPC and resolve other profiles witho
     publicClientFor(network: typeof original): Client;
     configureRpcClient(network: typeof original): void;
   }>("../../src/core/rpc/client.ts", {
-    viem: {
+    viem: withCreateClient({
       createPublicClient: (options: Client) => options,
       createWalletClient: () => ({}),
       http: (url: string) => url,
-    },
+    }),
+    "viem/actions": {},
     "viem/accounts": { toAccount: (source: unknown) => source },
     "../i18n": { t: (key: string) => key },
     "../../config/networks": {
@@ -93,6 +106,7 @@ test("profile read clients reuse the active RPC and resolve other profiles witho
       viemChainFor: (network: typeof original) => ({ id: network.id }),
     },
     "../keyring/vault": {},
+    "../services/rpcProbe": { probeChainId: async () => null },
   });
   const first = rpc.publicClient;
   assert.equal(rpc.publicClientFor(original), first);
@@ -140,7 +154,7 @@ function historyFixture(rows: RecordRow[] = []) {
   };
   const service = evaluate<HistoryService>("../../src/core/services/history.ts", {
     "../i18n": { t: (key: string) => key },
-    "../../config/networks": { LITVM_NETWORK: originalNetwork },
+    "../../config/networks": { LITVM_NETWORK: originalNetwork, ...chainScoping(originalNetwork.id) },
     "../platform/storage": { persistentStore: storage },
     "../platform/storageKeys": { STORAGE_KEYS: { history: "history" } },
     "../platform/locks": { withNamedLock: unlocked },
@@ -224,6 +238,7 @@ function txFixture() {
     "../lib/errors": { describeError: String },
     "../platform/locks": { withNamedLock: unlocked },
     "../rpc/client": rpc,
+    "./approvals": { noteSignedApproval: async () => {} },
     "./history": { addRecord: async () => {}, setRecordStatus: async () => {} },
   });
   const switchNetwork = () => { rpc.activeNetwork = otherNetwork; rpc.publicClient = otherClient; };
@@ -337,4 +352,19 @@ test("a verified zero NFT balance still returns an empty list", async () => {
   fixture.balance.resolve(0n);
   assert.equal((await result).length, 0);
   assert.equal(fixture.calls.length, 0);
+});
+
+test("loopback http stays a valid RPC for the extension and is the one shape Android must refuse", () => {
+  // The extension keeps reaching a developer's local node.
+  for (const url of ["http://127.0.0.1:8545", "http://localhost:8545", "http://[::1]:8545"]) {
+    const normalized = normalizeRpcUrl(url);
+    assert.ok(normalized, url);
+    assert.equal(cleartextRpcUrl(normalized), true, url);
+  }
+  // Android blocks cleartext; https, local or not, is never caught.
+  assert.equal(cleartextRpcUrl("https://127.0.0.1:8545"), false);
+  assert.equal(cleartextRpcUrl("https://rpc.example"), false);
+  assert.equal(cleartextRpcUrl("not a url"), false);
+  // Non-loopback http was never accepted at all.
+  assert.equal(normalizeRpcUrl("http://rpc.example"), null);
 });

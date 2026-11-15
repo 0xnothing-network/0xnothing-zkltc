@@ -6,8 +6,9 @@ import {
   nativeTokenFor,
   type WalletToken,
 } from "../../config/assets";
-import { LITVM_NETWORK, type WalletNetwork } from "../../config/networks";
+import { chainScope, LITVM_NETWORK, onNetworkChain, type WalletNetwork } from "../../config/networks";
 import { t } from "../i18n";
+import { IGNORABLE_LETTERS } from "../lib/confusables";
 import { persistentStore } from "../platform/storage";
 import { STORAGE_KEYS } from "../platform/storageKeys";
 import { withNamedLock } from "../platform/locks";
@@ -76,6 +77,18 @@ function cleanText(value: unknown, max: number): string | null {
     : null;
 }
 
+/**
+ * What a contract says about itself must also hold no format character: a
+ * zero-width space or word joiner in "NUSD" displays as the built-in symbol and
+ * slips past every comparison. A Hangul filler is refused too: it is a letter,
+ * yet "NU<U+3164>SD" displays as "NU SD". Only fresh reads are held to it, so a
+ * token an earlier version saved keeps loading.
+ */
+function contractText(value: unknown, max: number): string | null {
+  const text = cleanText(value, max);
+  return text !== null && !/\p{Cf}/u.test(text) && !IGNORABLE_LETTERS.test(text) ? text : null;
+}
+
 function storedToken(value: unknown): StoredToken | null {
   if (value === null || typeof value !== "object" || Array.isArray(value)) return null;
   const entry = value as Record<string, unknown>;
@@ -117,7 +130,9 @@ async function readStored(): Promise<StoredToken[]> {
   for (const value of raw.slice(-MAX_STORED_TOKENS).reverse()) {
     const token = storedToken(value);
     if (!token) continue;
-    const key = `${token.networkId ?? LITVM_NETWORK.id}:${token.address.toLowerCase()}`;
+    // One row per chain and address: a 1.0.9 row under an old custom id and a
+    // new one under the re-added profile are the same import.
+    const key = `${chainScope(token.networkId ?? LITVM_NETWORK.id)}:${token.address.toLowerCase()}`;
     if (seen.has(key)) continue;
     seen.add(key);
     result.push(token);
@@ -131,7 +146,7 @@ export async function listTokens(network: WalletNetwork = activeNetwork): Promis
     ...(network.builtin ? BUILTIN_TOKENS : [nativeTokenFor(network)]),
     ...stored
       .filter((entry) => !network.builtin || !BUILTIN_IDS.has(entry.address.toLowerCase()))
-      .filter((entry) => (entry.networkId ?? LITVM_NETWORK.id) === network.id)
+      .filter((entry) => onNetworkChain(entry.networkId, network.id))
       .map((entry) => customToken(entry)),
   ];
 }
@@ -174,8 +189,8 @@ async function readTokenMetadata(
     decimals = typeof decimalsResult === "number" ? decimalsResult : -1;
     logoValue = logoResult;
   }
-  const cleanSymbol = cleanText(symbol, MAX_SYMBOL_LENGTH);
-  const cleanName = cleanText(name, MAX_NAME_LENGTH) ?? cleanSymbol;
+  const cleanSymbol = contractText(symbol, MAX_SYMBOL_LENGTH);
+  const cleanName = contractText(name, MAX_NAME_LENGTH) ?? cleanSymbol;
   if (
     cleanSymbol === null
     || cleanName === null
@@ -236,9 +251,16 @@ export async function lookupToken(
   return request;
 }
 
+/**
+ * `expected` is the metadata a review showed (a dapp's watchAsset prompt): a
+ * token whose contract answers differently now (an upgradeable token changed in
+ * between) is refused rather than saved under details the user never saw. The
+ * stored row is always what the chain returned.
+ */
 export async function addCustomToken(
   address: string,
   network: WalletNetwork = activeNetwork,
+  expected?: TokenMetadata,
 ): Promise<WalletToken[]> {
   const trimmed = address.trim();
   if (!isAddress(trimmed)) throw new Error(t("err.badAddress"));
@@ -246,18 +268,27 @@ export async function addCustomToken(
   const id = token.toLowerCase();
   if (network.builtin && BUILTIN_IDS.has(id)) throw new Error(t("err.tokenBuiltin"));
   const meta = await lookupToken(token, network);
+  if (
+    expected !== undefined
+    && (meta.symbol !== expected.symbol || meta.name !== expected.name || meta.decimals !== expected.decimals)
+  ) {
+    throw new Error(t("apr.watchAssetChanged"));
+  }
   return withNamedLock(TOKENS_LOCK, async () => {
     const stored = await readStored();
     if (stored.some(
       (entry) => entry.address.toLowerCase() === id
-        && (entry.networkId ?? LITVM_NETWORK.id) === network.id,
+        && onNetworkChain(entry.networkId, network.id),
     )) {
       throw new Error(t("err.tokenAdded"));
     }
+    // The list is shared by every network. Dropping the oldest entry to make
+    // room would remove an import, perhaps on another chain, without a word.
+    if (stored.length >= MAX_STORED_TOKENS) throw new Error(t("tok.full", { max: String(MAX_STORED_TOKENS) }));
     await persistentStore.set(STORAGE_KEYS.tokens, [
       ...stored,
       { address: token, ...meta, networkId: network.id },
-    ].slice(-MAX_STORED_TOKENS));
+    ]);
     return listTokens(network);
   });
 }
@@ -272,7 +303,7 @@ export async function removeCustomToken(
       STORAGE_KEYS.tokens,
       stored.filter(
         (entry) => entry.address.toLowerCase() !== id.toLowerCase()
-          || (entry.networkId ?? LITVM_NETWORK.id) !== network.id,
+          || !onNetworkChain(entry.networkId, network.id),
       ),
     );
     return listTokens(network);

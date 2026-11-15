@@ -1,0 +1,225 @@
+/*
+ * 0xWallet suite: engine compatibility. Imported last, after every other sheet.
+ *
+ * The extension runs in a current Chrome; the Android build runs in whatever
+ * Android System WebView the phone carries, tested down to 110. This file only
+ * holds what that older engine needs to look like the modern one, and nothing
+ * here may change the rendering in an engine that already supports the feature.
+ */
+
+/* ------------------------------------------------------------ color-mix */
+
+/*
+ * color-mix() arrived in Chromium 111. Below that a declaration using it is
+ * dropped while parsing, and a custom property holding it (--ring,
+ * --fi-green-hover, --w-primary-hover) becomes invalid where it is used, so the
+ * primary button lost its hover fill, the focus ring vanished and pills,
+ * toasts and the danger button fell back to their bare borders.
+ *
+ * Each mix is restated here with a static colour. A mix with `transparent` in
+ * srgb is exactly the colour at that alpha, so those read the theme's rgb
+ * triplet (--w-compat-*-rgb, one set per theme and one accent for the NUSD
+ * screens). The two opaque mixes are precomputed per theme;
+ * tests/ui/compatCss.test.ts recomputes every one from tokens.css.
+ *
+ * Selectors match the originals so the cascade is the same. A declaration a
+ * later rule already overrides in every engine (the .w-btn, .w-action, .w-asset,
+ * .w-dapp, .w-tx, .w-max and .w-account tints, the aria-invalid focus shadow) is
+ * not restated: restating it here, last, would bring it back.
+ */
+@supports not (color: color-mix(in srgb, red, blue)) {
+  .w-root {
+    --w-compat-accent-rgb: 238, 241, 244;
+    --w-compat-text-1-rgb: 242, 244, 246;
+    --w-compat-positive-rgb: 61, 214, 140;
+    --w-compat-negative-rgb: 255, 92, 112;
+    --w-compat-warning-rgb: 245, 181, 68;
+    --w-compat-surface-1-rgb: 19, 20, 23;
+    --ring: 0 0 0 3px rgba(var(--w-compat-accent-rgb), .28);
+    --fi-green-hover: #eff1f4;
+  }
+
+  .w-root[data-theme="light"] {
+    --w-compat-accent-rgb: 14, 17, 22;
+    --w-compat-text-1-rgb: 14, 17, 22;
+    --w-compat-positive-rgb: 15, 138, 85;
+    --w-compat-negative-rgb: 214, 51, 74;
+    --w-compat-warning-rgb: 183, 121, 31;
+    --w-compat-surface-1-rgb: 255, 255, 255;
+    --fi-green-hover: #0e1116;
+    --w-primary-hover: #2e3136;
+  }
+
+  /* The NUSD screens (mint, earn) swap the accent for the NUSD teal. */
+  .w-root:not([data-theme="light"]):has(.w-earn-flow, .w-mint-flow) {
+    --w-compat-accent-rgb: 99, 213, 198;
+    --fi-green-hover: #78dacd;
+    --w-primary-hover: #58bdb0;
+  }
+
+  .w-root[data-theme="light"]:has(.w-earn-flow, .w-mint-flow) {
+    --w-compat-accent-rgb: 14, 138, 126;
+    --fi-green-hover: #0e786e;
+    --w-primary-hover: #2a978d;
+  }
+
+  .w-btn[data-variant="danger"]:hover:not(:disabled) {
+    background: rgba(var(--w-compat-negative-rgb), .12);
+  }
+
+  .w-root .w-btn[data-variant="danger"] {
+    border-color: rgba(var(--w-compat-negative-rgb), .7);
+  }
+
+  /* The pressed chip and keyboard focus keep their own later rules. */
+  .w-earn-lock-option:hover:not(:disabled):not([aria-pressed="true"]) {
+    background: rgba(var(--w-compat-accent-rgb), .06);
+  }
+
+  .w-pill[data-tone="ok"] {
+    border-color: rgba(var(--w-compat-positive-rgb), .5);
+  }
+
+  .w-pill[data-tone="warn"] {
+    border-color: rgba(var(--w-compat-warning-rgb), .5);
+  }
+
+  .w-pill[data-tone="bad"] {
+    border-color: rgba(var(--w-compat-negative-rgb), .5);
+  }
+
+  .w-toast[data-tone="error"] {
+    border-color: rgba(var(--w-compat-negative-rgb), .55);
+  }
+
+  .w-toast[data-tone="ok"] {
+    border-color: rgba(var(--w-compat-accent-rgb), .55);
+  }
+
+  .w-token-option:hover,
+  .w-token-option[aria-selected="true"] {
+    background: rgba(var(--w-compat-accent-rgb), .07);
+  }
+
+  /* A focused select keeps the accent border of its later focus rule. */
+  .w-select:hover:not(:disabled):not(:focus-visible) {
+    border-color: rgba(var(--w-compat-text-1-rgb), .35);
+  }
+
+  /* The segmented control keeps its own later focus outline. */
+  .w-root :is(button, a, [role="tab"]):not(.w-seg-item):focus-visible {
+    outline: 2px solid rgba(var(--w-compat-accent-rgb), .7);
+  }
+
+  .w-root .w-mint-flow .w-receive-out > .w-logo {
+    border-color: rgba(var(--w-compat-accent-rgb), .3);
+  }
+
+  .w-root .w-token-source[data-core="true"] {
+    border-color: rgba(var(--w-compat-accent-rgb), .45);
+  }
+
+  .w-root .w-net-chip[data-custom="true"] {
+    border-color: rgba(var(--w-compat-warning-rgb), .5);
+  }
+
+  .w-root .w-dapps .w-dapp:hover {
+    background: rgba(var(--w-compat-surface-1-rgb), .5);
+  }
+}
+
+/* ---------------------------------------------------------- touch hover */
+
+/*
+ * On a touch screen :hover is set by the tap and stays until the next tap
+ * elsewhere, so a button or row kept its hover look after the screen it opened
+ * had closed. Where that look reads as a state (a brighter border, a fill, a
+ * tint), the resting value is restated for the hover state. The hover rules
+ * themselves stay as they are for a mouse.
+ */
+@media (hover: none) {
+  .w-btn:hover:not(:disabled) {
+    border-color: var(--line);
+    background: var(--surface-2);
+  }
+
+  .w-btn[data-variant="primary"]:hover:not(:disabled) {
+    border-color: transparent;
+  }
+
+  .w-root .w-btn[data-variant="primary"]:hover:not(:disabled) {
+    background: var(--accent);
+  }
+
+  /* At rest the danger border is the 70% mix (wallet.css), in either engine. */
+  .w-btn[data-variant="danger"]:hover:not(:disabled) {
+    background: var(--surface-1);
+  }
+
+  @supports (color: color-mix(in srgb, red, blue)) {
+    .w-btn[data-variant="danger"]:hover:not(:disabled) {
+      border-color: color-mix(in srgb, var(--negative) 70%, transparent);
+    }
+  }
+
+  @supports not (color: color-mix(in srgb, red, blue)) {
+    .w-btn[data-variant="danger"]:hover:not(:disabled) {
+      border-color: rgba(var(--w-compat-negative-rgb), .7);
+    }
+  }
+
+  .w-root .w-dapp-site > .w-btn[data-size="sm"]:hover:not(:disabled) {
+    border-color: var(--line);
+    color: var(--text-2);
+  }
+
+  /* List rows. */
+  .w-root .w-tx:hover {
+    border-color: var(--line);
+  }
+
+  .w-dapp:hover,
+  .w-root .w-dapps .w-dapp:hover {
+    background: transparent;
+  }
+
+  .w-dapp:hover .w-asset-usd {
+    color: var(--text-2);
+    transform: none;
+  }
+
+  .w-token-option:hover,
+  .w-root .w-token-option:hover:not(:disabled) {
+    background: transparent;
+  }
+
+  .w-root .w-token-option[aria-selected="true"]:hover:not(:disabled) {
+    background: var(--surface-2);
+  }
+
+  /* Chips. */
+  .w-earn-lock-option:hover:not(:disabled):not([aria-pressed="true"]) {
+    background: var(--surface-2);
+    color: var(--text-3);
+  }
+
+  .w-token-chip:hover:not(:disabled),
+  .w-root .w-swap-flow .w-token-chip:hover:not(:disabled),
+  .w-root .w-token-trigger:hover:not(:disabled) {
+    border-color: var(--line);
+  }
+
+  .w-slip-chip:hover {
+    border-color: var(--line);
+    color: var(--text-2);
+  }
+
+  .w-root .w-recent:hover:not(:disabled) {
+    border-color: var(--line);
+    color: var(--text-2);
+  }
+
+  .w-root .w-seg-item:hover:not(:disabled, [aria-pressed="true"]) {
+    color: var(--text-3);
+  }
+}

@@ -22,3 +22,15 @@ export function findApprovalWindowId(
   }
   return undefined;
 }
+
+/** The least time between two requests that pull the approval window to the front. */
+export const FORCE_FOCUS_INTERVAL_MS = 10_000;
+
+/**
+ * Whether a new request may take the focus. A page asking again and again would
+ * otherwise keep the window in front of everything the user does; in between,
+ * the window only flashes for attention.
+ */
+export function shouldForceFocus(now: number, last: number, interval = FORCE_FOCUS_INTERVAL_MS): boolean {
+  return now - last >= interval;
+}

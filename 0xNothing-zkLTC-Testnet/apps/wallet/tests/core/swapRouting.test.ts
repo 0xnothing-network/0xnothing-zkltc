@@ -36,6 +36,8 @@ function fixture(oraclePause: boolean | "unreadable", swapsPaused = false) {
     viem: { zeroAddress }, "../../abis": {}, "../../config/contracts": { CONTRACTS: addresses },
     "../../../../../shared/transactions/tokenDelivery": { deliveredTokenAmount },
     "../i18n": {}, "../lib/format": {}, "../lib/swapMath": {}, "./tx": {},
+    "../../config/assets": {}, "../lib/errors": {}, "../platform/locks": {}, "../platform/storage": {},
+    "../platform/storageKeys": { STORAGE_KEYS: {} },
     "../rpc/client": { activeNetwork: { id: "litvm", rpcUrl: "https://rpc.example" }, publicClient: { readContract, multicall: async () => [50n, 10n, 10n] } },
   });
 }

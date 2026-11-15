@@ -25,6 +25,26 @@ export const STORAGE_KEYS = {
   session: "wallet.session.v1",
   /** Auto-lock deadline, split from the key so an old touch cannot restore it. */
   sessionDeadline: "wallet.session.deadline.v1",
+  /** Failed password attempts and when the next is allowed. Persistent, never key material. */
+  unlockGuard: "wallet.unlockGuard.v1",
+  /** Two-stage swaps whose first leg was signed and whose second may still be owed. */
+  pendingStagedSwap: "wallet.pendingStagedSwap.v1",
+  /** account -> chain -> addresses this wallet has sent to. Public, never key material. */
+  recipients: "wallet.recipients.v1",
+  /** The half-typed Send form (token, amount, recipient) for ten minutes. Never secret. */
+  sendDraft: "wallet.sendDraft.v1",
+  /** account -> chain id -> token approvals this wallet signed (token, spender, hash). Public. */
+  approvals: "wallet.approvals.v1",
+  /** Ids of the OS notifications already shown, so none is shown twice. */
+  notified: "wallet.notified.v1",
+  /** History label templates in the language on screen, for the worker's notifications. */
+  notifyText: "wallet.notifyText.v1",
+  /** The Home tab last picked (token, nft or rwa). Public. */
+  homeTab: "wallet.homeTab.v1",
+  /** The swap pair last used, with the network it belongs to. Public token ids. */
+  swapPair: "wallet.swapPair.v1",
+  /** The last wallet version whose "What is new" card was seen. */
+  seenVersion: "wallet.seenVersion.v1",
 } as const;
 
 /** Alarm the UI sets at the auto-lock deadline so the worker can drop the session key. */

@@ -28,6 +28,26 @@ export interface EncryptedBlob {
   iv: string;
   /** base64, ciphertext with the GCM tag appended */
   data: string;
+  /**
+   * "nfc": the key was derived from the NFC form of the password, so the same
+   * visible text typed as precomposed or combining characters opens it. Absent
+   * on blobs written by 1.0.9 and earlier, which used the text exactly as typed.
+   */
+  pw?: "nfc";
+}
+
+const NON_ASCII = /[^\u0000-\u007f]/u;
+
+/**
+ * The password forms to try against a blob, in order. A tagged blob has one:
+ * its NFC form. An untagged blob is tried with the text exactly as typed first,
+ * and only non-ASCII text adds the NFC and NFD forms that differ from it, so an
+ * ASCII password still costs a single PBKDF2 run.
+ */
+export function passwordForms(blob: EncryptedBlob, password: string): string[] {
+  if (blob.pw === "nfc") return [password.normalize("NFC")];
+  if (!NON_ASCII.test(password)) return [password];
+  return [...new Set([password, password.normalize("NFC"), password.normalize("NFD")])];
 }
 
 export function bytesToBase64(bytes: Uint8Array): string {
@@ -78,6 +98,8 @@ function validatedBlob(blob: EncryptedBlob): {
     || !Number.isInteger(value.iterations)
     || (value.iterations as number) < MIN_PBKDF2_ITERATIONS
     || (value.iterations as number) > MAX_PBKDF2_ITERATIONS
+    // A form this build cannot derive must fail closed, never fall back to raw.
+    || (value.pw !== undefined && value.pw !== "nfc")
   ) {
     throw new Error("Invalid encrypted wallet data");
   }
@@ -149,6 +171,7 @@ export async function encryptJson(value: unknown, password: string): Promise<Enc
  * Encrypts under a fresh salt and also returns the key that was derived for it.
  * A caller that goes on to open a session needs that same key, and deriving it a
  * second time from the blob costs another full PBKDF2 run for an identical result.
+ * Every new blob is sealed from the NFC form and tagged so.
  */
 export async function sealJson(value: unknown, password: string): Promise<{ blob: EncryptedBlob; key: CryptoKey }> {
   const salt = randomBytes(SALT_BYTES);
@@ -156,7 +179,7 @@ export async function sealJson(value: unknown, password: string): Promise<{ blob
   const plaintext = new TextEncoder().encode(JSON.stringify(value));
   let ciphertext: Uint8Array | undefined;
   try {
-    const key = await deriveKey(password, salt);
+    const key = await deriveKey(password.normalize("NFC"), salt);
     ciphertext = new Uint8Array(await crypto.subtle.encrypt(
       { name: "AES-GCM", iv: iv as BufferSource },
       key,
@@ -171,6 +194,7 @@ export async function sealJson(value: unknown, password: string): Promise<{ blob
         salt: bytesToBase64(salt),
         iv: bytesToBase64(iv),
         data: bytesToBase64(ciphertext),
+        pw: "nfc",
       },
     };
   } finally {
@@ -185,7 +209,11 @@ export async function sealJson(value: unknown, password: string): Promise<{ blob
 export async function decryptJson<T>(blob: EncryptedBlob, password: string): Promise<T> {
   const checked = validatedBlob(blob);
   try {
-    const key = await deriveKey(password, checked.salt, checked.blob.iterations);
+    const key = await deriveKey(
+      passwordForms(checked.blob, password)[0]!,
+      checked.salt,
+      checked.blob.iterations,
+    );
     return await decryptValidated<T>(checked, key);
   } catch (error) {
     checked.salt.fill(0);
@@ -219,11 +247,16 @@ async function decryptValidated<T>(
   }
 }
 
-/** Re-derives the key for an existing blob so its salt/iterations are reused. */
+/**
+ * Re-derives the key for an existing blob so its salt/iterations are reused. A
+ * tagged blob takes the NFC form; an untagged one takes `password` byte for byte,
+ * so a caller trying the `passwordForms` passes each form as it is.
+ */
 export async function keyForBlob(blob: EncryptedBlob, password: string): Promise<CryptoKey> {
   const checked = validatedBlob(blob);
   try {
-    return await deriveKey(password, checked.salt, checked.blob.iterations);
+    const form = checked.blob.pw === "nfc" ? password.normalize("NFC") : password;
+    return await deriveKey(form, checked.salt, checked.blob.iterations);
   } finally {
     checked.salt.fill(0);
     checked.iv.fill(0);

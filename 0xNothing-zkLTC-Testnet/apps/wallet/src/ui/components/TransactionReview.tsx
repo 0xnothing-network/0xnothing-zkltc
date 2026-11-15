@@ -1,5 +1,8 @@
-import { type ReactNode, useEffect, useId } from "react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { t } from "../../core/i18n";
+import { useReviewArm } from "../hooks/useReviewArm";
+import { useSheetFocus } from "../hooks/useSheetFocus";
+import { backdropCloseAllowed } from "../lib/armTimer";
 import { Button, Icon, Note } from "./kit";
 
 export function TransactionReview({
@@ -10,6 +13,7 @@ export function TransactionReview({
   children,
   confirmLabel = t("swap.confirmSubmit"),
   error = null,
+  armKey = "review",
   onClose,
   onConfirm,
 }: {
@@ -20,10 +24,15 @@ export function TransactionReview({
   children: ReactNode;
   confirmLabel?: string;
   error?: string | null;
+  /** Identity of the reviewed values; a new one disarms Confirm again. */
+  armKey?: string;
   onClose: () => void;
   onConfirm: () => void;
 }): ReactNode {
   const titleId = useId();
+  const armed = useReviewArm(armKey);
+  const [shownAt] = useState(() => Date.now());
+  const sheetRef = useSheetFocus<HTMLDivElement>();
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
@@ -37,12 +46,14 @@ export function TransactionReview({
     <div
       className="w-sheet"
       onClick={() => {
-        if (!busy) onClose();
+        if (!busy && backdropCloseAllowed(shownAt, Date.now())) onClose();
       }}
     >
       <div
+        ref={sheetRef}
         className="w-sheet-body w-swap-review"
         role="dialog"
+        tabIndex={-1}
         aria-modal="true"
         aria-labelledby={titleId}
         aria-busy={busy}
@@ -77,7 +88,7 @@ export function TransactionReview({
             <Button
               type="button"
               variant="primary"
-              disabled={busy || !ready}
+              disabled={busy || !ready || !armed}
               onClick={onConfirm}
             >
               {busy ? t("common.working") : confirmLabel}

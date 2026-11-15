@@ -10,7 +10,7 @@ import { pumpTokenImageUrl } from "../../core/lib/pumpImage";
 type Stage = "logo" | "brand" | "initials";
 
 export function TokenLogo({ token, size }: { token: WalletToken; size?: number }): ReactNode {
-  const imageUrl = pumpTokenImageUrl(token.logo, token.symbol);
+  const imageUrl = pumpTokenImageUrl(token.logo, token.symbol, token.builtin);
   const [stage, setStage] = useState<Stage>(imageUrl ? "logo" : "brand");
 
   useEffect(() => {

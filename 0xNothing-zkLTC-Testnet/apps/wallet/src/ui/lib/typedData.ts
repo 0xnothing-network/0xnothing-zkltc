@@ -62,6 +62,28 @@ export function readableTypedData(message: string): string {
     : `\\u${(char.codePointAt(0) ?? 0).toString(16).padStart(4, "0")}`).join("");
 }
 
+/**
+ * How a personal_sign / eth_sign payload reads. Only readable text is a message the
+ * user can judge; 32 other bytes are almost always a hash, and a signature over one
+ * can approve a transaction elsewhere (a Safe owner's, a relayer's order). Bytes
+ * that decode to visible text count as text: a real hash does that about once in
+ * 1e14 and cannot be ground out, so text of 32 characters is not flagged.
+ */
+export type SignRisk = "text" | "hash" | "binary";
+
+export function signMessageRisk(message: string): SignRisk {
+  if (!isHex(message)) return SHOWN_AS_TEXT.test(message) ? "text" : "binary";
+  const bytes = hexToBytes(message);
+  let text: string | null = null;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    // Not UTF-8: judged by its length below.
+  }
+  if (text !== null && SHOWN_AS_TEXT.test(text)) return "text";
+  return bytes.length === 32 ? "hash" : "binary";
+}
+
 /** personal_sign carries hex-encoded UTF-8 far more often than plain text. */
 export function readableSignMessage(message: string): string {
   if (!isHex(message)) return SHOWN_AS_TEXT.test(message) ? message : stringToHex(message);

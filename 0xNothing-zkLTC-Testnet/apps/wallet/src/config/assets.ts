@@ -111,6 +111,25 @@ export const BUILTIN_TOKENS: readonly WalletToken[] = [
 
 export const FALLBACK_TOKEN_LOGO = "tokens/0xNothing.jpg";
 
+/** Lower-cased addresses of the built-in tokens, which every wallet already lists. */
+export const BUILTIN_TOKEN_ADDRESSES: ReadonlySet<string> = new Set(
+  BUILTIN_TOKENS.flatMap((token) => (token.address ? [token.address.toLowerCase()] : [])),
+);
+
+/** Upper-cased symbols of the built-in tokens, the ones a fake would copy. */
+export const BUILTIN_SYMBOLS: ReadonlySet<string> = new Set(
+  BUILTIN_TOKENS.map((token) => token.symbol.toUpperCase()),
+);
+
+/**
+ * An imported token that takes a built-in's symbol. Symbols are chosen by
+ * whoever deploys the contract, so a second "NUSD" is never the official one;
+ * screens that list it say so next to the name.
+ */
+export function impersonatesBuiltin(token: WalletToken): boolean {
+  return !token.builtin && !token.verified && BUILTIN_SYMBOLS.has(token.symbol.trim().toUpperCase());
+}
+
 /** Tokens the user imported by address (0xPump launches, LP tokens, …). */
 export function customToken(input: {
   address: Address;

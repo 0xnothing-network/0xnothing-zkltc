@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { addressUrl } from "../../config/chain";
 import { t } from "../../core/i18n";
 import { accountLabel } from "../../core/keyring/vault";
-import { openExternal } from "../../core/platform/env";
+import { isAndroid, openExternal } from "../../core/platform/env";
 import { Button, Empty, Note } from "../components/kit";
 import { Screen } from "../components/Screen";
 import { useCopy } from "../hooks/useCopy";
@@ -120,7 +120,8 @@ export function Receive(): ReactNode {
           >
             {copied ? `${t("common.copied")} ✓` : t("recv.copyAddress")}
           </Button>
-          {qrDataUrl ? (
+          {/* The Android WebView drops an <a download> without a word: no button there. */}
+          {qrDataUrl && !isAndroid ? (
             <Button onClick={() => saveQr(qrDataUrl, address)}>
               {t("common.save")} QR
             </Button>

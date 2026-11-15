@@ -164,9 +164,12 @@ function preferencesStore(): KeyValueStore {
     },
     async setMany(entries) {
       const { Preferences } = await pluginModule;
-      await Promise.all(
-        entries.map(([key, value]) => Preferences.set({ key, value: JSON.stringify(value) })),
-      );
+      // One native call per key and no transaction, so the order is the only
+      // guarantee: callers list the vault before the accounts that point into it,
+      // and an app killed between the two leaves a state re-import can repair.
+      for (const [key, value] of entries) {
+        await Preferences.set({ key, value: JSON.stringify(value) });
+      }
       for (const [key, value] of entries) {
         watchers.get(key)?.forEach((handler) => handler(value));
       }

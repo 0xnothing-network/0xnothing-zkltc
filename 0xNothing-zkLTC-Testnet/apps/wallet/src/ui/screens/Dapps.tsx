@@ -1,9 +1,10 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { DAPPS } from "../../config/dapps";
 import { t } from "../../core/i18n";
+import { accountLabel } from "../../core/keyring/vault";
 import { describeError } from "../../core/lib/errors";
 import { formatTimeAgo, shortenAddress } from "../../core/lib/format";
-import { isExtension, openExternal } from "../../core/platform/env";
+import { extensionView, isExtension, openExternal } from "../../core/platform/env";
 import { persistentStore } from "../../core/platform/storage";
 import { STORAGE_KEYS } from "../../core/platform/storageKeys";
 import { listConnections, revokeConnection } from "../../core/services/dapp";
@@ -11,7 +12,9 @@ import { announceToPages } from "../../core/services/walletEvents";
 import { Button, Icon, Note } from "../components/kit";
 import { Screen } from "../components/Screen";
 import { useActionGate } from "../hooks/useActionGate";
+import { currentSiteStatus, siteOrigin } from "../lib/currentSite";
 import { useLiveRead } from "../hooks/useLiveRead";
+import { navigate } from "../router";
 import { useWallet } from "../state/WalletContext";
 
 /**
@@ -24,7 +27,7 @@ import { useWallet } from "../state/WalletContext";
  * prompt that will never come.
  */
 export function Dapps(): ReactNode {
-  const { tick } = useWallet();
+  const { accounts, address, tick } = useWallet();
   const read = useLiveRead(() => listConnections(), [tick], {
     live: false,
     identity: [],
@@ -33,6 +36,32 @@ export function Dapps(): ReactNode {
   const actionGate = useActionGate();
   const [actionError, setActionError] = useState<string | null>(null);
   const connections = read.data ?? [];
+  // The active tab's address is readable only in the popup, where the toolbar
+  // click or the shortcut granted activeTab; the side panel, a wallet tab and
+  // Android show no site status at all rather than a guess.
+  const [tabUrl, setTabUrl] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (extensionView() !== "popup" || typeof chrome.tabs?.query !== "function") return undefined;
+    let live = true;
+    chrome.tabs.query({ active: true, currentWindow: true })
+      .then(([tab]) => {
+        if (live) setTabUrl(tab?.url);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
+  const tabOrigin = siteOrigin(tabUrl);
+  const site = tabOrigin !== null && read.data !== null
+    ? currentSiteStatus(tabOrigin, read.data, address)
+    : null;
+  // Each site keeps the accounts it was granted (up to 8) and sees only the
+  // active one among them: list every one, by name where the wallet has it.
+  const grantedName = (account: string): string | null => {
+    const meta = accounts.find((entry) => entry.address.toLowerCase() === account.toLowerCase());
+    return meta ? accountLabel(meta) : null;
+  };
 
   // Grants and revocations are often written by a different surface (the
   // approval popup or another wallet window), so a local React tick is not
@@ -48,7 +77,7 @@ export function Dapps(): ReactNode {
     setActionError(null);
     try {
       await revokeConnection(origin);
-      await announceToPages("accountsChanged", [], [origin]);
+      await announceToPages("accountsChanged");
       read.reload();
     } catch (cause) {
       setActionError(describeError(cause));
@@ -60,6 +89,34 @@ export function Dapps(): ReactNode {
   return (
     <Screen title={t("dapp.title")}>
       <div className="w-stack w-dapps" aria-busy={read.busy || busy !== null}>
+        {site !== null ? (
+          <section className="w-dapp-sites w-dapp-current">
+            <h2 className="w-dapp-sites-label">{t("dapp.currentSite")}</h2>
+            <div className="w-split w-dapp-site">
+              <span className="w-asset-main">
+                <span className="w-asset-symbol">{site.origin}</span>
+                <span className="w-asset-sub" title={site.account ?? undefined}>
+                  {!site.connected
+                    ? t("dapp.siteNotConnected")
+                    : site.account === null
+                      ? t("dapp.siteInactive")
+                      : `${t("dapp.siteConnected")} · ${
+                        grantedName(site.account) !== null ? `${grantedName(site.account)} · ` : ""
+                      }${shortenAddress(site.account)}`}
+                </span>
+              </span>
+              {site.connected ? (
+                <Button
+                  size="sm"
+                  disabled={busy !== null}
+                  onClick={() => void revoke(site.origin)}
+                >
+                  {busy === site.origin ? t("common.working") : t("dapp.revoke")}
+                </Button>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
         <div className="w-list">
           {DAPPS.map((entry) => (
             <button
@@ -101,10 +158,16 @@ export function Dapps(): ReactNode {
               <div key={entry.origin} className="w-split w-dapp-site">
                 <span className="w-asset-main">
                   <span className="w-asset-symbol">{entry.origin}</span>
-                  <span className="w-asset-sub">
-                    {entry.accounts.map((account) => shortenAddress(account)).join(", ")} ·{" "}
-                    {formatTimeAgo(entry.at)}
-                  </span>
+                  <span className="w-asset-sub">{t("dapp.grantedAccounts")}</span>
+                  {entry.accounts.map((account) => {
+                    const name = grantedName(account);
+                    return (
+                      <span key={account} className="w-asset-sub w-dapp-account" title={account}>
+                        {name !== null ? `${name} · ` : ""}{shortenAddress(account)}
+                      </span>
+                    );
+                  })}
+                  <span className="w-asset-sub">{formatTimeAgo(entry.at)}</span>
                 </span>
                 <Button
                   size="sm"
@@ -122,6 +185,11 @@ export function Dapps(): ReactNode {
             </div>
           ) : null}
         </section>
+        {isExtension ? (
+          <Button size="sm" variant="ghost" onClick={() => navigate("settings?panel=approvals")}>
+            {t("dapp.approvalsLink")}
+          </Button>
+        ) : null}
         {actionError !== null ? (
           <div role="alert">
             <Note tone="error">{actionError}</Note>

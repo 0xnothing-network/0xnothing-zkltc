@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { toAccount, type LocalAccount } from "viem/accounts";
 import { evaluateModule } from "../../../web/tests/helpers/evaluateModule.ts";
+import { withCreateClient } from "../helpers/viemClients.ts";
 
 const owner = `0x${"11".repeat(20)}` as const;
 const other = `0x${"22".repeat(20)}` as const;
@@ -20,7 +21,8 @@ function fixture() {
     walletClientFor(address: string): Promise<{ account: LocalAccount }>;
     configureRpcClient(profile: typeof network): void;
   }>(new URL("../../src/core/rpc/client.ts", import.meta.url), {
-    viem: { createPublicClient: () => ({}), createWalletClient: (options: unknown) => options, http: () => ({}) },
+    viem: withCreateClient({ createPublicClient: () => ({}), createWalletClient: (options: unknown) => options, http: () => ({}) }),
+    "viem/actions": {},
     "viem/accounts": { toAccount },
     "../../config/networks": {
       LITVM_NETWORK: network,
@@ -40,6 +42,7 @@ function fixture() {
       readSettings: async () => ({ networkId: savedNetwork.id, customNetworks: [savedNetwork] }),
       isUnlocked: async () => unlocked,
     },
+    "../services/rpcProbe": { probeChainId: async () => null },
   });
   return {
     ...module,

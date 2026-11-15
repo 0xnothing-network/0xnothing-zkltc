@@ -1,15 +1,16 @@
-import { type ReactNode, useEffect, useState } from "react";
-import { formatUnits } from "viem";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { formatUnits, type Hex } from "viem";
 import { NUSD_TOKEN } from "../../config/assets";
 import { txUrl } from "../../config/chain";
 import { t } from "../../core/i18n";
-import { describeError } from "../../core/lib/errors";
+import { BroadcastUnknownError, describeError } from "../../core/lib/errors";
 import {
   formatAmount,
   formatBalance,
   formatRateWad,
   parseAmount,
 } from "../../core/lib/format";
+import type { TxKind } from "../../core/services/history";
 import { loadLendState, supplyNusd, withdrawNusd } from "../../core/services/lend";
 import { loadPortfolio, rowBalance } from "../../core/services/portfolio";
 import { AmountField } from "../components/AmountField";
@@ -17,10 +18,17 @@ import { Button, Icon, Note, Panel, Row, Rows } from "../components/kit";
 import { Screen } from "../components/Screen";
 import { TokenLogo } from "../components/TokenLogo";
 import { useActionGate } from "../hooks/useActionGate";
+import { useBroadcastHold } from "../hooks/useBroadcastHold";
 import { useLiveRead } from "../hooks/useLiveRead";
+import { useReviewArm } from "../hooks/useReviewArm";
+import { useSheetFocus } from "../hooks/useSheetFocus";
+import { backdropCloseAllowed } from "../lib/armTimer";
 import { reviewKey } from "../lib/reviewKey";
 import { goHome } from "../router";
 import { useWallet } from "../state/WalletContext";
+
+/** History kinds a supply or withdraw writes (not its approval); a pending one holds a reopened screen. */
+const LEND_KINDS: readonly TxKind[] = ["supply", "withdraw"];
 
 /**
  * The wireframe's "STAKE NUSD". It is the 0xFi lending pool — supply() earns the
@@ -39,6 +47,8 @@ export function Lend(): ReactNode {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewIdentity, setReviewIdentity] = useState<string | null>(null);
   const confirmGate = useActionGate();
+  const broadcast = useBroadcastHold(address, network, LEND_KINDS);
+  const reviewShownAt = useRef(0);
 
   const read = useLiveRead(
     address
@@ -64,7 +74,8 @@ export function Lend(): ReactNode {
   const over = parsed !== null && cap !== null && parsed > cap;
   const blocked = supply
     ? state === null || state.supplyPaused || !state.activated
-    : state === null || !state.activated;
+    // An unread maxWithdraw is unknown, not 0: block rather than quote a cap.
+    : state === null || !state.activated || state.maxWithdraw === null;
   const ready = address !== null && positive && !over && !blocked;
   const amountInvalid = amount.length > 0 && (parsed === null || !positive || over);
   const currentReviewIdentity = reviewKey([
@@ -76,6 +87,9 @@ export function Lend(): ReactNode {
     parsed,
   ]);
   const reviewCurrent = reviewIdentity === currentReviewIdentity;
+  const reviewArmed = useReviewArm(reviewOpen ? reviewIdentity : null);
+  // Same condition as the sheet below renders with.
+  const sheetRef = useSheetFocus<HTMLDivElement>(reviewOpen && reviewCurrent && parsed !== null && address !== null);
 
   const utilization = state === null || state.totalSupplied === 0n
     ? null
@@ -104,6 +118,7 @@ export function Lend(): ReactNode {
     if (busy || !ready || !address || parsed === null) return;
     setError(null);
     setReviewIdentity(currentReviewIdentity);
+    reviewShownAt.current = Date.now();
     setReviewOpen(true);
   };
 
@@ -115,15 +130,15 @@ export function Lend(): ReactNode {
       || !ready
       || !address
       || parsed === null
+      || !reviewArmed
+      || broadcast.held
       || !confirmGate.tryEnter()
     ) return;
     const submitted = { from: address, amount: parsed, supply, network };
     setBusy(true);
     setError(null);
-    try {
-      const hash = submitted.supply
-        ? await supplyNusd({ from: submitted.from, amount: submitted.amount })
-        : await withdrawNusd({ from: submitted.from, amount: submitted.amount });
+    // Also run when a held broadcast is later found mined: the job went through.
+    const sent = (hash: Hex): void => {
       notify(
         t(submitted.supply ? "lend.toastSupply" : "lend.toastWithdraw", {
           amount: formatAmount(submitted.amount, NUSD_TOKEN.decimals, 2),
@@ -132,11 +147,22 @@ export function Lend(): ReactNode {
         "ok",
         txUrl(hash, submitted.network),
       );
+      setError(null);
       setAmount("");
       setReviewOpen(false);
       setReviewIdentity(null);
       refresh();
+    };
+    try {
+      sent(submitted.supply
+        ? await supplyNusd({ from: submitted.from, amount: submitted.amount })
+        : await withdrawNusd({ from: submitted.from, amount: submitted.amount }));
     } catch (cause) {
+      // The node may hold it: keep the form, hold Confirm, link the hash.
+      if (cause instanceof BroadcastUnknownError) {
+        broadcast.hold(cause.hash, sent);
+        notify(describeError(cause), "error", txUrl(cause.hash, submitted.network));
+      }
       setError(describeError(cause));
     } finally {
       confirmGate.leave();
@@ -207,7 +233,7 @@ export function Lend(): ReactNode {
             <Rows>
               <Row
                 label={t("lend.supplied")}
-                value={state === null ? "…" : `${formatAmount(state.supplied, 18, 2)} NUSD`}
+                value={state === null ? "…" : state.supplied === null ? "--" : `${formatAmount(state.supplied, 18, 2)} NUSD`}
                 tone="green"
               />
               {supply ? (
@@ -229,12 +255,12 @@ export function Lend(): ReactNode {
                 <>
                   <Row
                     label={t("lend.maxWithdraw")}
-                    value={state === null ? "…" : `${formatAmount(state.maxWithdraw, 18, 2)} NUSD`}
+                    value={state === null ? "…" : state.maxWithdraw === null ? "--" : `${formatAmount(state.maxWithdraw, 18, 2)} NUSD`}
                   />
                   <Row
                     label={t("lend.liquidity")}
                     value={
-                      state === null ? "…" : `${formatAmount(state.availableLiquidity, 18, 2)} NUSD`
+                      state === null ? "…" : state.availableLiquidity === null ? "--" : `${formatAmount(state.availableLiquidity, 18, 2)} NUSD`
                     }
                   />
                   <Row
@@ -253,6 +279,11 @@ export function Lend(): ReactNode {
           ) : null}
           {supply && state?.supplyPaused === true && state.activated ? (
             <Note tone="error">{t("lend.supplyPaused")}</Note>
+          ) : null}
+          {/* A "--" row is an unread figure, never a zero: say so, or it reads as lost funds. */}
+          {state !== null
+            && (state.supplied === null || state.maxWithdraw === null || state.availableLiquidity === null) ? (
+            <Note tone="warn">{t("lend.readError")}</Note>
           ) : null}
           {read.error !== null ? <Note tone="error">{read.error}</Note> : null}
           <p className="w-hint w-flow-note">
@@ -276,12 +307,14 @@ export function Lend(): ReactNode {
         <div
           className="w-sheet"
           onClick={() => {
-            if (!busy) setReviewOpen(false);
+            if (!busy && backdropCloseAllowed(reviewShownAt.current, Date.now())) setReviewOpen(false);
           }}
         >
           <div
+            ref={sheetRef}
             className="w-sheet-body w-swap-review"
             role="dialog"
+            tabIndex={-1}
             aria-modal="true"
             aria-labelledby="lend-review-title"
             aria-busy={busy}
@@ -312,13 +345,15 @@ export function Lend(): ReactNode {
                 <Rows>
                   <Row
                     label={t("lend.supplied")}
-                    value={state === null ? "…" : `${formatAmount(state.supplied, 18, 2)} NUSD`}
+                    value={state === null ? "…" : state.supplied === null ? "--" : `${formatAmount(state.supplied, 18, 2)} NUSD`}
                   />
                   {!supply ? (
                     <Row
                       label={t("lend.maxWithdraw")}
                       value={state === null
                         ? "…"
+                        : state.maxWithdraw === null
+                        ? "--"
                         : `${formatAmount(state.maxWithdraw, 18, 2)} NUSD`}
                     />
                   ) : null}
@@ -334,7 +369,7 @@ export function Lend(): ReactNode {
                 </Button>
                 <Button
                   variant="primary"
-                  disabled={busy || !ready || !reviewCurrent}
+                  disabled={busy || !ready || !reviewCurrent || !reviewArmed || broadcast.held}
                   onClick={() => void confirm()}
                 >
                   {busy ? t("common.working") : t("swap.confirmSubmit")}

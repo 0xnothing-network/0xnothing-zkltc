@@ -22,10 +22,10 @@ testnet (chain **4441**), and reuse the design tokens of the 0xFi surface in
 | `npm run build:app` | `vite build` only — `index.html`, `assets/`, `background.js`. Empties `dist/`. |
 | `npm run build:inject` | `content.js` + `inpage.js` only, as IIFE with unhashed names. |
 | `npm run build:android` | `npm run build`, then `cap sync android`. |
-| `npm run android:configure` | Reapply the tracked Android backup policy and scaffold package assertion. Also runs after every Capacitor sync. |
+| `npm run android:configure` | Reapply the tracked Android policy, activity, version, icons and scaffold package assertion. Also runs after every Capacitor copy and sync. |
 | `npm run typecheck` | `tsc --noEmit`. |
 | `npm test` | Node's built-in runner over recursively organized `tests/**/*.test.ts`. |
-| `npm run icons` | Regenerates `public/icons/*`. |
+| `npm run icons` | Regenerates `public/icons/*` and the Android icons and splash in `native/android/res/`. |
 
 Order matters if you run the two build halves separately: `build:app` empties
 `dist/`, `build:inject` adds to it.
@@ -69,13 +69,40 @@ keyring) and storage behave exactly as they do in the extension. `cleartext` and
 `allowMixedContent` are off, and the `CapacitorHttp` plugin is disabled so
 `fetch` stays the browser's rather than a native bridge.
 
-The tracked `capacitor:sync:after` hook applies `scripts/configure-android.ts`
+The tracked `capacitor:copy:after` and `capacitor:sync:after` hooks apply `scripts/configure-android.ts`
 and the XML policies in `native/android/res/xml/` to each regenerated Android
 project. Android cloud backup and device-to-device transfer exclude wallet data:
 the vault is encrypted in Capacitor Preferences, but it still must not be copied
 by the operating system. Recover on another device with the seed phrase and
 separate backups of imported private keys. The hook also aligns the generated
 instrumented test with `appId` in `capacitor.config.ts`.
+
+### Android build requirements
+
+The Android shell needs the **Android SDK** (Android Studio, compile SDK 36) and
+**JDK 21**; Capacitor 8 does not build with an older JDK. After every copy and sync,
+`configure-android.ts` installs into the regenerated `android/`:
+
+- the backup and data-extraction policies above;
+- `native/android/java/MainActivity.java`, in the `appId` package: `FLAG_SECURE`
+  on the whole window (no screenshots, recording or casting, so the Receive QR
+  cannot be screenshotted either) and a blank Recents card on API 33+. Back asks
+  the page first through `window.__walletBack()` (true means handled); otherwise
+  the task goes to the background instead of finishing, so the session survives.
+  The hook refuses to overwrite a generated `MainActivity` that has code of its
+  own: merge that into the tracked file. A copy from an earlier install (it
+  carries the `Tracked source:` comment) is replaced, and a refusal comes
+  before anything in `android/` is written;
+- `versionCode` and `versionName` from `package.json` (`1.0.9` becomes `10009`,
+  so minor and patch stay below 100);
+- the launcher icons and splash images from `native/android/res`, written by
+  `npm run icons` over the same-named scaffold files at the same sizes;
+- no `background.js`, `content.js`, `inpage.js`, `manifest.json` or `_locales/`
+  in the app's web assets: those are the extension's. A bare `npx cap copy`
+  runs the hook too.
+
+The WebView paints `#0b0c0e` (the dark `--bg`) before the page loads, so a cold
+start does not flash white. Release signing is not configured here.
 
 ## Security model
 

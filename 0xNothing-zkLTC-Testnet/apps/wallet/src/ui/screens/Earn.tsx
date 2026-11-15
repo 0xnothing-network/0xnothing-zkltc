@@ -1,10 +1,11 @@
 import { type ReactNode, useEffect, useState } from "react";
-import { formatUnits } from "viem";
+import { formatUnits, type Hex } from "viem";
 import { NUSD_TOKEN } from "../../config/assets";
 import { txUrl } from "../../config/chain";
 import { t } from "../../core/i18n";
-import { describeError } from "../../core/lib/errors";
+import { BroadcastUnknownError, describeError } from "../../core/lib/errors";
 import { formatAmount, formatBalance, parseAmount } from "../../core/lib/format";
+import type { TxKind } from "../../core/services/history";
 import {
   claimPointsRewards,
   formatPoints,
@@ -12,6 +13,8 @@ import {
   POINTS_LOCK_OPTIONS,
   dailyReward,
   loadPointsState,
+  POSITION_PAGE,
+  POSITION_READ_CAP,
   rewardShareBps,
   stakeNusdForPoints,
   stakeWeight,
@@ -24,10 +27,15 @@ import { TransactionReview } from "../components/TransactionReview";
 import { Button, Empty, Icon, Note, Panel, PanelBody, Row, Rows } from "../components/kit";
 import { Screen } from "../components/Screen";
 import { useActionGate } from "../hooks/useActionGate";
+import { useBroadcastHold } from "../hooks/useBroadcastHold";
 import { useLiveRead } from "../hooks/useLiveRead";
+import { claimReviewReady } from "../lib/claimReview";
 import { reviewKey } from "../lib/reviewKey";
 import { goHome, navigate } from "../router";
 import { useWallet } from "../state/WalletContext";
+
+/** History kinds a stake, withdraw or claim writes; a pending one holds a reopened screen. */
+const EARN_KINDS: readonly TxKind[] = ["points-stake", "points-withdraw", "points-claim"];
 
 type ReviewAction =
   | {
@@ -78,21 +86,33 @@ export function Earn(): ReactNode {
   const [error, setError] = useState<string | null>(null);
   const [review, setReview] = useState<ReviewAction | null>(null);
   const confirmGate = useActionGate();
+  const broadcast = useBroadcastHold(address, network, EARN_KINDS);
+  // How many of the newest positions to read; back to one page for another
+  // account or network.
+  const pageKey = `${address ?? ""}:${network.id}`;
+  const [paging, setPaging] = useState({ key: pageKey, limit: POSITION_PAGE });
+  const positionLimit = paging.key === pageKey ? paging.limit : POSITION_PAGE;
 
   const read = useLiveRead(
     address
       ? async () => {
           const [state, portfolio] = await Promise.all([
-            loadPointsState(address),
+            loadPointsState(address, positionLimit),
             loadPortfolio(address, tokens),
           ]);
           return { state, portfolio };
         }
       : null,
-    [address, network.id, network.rpcUrl, tokens, tick],
-    { identity: [address, network.id, network.rpcUrl, tokens] },
+    [address, network.id, network.rpcUrl, tokens, tick, positionLimit],
+    // Paged back, a block-by-block re-read would fetch up to 500 positions every
+    // few seconds from the one public RPC: then it reads on a transaction
+    // (tick), a page or a refresh only.
+    { identity: [address, network.id, network.rpcUrl, tokens], live: positionLimit === POSITION_PAGE },
   );
   const state = read.data?.state ?? null;
+  // useLiveRead's loading is false while the previous page stays shown, so a
+  // page is pending until the read has caught up with the limit asked for.
+  const pagePending = state !== null && state.positionsRead < Math.min(positionLimit, Number(state.positionCount));
   const walletNusd = rowBalance(read.data?.portfolio.rows, NUSD_TOKEN.id);
 
   const parsed = parseAmount(amount, NUSD_TOKEN.decimals);
@@ -116,7 +136,8 @@ export function Earn(): ReactNode {
     lockDuration,
   ]);
 
-  const claimIdentity = reviewKey([address, network.id, network.rpcUrl, "claim", state?.claimable]);
+  // No claimable figure here: it grows every second and would disarm the review.
+  const claimIdentity = reviewKey([address, network.id, network.rpcUrl, "claim"]);
   const claimReady = address !== null && state !== null && state.claimable > 0n;
   const now = BigInt(Math.floor(Date.now() / 1_000));
   const estimatedDailyPoints = parsed !== null && parsed > 0n
@@ -183,7 +204,7 @@ export function Earn(): ReactNode {
     : review.kind === "stake"
       ? review.identity === stakeIdentity && stakeReady && review.amount === parsed
       : review.kind === "claim"
-        ? review.identity === claimIdentity && claimReady && review.amount === state?.claimable
+        ? claimReady && claimReviewReady(review, { identity: claimIdentity, claimable: state?.claimable ?? null })
         : reviewedPosition !== null
           && review.identity === reviewKey([
             address,
@@ -204,19 +225,16 @@ export function Earn(): ReactNode {
       || review === null
       || !reviewReady
       || address === null
+      || broadcast.held
       || !confirmGate.tryEnter()
     ) return;
     const submitted = review;
     const submittedNetwork = network;
     setBusy(true);
     setError(null);
-    try {
+    // Also run when a held broadcast is later found mined: the job went through.
+    const sent = (hash: Hex): void => {
       if (submitted.kind === "stake") {
-        const hash = await stakeNusdForPoints({
-          from: address,
-          amount: submitted.amount,
-          lockDuration: submitted.lockDuration,
-        });
         notify(
           t("earn.toastStake", {
             amount: formatAmount(submitted.amount, NUSD_TOKEN.decimals, 6),
@@ -227,7 +245,6 @@ export function Earn(): ReactNode {
         );
         setAmount("");
       } else if (submitted.kind === "withdraw") {
-        const hash = await withdrawPointsStake({ from: address, positionId: submitted.positionId });
         notify(
           t("earn.toastWithdraw", {
             amount: formatAmount(submitted.amount, NUSD_TOKEN.decimals, 6),
@@ -236,16 +253,34 @@ export function Earn(): ReactNode {
           txUrl(hash, submittedNetwork),
         );
       } else {
-        const hash = await claimPointsRewards({ from: address, amount: submitted.amount });
         notify(
           t("earn.toastClaim", { amount: formatAmount(submitted.amount, NUSD_TOKEN.decimals, 6) }),
           "ok",
           txUrl(hash, submittedNetwork),
         );
       }
+      setError(null);
       setReview(null);
       refresh();
+    };
+    try {
+      if (submitted.kind === "stake") {
+        sent(await stakeNusdForPoints({
+          from: address,
+          amount: submitted.amount,
+          lockDuration: submitted.lockDuration,
+        }));
+      } else if (submitted.kind === "withdraw") {
+        sent(await withdrawPointsStake({ from: address, positionId: submitted.positionId }));
+      } else {
+        sent(await claimPointsRewards({ from: address, amount: submitted.amount }));
+      }
     } catch (cause) {
+      // The node may hold it: keep the form, hold Confirm, link the hash.
+      if (cause instanceof BroadcastUnknownError) {
+        broadcast.hold(cause.hash, sent);
+        notify(describeError(cause), "error", txUrl(cause.hash, submittedNetwork));
+      }
       setError(describeError(cause));
     } finally {
       confirmGate.leave();
@@ -404,7 +439,10 @@ export function Earn(): ReactNode {
           <span className="w-label">{t("earn.positions")}</span>
           {state?.positionsTruncated === true ? (
             <Note tone="warn">
-              {t("earn.positionsTruncated", { count: state.positionCount.toString() })}
+              {t("earn.positionsTruncated", {
+                shown: state.positionsRead.toString(),
+                count: state.positionCount.toString(),
+              })}
             </Note>
           ) : null}
           {state === null && read.loading ? (
@@ -461,6 +499,20 @@ export function Earn(): ReactNode {
               );
             })
           )}
+          {state?.positionsTruncated === true && positionLimit < POSITION_READ_CAP ? (
+            <Button
+              type="button"
+              block
+              disabled={pagePending}
+              aria-busy={pagePending}
+              onClick={() => setPaging({
+                key: pageKey,
+                limit: Math.min(positionLimit + POSITION_PAGE, POSITION_READ_CAP),
+              })}
+            >
+              {pagePending ? t("common.working") : t("earn.loadOlder")}
+            </Button>
+          ) : null}
         </section>
 
         <Panel title={t("earn.lending")}>
@@ -476,8 +528,9 @@ export function Earn(): ReactNode {
       {review !== null ? (
         <TransactionReview
           title={reviewTitle}
+          armKey={review.identity}
           busy={busy}
-          ready={reviewReady}
+          ready={reviewReady && !broadcast.held}
           confirmLabel={reviewConfirm}
           onClose={() => setReview(null)}
           onConfirm={() => void confirm()}
@@ -523,7 +576,7 @@ export function Earn(): ReactNode {
                 <>
                   <Row
                     label={t("earn.claimable")}
-                    value={`${formatAmount(review.amount, NUSD_TOKEN.decimals, 6)} NUSD`}
+                    value={t("earn.claimAtLeast", { amount: formatAmount(review.amount, NUSD_TOKEN.decimals, 6) })}
                     tone="green"
                   />
                   <Row label={t("common.network")} value={network.name} />

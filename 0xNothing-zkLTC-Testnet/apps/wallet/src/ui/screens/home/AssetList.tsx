@@ -6,6 +6,7 @@ import { visibleRows } from "../../../core/services/portfolio";
 import { Empty, Note } from "../../components/kit";
 import { TokenLogo } from "../../components/TokenLogo";
 import { VerifiedMark } from "../../components/VerifiedMark";
+import { maskBalance } from "../../lib/balanceMask";
 
 /**
  * The TOKEN tab. A row opens the send screen already pointed at that token — it
@@ -19,11 +20,14 @@ export function AssetList({
   rows,
   loading = false,
   failed = false,
+  hidden = false,
 }: {
   rows: readonly AssetRow[];
   loading?: boolean;
   /** The parent already renders the read error beside the portfolio total. */
   failed?: boolean;
+  /** Hide balances: masks the amount and the value of every row. */
+  hidden?: boolean;
 }): ReactNode {
   const listed = visibleRows(rows);
   if (listed.length === 0) {
@@ -55,12 +59,12 @@ export function AssetList({
             </span>
             <span className="w-asset-side">
               <span className="w-asset-amount">
-                {row.readError !== null ? "--" : formatBalance(row.balance, row.token.decimals)}
+                {row.readError !== null ? "--" : maskBalance(hidden, formatBalance(row.balance, row.token.decimals))}
               </span>
               <span className="w-asset-usd">
                 {row.priceWad === 0n
                   ? "--"
-                  : `${row.stale ? "~" : ""}${formatUsdWad(row.valueWad)}`}
+                  : maskBalance(hidden, `${row.stale ? "~" : ""}${formatUsdWad(row.valueWad)}`)}
               </span>
             </span>
           </a>

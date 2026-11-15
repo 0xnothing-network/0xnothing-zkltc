@@ -70,3 +70,59 @@ export function completeWord(prefix: string, limit = 4): string[] {
   }
   return out;
 }
+
+/** A uniform index below `bound` from the platform CSPRNG, without modulo bias. */
+function randomIndex(bound: number): number {
+  const limit = Math.floor(0x1_0000_0000 / bound) * bound;
+  const cell = new Uint32Array(1);
+  do {
+    crypto.getRandomValues(cell);
+  } while (cell[0]! >= limit);
+  return cell[0]! % bound;
+}
+
+/**
+ * The backup check a new wallet runs before it is sealed: a few distinct word
+ * positions (0-based, ascending) the user must give back from the written copy.
+ */
+export function backupCheckPositions(
+  total: number,
+  count = 3,
+  pick: (bound: number) => number = randomIndex,
+): number[] {
+  const pool = Array.from({ length: total }, (_, index) => index);
+  const out: number[] = [];
+  while (out.length < count && pool.length > 0) out.push(pool.splice(pick(pool.length), 1)[0]!);
+  return out.sort((a, b) => a - b);
+}
+
+/**
+ * The asked word among other words of the same phrase, shuffled, each listed
+ * once. Decoys from the phrase itself mean a tap only lands by knowing the order,
+ * which is what the paper copy has to hold.
+ */
+export function backupCheckChoices(
+  words: readonly string[],
+  position: number,
+  count = 6,
+  pick: (bound: number) => number = randomIndex,
+): string[] {
+  const answer = words[position];
+  if (answer === undefined) return [];
+  const others = [...new Set(words.filter((word) => word !== answer))];
+  const choices = [answer];
+  while (choices.length < count && others.length > 0) {
+    choices.push(others.splice(pick(others.length), 1)[0]!);
+  }
+  for (let index = choices.length - 1; index > 0; index -= 1) {
+    const swap = pick(index + 1);
+    [choices[index], choices[swap]] = [choices[swap]!, choices[index]!];
+  }
+  return choices;
+}
+
+/** A typed or tapped answer against the phrase's word, in the form BIP-39 compares. */
+export function sameWord(answer: string, word: string): boolean {
+  const given = normalizeMnemonic(answer);
+  return given.length > 0 && !given.includes(" ") && given === normalizeMnemonic(word);
+}

@@ -8,7 +8,6 @@ import {
 } from "../../abis";
 import {
   customToken,
-  NATIVE_TOKEN,
   NUSD_TOKEN,
   type WalletToken,
 } from "../../config/assets";
@@ -254,11 +253,14 @@ function parseFiCatalog(payload: unknown): {
     }
     const changePercent = Number(pool.priceChange24h);
     if (!Number.isFinite(changePercent) || changePercent <= -100 || changePercent > 1_000_000) continue;
-    const nonNusd = tokens.find((meta) =>
-      typeof meta?.id === "string" && meta.id.toLowerCase() !== CONTRACTS.nusd.toLowerCase()
-    );
-    if (typeof nonNusd?.id === "string" && isAddress(nonNusd.id)) {
-      changes24h[nonNusd.id.toLowerCase()] = changePercent / 100;
+    // The move is quoted in NUSD only when NUSD is one side and the token the
+    // other. A pool between two other tokens says nothing about either one's
+    // dollar price, so it books no change at all.
+    const nusd = CONTRACTS.nusd.toLowerCase();
+    const ids = tokens.map((meta) => typeof meta?.id === "string" ? meta.id.toLowerCase() : "");
+    const other = ids.find((id) => id !== nusd);
+    if (ids.filter((id) => id === nusd).length === 1 && other && isAddress(other)) {
+      changes24h[other] = changePercent / 100;
     }
   }
   return { entries, changes24h };
@@ -645,9 +647,17 @@ export async function loadPortfolioMarketChange24h(
       delete changes[entry.token.address.toLowerCase()];
     }
   }
+  // zkLTC and WzkLTC are valued off the DIA feed and NUSD off its peg, so a
+  // pool's move is not theirs: the thin WzkLTC/NUSD pool is the very reason
+  // they are priced off the feed. Without a change here they fall to the local
+  // snapshot path rather than show a pool's 24h next to a feed-priced total.
+  for (const row of portfolio.rows) {
+    if (row.token.priceSource === "oracle" || row.token.priceSource === "usd") {
+      delete changes[row.token.address?.toLowerCase() ?? row.token.id];
+    }
+  }
+  delete changes[CONTRACTS.wzkltc.toLowerCase()];
   changes[NUSD_TOKEN.id] = 0;
-  const wrappedChange = changes[CONTRACTS.wzkltc.toLowerCase()];
-  if (wrappedChange !== undefined) changes[NATIVE_TOKEN.id] = wrappedChange;
 
   const pumpAddresses = portfolio.rows
     .filter((row) => row.valueWad > 0n && row.token.address && changes[row.token.id] === undefined)

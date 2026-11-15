@@ -1,4 +1,7 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { formatUnits } from "viem";
+import { NUSD_TOKEN } from "../../config/assets";
+import { isLitvmNetwork } from "../../config/networks";
 import { type MessageKey, t } from "../../core/i18n";
 import { accountLabel } from "../../core/keyring/vault";
 import {
@@ -7,13 +10,21 @@ import {
   shortenAddress,
 } from "../../core/lib/format";
 import { AccountSheet } from "../components/AccountSheet";
+import { Identicon } from "../components/Identicon";
 import { Button, Icon, type IconName, Note } from "../components/kit";
+import { RpcAccessPrompt } from "../components/RpcAccessPrompt";
+import { StagedSwapPrompt } from "../components/StagedSwapPrompt";
 import { useCopy } from "../hooks/useCopy";
 import { usePortfolio } from "../hooks/usePortfolio";
+import { maskBalance } from "../lib/balanceMask";
+import type { HomeTab } from "../lib/uiMemory";
+import { loadHomeTab, saveHomeTab } from "../lib/uiMemoryStore";
 import { navigate } from "../router";
 import { useWallet } from "../state/WalletContext";
 import { AssetList } from "./home/AssetList";
+import { HomeNotice } from "./home/HomeNotice";
 import { NftGrid } from "./home/NftGrid";
+import { PendingTxs } from "./home/PendingTxs";
 import { RwaList } from "./home/RwaList";
 
 /**
@@ -22,7 +33,7 @@ import { RwaList } from "./home/RwaList";
  * TOKEN / NFT / RWA list. There is no refresh control anywhere — the block
  * ticker reloads the panels by itself.
  */
-type Tab = "token" | "nft" | "rwa";
+type Tab = HomeTab;
 
 const ACTIONS: readonly { label: MessageKey; icon: IconName; path: string }[] = [
   { label: "home.send", icon: "send", path: "#/send" },
@@ -32,16 +43,35 @@ const ACTIONS: readonly { label: MessageKey; icon: IconName; path: string }[] = 
 ];
 
 export function Home(): ReactNode {
-  const { active, address, network, notify } = useWallet();
+  const { active, address, network, notify, settings, saveSettings } = useWallet();
+  const hidden = settings.hideBalances;
+  // A custom network has no protocol screens and its own gas coin: say so on
+  // the chip, so a forgotten switch is seen before a send on the wrong chain.
+  const custom = !isLitvmNetwork(network);
   const { copied, copy } = useCopy();
   const { portfolio, change, changeLoading, error, loading } = usePortfolio();
   const [tab, setTab] = useState<Tab>("token");
   const [nftOpened, setNftOpened] = useState(false);
   const [sheet, setSheet] = useState(false);
+  // A tab picked before the stored one is read wins over it.
+  const tabPickedRef = useRef(false);
 
   useEffect(() => {
     setSheet(false);
   }, [address]);
+
+  // Come back to the tab last picked.
+  useEffect(() => {
+    let live = true;
+    void loadHomeTab().then((stored) => {
+      if (!live || stored === null || tabPickedRef.current) return;
+      setTab(stored);
+      if (stored === "nft") setNftOpened(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   const tone = change === null || change === 0 ? undefined : change > 0 ? "up" : "down";
 
@@ -49,7 +79,9 @@ export function Home(): ReactNode {
     <div className="w-screen w-home">
       <header className="w-head">
         <span className="w-avatar" aria-hidden="true">
-          {(active ? accountLabel(active) : t("account.main")).slice(0, 1).toUpperCase()}
+          {address
+            ? <Identicon address={address} size={24} />
+            : (active ? accountLabel(active) : t("account.main")).slice(0, 1).toUpperCase()}
         </span>
         <div className="w-head-main">
           <button
@@ -80,9 +112,9 @@ export function Home(): ReactNode {
             <Icon name={copied ? "check" : "copy"} size={12} />
           </button>
         </div>
-        <span className="w-net-chip">
+        <span className="w-net-chip" data-custom={custom ? "true" : undefined}>
           <i className="w-dot" aria-hidden="true" />
-          {network.name}
+          {custom ? `${network.name} · ${t("home.customNet")}` : network.name}
         </span>
         <button type="button" className="w-back" aria-label={t("home.settingsAria")} onClick={() => navigate("#/settings")}>
           <Icon name="settings" size={16} />
@@ -92,8 +124,20 @@ export function Home(): ReactNode {
       <div className="w-body">
         <div className="w-total-block" aria-busy={loading}>
           <div className="w-total-row">
-            <span className="w-total">
-              {portfolio ? formatUsdWad(portfolio.totalWad) : loading ? "…" : "—"}
+            <span className="w-total-line">
+              <span className="w-total">
+                {portfolio ? maskBalance(hidden, formatUsdWad(portfolio.totalWad)) : loading ? "…" : "—"}
+              </span>
+              <button
+                type="button"
+                className="w-total-eye"
+                aria-pressed={hidden}
+                aria-label={hidden ? t("home.showBalances") : t("home.hideBalances")}
+                title={hidden ? t("home.showBalances") : t("home.hideBalances")}
+                onClick={() => void saveSettings({ hideBalances: !hidden }).catch(() => undefined)}
+              >
+                <Icon name={hidden ? "eyeOff" : "eye"} size={14} />
+              </button>
             </span>
             {change !== null || changeLoading ? (
               <span className="w-delta" data-tone={tone}>
@@ -109,6 +153,7 @@ export function Home(): ReactNode {
           </div>
           {error !== null ? <Note tone="error">{error}</Note> : null}
         </div>
+        <HomeNotice portfolio={portfolio} failed={error !== null} />
 
         <div className="w-actions">
           {ACTIONS.map((action) => (
@@ -124,6 +169,19 @@ export function Home(): ReactNode {
             </a>
           ))}
         </div>
+        <RpcAccessPrompt rpcUrl={network.rpcUrl} />
+        <StagedSwapPrompt
+          address={address}
+          networkKey={`${network.id}:${network.rpcUrl}`}
+          onFinish={(pending) => {
+            const params = new URLSearchParams({
+              finish: pending.tokenOutId,
+              amount: formatUnits(pending.delivered, NUSD_TOKEN.decimals),
+            });
+            navigate(`#/swap?${params.toString()}`);
+          }}
+        />
+        <PendingTxs />
         <div className="w-tabs" role="tablist" aria-label={t("home.tabsAria")}>
           {(
             [
@@ -141,8 +199,10 @@ export function Home(): ReactNode {
               aria-controls={`home-panel-${name}`}
               aria-selected={tab === name}
               onClick={() => {
+                tabPickedRef.current = true;
                 setTab(name);
                 if (name === "nft") setNftOpened(true);
+                saveHomeTab(name);
               }}
             >
               {label}
@@ -160,6 +220,7 @@ export function Home(): ReactNode {
             rows={portfolio?.rows ?? []}
             loading={loading}
             failed={error !== null}
+            hidden={hidden}
           />
         </div>
         <div
@@ -176,7 +237,7 @@ export function Home(): ReactNode {
           aria-labelledby="home-tab-rwa"
           hidden={tab !== "rwa"}
         >
-          {tab === "rwa" ? <RwaList /> : null}
+          {tab === "rwa" ? <RwaList hidden={hidden} /> : null}
         </div>
       </div>
 

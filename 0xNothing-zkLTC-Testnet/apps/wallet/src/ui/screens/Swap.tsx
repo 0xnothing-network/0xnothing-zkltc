@@ -1,5 +1,5 @@
-import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { formatUnits, type Address } from "viem";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { formatUnits, type Address, type Hex } from "viem";
 import {
   NATIVE_TOKEN,
   NUSD_TOKEN,
@@ -7,32 +7,51 @@ import {
 } from "../../config/assets";
 import { txUrl } from "../../config/chain";
 import { t } from "../../core/i18n";
-import { describeError } from "../../core/lib/errors";
+import { BroadcastUnknownError, describeError, StagedSwapError } from "../../core/lib/errors";
 import { formatAmount, formatBalance, parseAmount } from "../../core/lib/format";
 import {
   applySlippage,
   NATIVE_GAS_RESERVE_WEI,
+  quoteFresh,
   spendableForSwap,
 } from "../../core/lib/swapMath";
+import type { TxKind, TxRecord } from "../../core/services/history";
 import { loadPortfolio, rowBalance, rowReadError } from "../../core/services/portfolio";
 import {
   loadSwapCatalog,
   type SwapCatalogEntry,
 } from "../../core/services/marketCatalog";
-import { executeSwap, quoteSwap, routeLabel, type SwapRoute } from "../../core/services/swap";
+import {
+  executeSwap,
+  type PendingStagedSwap,
+  quoteSwap,
+  routeLabel,
+  type SwapRoute,
+} from "../../core/services/swap";
 import { addCustomToken } from "../../core/services/tokens";
 import { AmountField } from "../components/AmountField";
 import { Button, Icon, Note, Panel, Row, Rows } from "../components/kit";
 import { Screen } from "../components/Screen";
+import { StagedSwapPrompt } from "../components/StagedSwapPrompt";
 import {
   SwapTokenPicker,
   type SwapTokenOption,
 } from "../components/SwapTokenPicker";
 import { TokenLogo } from "../components/TokenLogo";
 import { useActionGate } from "../hooks/useActionGate";
+import { useBroadcastHold } from "../hooks/useBroadcastHold";
 import { useLiveRead } from "../hooks/useLiveRead";
+import { useReviewArm } from "../hooks/useReviewArm";
+import { useSheetFocus } from "../hooks/useSheetFocus";
+import { backdropCloseAllowed } from "../lib/armTimer";
 import { reviewKey } from "../lib/reviewKey";
+import { restorableSwapPair } from "../lib/uiMemory";
+import { loadSwapPair, saveSwapPair } from "../lib/uiMemoryStore";
+import { useRoute } from "../router";
 import { useWallet } from "../state/WalletContext";
+
+/** History kinds a swap leg writes (not its approval); a pending one holds a reopened screen. */
+const SWAP_KINDS: readonly TxKind[] = ["swap"];
 
 function tokenOptions(
   walletTokens: readonly WalletToken[],
@@ -72,6 +91,9 @@ export function Swap(): ReactNode {
   const [reviewRoute, setReviewRoute] = useState<SwapRoute | null>(null);
   const [reviewIdentity, setReviewIdentity] = useState<string | null>(null);
   const confirmGate = useActionGate();
+  const broadcast = useBroadcastHold(address, network, SWAP_KINDS);
+  const reviewShownAt = useRef(0);
+  const arrival = useRoute();
 
   const tokenIn = tokens.find((entry) => entry.id === inId) ?? NATIVE_TOKEN;
   const tokenOut = tokens.find((entry) => entry.id === outId) ?? NUSD_TOKEN;
@@ -181,6 +203,14 @@ export function Swap(): ReactNode {
     settings.slippageBps,
   ]);
   const reviewCurrent = reviewIdentity === currentReviewIdentity;
+  // The quote time is part of the arm key: a refreshed quote is a new review.
+  const reviewArmed = useReviewArm(
+    reviewOpen && reviewRoute !== null ? `${reviewIdentity}:${reviewRoute.quotedAt}` : null,
+  );
+  // Same condition as the sheet below renders with.
+  const sheetRef = useSheetFocus<HTMLDivElement>(
+    reviewOpen && reviewCurrent && reviewRoute !== null && parsed !== null && address !== null,
+  );
 
   useEffect(() => {
     setReviewOpen(false);
@@ -206,6 +236,58 @@ export function Swap(): ReactNode {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [busy, reviewOpen]);
+
+  // The second leg of an interrupted two-stage swap: NUSD in, the original
+  // output out, the delivered amount. It is quoted afresh like any swap.
+  const prefillFinish = (tokenOutId: string, nusd: string): void => {
+    setInId(NUSD_TOKEN.id);
+    if (tokenOutId !== NUSD_TOKEN.id) setOutId(tokenOutId);
+    setAmount(parseAmount(nusd, NUSD_TOKEN.decimals) === null ? "" : nusd);
+    setError(null);
+  };
+  const finishPending = (pending: PendingStagedSwap): void => {
+    prefillFinish(pending.tokenOutId, formatUnits(pending.delivered, NUSD_TOKEN.decimals));
+  };
+  // The offer on Home hands the same prefill over in the hash. Read once, on
+  // arrival: a later render must not overwrite what the user typed since.
+  useEffect(() => {
+    const finishOut = arrival.params.get("finish");
+    const finishAmount = arrival.params.get("amount");
+    if (finishOut !== null && finishAmount !== null) prefillFinish(finishOut, finishAmount);
+  }, []);
+
+  // The pair last used on this network comes back, unless Home handed a
+  // finish over (that prefill wins) or the user picked a token before the read.
+  const pairReadyRef = useRef(false);
+  const pairTouchedRef = useRef(false);
+  useEffect(() => {
+    if (arrival.params.get("finish") !== null) {
+      pairReadyRef.current = true;
+      return undefined;
+    }
+    let live = true;
+    const ids = tokens.map((entry) => entry.id);
+    void loadSwapPair().then((stored) => {
+      if (!live) return;
+      const pair = pairTouchedRef.current ? null : restorableSwapPair(stored, network.id, ids);
+      pairReadyRef.current = true;
+      if (pair !== null) {
+        setInId(pair.inId);
+        setOutId(pair.outId);
+      }
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (!pairReadyRef.current) {
+      // Anything but the defaults before the read lands is the user's pick.
+      if (inId !== NUSD_TOKEN.id || outId !== NATIVE_TOKEN.id) pairTouchedRef.current = true;
+      return;
+    }
+    if (inId !== outId) saveSwapPair({ networkId: network.id, inId, outId });
+  }, [inId, outId]);
 
   const flip = (): void => {
     setInId(tokenOut.id);
@@ -269,6 +351,7 @@ export function Swap(): ReactNode {
     setError(null);
     setReviewRoute(route);
     setReviewIdentity(currentReviewIdentity);
+    reviewShownAt.current = Date.now();
     setReviewOpen(true);
   };
 
@@ -282,8 +365,28 @@ export function Swap(): ReactNode {
       || !address
       || parsed === null
       || reviewRoute === null
+      || !reviewArmed
+      || broadcast.held
       || !confirmGate.tryEnter()
     ) return;
+    // A quote that aged on this sheet, or that the live quote has moved away
+    // from, is not confirmed: the newer quote replaces it on the same sheet,
+    // which re-arms, so the user confirms the number they now see.
+    if (!quoteFresh(reviewRoute, Date.now(), route, settings.slippageBps)) {
+      const live = route !== null
+        && route.kind !== "none"
+        && route.amountOut > 0n
+        && !route.paused
+        && quoteFresh(route, Date.now());
+      confirmGate.leave();
+      setError(t("err.quoteStale"));
+      if (live) setReviewRoute(route);
+      else {
+        setReviewOpen(false);
+        quote.reload();
+      }
+      return;
+    }
     const submitted = {
       from: address,
       tokenIn,
@@ -295,15 +398,7 @@ export function Swap(): ReactNode {
     };
     setBusy(true);
     setError(null);
-    try {
-      const hash = await executeSwap({
-        from: submitted.from,
-        tokenIn: submitted.tokenIn,
-        tokenOut: submitted.tokenOut,
-        amountIn: submitted.amountIn,
-        route: submitted.route,
-        slippageBps: submitted.slippageBps,
-      });
+    const sent = (hash: Hex): void => {
       notify(
         t("swap.toast", {
           amount: formatAmount(submitted.amountIn, submitted.tokenIn.decimals, 4),
@@ -317,9 +412,45 @@ export function Swap(): ReactNode {
       setReviewOpen(false);
       setReviewIdentity(null);
       refresh();
+    };
+    // A held broadcast later found mined went through: the input is spent, so
+    // the form must not offer it again. A mined first leg of a two-stage swap
+    // only delivered NUSD; the staged prompt offers the rest, as after a
+    // StagedSwapError.
+    const sentLater = (hash: Hex, row: TxRecord): void => {
+      setError(null);
+      if (row.label?.key !== "tx.swapStep1") {
+        sent(hash);
+        return;
+      }
+      setInId(NUSD_TOKEN.id);
+      setAmount("");
+      refresh();
+    };
+    try {
+      sent(await executeSwap({
+        from: submitted.from,
+        tokenIn: submitted.tokenIn,
+        tokenOut: submitted.tokenOut,
+        amountIn: submitted.amountIn,
+        route: submitted.route,
+        slippageBps: submitted.slippageBps,
+      }));
     } catch (cause) {
+      // The node may hold it: keep the form, hold Confirm, link the hash.
+      if (cause instanceof BroadcastUnknownError) {
+        broadcast.hold(cause.hash, sentLater);
+        notify(describeError(cause), "error", txUrl(cause.hash, submitted.network));
+      }
       setError(describeError(cause));
       setReviewOpen(false);
+      if (cause instanceof StagedSwapError) {
+        // Step 1 already spent the input; the form now starts from the NUSD the
+        // user holds, so a second tap cannot run step 1 again.
+        setInId(NUSD_TOKEN.id);
+        setAmount("");
+      }
+      refresh();
     } finally {
       confirmGate.leave();
       setBusy(false);
@@ -344,6 +475,11 @@ export function Swap(): ReactNode {
         }}
       >
         <div className="w-flow-main">
+          <StagedSwapPrompt
+            address={address}
+            networkKey={`${network.id}:${network.rpcUrl}`}
+            onFinish={finishPending}
+          />
           <AmountField
             label={t("swap.from")}
             inset
@@ -478,12 +614,14 @@ export function Swap(): ReactNode {
         <div
           className="w-sheet"
           onClick={() => {
-            if (!busy) setReviewOpen(false);
+            if (!busy && backdropCloseAllowed(reviewShownAt.current, Date.now())) setReviewOpen(false);
           }}
         >
           <div
+            ref={sheetRef}
             className="w-sheet-body w-swap-review"
             role="dialog"
+            tabIndex={-1}
             aria-modal="true"
             aria-labelledby="swap-review-title"
             aria-busy={busy}
@@ -559,7 +697,7 @@ export function Swap(): ReactNode {
                 </Button>
                 <Button
                   variant="primary"
-                  disabled={busy || !ready || !reviewCurrent}
+                  disabled={busy || !ready || !reviewCurrent || !reviewArmed || broadcast.held}
                   onClick={() => void confirmSwap()}
                 >
                   {busy ? t("swap.swapping") : t("swap.confirmSubmit")}

@@ -9,7 +9,8 @@ import {
   newProviderUuid,
   PROVIDER_CHAIN_ID_HEX,
   PROVIDER_RDNS,
-  targetsOrigin,
+  readProviderState,
+  sameAccounts,
   TO_CONTENT,
   TO_PAGE,
 } from "../../src/extension/protocol.ts";
@@ -77,17 +78,35 @@ test("provider calls are bounded before crossing into the worker", () => {
 test("content messages carry results and events on their own channel", () => {
   assert.equal(isContentMessage({ channel: TO_PAGE, id: "1", result: "0x1159" }), true);
   assert.equal(
-    isContentMessage({ channel: TO_PAGE, event: { name: "accountsChanged", data: [] } }),
+    isContentMessage({ channel: TO_PAGE, state: { chainId: "0x1159", accounts: [] } }),
     true,
   );
   assert.equal(isContentMessage({ channel: TO_CONTENT, id: "1" }), false);
   assert.equal(isContentMessage(undefined), false);
 });
 
-test("provider identity is a valid UUID and targeted events stay origin-scoped", () => {
+test("provider identity is a valid UUID", () => {
   const uuid = newProviderUuid();
   assert.match(uuid, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
-  assert.equal(targetsOrigin(undefined, "https://app.example"), true);
-  assert.equal(targetsOrigin(["https://app.example"], "https://app.example"), true);
-  assert.equal(targetsOrigin(["https://app.example"], "https://other.example"), false);
+});
+
+// The pulled state is all a page provider applies after a ping; anything that is
+// not a chain id and a short list of addresses is dropped.
+test("a pulled provider state is applied only in its exact shape", () => {
+  const account = `0x${"aB".repeat(20)}`;
+  assert.deepEqual(readProviderState({ chainId: "0x1159", accounts: [account] }), { chainId: "0x1159", accounts: [account] });
+  assert.deepEqual(readProviderState({ chainId: "0x1159", accounts: [], origins: ["https://x.example"] }), { chainId: "0x1159", accounts: [] });
+  assert.equal(readProviderState(null), null);
+  assert.equal(readProviderState({ chainId: "4441", accounts: [] }), null);
+  assert.equal(readProviderState({ chainId: "0x1159" }), null);
+  // A site without a connection is sent its accounts only.
+  assert.deepEqual(readProviderState({ accounts: [] }), { accounts: [] });
+  assert.equal("chainId" in (readProviderState({ accounts: [] }) ?? {}), false);
+  assert.equal(readProviderState({ chainId: 4441, accounts: [] }), null);
+  assert.equal(readProviderState({ chainId: null, accounts: [] }), null);
+  assert.equal(readProviderState({ chainId: "0x1159", accounts: ["0x12"] }), null);
+  assert.equal(readProviderState({ chainId: "0x1159", accounts: Array(9).fill(account) }), null);
+  assert.equal(sameAccounts([account], [account.toLowerCase()]), true);
+  assert.equal(sameAccounts([account], []), false);
+  assert.equal(sameAccounts([], []), true);
 });

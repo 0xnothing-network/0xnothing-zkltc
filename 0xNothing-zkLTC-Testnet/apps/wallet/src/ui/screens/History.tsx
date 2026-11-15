@@ -1,9 +1,9 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { txUrl } from "../../config/chain";
 import { type MessageKey, t } from "../../core/i18n";
 import { describeError } from "../../core/lib/errors";
 import { formatClock, formatTimeAgo, shortenAddress } from "../../core/lib/format";
-import { openExternal } from "../../core/platform/env";
+import { isExtension, openExternal } from "../../core/platform/env";
 import {
   clearRecords,
   listSettled,
@@ -12,10 +12,15 @@ import {
   type TxKind,
   type TxRecord,
 } from "../../core/services/history";
-import { Button, Empty, Icon, type IconName, Note, Pill, type Tone } from "../components/kit";
+import { Button, Empty, Icon, Note, Pill } from "../components/kit";
 import { Screen } from "../components/Screen";
 import { useActionGate } from "../hooks/useActionGate";
 import { useLiveRead } from "../hooks/useLiveRead";
+import { useRecipients } from "../hooks/useRecipients";
+import { type RecentRecipient, recipientName } from "../lib/recipients";
+import { downloadCsv, historyCsv, historyFileName } from "../lib/historyCsv";
+import { CONFIRM_TAP_MS, secondTapFires } from "../lib/twoStep";
+import { KIND_ICON, TX_STATUS } from "../lib/txDisplay";
 import { goHome } from "../router";
 import { useWallet } from "../state/WalletContext";
 
@@ -39,43 +44,71 @@ const KIND_LABEL: Record<TxKind, MessageKey> = {
   dapp: "kind.dapp",
 };
 
-const KIND_ICON: Record<TxKind, IconName> = {
-  send: "send",
-  "mint-nusd": "plus",
-  "redeem-nusd": "receive",
-  supply: "send",
-  withdraw: "receive",
-  "points-stake": "lock",
-  "points-withdraw": "receive",
-  "points-claim": "checkCircle",
-  swap: "trade",
-  approve: "checkCircle",
-  nft: "dapp",
-  dapp: "external",
-};
-
-const STATUS: Record<TxRecord["status"], { label: MessageKey; tone: Tone }> = {
-  pending: { label: "status.pending", tone: "warn" },
-  success: { label: "status.success", tone: "ok" },
-  failed: { label: "status.failed", tone: "bad" },
-};
+/**
+ * The detail line of a row: a send's recipient carries the name the user gave
+ * it on this chain, beside the short address that the name never replaces.
+ */
+function rowDetail(row: TxRecord, known: readonly RecentRecipient[] | null): string {
+  const detail = recordDetail(row);
+  if (detail === undefined) return shortenAddress(row.hash, 10, 6);
+  const name = row.kind === "send" || row.kind === "nft" ? recipientName(known, detail) : null;
+  return name === null ? detail : `${name} · ${shortenAddress(detail)}`;
+}
 
 export function History(): ReactNode {
   const { address, network, tick } = useWallet();
   const read = useLiveRead(address ? () => listSettled(address, network) : null, [address, network.id, tick], {
     identity: [address, network.id],
   });
+  const known = useRecipients(address, network);
   const [busy, setBusy] = useState(false);
   const actionGate = useActionGate();
   const [actionError, setActionError] = useState<string | null>(null);
+  // Clear wipes this network's settled rows with no undo, so it takes two taps.
+  const [clearArmedAt, setClearArmedAt] = useState<number | null>(null);
+  useEffect(() => {
+    if (clearArmedAt === null) return;
+    const id = setTimeout(() => setClearArmedAt(null), CONFIRM_TAP_MS);
+    return () => clearTimeout(id);
+  }, [clearArmedAt]);
+  const tapClear = (): void => {
+    const now = Date.now();
+    if (!secondTapFires(clearArmedAt, now)) {
+      // A too-quick second touch keeps the first arming; anything else re-arms.
+      if (clearArmedAt === null || now - clearArmedAt > CONFIRM_TAP_MS) setClearArmedAt(now);
+      return;
+    }
+    setClearArmedAt(null);
+    void clear();
+  };
   const rows = read.data ?? [];
+
+  // Exactly the rows on screen, in their order and in the language on screen.
+  const exportCsv = (): void => {
+    const now = Date.now();
+    const text = historyCsv(
+      [t("hist.csvDate"), t("hist.csvKind"), t("hist.csvSummary"), t("hist.csvStatus"), t("hist.csvHash"), t("common.network")],
+      rows.map((row) => {
+        const detail = recordDetail(row);
+        return [
+          new Date(row.at).toISOString(),
+          t(KIND_LABEL[row.kind]),
+          detail === undefined ? recordSummary(row) : `${recordSummary(row)} · ${detail}`,
+          t(TX_STATUS[row.status].label),
+          row.hash,
+          network.name,
+        ];
+      }),
+    );
+    downloadCsv(historyFileName(network.chainId, now), text);
+  };
 
   const clear = async (): Promise<void> => {
     if (busy || !address || !actionGate.tryEnter()) return;
     setBusy(true);
     setActionError(null);
     try {
-      await clearRecords(address);
+      await clearRecords(address, network);
       read.reload();
     } catch (cause) {
       setActionError(describeError(cause));
@@ -90,9 +123,17 @@ export function History(): ReactNode {
       onBack={goHome}
       right={
         rows.length > 0 ? (
-          <Button variant="ghost" size="sm" disabled={busy || read.busy} onClick={() => void clear()}>
-            {busy ? t("common.working") : t("hist.clear")}
-          </Button>
+          <span className="w-hist-actions">
+            {/* Android's WebView does nothing with a download link, so it is not offered there. */}
+            {isExtension ? (
+              <Button variant="ghost" size="sm" aria-label={t("hist.exportAria")} onClick={exportCsv}>
+                {t("hist.export")}
+              </Button>
+            ) : null}
+            <Button variant="ghost" size="sm" disabled={busy || read.busy} onClick={tapClear}>
+              {busy ? t("common.working") : clearArmedAt !== null ? t("hist.clearConfirm") : t("hist.clear")}
+            </Button>
+          </span>
         ) : undefined
       }
     >
@@ -113,7 +154,7 @@ export function History(): ReactNode {
                 type="button"
                 className="w-tx"
                 data-status={row.status}
-                aria-label={`${recordSummary(row)} · ${t(STATUS[row.status].label)} · ${formatTimeAgo(row.at)}`}
+                aria-label={`${recordSummary(row)} · ${t(TX_STATUS[row.status].label)} · ${formatTimeAgo(row.at)}`}
                 onClick={() => {
                   const url = txUrl(row.hash, network);
                   if (url) void openExternal(url);
@@ -129,7 +170,7 @@ export function History(): ReactNode {
                   <span className="w-tx-detail">
                     <span className="w-tx-what">
                       {t(KIND_LABEL[row.kind])} ·{" "}
-                      {recordDetail(row) ?? shortenAddress(row.hash, 10, 6)}
+                      {rowDetail(row, known)}
                     </span>
                     <span className="w-tx-when" title={formatClock(row.at)}>
                       · {formatTimeAgo(row.at)}
@@ -137,7 +178,7 @@ export function History(): ReactNode {
                   </span>
                 </span>
                 <span className="w-tx-side">
-                  <Pill tone={STATUS[row.status].tone}>{t(STATUS[row.status].label)}</Pill>
+                  <Pill tone={TX_STATUS[row.status].tone}>{t(TX_STATUS[row.status].label)}</Pill>
                 </span>
               </button>
             ))}

@@ -34,6 +34,7 @@ const NEUTRAL: readonly MessageKey[] = [
   "kind.nft",
   "home.delta24h", // "24h"
   "tx.swap", // "{paid} → {received}"
+  "tx.swapStep1", // "{paid} → {bridged} NUSD"
   "apr.selTransfer",
   "apr.selApprove",
   "apr.selTransferFrom",
@@ -61,6 +62,7 @@ const SAME_AS_ENGLISH: Record<Code, readonly MessageKey[]> = {
     "kind.swap",
     "apr.domain",
     "apr.footer",
+    "apr.addNetworkChainId",
   ],
   zh: ["wipe.word", "network.protocolOnly", "apr.networkChanged", "set.customNetworks", "set.networkChoose", "set.addNetwork",
     "set.networkName", "set.rpcUrl", "set.chainId", "set.nativeName", "set.nativeSymbol", "set.explorerUrl",
@@ -68,14 +70,15 @@ const SAME_AS_ENGLISH: Record<Code, readonly MessageKey[]> = {
   es: ["common.no", "common.token", "nav.swap", "home.stake", "swap.title", "swap.submit",
     "kind.swap", "set.lockChoice", "tok.panel", "network.protocolOnly", "apr.networkChanged", "set.customNetworks", "set.networkChoose",
     "set.addNetwork", "set.networkName", "set.rpcUrl", "set.chainId", "set.nativeName", "set.nativeSymbol",
-    "set.explorerUrl", "set.networkInvalid", "set.networkDuplicate", "set.networkPermission", "set.customNetworkNote"],
-  fr: ["common.max", "common.token", "nav.swap", "home.stake", "swap.title", "swap.submit",
+    "set.explorerUrl", "set.networkInvalid", "set.networkDuplicate", "set.networkPermission", "set.customNetworkNote",
+    "send.total"],
+  fr: ["set.notifications", "common.max", "common.token", "nav.swap", "home.stake", "swap.title", "swap.submit",
     "swap.route", "swap.confirmations", "lend.utilization", "kind.swap", "set.lockChoice",
     "set.build", "tok.panel", "apr.txTitle", "apr.signTitle", "network.protocolOnly", "apr.networkChanged", "set.customNetworks",
     "set.networkChoose", "set.addNetwork", "set.networkName", "set.rpcUrl", "set.chainId", "set.nativeName",
     "set.nativeSymbol", "set.explorerUrl", "set.networkInvalid", "set.networkDuplicate", "set.networkPermission",
-    "set.customNetworkNote"],
-  de: ["common.explorer", "common.max", "common.token", "account.hdN", "nav.swap", "home.stake",
+    "set.customNetworkNote", "send.total"],
+  de: ["apr.addNetworkExplorer", "common.explorer", "common.max", "common.token", "account.hdN", "nav.swap", "home.stake",
     "swap.title", "swap.submit", "swap.route", "kind.swap", "onb.title", "set.build", "tok.panel",
     "tok.symbol", "tok.name", "apr.domain", "apr.footer", "network.protocolOnly", "apr.networkChanged", "set.customNetworks",
     "set.networkChoose", "set.addNetwork", "set.networkName", "set.rpcUrl", "set.chainId", "set.nativeName",
@@ -253,4 +256,10 @@ test("reward toasts interpolate the amount exactly once", () => {
   assert.equal(interpolate(EN["earn.toastClaim"], { amount: "2" }), "Claimed 2 NUSD");
   assert.equal(interpolate(vi["earn.toastClaim"]!, { amount: "2" }), "Đã nhận 2 NUSD");
   assert.equal(interpolate(EN["tx.pointsClaim"], { amount: "2" }), "Claimed 2 NUSD of rewards");
+});
+
+test("the German catalog addresses the user formally (Sie) everywhere", () => {
+  for (const [key, text] of Object.entries(de)) {
+    assert.doesNotMatch(String(text), /(?:^|[\s.,;:!?(])(?:du|dich|dir|dein\p{L}*|gib|gibst)(?=$|[\s.,;:!?)])/iu, key);
+  }
 });

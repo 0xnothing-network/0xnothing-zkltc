@@ -21,6 +21,11 @@ export const erc20Abi = parseAbi([
   "event Transfer(address indexed from, address indexed to, uint256 value)",
 ]);
 
+/** ERC-165: the approval window asks it whether an approve target is an ERC-721 (0x80ac58cd). */
+export const erc165Abi = parseAbi([
+  "function supportsInterface(bytes4 interfaceId) view returns (bool)",
+]);
+
 /** Optional metadata exposed by 0xPump-launched ERC-20s. */
 export const tokenImageAbi = parseAbi([
   "function imageURI() view returns (string)",

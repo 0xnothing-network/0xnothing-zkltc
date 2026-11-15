@@ -1,6 +1,12 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useId, useRef, useState } from "react";
 import { t } from "../../../core/i18n";
-import { changePassword, MIN_WALLET_PASSWORD_LENGTH } from "../../../core/keyring/vault";
+import {
+  changePassword,
+  passwordProblem,
+  passwordProblemText,
+  passwordStrength,
+  type PasswordStrength,
+} from "../../../core/keyring/vault";
 import { describeError } from "../../../core/lib/errors";
 import { Button, Note, Panel, PanelBody } from "../../components/kit";
 import { useActionGate } from "../../hooks/useActionGate";
@@ -10,7 +16,17 @@ import { useWallet } from "../../state/WalletContext";
  * Password rotation. The vault re-encrypts the same secret under the new
  * password and refreshes the session key, so the wallet stays unlocked and no
  * account is re-derived — the addresses cannot change.
+ *
+ * The fields are read-only while it runs, not disabled, so a wrong current
+ * password keeps the focus; that field is selected for the retry.
  */
+
+/** The meter only informs; what blocks Confirm is `passwordProblem`. */
+const STRENGTH_TONE: Record<PasswordStrength, "warn" | "ok" | undefined> = {
+  weak: "warn",
+  fair: undefined,
+  strong: "ok",
+};
 export function ChangePassword(): ReactNode {
   const { notify } = useWallet();
   const [open, setOpen] = useState(false);
@@ -20,11 +36,16 @@ export function ChangePassword(): ReactNode {
   const [busy, setBusy] = useState(false);
   const actionGate = useActionGate();
   const [error, setError] = useState<string | null>(null);
+  const currentRef = useRef<HTMLInputElement>(null);
+  const errorId = useId();
 
-  const tooShort = next.length > 0 && next.length < MIN_WALLET_PASSWORD_LENGTH;
+  // The same check changePassword runs, so Confirm never enables for a password it refuses.
+  const problem = passwordProblem(next);
+  const refused = next.length > 0 && problem !== null;
+  const strength = passwordStrength(next);
   const mismatch = again.length > 0 && again !== next;
   const ready = current.length > 0
-    && next.length >= MIN_WALLET_PASSWORD_LENGTH
+    && problem === null
     && again === next;
 
   const close = (): void => {
@@ -45,6 +66,7 @@ export function ChangePassword(): ReactNode {
       notify(t("pwd.done"), "ok");
     } catch (cause) {
       setError(describeError(cause));
+      requestAnimationFrame(() => currentRef.current?.select());
     } finally {
       actionGate.leave();
       setBusy(false);
@@ -71,13 +93,15 @@ export function ChangePassword(): ReactNode {
             <label className="w-field">
               <span className="w-label">{t("pwd.current")}</span>
               <input
+                ref={currentRef}
                 className="w-input"
                 type="password"
                 value={current}
                 autoFocus
-                disabled={busy}
+                readOnly={busy}
                 autoComplete="current-password"
                 aria-invalid={error !== null}
+                aria-describedby={error !== null ? errorId : undefined}
                 onChange={(event) => {
                   setCurrent(event.target.value);
                   setError(null);
@@ -90,9 +114,9 @@ export function ChangePassword(): ReactNode {
                 className="w-input"
                 type="password"
                 value={next}
-                disabled={busy}
+                readOnly={busy}
                 autoComplete="new-password"
-                aria-invalid={tooShort}
+                aria-invalid={refused}
                 onChange={(event) => {
                   setNext(event.target.value);
                   setError(null);
@@ -105,7 +129,7 @@ export function ChangePassword(): ReactNode {
                 className="w-input"
                 type="password"
                 value={again}
-                disabled={busy}
+                readOnly={busy}
                 autoComplete="new-password"
                 aria-invalid={mismatch}
                 onChange={(event) => {
@@ -117,14 +141,18 @@ export function ChangePassword(): ReactNode {
                 }}
               />
             </label>
-            {tooShort ? (
-              <Note tone="warn">
-                {t("onb.shortPassword", { min: MIN_WALLET_PASSWORD_LENGTH })}
-              </Note>
+            {next.length > 0 ? (
+              <p className="w-caption" data-tone={STRENGTH_TONE[strength]}>
+                {t("pwd.strengthLabel", { level: t(`pwd.strength.${strength}`) })}
+                {strength === "strong" ? null : ` · ${t("pwd.hint")}`}
+              </p>
+            ) : null}
+            {refused && problem !== null ? (
+              <Note tone="warn">{passwordProblemText(problem)}</Note>
             ) : null}
             {mismatch ? <Note tone="error">{t("pwd.mismatch")}</Note> : null}
             {error !== null ? (
-              <div role="alert">
+              <div role="alert" id={errorId}>
                 <Note tone="error">{error}</Note>
               </div>
             ) : null}

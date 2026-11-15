@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { evaluateModule } from "../../../web/tests/helpers/evaluateModule.ts";
 
 const blockTicker = readFileSync(new URL("../../src/core/rpc/blockTicker.ts", import.meta.url), "utf8");
 const portfolio = readFileSync(new URL("../../src/core/services/portfolio.ts", import.meta.url), "utf8");
@@ -25,7 +26,12 @@ test("partial RPC reads cannot become complete zero-value portfolio snapshots", 
   // A lone failed leg becomes an unread row (see portfolioPartial.test.ts); it must
   // still keep the whole read incomplete so it never enters the 24h snapshot book.
   assert.match(portfolio, /stale: readError !== null \|\|/u);
-  assert.match(portfolio, /complete: !suppliedFailed && rows\.every\(\(row\) => !row\.stale\)/u);
+  // A stale row only passes when its balance was read as zero (MON-08); an
+  // unread row never does.
+  assert.match(
+    portfolio,
+    /complete: !suppliedFailed\s+&& rows\.every\(\(row\) => !row\.stale \|\| \(row\.readError === null && row\.balance === 0n\)\)/u,
+  );
   assert.match(prices, /const hasPrice = priceCall\.status === "success" && priceCall\.result\[0\] > 0n;/u);
   assert.match(prices, /priceSource === "none"[\s\S]*stale: false/u);
 });
@@ -51,4 +57,41 @@ test("temporary plaintext, password and key buffers are zeroized", () => {
   assert.match(cryptoSource, /passwordBytes\.fill\(0\)/u);
   assert.match(cryptoSource, /plaintext\?\.fill\(0\)|plaintext\.fill\(0\)/u);
   assert.match(cryptoSource, /bytes\.fill\(0\)/u);
+});
+
+function lendWith(results: readonly ({ status: "success"; result: unknown } | { status: "failure"; error: Error })[]) {
+  return evaluateModule<{
+    loadLendState(account: string): Promise<{
+      supplied: bigint | null;
+      maxWithdraw: bigint | null;
+      availableLiquidity: bigint | null;
+      supplyPaused: boolean;
+      activated: boolean;
+    }>;
+  }>(new URL("../../src/core/services/lend.ts", import.meta.url), {
+    "../../abis": { lendingPoolAbi: [] },
+    "../../config/contracts": { CONTRACTS: { lendingPool: "0xpool", nusd: "0xnusd" } },
+    "../lib/format": { formatAmount: String },
+    "../rpc/client": { activeNetwork: {}, publicClient: { multicall: async () => results } },
+    "./tx": {},
+  });
+}
+
+test("a failed lending read is unknown, never 0 supplied or 0 withdrawable", async () => {
+  const ok = (result: unknown) => ({ status: "success" as const, result });
+  const failed = { status: "failure" as const, error: new Error("execution reverted") };
+  // maxWithdraw alone reverts: the deposit is still there.
+  const one = await lendWith([ok(5n), failed, ok(1n), ok(1n), ok(9n), ok(9n), ok(0n), ok(false), ok(true)])
+    .loadLendState("0xaccount");
+  assert.equal(one.supplied, 5n);
+  assert.equal(one.maxWithdraw, null);
+  assert.equal(one.availableLiquidity, 9n);
+  // A dropped reply fails every call of the batch: nothing is claimed, and the
+  // fail-closed switches block both actions.
+  const all = await lendWith(Array.from({ length: 9 }, () => failed)).loadLendState("0xaccount");
+  assert.equal(all.supplied, null);
+  assert.equal(all.maxWithdraw, null);
+  assert.equal(all.availableLiquidity, null);
+  assert.equal(all.supplyPaused, true);
+  assert.equal(all.activated, false);
 });

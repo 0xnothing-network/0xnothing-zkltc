@@ -73,6 +73,37 @@
   color: var(--text-1);
 }
 
+/* Pending rows: compact History rows between the actions and the tabs. */
+.w-root .w-home .w-home-pending {
+  gap: 4px;
+  margin: 0 var(--w-gutter) 12px;
+}
+
+.w-root .w-home .w-home-pending > .w-tx {
+  min-width: 0;
+  min-height: 40px;
+  gap: 8px;
+  border-radius: var(--r-md);
+  padding: 6px 10px;
+}
+
+.w-root .w-home .w-home-pending .w-tx-summary {
+  overflow: hidden;
+  color: var(--text-1);
+  font-size: 12px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.w-root .w-home .w-home-pending .w-pill {
+  border-color: currentColor;
+  border-radius: var(--r-xs);
+  padding: 1px 6px;
+  font-size: 11px;
+  line-height: 16px;
+}
+
 /* Token rows start 12px under the tab rule. */
 .w-root .w-home .w-list:has(> .w-asset) {
   padding: 12px var(--w-gutter) 0;
@@ -414,6 +445,16 @@
   margin-right: -6px;
 }
 
+/* Export (extension only) and Clear share the head's right slot, Clear last and flush. */
+.w-root .w-hist-actions {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  align-items: center;
+  gap: 2px;
+  margin-right: -6px;
+}
+
 .w-root .w-hist-foot {
   gap: 8px;
   margin-top: auto;
@@ -494,4 +535,134 @@
   gap: 8px;
   padding: 12px var(--w-gutter);
   background: transparent;
+}
+
+/* The foot row: where the wallet opens (side panel, tab), as quiet text actions
+   on one hairline-topped line that wraps rather than widen the 360px sheet. */
+.w-root .w-account-sheet .w-account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 12px;
+  border-top: 1px solid var(--line);
+  padding: 8px var(--w-gutter) 2px;
+}
+
+.w-root .w-account-sheet .w-account-actions > .w-btn {
+  min-width: 0;
+  min-height: 32px;
+  gap: 6px;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.w-root .w-account-sheet .w-account-actions > .w-btn:hover:not(:disabled) {
+  color: var(--text-1);
+}
+
+/* The total and its hide-balances eye on one line; the eye is a quiet icon. */
+.w-root .w-home .w-total-line {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+}
+
+.w-root .w-home .w-total-eye {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--r-xs);
+  padding: 0;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.w-root .w-home .w-total-eye:hover,
+.w-root .w-home .w-total-eye:focus-visible {
+  color: var(--text-1);
+  background: var(--surface-2);
+}
+
+/* A custom network: the chip takes the warning tone, dot and all. */
+.w-root .w-net-chip[data-custom="true"] {
+  border-color: color-mix(in srgb, var(--warning) 50%, transparent);
+  color: var(--warning);
+}
+
+.w-root .w-net-chip[data-custom="true"] > .w-dot {
+  background: var(--warning);
+}
+
+/* The address picture. Drawn on its own tinted square, so it reads the
+   same in the dark and the light theme; in an avatar it fills the circle. */
+.w-root .w-identicon {
+  display: inline-block;
+  flex: 0 0 auto;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+
+.w-root .w-avatar > .w-identicon {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.w-root .w-recent:has(> .w-identicon),
+.w-root .w-signer {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 6px;
+}
+
+.w-root .w-avatar:has(> .w-identicon) {
+  overflow: hidden;
+}
+
+/* The one card slot under the balance (first run, or what is new). */
+.w-root .w-home .w-home-card {
+  display: grid;
+  gap: 6px;
+  margin: 0 var(--w-gutter) 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+  background: var(--surface-2);
+}
+
+.w-root .w-home .w-home-card-title {
+  margin: 0;
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.w-root .w-home .w-home-card-body,
+.w-root .w-home .w-home-card-list {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 17px;
+  overflow-wrap: anywhere;
+}
+
+.w-root .w-home .w-home-card-list {
+  display: grid;
+  gap: 2px;
+  padding-left: 16px;
+}
+
+.w-root .w-home .w-home-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }

@@ -16,7 +16,13 @@ export const POINTS_DISPLAY_DIGITS = 2;
 export const SECONDS_PER_DAY = 86_400n;
 
 const DAY_SECONDS = 24 * 60 * 60;
-const POSITION_READ_LIMIT = 50;
+/** Earn reads the newest page of positions first and older pages on request. */
+export const POSITION_PAGE = 50;
+/**
+ * However far back the user pages, one read covers at most this many positions,
+ * so a very long staking history cannot turn one screen into thousands of calls.
+ */
+export const POSITION_READ_CAP = 500;
 
 export const POINTS_LOCK_OPTIONS = [
   { duration: 30 * DAY_SECONDS, multiplierBps: 10_000 },
@@ -50,6 +56,8 @@ export interface PointsState {
   /** NUSD still to stream, income not picked up yet included. */
   queued: bigint;
   positionCount: bigint;
+  /** How many of the newest position ids were read (the page size, or fewer). */
+  positionsRead: number;
   positionsTruncated: boolean;
   positions: PointsPosition[];
 }
@@ -123,11 +131,20 @@ function normalizePosition(
   return { id, account: account as Address, amount, weight, unlockTime, lockDuration, withdrawn };
 }
 
+/** How many of the newest positions to read for `requested`: whole pages, 50 to 500. */
+export function positionReadLimit(requested: number): number {
+  if (!Number.isSafeInteger(requested) || requested < POSITION_PAGE) return POSITION_PAGE;
+  return Math.min(requested, POSITION_READ_CAP);
+}
+
 /**
- * Loads the account's 0xPoints, claimable rewards, the reward stream and at most the 50
- * newest positions. Partial reads degrade to zero; no action depends on a guess.
+ * Loads the account's 0xPoints, claimable rewards, the reward stream and the newest
+ * `limit` positions (50 by default; Earn pages back by 50 up to 500). An older position
+ * that is not withdrawn can only be withdrawn once it is on screen, hence the paging.
+ * Partial reads degrade to zero; no action depends on a guess.
  */
-export async function loadPointsState(account: Address): Promise<PointsState> {
+export async function loadPointsState(account: Address, limit = POSITION_PAGE): Promise<PointsState> {
+  const readLimit = positionReadLimit(limit);
   const client = publicClient;
   const staking = { address: CONTRACTS.rewardStaking, abi: rewardStakingAbi } as const;
   const calls = await client.multicall({
@@ -147,7 +164,7 @@ export async function loadPointsState(account: Address): Promise<PointsState> {
     : [0n, 0n, 0n];
   const idsRead = calls[1];
   const allIds = idsRead?.status === "success" ? idsRead.result as readonly bigint[] : [];
-  const positionIds = allIds.slice(-POSITION_READ_LIMIT);
+  const positionIds = allIds.slice(-readLimit);
   const positionReads = positionIds.length > 0
     ? await client.multicall({
         allowFailure: true,
@@ -175,7 +192,8 @@ export async function loadPointsState(account: Address): Promise<PointsState> {
     totalWeight: numericResult(calls, 3),
     queued: numericResult(calls, 4),
     positionCount: BigInt(allIds.length),
-    positionsTruncated: allIds.length > POSITION_READ_LIMIT,
+    positionsRead: positionIds.length,
+    positionsTruncated: allIds.length > readLimit,
     positions,
   };
 }

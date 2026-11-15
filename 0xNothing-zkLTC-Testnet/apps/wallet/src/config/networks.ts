@@ -9,7 +9,7 @@ import {
 const MAX_NAME_LENGTH = 48;
 const MAX_SYMBOL_LENGTH = 12;
 const MAX_RPC_LENGTH = 2_048;
-const MAX_CUSTOM_NETWORKS = 32;
+export const MAX_CUSTOM_NETWORKS = 32;
 const MAX_CHAIN_CACHE_ENTRIES = MAX_CUSTOM_NETWORKS * 2;
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
@@ -72,6 +72,23 @@ export function networkIdentity(network: WalletNetwork): string {
   ]);
 }
 
+/**
+ * The chain a stored row belongs to, from the profile id it was written under.
+ * A custom profile's id hashes its RPC URL, so re-adding a chain with a new RPC
+ * gives it a new id; tokens and history follow the chain instead, which is
+ * unique per wallet (one profile per chainId, and 4441 is LitVM's alone).
+ * An id of no known shape stands for itself.
+ */
+export function chainScope(networkId: string): string {
+  if (networkId === LITVM_NETWORK.id) return String(LITVM_NETWORK.chainId);
+  return /^custom-(\d+)-/u.exec(networkId)?.[1] ?? networkId;
+}
+
+/** Whether a row stored under `storedId` (none: a pre-network LitVM row) belongs to `networkId`'s chain. */
+export function onNetworkChain(storedId: string | undefined, networkId: string): boolean {
+  return chainScope(storedId ?? LITVM_NETWORK.id) === chainScope(networkId);
+}
+
 export function customNetworkId(chainId: number, rpcUrl: string): string {
   const normalized = normalizeRpcUrl(rpcUrl) ?? rpcUrl.trim();
   let hash = 2166136261;
@@ -103,6 +120,22 @@ export function normalizeRpcUrl(value: string): string | null {
     return url.toString();
   } catch {
     return null;
+  }
+}
+
+/**
+ * A plaintext RPC, which `normalizeRpcUrl` allows only on loopback. The
+ * extension reaches a developer's local node that way, but the Android shell
+ * blocks all cleartext traffic (capacitor `cleartext: false`, targetSdk 36),
+ * 127.0.0.1 included, so there the profile would save and then fail every
+ * read. The form refuses it when `isAndroid` (core/platform/env); stored
+ * profiles are left as they are.
+ */
+export function cleartextRpcUrl(rpcUrl: string): boolean {
+  try {
+    return new URL(rpcUrl.trim()).protocol === "http:";
+  } catch {
+    return false;
   }
 }
 
@@ -205,9 +238,52 @@ export function normalizeCustomNetworks(value: unknown): WalletNetwork[] {
   return result;
 }
 
-export function resolveNetwork(networkId: unknown, customNetworks: readonly WalletNetwork[]): WalletNetwork {
-  if (networkId === LITVM_NETWORK.id) return LITVM_NETWORK;
-  return customNetworks.find((network) => network.id === networkId) ?? LITVM_NETWORK;
+/**
+ * The user's own RPC for the built-in LiteForge profile, from untrusted stored
+ * settings: HTTPS only (no plaintext, loopback included), no credentials or
+ * hash, and not the public endpoint itself. Anything else, "" included, means
+ * no override, so a bad stored value reads as unset and never throws.
+ */
+export function litvmRpcOverride(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = normalizeRpcUrl(value);
+  if (normalized === null || new URL(normalized).protocol !== "https:") return null;
+  return normalized === normalizeRpcUrl(LITVM_RPC_URL) ? null : normalized;
+}
+
+const litvmProfiles = new Map<string, WalletNetwork>();
+
+/**
+ * LiteForge with the user's endpoint first and the public one as the fallback.
+ * Memoized per URL so every read of the same settings gives the same object.
+ */
+function litvmNetworkWith(rpcUrl: string): WalletNetwork {
+  const cached = litvmProfiles.get(rpcUrl);
+  if (cached) return cached;
+  const network: WalletNetwork = { ...LITVM_NETWORK, rpcUrl, fallbackRpcUrls: [LITVM_RPC_URL] };
+  // One override is live at a time; a handful of old ones is all this can hold.
+  if (litvmProfiles.size >= 8) litvmProfiles.clear();
+  litvmProfiles.set(rpcUrl, network);
+  return network;
+}
+
+/**
+ * `litvmRpcUrl` is the stored override (settings.litvmRpcUrl). Every surface
+ * passes it, the worker included: the network identity a dapp request carries
+ * holds the RPC URL, so the worker and the approval window must agree on it.
+ * Without an override the result is LITVM_NETWORK itself, exactly as before.
+ */
+export function resolveNetwork(
+  networkId: unknown,
+  customNetworks: readonly WalletNetwork[],
+  litvmRpcUrl?: unknown,
+): WalletNetwork {
+  const custom = networkId === LITVM_NETWORK.id
+    ? undefined
+    : customNetworks.find((network) => network.id === networkId);
+  if (custom) return custom;
+  const override = litvmRpcOverride(litvmRpcUrl);
+  return override === null ? LITVM_NETWORK : litvmNetworkWith(override);
 }
 
 const chainCache = new Map<string, Chain>();

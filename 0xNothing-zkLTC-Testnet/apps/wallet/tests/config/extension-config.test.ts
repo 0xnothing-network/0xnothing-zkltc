@@ -15,8 +15,13 @@ const manifest = JSON.parse(
   name?: string;
   short_name?: string;
   version?: string;
+  permissions?: string[];
   host_permissions?: string[];
+  optional_host_permissions?: string[];
+  optional_permissions?: string[];
   action?: { default_title?: string };
+  side_panel?: { default_path?: string };
+  commands?: Record<string, { suggested_key?: Record<string, string> }>;
 };
 const pkg = JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
@@ -53,7 +58,56 @@ test("extension branding and market API permission stay explicit", () => {
   const viMessages = JSON.parse(
     readFileSync(new URL("../../public/_locales/vi/messages.json", import.meta.url), "utf8"),
   ) as { extDescription?: { message?: string } };
-  assert.equal(viMessages.extDescription?.message, "0xNothing Wallet");
+  assert.equal(
+    viMessages.extDescription?.message,
+    "Ví tự lưu ký cho testnet LitVM LiteForge. Giữ, gửi, hoán đổi tài sản thử nghiệm và kết nối dapp. Tài sản này không có giá trị.",
+  );
+});
+
+// A Chrome pattern without a port matches every port, so a granted loopback pattern
+// reached every local service (router pages, dev servers, a Docker API). Loopback is
+// only asked for, port by port, when the user saves or picks a local RPC.
+test("loopback hosts are optional, never granted at install", () => {
+  for (const pattern of manifest.host_permissions ?? []) {
+    assert.ok(!pattern.startsWith("http://"), pattern);
+  }
+  for (const pattern of ["http://127.0.0.1/*", "http://localhost/*", "http://[::1]/*", "https://*/*"]) {
+    assert.ok(manifest.optional_host_permissions?.includes(pattern), pattern);
+  }
+});
+
+// "idle" carries no install warning, so adding it does not disable the extension
+// on update; the worker uses it to lock when the computer locks. "sidePanel" and
+// "activeTab" carry none either (Chrome's permission list): the side panel view,
+// and the popup reading the active tab's address for the site status.
+test("the extension asks only for the API permissions it uses", () => {
+  assert.deepEqual(manifest.permissions, ["storage", "alarms", "idle", "sidePanel", "activeTab"]);
+});
+
+// "notifications" carries the warning "Display notifications", so it is optional:
+// an update that adds an optional permission is not disabled, and Chrome asks only
+// when the user switches notifications on in Settings.
+test("notifications are an optional permission, asked for from the Settings switch", () => {
+  assert.deepEqual(manifest.optional_permissions, ["notifications"]);
+  assert.ok(!manifest.permissions?.includes("notifications"));
+  const settings = readFileSync(new URL("../../src/ui/screens/Settings.tsx", import.meta.url), "utf8");
+  // The request is the first thing the click does: an await before it would lose the gesture.
+  assert.match(settings, /const enableNotifications = \(\): void => \{\n\s+const asked = chrome\.permissions\.request\(\{ permissions: \["notifications"\] \}\);/u);
+});
+
+test("the side panel opens the same page in its own view", () => {
+  assert.equal(manifest.side_panel?.default_path, "index.html?surface=panel");
+});
+
+// A suggested key must hold Ctrl or Alt and never Ctrl+Alt, or Chrome rejects the
+// manifest; the action command opens the popup and needs no permission.
+test("a keyboard shortcut opens the wallet", () => {
+  const keys = manifest.commands?._execute_action?.suggested_key ?? {};
+  assert.equal(keys.default, "Alt+Shift+W");
+  for (const key of Object.values(keys)) {
+    assert.match(key, /^(?:Ctrl|Alt|Command|MacCtrl)\+(?:Shift\+)?[A-Z0-9]$/u);
+    assert.doesNotMatch(key, /Ctrl\+Alt|Alt\+Ctrl/u);
+  }
 });
 
 test("persisted custom networks cannot supply a cache-aliasing id", () => {

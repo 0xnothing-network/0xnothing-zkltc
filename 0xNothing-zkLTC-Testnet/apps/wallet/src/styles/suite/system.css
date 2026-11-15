@@ -97,6 +97,13 @@
   line-height: 15px;
 }
 
+/* One granted account per line, so a site's full list reads at a glance. */
+.w-root .w-dapp-site .w-dapp-account {
+  overflow-wrap: anywhere;
+  color: var(--text-2);
+  font-family: var(--font-num);
+}
+
 .w-root .w-dapp-site > .w-hint {
   font-size: 12px;
 }
@@ -340,6 +347,27 @@
   background: var(--surface-2);
 }
 
+/* Saved recipients: the name field takes the width, Save sits at its foot. */
+.w-root .w-settings .w-rcp-name {
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.w-root .w-settings .w-rcp-name > .w-field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.w-root .w-settings .w-rcp-name > .w-btn[data-size="sm"] {
+  min-height: 36px;
+}
+
+/* Token approvals: the spender is shown in full, so it may wrap anywhere. */
+.w-root .w-settings .w-approval-spender {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 /* Danger zone: the red action and its caption share one padded card. */
 .w-root .w-settings .w-panel[data-tone="danger"] > .w-panel-body {
   box-shadow: none;
@@ -455,6 +483,14 @@
   font-weight: 600;
 }
 
+/* A target address in full: the row's value wraps between its groups of four
+   instead of ending in an ellipsis, still in the mono face, right-aligned. */
+.w-root .w-approve-flow .w-row dd .w-approve-address {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 /* The grant warning: a red-edged strip, 11px, between the card and the fee. */
 .w-root .w-approve-risk > .w-hint {
   border-left: 2px solid var(--negative);
@@ -464,6 +500,25 @@
   color: var(--text-2);
   font-size: 11px;
   line-height: 15px;
+}
+
+/* A hash or unreadable bytes to sign: the same strip, its text in the danger colour. */
+.w-root .w-approve-risk > .w-hint[data-tone="error"] {
+  color: var(--negative);
+}
+
+/* The tick that arms Approve for such a signature: the box flush, its sentence 12px. */
+.w-root .w-approve-ack {
+  margin-top: 10px;
+}
+
+.w-root .w-approve-ack > .w-check {
+  margin: 0;
+}
+
+.w-root .w-approve-ack > .w-hint {
+  font-size: 12px;
+  line-height: 18px;
 }
 
 /* The fee card: gas limit left, max fee right, each a caption over a figure. */
@@ -588,9 +643,134 @@
   .w-root :is(.w-back, .w-secret-toggle) {
     min-width: 44px;
   }
+
+  /*
+   * Measured on a phone, these stayed under 44px. Max sits under the amount
+   * input, so its area grows down rather than further up.
+   */
+  .w-root .w-max::before {
+    inset: -12px -8px -16px;
+  }
+
+  /*
+   * Home stacks the account name over the address in a 52px header, so two
+   * 44px targets cannot both fit: the address takes 44px (its 16px line, 3px of
+   * the name above, the rest down to the top of the total), and no longer
+   * covers the lower half of the name as it did. The name takes the header
+   * above the address and the avatar beside it; its overflow clips a pseudo
+   * element, so it grows by padding under a matching negative margin.
+   */
+  .w-root .w-home .w-address::before {
+    inset: -3px -8px -25px;
+  }
+
+  .w-root .w-home .w-head-main > .w-head-title {
+    margin: -13px 0 0 -32px;
+    padding: 13px 0 0 32px;
+  }
+
+  /* Receive's explorer link: 4px up to the buttons, the rest over the note. */
+  .w-root .w-recv > .w-btn[data-variant="ghost"],
+  .w-root .w-settings .w-panel[data-tone="danger"] > .w-panel-body > .w-btn {
+    position: relative;
+  }
+
+  .w-root .w-recv > .w-btn[data-variant="ghost"]::before {
+    position: absolute;
+    inset: -4px 0 -16px;
+    content: "";
+  }
+
+  /* The danger row is 30px; its caption below shares the card, so it takes the rest. */
+  .w-root .w-settings .w-panel[data-tone="danger"] > .w-panel-body > .w-btn::before {
+    position: absolute;
+    inset: 0 0 -14px;
+    content: "";
+  }
 }
 
 /* A plain-http origin keeps its scheme and reads in the danger tone. */
 .w-root .w-approve-origin[data-insecure="true"] .w-asset-symbol {
   color: var(--negative);
+}
+
+/* A host that imitates an official one reads in the same danger tone. */
+.w-root .w-approve-origin[data-lookalike="true"] .w-asset-symbol {
+  color: var(--negative);
+}
+
+/* The official mark: quiet, no accent, kept on one line after the host. */
+.w-root .w-approve-official {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  color: var(--text-2);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  line-height: 16px;
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+/* The active tab's site: a long origin breaks inside the card, never past it. */
+.w-root .w-dapp-current .w-asset-symbol {
+  overflow-wrap: anywhere;
+}
+
+/* A saved network's quiet actions (Change RPC, Remove) side by side. */
+.w-root .w-settings .w-network-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.w-root .w-settings .w-network-actions > .w-btn[data-size="sm"] {
+  min-height: 24px;
+  border-radius: var(--r-xs);
+  padding: 0 8px;
+  box-shadow: none;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* ----------------------------------------------------------------- toast */
+
+/* The message and a close control on one line; the text wraps, the control stays. */
+.w-root .w-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.w-root .w-toast-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.w-root .w-toast-close {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  margin: -2px -4px -2px 0;
+  border: 0;
+  border-radius: var(--r-xs);
+  padding: 0;
+  background: transparent;
+  color: var(--fi-muted);
+  cursor: pointer;
+}
+
+.w-root .w-toast-close:hover,
+.w-root .w-toast-close:focus-visible {
+  color: var(--fi-text);
+}
+
+/* A sheet takes focus itself when it opens (tabIndex -1); it is not a control. */
+.w-root .w-sheet-body:focus {
+  outline: none;
 }

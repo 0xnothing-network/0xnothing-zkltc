@@ -66,8 +66,10 @@ test("the DApp permission list follows writes from every wallet surface", () => 
 
 test("custom RPC permissions are rechecked and cleaned up from settings", () => {
   assert.match(settings, /requestRpcPermission\(selected\.rpcUrl\)/u);
-  assert.match(settings, /if \(!usedBySavedProfile\) await releaseRpcPermission/u);
-  assert.match(settings, /releaseRpcPermission\(removed\.rpcUrl\)/u);
+  // The release re-reads the saved list (rpcRelease.ts), so a network the
+  // approval window added on the same host keeps its grant.
+  assert.match(settings, /releaseRpcPermissionUnlessUsed\(candidate\.rpcUrl\)/u);
+  assert.match(settings, /await releaseRpcPermissionUnlessUsed\(removed\.rpcUrl\)/u);
   assert.match(settings, /nativeDecimals: event\.target\.value/u);
 });
 

@@ -1,4 +1,4 @@
-import { targetsOrigin, type ContentMessage, isPageMessage, TO_PAGE } from "./protocol";
+import { type ContentMessage, isPageMessage, TO_PAGE, WALLET_STOPPED_MESSAGE } from "./protocol";
 
 /**
  * The relay, in the ISOLATED world: it can reach both `window` and
@@ -15,13 +15,24 @@ function reply(message: ContentMessage): void {
   window.postMessage(message, "/");
 }
 
+// Set once this frame's page has used the provider (the top frame does at load).
+// Only such frames pull their state after a ping: a frame that never asked has
+// nothing to update, and every ad frame of every tab would wake the worker.
+let used = false;
+// Pulls are numbered so an older answer arriving late cannot undo a newer one.
+let pulls = 0;
+
 window.addEventListener("message", (event: MessageEvent) => {
   if (event.source !== window) return;
   const message = event.data;
   if (!isPageMessage(message)) return;
+  used = true;
 
-  chrome.runtime
-    .sendMessage({ kind: "provider-request", call: message.call })
+  // An orphaned script (the extension was reloaded) can throw here instead of
+  // rejecting; both take the same 4900 path below.
+  new Promise<{ result?: unknown; error?: { code: number; message: string } }>((resolve) => {
+    resolve(chrome.runtime.sendMessage({ kind: "provider-request", call: message.call }));
+  })
     .then((response: { result?: unknown; error?: { code: number; message: string } }) => {
       reply({
         channel: TO_PAGE,
@@ -30,26 +41,40 @@ window.addEventListener("message", (event: MessageEvent) => {
         error: response?.error,
       });
     })
-    .catch((error: unknown) => {
-      // The worker was replaced or the extension was reloaded mid-flight.
+    .catch(() => {
+      // The worker was replaced or the extension was reloaded mid-flight. The
+      // code stays 4900 so the dapp may retry; Chrome's text is not passed on.
       reply({
         channel: TO_PAGE,
         id: message.id,
-        error: {
-          code: 4900,
-          message: error instanceof Error ? error.message : "Wallet is disconnected",
-        },
+        error: { code: 4900, message: WALLET_STOPPED_MESSAGE },
       });
     });
 });
 
-// Account and chain changes are pushed by the worker to every connected frame.
-chrome.runtime.onMessage.addListener((message: unknown) => {
-  const event = message as { kind?: string; name?: string; data?: unknown; origins?: readonly string[] } | null;
+// The worker pings every frame when the account or chain changes; the ping says
+// nothing else. This frame then asks for its own state, which the worker answers
+// for the origin the browser reports, and the page provider emits what changed.
+chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+  const event = message as { kind?: string; name?: string } | null;
+  // The worker asks whether this document is still the one its requests came from
+  // (the tab reported a load); answering at all is the whole reply.
+  if (event?.kind === "provider-alive") {
+    sendResponse(true);
+    return;
+  }
   if (event?.kind !== "provider-event" || typeof event.name !== "string") return;
-  // `location.origin` comes from the URL, so a sandboxed frame loaded from a connected
-  // site's address still matches it. Its real origin is opaque ("null") and the worker
-  // refuses its requests, so it must not be told the connected account either.
-  if (self.origin === "null" || !targetsOrigin(event.origins, window.location.origin)) return;
-  reply({ channel: TO_PAGE, event: { name: event.name, data: event.data } });
+  // A sandboxed frame's real origin is opaque ("null"): the worker refuses it, so it
+  // does not ask.
+  if (self.origin === "null" || !used) return;
+  const pull = ++pulls;
+  chrome.runtime
+    .sendMessage({ kind: "provider-state" })
+    .then((response: { result?: ContentMessage["state"] } | undefined) => {
+      if (pull !== pulls || response?.result === undefined) return;
+      reply({ channel: TO_PAGE, state: response.result });
+    })
+    .catch(() => {
+      // The worker is waking or was replaced; the page re-reads on its next call.
+    });
 });

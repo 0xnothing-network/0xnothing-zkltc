@@ -1,20 +1,30 @@
 import { type ReactNode, useEffect, useState } from "react";
+import { getAddress, type Hex } from "viem";
 import { FALLBACK_TOKEN_LOGO } from "../../../config/assets";
 import { txUrl } from "../../../config/chain";
+import { chainScope } from "../../../config/networks";
 import { CONTRACTS, PIXEL_COLLECTIONS } from "../../../config/contracts";
 import { t } from "../../../core/i18n";
-import { describeError } from "../../../core/lib/errors";
-import { shortenAddress } from "../../../core/lib/format";
+import { BroadcastUnknownError, describeError } from "../../../core/lib/errors";
+import { groupHex } from "../../../core/lib/format";
+import type { TxKind } from "../../../core/services/history";
 import { findPixelNft, loadPixelNfts, transferPixelNft } from "../../../core/services/nfts";
 import { validateRecipient } from "../../../core/services/transfer";
 import { Button, Empty, Icon, Note, Panel, Row, Rows } from "../../components/kit";
+import { RecentRecipients, RecipientWarning } from "../../components/RecipientHints";
 import { Screen } from "../../components/Screen";
 import { TransactionReview } from "../../components/TransactionReview";
 import { useActionGate } from "../../hooks/useActionGate";
+import { useBroadcastHold } from "../../hooks/useBroadcastHold";
 import { useLiveRead } from "../../hooks/useLiveRead";
+import { useRecipients } from "../../hooks/useRecipients";
+import { recipientName, recipientRisk, rememberRecipient } from "../../lib/recipients";
 import { reviewKey } from "../../lib/reviewKey";
 import { goHome } from "../../router";
 import { useWallet } from "../../state/WalletContext";
+
+/** History kinds an NFT send writes; a pending one holds a reopened screen. */
+const NFT_KINDS: readonly TxKind[] = ["nft"];
 
 /**
  * Sending a 0xPixel NFT. Reached from the NFT tab, so the token is already
@@ -22,7 +32,7 @@ import { useWallet } from "../../state/WalletContext";
  * final, which is why the address is echoed back before the button is armed.
  */
 export function SendNft({ tokenId, collection }: { tokenId: string; collection: string | null }): ReactNode {
-  const { address, network, notify, refresh, tick } = useWallet();
+  const { address, accounts, network, notify, refresh, tick } = useWallet();
   const read = useLiveRead(address ? () => loadPixelNfts(address) : null, [
     address,
     network.id,
@@ -38,6 +48,8 @@ export function SendNft({ tokenId, collection }: { tokenId: string; collection: 
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewIdentity, setReviewIdentity] = useState<string | null>(null);
   const confirmGate = useActionGate();
+  const broadcast = useBroadcastHold(address, network, NFT_KINDS);
+  const known = useRecipients(address, network);
 
   // Existing bookmarks without a collection refer to the original NFT contract.
   const selectedCollection = collection ?? CONTRACTS.pixelClassicNft;
@@ -46,6 +58,10 @@ export function SendNft({ tokenId, collection }: { tokenId: string; collection: 
   const recipient = validateRecipient(to);
   const self = recipient !== null && address !== null
     && recipient.toLowerCase() === address.toLowerCase();
+  // The wallet's own accounts count as known recipients.
+  const risk = recipient !== null && !self && known !== null
+    ? recipientRisk(recipient, [...known.map((entry) => entry.address), ...accounts.map((entry) => entry.address)])
+    : null;
   const currentReviewIdentity = reviewKey([
     address,
     network.id,
@@ -90,6 +106,7 @@ export function SendNft({ tokenId, collection }: { tokenId: string; collection: 
       || !address
       || !recipient
       || !nft
+      || broadcast.held
       || !confirmGate.tryEnter()
     ) return;
     const submitted = {
@@ -102,14 +119,24 @@ export function SendNft({ tokenId, collection }: { tokenId: string; collection: 
     const submittedNetwork = network;
     setBusy(true);
     setError(null);
-    try {
-      const hash = await transferPixelNft(submitted);
+    // Also run when a held broadcast is later found mined: the job went through.
+    const sent = (hash: Hex): void => {
       notify(t("nft.sentToast", { name: submitted.name }), "ok", txUrl(hash, submittedNetwork));
+      void rememberRecipient(submitted.from, chainScope(submittedNetwork.id), submitted.to).catch(() => undefined);
+      setError(null);
       setReviewOpen(false);
       setReviewIdentity(null);
       refresh();
       goHome();
+    };
+    try {
+      sent(await transferPixelNft(submitted));
     } catch (cause) {
+      // The node may hold it: keep the form, hold Confirm, link the hash.
+      if (cause instanceof BroadcastUnknownError) {
+        broadcast.hold(cause.hash, sent);
+        notify(describeError(cause), "error", txUrl(cause.hash, submittedNetwork));
+      }
       setError(describeError(cause));
     } finally {
       confirmGate.leave();
@@ -178,10 +205,21 @@ export function SendNft({ tokenId, collection }: { tokenId: string; collection: 
                 }}
               />
             </label>
+            {to.length === 0 ? (
+              <RecentRecipients
+                known={known}
+                disabled={busy}
+                onPick={(picked) => {
+                  setTo(picked);
+                  setError(null);
+                }}
+              />
+            ) : null}
             {to.length > 0 && recipient === null ? (
               <Note tone="error">{t("send.badAddress")}</Note>
             ) : null}
             {self ? <Note tone="warn">{t("send.selfAddress")}</Note> : null}
+            <RecipientWarning risk={risk} />
             <p className="w-hint w-flow-note">
               <Icon name="info" size={14} />
               <span>{t("nft.irreversible")}</span>
@@ -203,8 +241,9 @@ export function SendNft({ tokenId, collection }: { tokenId: string; collection: 
       {reviewOpen && reviewCurrent && nft !== null && recipient !== null ? (
         <TransactionReview
           title={t("apr.titleTx")}
+          armKey={currentReviewIdentity}
           busy={busy}
-          ready={address !== null && reviewCurrent}
+          ready={address !== null && reviewCurrent && !broadcast.held}
           onClose={() => setReviewOpen(false)}
           onConfirm={() => void confirm()}
           error={error}
@@ -215,10 +254,17 @@ export function SendNft({ tokenId, collection }: { tokenId: string; collection: 
           </div>
           <Panel>
             <Rows>
-              <Row label={t("send.recipient")} value={shortenAddress(recipient, 10, 6)} />
+              <Row
+                label={t("send.recipient")}
+                value={<span className="w-review-address">{groupHex(getAddress(recipient))}</span>}
+              />
+              {recipientName(known, recipient) !== null ? (
+                <Row label={t("send.savedAs")} value={recipientName(known, recipient)} />
+              ) : null}
               <Row label={t("common.network")} value={network.name} />
             </Rows>
           </Panel>
+          <RecipientWarning risk={risk} />
         </TransactionReview>
       ) : null}
     </Screen>

@@ -3,10 +3,12 @@ import { test } from "node:test";
 import {
   formatAmount,
   formatBalance,
+  formatFee,
   formatRateWad,
   formatSignedPercent,
   formatTimeAgo,
   formatUsdWad,
+  groupHex,
   parseAmount,
   shortenAddress,
   usdValueWad,
@@ -105,4 +107,24 @@ test("time ago stays in one unit", () => {
   assert.equal(formatTimeAgo(now - 172_800_000, now), "2d");
   // A clock that is behind the record must not print a negative age.
   assert.equal(formatTimeAgo(now + 5_000, now), "0s");
+});
+
+test("a review shows the whole address in groups of four", () => {
+  const address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+  const grouped = groupHex(address);
+  const groups = grouped.split(" ");
+  assert.equal(groups[0], "0x");
+  assert.equal(groups.length, 11);
+  assert.ok(groups.slice(1).every((group) => group.length === 4));
+  // No character lost, added or reordered: only spaces were inserted.
+  assert.equal(grouped.replace(/ /gu, ""), address);
+});
+
+test("a LiteForge fee is never shown as 0", () => {
+  // 25,200 gas at about 1.2e7 wei: a real native send on LiteForge.
+  assert.equal(formatAmount(302_400_000_000n, 18), "0");
+  assert.equal(formatFee(302_400_000_000n, 18), "0.0000003");
+  assert.equal(formatFee(1n, 18), "< 0.00000001");
+  assert.equal(formatFee(0n, 18), "0");
+  assert.equal(formatFee(WAD / 100n, 18), "0.01");
 });

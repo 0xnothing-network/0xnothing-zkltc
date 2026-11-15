@@ -8,8 +8,29 @@ import {
   exportKey,
   importKey,
   keyForBlob,
+  passwordForms,
   sealJson,
 } from "../../src/core/keyring/crypto.ts";
+
+const NFC_PASSWORD = "mật khẩu ví 2026".normalize("NFC");
+const NFD_PASSWORD = NFC_PASSWORD.normalize("NFD");
+
+test("new blobs are sealed from the NFC form and open from either typed form", async () => {
+  assert.notEqual(NFC_PASSWORD, NFD_PASSWORD);
+  const blob = await encryptJson({ ok: true }, NFD_PASSWORD);
+  assert.equal(blob.pw, "nfc");
+  assert.deepEqual(await decryptJson(blob, NFC_PASSWORD), { ok: true });
+  assert.deepEqual(await decryptJson(blob, NFD_PASSWORD), { ok: true });
+  await assert.rejects(() => decryptJson({ ...blob, pw: "nfkc" as "nfc" }, NFC_PASSWORD));
+});
+
+test("untagged blobs try the typed text first and add other forms only for non-ASCII", () => {
+  const legacy = { v: 1, kdf: "PBKDF2-SHA256", iterations: 600_000, salt: "", iv: "", data: "" } as const;
+  assert.deepEqual(passwordForms(legacy, "correct horse battery staple"), ["correct horse battery staple"]);
+  assert.deepEqual(passwordForms(legacy, NFD_PASSWORD), [NFD_PASSWORD, NFC_PASSWORD]);
+  assert.deepEqual(passwordForms(legacy, NFC_PASSWORD), [NFC_PASSWORD, NFD_PASSWORD]);
+  assert.deepEqual(passwordForms({ ...legacy, pw: "nfc" }, NFD_PASSWORD), [NFC_PASSWORD]);
+});
 
 test("vault encryption round-trips with authenticated ciphertext", async () => {
   const secret = { mnemonic: "test words", imported: [] };

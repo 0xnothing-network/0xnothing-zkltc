@@ -1,16 +1,27 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react";
 import { t } from "../../core/i18n";
-import { accountLabel, unlock, wipeWallet, WrongPasswordError } from "../../core/keyring/vault";
+import {
+  accountLabel,
+  secondsUntil,
+  unlock,
+  unlockRetryAt,
+  UnlockThrottledError,
+  wipeWallet,
+  WrongPasswordError,
+} from "../../core/keyring/vault";
 import { shortenAddress } from "../../core/lib/format";
 import { describeError } from "../../core/lib/errors";
 import { Button, Note, Wordmark } from "../components/kit";
 import { useActionGate } from "../hooks/useActionGate";
 import { Screen } from "../components/Screen";
 import { useWallet } from "../state/WalletContext";
+import { releaseCustomRpcPermissions, releaseNotificationsBeforeErase } from "./settings/rpcRelease";
 
 /**
  * The lock screen. Unlocking is a local key derivation — no request leaves the
  * device — so a wrong password fails instantly and cannot be probed remotely.
+ * After five misses in a row the vault makes each further try wait (up to 15
+ * min); the screen shows the time left instead of a button that would refuse.
  *
  * The reset at the bottom is the only way out for someone who has lost the
  * password: the vault cannot be decrypted without it, so pretending otherwise
@@ -18,6 +29,10 @@ import { useWallet } from "../state/WalletContext";
  *
  * The confirmation word is translated with the rest of the screen, so it is
  * compared case-insensitively rather than against one fixed spelling.
+ *
+ * While a try runs the field is read-only, not disabled: a disabled field loses
+ * focus, so after a wrong password the caret was gone and, on Android, the
+ * keyboard closed. The miss selects the text instead, ready to be retyped.
  */
 export function Unlock(): ReactNode {
   const { active, openWallet } = useWallet();
@@ -27,11 +42,36 @@ export function Unlock(): ReactNode {
   const [resetting, setResetting] = useState(false);
   const [confirmWord, setConfirmWord] = useState("");
   const actionGate = useActionGate();
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const errorId = useId();
   const wipeWord = t("wipe.word");
   const wipeReady = confirmWord.trim().toUpperCase() === wipeWord.toUpperCase();
 
+  // The guard outlives this window, so a reopened popup shows the wait it left.
+  const [retryAt, setRetryAt] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+  const waiting = retryAt > now;
+  // The visible count ticks every second; a live region doing so would be read
+  // out every second for up to 15 minutes. Screen readers get one sentence per
+  // new wait instead, with the seconds left when it began.
+  const announcedSeconds = useMemo(() => secondsUntil(retryAt), [retryAt]);
+  useEffect(() => {
+    let live = true;
+    void unlockRetryAt().then((at) => {
+      if (live) setRetryAt(at);
+    }).catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (!waiting) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
+  }, [waiting]);
+
   const submit = async (): Promise<void> => {
-    if (busy || password.length === 0 || !actionGate.tryEnter()) return;
+    if (busy || waiting || password.length === 0 || !actionGate.tryEnter()) return;
     setBusy(true);
     setError(null);
     try {
@@ -39,9 +79,21 @@ export function Unlock(): ReactNode {
       setPassword("");
       await openWallet();
     } catch (cause) {
-      setError(
-        cause instanceof WrongPasswordError ? t("vault.wrongPassword") : describeError(cause),
-      );
+      if (cause instanceof UnlockThrottledError) {
+        setNow(Date.now());
+        setRetryAt(cause.retryAt);
+      } else {
+        setError(
+          cause instanceof WrongPasswordError ? t("vault.wrongPassword") : describeError(cause),
+        );
+        requestAnimationFrame(() => passwordRef.current?.select());
+        // The fifth miss in a row starts a wait; show it now, not on the next try.
+        if (cause instanceof WrongPasswordError) {
+          const at = await unlockRetryAt().catch(() => 0);
+          setNow(Date.now());
+          setRetryAt(at);
+        }
+      }
     } finally {
       actionGate.leave();
       setBusy(false);
@@ -53,6 +105,10 @@ export function Unlock(): ReactNode {
     setBusy(true);
     setError(null);
     try {
+      // The custom RPC host grants go first, while the profiles naming them
+      // can still be read; this never throws. So does the notifications release.
+      await releaseNotificationsBeforeErase();
+      await releaseCustomRpcPermissions();
       await wipeWallet();
       // A full reload is the cleanest way back to onboarding: nothing from the
       // old vault stays in memory, not even in this component's state.
@@ -123,14 +179,16 @@ export function Unlock(): ReactNode {
               <label className="w-field">
                 <span className="w-label w-sr-only">{t("common.password")}</span>
                 <input
+                  ref={passwordRef}
                   className="w-input"
                   type="password"
                   value={password}
                   autoComplete="current-password"
                   autoFocus
-                  disabled={busy}
+                  readOnly={busy}
                   aria-label={t("common.password")}
                   aria-invalid={error !== null}
+                  aria-describedby={error && !waiting ? errorId : undefined}
                   onChange={(event) => {
                     setPassword(event.target.value);
                     setError(null);
@@ -140,15 +198,25 @@ export function Unlock(): ReactNode {
                   }}
                 />
               </label>
-              {error ? (
+              {error && !waiting ? (
                 <div role="alert">
-                  <p className="w-caption" data-tone="error">{error}</p>
+                  <p className="w-caption" data-tone="error" id={errorId}>{error}</p>
+                </div>
+              ) : null}
+              {waiting ? (
+                <div>
+                  <p className="w-caption" data-tone="warn" aria-hidden="true">
+                    {t("unlock.throttled", { seconds: secondsUntil(retryAt, now) })}
+                  </p>
+                  <p className="w-sr-only" role="status">
+                    {t("unlock.throttled", { seconds: announcedSeconds })}
+                  </p>
                 </div>
               ) : null}
               <Button
                 variant="primary"
                 block
-                disabled={busy || password.length === 0}
+                disabled={busy || waiting || password.length === 0}
                 onClick={() => void submit()}
               >
                 {busy ? t("unlock.opening") : t("unlock.title")}

@@ -4,7 +4,11 @@ import { WAD } from "../../src/core/lib/format.ts";
 import {
   applySlippage,
   endToEndMinOut,
+  fallbackNativeReserve,
   NATIVE_GAS_RESERVE_WEI,
+  nativeSendMax,
+  QUOTE_MAX_AGE_MS,
+  quoteFresh,
   quoteMatches,
   spendableForSwap,
 } from "../../src/core/lib/swapMath.ts";
@@ -82,4 +86,37 @@ test("a quote is executable only for the amount and pair it was built for", () =
     quoteMatches(quote, "litvm-4441", "https://other.example", "native", "nusd", 10n),
     false,
   );
+});
+
+test("a reviewed quote stays executable only while it is young and the market has not moved", () => {
+  const reviewed = { quotedAt: 1_000, amountOut: 1_000_000n };
+  // Age is the hard rule, with or without a live quote.
+  assert.equal(quoteFresh(reviewed, 1_000 + QUOTE_MAX_AGE_MS), true);
+  assert.equal(quoteFresh(reviewed, 1_001 + QUOTE_MAX_AGE_MS), false);
+  assert.equal(quoteFresh(reviewed, 999), false);
+  assert.equal(quoteFresh({ quotedAt: Number.NaN, amountOut: 1n }, 1_000), false);
+  // Drift beyond half the slippage (50 bps here: 0.25%), in either direction.
+  const at = (amountOut: bigint) => ({ quotedAt: 2_000, amountOut });
+  assert.equal(quoteFresh(reviewed, 3_000, at(1_002_500n), 50), true);
+  assert.equal(quoteFresh(reviewed, 3_000, at(997_500n), 50), true);
+  assert.equal(quoteFresh(reviewed, 3_000, at(1_002_501n), 50), false);
+  assert.equal(quoteFresh(reviewed, 3_000, at(997_499n), 50), false);
+  // A live quote no newer than the reviewed one says nothing about drift.
+  assert.equal(quoteFresh(reviewed, 3_000, { quotedAt: 1_000, amountOut: 2_000_000n }, 50), true);
+  assert.equal(quoteFresh(reviewed, 3_000, null, 50), true);
+});
+
+test("the native Send reserve follows the network's decimals and the quoted fee", () => {
+  // 0.01 of a coin at any decimals, never raw wei.
+  assert.equal(fallbackNativeReserve(18), NATIVE_GAS_RESERVE_WEI);
+  assert.equal(fallbackNativeReserve(6), 10_000n);
+  assert.equal(fallbackNativeReserve(2), 1n);
+  assert.equal(fallbackNativeReserve(0), 1n);
+  // A 6-decimal custom coin: 5 coins leave 4.99 sendable, not nothing.
+  assert.equal(nativeSendMax(5_000_000n, 6, null), 4_990_000n);
+  // Once quoted, only twice the fee stays: the last 0.009 zkLTC can leave.
+  const fee = 302_400_000_000n;
+  assert.equal(nativeSendMax(WAD * 9n / 1000n, 18, fee), WAD * 9n / 1000n - 2n * fee);
+  assert.equal(nativeSendMax(fee, 18, fee), 0n);
+  assert.equal(nativeSendMax(0n, 18, null), 0n);
 });

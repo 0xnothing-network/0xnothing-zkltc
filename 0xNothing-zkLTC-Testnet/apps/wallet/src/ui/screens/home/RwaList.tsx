@@ -8,6 +8,7 @@ import { Button, Empty, Note, Panel, PanelBody, Row, Rows } from "../../componen
 import { TransactionReview } from "../../components/TransactionReview";
 import { useActionGate } from "../../hooks/useActionGate";
 import { useLiveRead } from "../../hooks/useLiveRead";
+import { maskBalance } from "../../lib/balanceMask";
 import { useWallet } from "../../state/WalletContext";
 import { parseRwaAmount, tradeLimit, type RwaMarketConfig } from "../../../../../../shared/rwa/core";
 
@@ -15,7 +16,8 @@ interface Review {
   amount: bigint; buy: boolean; limit: bigint; deadline: bigint; fee: bigint; total: bigint;
 }
 
-function RwaPosition({ config }: { config: RwaMarketConfig }) {
+// `hidden` masks the holding on Home; the market's own figures and the review never mask.
+function RwaPosition({ config, hidden }: { config: RwaMarketConfig; hidden: boolean }) {
   const { address, network, tick, notify, refresh } = useWallet();
   const [buy, setBuy] = useState(true);
   const [text, setText] = useState("");
@@ -56,7 +58,7 @@ function RwaPosition({ config }: { config: RwaMarketConfig }) {
         {state.loading ? <Note>{t("rwa.loading")}</Note> : null}
         {state.error ? <Note tone="error">{state.error}</Note> : null}
         {data ? <Rows>
-          <Row label={t("rwa.balance")} value={`${formatUnits(data.assetBalance, config.assetDecimals)} ${config.assetSymbol}`} />
+          <Row label={t("rwa.balance")} value={maskBalance(hidden, `${formatUnits(data.assetBalance, config.assetDecimals)} ${config.assetSymbol}`)} />
           <Row label={t("rwa.liquidity")} value={cash(data.liquidity)} />
           <Row label={t("rwa.reserve")} value={cash(data.fees)} />
           <Row label={t("rwa.floor")} value={cash(data.reserveFloor)} />
@@ -90,6 +92,7 @@ function RwaPosition({ config }: { config: RwaMarketConfig }) {
       </div>
     </PanelBody>
     {review ? <TransactionReview title={t("rwa.review")} busy={busy}
+      armKey={`${review.buy}:${review.amount}:${review.limit}`}
       ready={Boolean(!state.error && data && !data.paused && data.price)}
       onClose={() => { if (!busy) setReview(null); }} onConfirm={() => void confirm()}>
       <Rows>
@@ -104,13 +107,13 @@ function RwaPosition({ config }: { config: RwaMarketConfig }) {
   </Panel>;
 }
 
-export function RwaList() {
+export function RwaList({ hidden }: { hidden: boolean }) {
   const { address, network } = useWallet();
   const markets = rwaMarkets.filter((market) => market.chainId === network.chainId);
   if (!isLitvmNetwork(network)) return <div className="w-stack w-rwa"><Note>{t("rwa.network")}</Note></div>;
   return <div className="w-stack w-rwa">
     <Note>{t("rwa.policy")}</Note>
-    {markets.length ? markets.map((config) => <RwaPosition key={`${config.market}:${address}:${network.id}:${network.rpcUrl}`} config={config} />)
+    {markets.length ? markets.map((config) => <RwaPosition key={`${config.market}:${address}:${network.id}:${network.rpcUrl}`} config={config} hidden={hidden} />)
       : <Empty><strong>{t("rwa.empty")}</strong><span>{t("rwa.activation")}</span></Empty>}
   </div>;
 }

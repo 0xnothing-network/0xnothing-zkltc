@@ -1,4 +1,13 @@
 export const PUBLIC_APP_URL = "https://0xnothing.xyz";
+/** The exact hosts the 0xNothing web app is served from (apps/web/wrangler.jsonc routes, PUBLIC_APP_URL). */
+export const OFFICIAL_SITE_HOSTS: readonly string[] = [
+  new URL(PUBLIC_APP_URL).hostname,
+  "0xnothing.app",
+  "0xnothing.network",
+  "www.0xnothing.network",
+];
+/** Registrable domains of the above: their other subdomains are the owner's, shown with no mark. */
+export const OFFICIAL_SITE_DOMAINS: readonly string[] = ["0xnothing.xyz", "0xnothing.app", "0xnothing.network"];
 /** Public indexers used by the web app; the wallet falls back to them on API throttling. */
 export const PUMP_SUBGRAPH_URL =
   "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxpump-testnet/1.0.0/gn";

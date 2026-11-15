@@ -69,3 +69,25 @@ test("subscriber exceptions are not mistaken for corrupt JSON or delivered twice
   assert.throws(() => run.emit("settings", "{}"), /Subscriber failed/);
   assert.equal(changes, 1);
 });
+
+test("Android writes a batch one key at a time, in the order given", async () => {
+  const events: string[] = [];
+  const Preferences = {
+    async set({ key }: { key: string }) {
+      events.push(`start ${key}`);
+      // The first write is the slow one: a parallel batch would start the second meanwhile.
+      await new Promise((resolve) => setTimeout(resolve, key === "vault" ? 20 : 0));
+      events.push(`end ${key}`);
+    },
+  };
+  const module = evaluateModule<{ persistentStore: KeyValueStore }>(
+    new URL("../../src/core/platform/storage.ts", import.meta.url),
+    {
+      "./chromeStore": {},
+      "./env": { isExtension: false, isAndroid: true },
+      "@capacitor/preferences": { Preferences },
+    },
+  );
+  await module.persistentStore.setMany([["vault", 1], ["accounts", 2]]);
+  assert.deepEqual(events, ["start vault", "end vault", "start accounts", "end accounts"]);
+});

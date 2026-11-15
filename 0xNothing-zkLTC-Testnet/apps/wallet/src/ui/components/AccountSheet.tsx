@@ -4,8 +4,17 @@ import { t } from "../../core/i18n";
 import { addHdAccount, accountLabel, renameAccount } from "../../core/keyring/vault";
 import { describeError } from "../../core/lib/errors";
 import { shortenAddress } from "../../core/lib/format";
+import {
+  canOpenSidePanel,
+  canOpenWalletTab,
+  extensionView,
+  openSidePanel,
+  openWalletTab,
+} from "../../core/platform/env";
 import { useActionGate } from "../hooks/useActionGate";
+import { useSheetFocus } from "../hooks/useSheetFocus";
 import { useWallet } from "../state/WalletContext";
+import { Identicon } from "./Identicon";
 import { Button, Icon } from "./kit";
 
 /**
@@ -14,10 +23,11 @@ import { Button, Icon } from "./kit";
  * screen the user was on.
  */
 export function AccountSheet({ onClose }: { onClose: () => void }): ReactNode {
-  const { accounts, address, selectAccount, reload, notify } = useWallet();
+  const { accounts, address, selectAccount, reload, notify, lockWallet } = useWallet();
   const [renaming, setRenaming] = useState<Address | null>(null);
   const [label, setLabel] = useState("");
   const [busy, setBusy] = useState(false);
+  const sheetRef = useSheetFocus<HTMLDivElement>();
   const actionGate = useActionGate();
   const mountedRef = useRef(true);
 
@@ -27,6 +37,59 @@ export function AccountSheet({ onClose }: { onClose: () => void }): ReactNode {
       mountedRef.current = false;
     };
   }, []);
+
+  // Fixed for the life of the page: which surface this is never changes.
+  const [panelOffered] = useState(canOpenSidePanel);
+  const [tabOffered] = useState(canOpenWalletTab);
+  const [windowId, setWindowId] = useState<number | null>(null);
+
+  // The side panel opens for a window, and the click cannot wait for the lookup
+  // (Chrome honours sidePanel.open only inside the gesture), so it is done here.
+  useEffect(() => {
+    if (!panelOffered) return undefined;
+    let live = true;
+    chrome.windows.getCurrent()
+      .then((current) => {
+        if (live && current.id !== undefined) setWindowId(current.id);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [panelOffered]);
+
+  const toSidePanel = (): void => {
+    if (busy || windowId === null) return;
+    openSidePanel(windowId)
+      .then(() => window.close())
+      .catch(() => notify(t("account.openFailed"), "error"));
+  };
+
+  const toTab = (): void => {
+    if (busy) return;
+    // The popup would close as the tab takes focus anyway; the panel stays beside it.
+    const fromPopup = extensionView() === "popup";
+    openWalletTab()
+      .then(() => {
+        if (fromPopup) window.close();
+      })
+      .catch(() => notify(t("account.openFailed"), "error"));
+  };
+
+  // The same lock as Settings' Lock now: the session key is dropped and every
+  // surface follows through the session record.
+  const lockNow = async (): Promise<void> => {
+    if (busy || !actionGate.tryEnter()) return;
+    setBusy(true);
+    try {
+      await lockWallet();
+    } catch (error) {
+      notify(describeError(error), "error");
+    } finally {
+      actionGate.leave();
+      if (mountedRef.current) setBusy(false);
+    }
+  };
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
@@ -88,8 +151,9 @@ export function AccountSheet({ onClose }: { onClose: () => void }): ReactNode {
     setBusy(true);
     try {
       const state = await addHdAccount();
-      const created = state.accounts[state.accounts.length - 1];
-      if (created) await selectAccount(created.address);
+      // addHdAccount makes the new account active; select that one, not the
+      // last row, which can be an imported key when nothing was added.
+      if (state.active) await selectAccount(state.active);
       else await reload();
       onClose();
     } catch (error) {
@@ -108,8 +172,10 @@ export function AccountSheet({ onClose }: { onClose: () => void }): ReactNode {
       }}
     >
       <div
+        ref={sheetRef}
         className="w-sheet-body w-account-sheet"
         role="dialog"
+        tabIndex={-1}
         aria-modal="true"
         aria-label={t("account.title")}
         aria-busy={busy}
@@ -139,9 +205,9 @@ export function AccountSheet({ onClose }: { onClose: () => void }): ReactNode {
                 autoFocus={meta.address === address}
                 onClick={() => void pick(meta.address)}
               >
-                {/* The same initial the home header leads with. */}
+                {/* The same picture the home header leads with. */}
                 <span className="w-avatar" aria-hidden="true">
-                  {accountLabel(meta).slice(0, 1).toUpperCase()}
+                  <Identicon address={meta.address} size={24} />
                 </span>
                 <span className="w-account-text">
                   <span className="w-asset-symbol">{accountLabel(meta)}</span>
@@ -205,6 +271,29 @@ export function AccountSheet({ onClose }: { onClose: () => void }): ReactNode {
         <div className="w-panel-body">
           <Button block disabled={busy} onClick={() => void addAccount()}>
             {t("account.add")}
+          </Button>
+        </div>
+
+        {/* Quiet text actions at the foot: where the wallet lives (extension only) and Lock now. */}
+        <div className="w-account-actions">
+          {panelOffered ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={busy || windowId === null}
+              onClick={toSidePanel}
+            >
+              {t("account.sidePanel")}
+            </Button>
+          ) : null}
+          {tabOffered ? (
+            <Button size="sm" variant="ghost" disabled={busy} onClick={toTab}>
+              {t("account.openTab")}
+              <Icon name="external" size={14} />
+            </Button>
+          ) : null}
+          <Button size="sm" variant="ghost" disabled={busy} onClick={() => void lockNow()}>
+            {t("set.lockNow")}
           </Button>
         </div>
       </div>

@@ -4,7 +4,9 @@ import "../styles/suite/onboarding.css";
 import "../styles/suite/home.css";
 import "../styles/suite/forms.css";
 import "../styles/suite/system.css";
-import { applyDocumentLang, t } from "../core/i18n";
+// Last: it restates rules above for older Android WebViews and touch screens.
+import "../styles/suite/compat.css";
+import { applyDocumentLang, prepareLocale, t } from "../core/i18n";
 import { App } from "./App";
 import { WalletProvider } from "./state/WalletContext";
 
@@ -20,11 +22,17 @@ import { WalletProvider } from "./state/WalletContext";
 const host = document.getElementById("root");
 if (!host) throw new Error(t("app.noRoot"));
 
-// `<html lang>` starts as "en"; the boot-cached locale corrects it before paint.
-applyDocumentLang();
+const render = (): void => {
+  // `<html lang>` starts as "en"; the boot-cached locale corrects it before paint.
+  applyDocumentLang();
+  createRoot(host).render(
+    <WalletProvider>
+      <App />
+    </WalletProvider>,
+  );
+};
 
-createRoot(host).render(
-  <WalletProvider>
-    <App />
-  </WalletProvider>,
-);
+// Only the stored language's catalog is read, and before the first render, so
+// the first frame is already in it. If it cannot be read the wallet still
+// renders, in English: never a blank page.
+void prepareLocale().then(render, render);

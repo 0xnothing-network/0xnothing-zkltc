@@ -8,16 +8,21 @@ import {
   nusdOracleAbi,
   zeroXPumpAbi,
 } from "../../abis";
-import type { WalletToken } from "../../config/assets";
+import { NUSD_TOKEN, type WalletToken } from "../../config/assets";
 import { CONTRACTS } from "../../config/contracts";
 import { t } from "../i18n";
+import { StagedSwapError } from "../lib/errors";
 import { formatAmount } from "../lib/format";
 import {
   applySlippage,
   endToEndMinOut,
   type QuoteIdentity,
+  quoteFresh,
   quoteMatches,
 } from "../lib/swapMath";
+import { withNamedLock } from "../platform/locks";
+import { persistentStore } from "../platform/storage";
+import { STORAGE_KEYS } from "../platform/storageKeys";
 import { activeNetwork, publicClient } from "../rpc/client";
 import {
   ensureAllowance,
@@ -65,6 +70,8 @@ export interface SwapRoute extends QuoteIdentity {
   stages: 1 | 2;
   /** Fail closed: a pause flag that could not be read reads as paused. */
   paused: boolean;
+  /** When the reads behind this quote started (ms); execution refuses an old one. */
+  quotedAt: number;
 }
 
 /** Router fees: LP fee per hop plus one protocol fee, direct when either end is NUSD or WzkLTC. */
@@ -317,7 +324,7 @@ async function oracleQuote(
 }
 
 function noRoute(
-  identity: QuoteIdentity,
+  identity: QuoteIdentity & { quotedAt: number },
   paused = false,
 ): SwapRoute {
   return {
@@ -354,6 +361,8 @@ export async function quoteSwap(params: {
     tokenInId: tokenIn.id,
     tokenOutId: tokenOut.id,
     quotedAmountIn: amountIn,
+    // Taken before the reads, so the age is never understated.
+    quotedAt: Date.now(),
   } as const;
   if (same(input, output) || amountIn <= 0n) {
     return noRoute(identity);
@@ -534,6 +543,132 @@ export function routeLabel(route: SwapRoute, from: string, to: string): string |
   }
 }
 
+/**
+ * A two-stage swap whose first leg was signed. Everything runs in the page, so
+ * a popup closed or an Android app killed while the first leg settles stops
+ * after it, with no error to show. The marker lets the next screen offer to
+ * finish: it is written when the first leg is signed and removed when the second
+ * is signed, or when the second fails and the user is told.
+ */
+interface StagedSwapMarker {
+  from: Address;
+  networkId: string;
+  stage1Hash: Hex;
+  tokenOutId: string;
+  tokenOutSymbol: string;
+  at: number;
+}
+
+export interface PendingStagedSwap extends StagedSwapMarker {
+  /** NUSD the first leg delivered, from its receipt. */
+  delivered: bigint;
+}
+
+type StagedSwapBook = Record<string, StagedSwapMarker>;
+
+/** A first leg older than this is not offered for finishing any more. */
+const STAGED_SWAP_TTL_MS = 24 * 60 * 60 * 1_000;
+const STAGED_SWAP_LOCK = `staged:${STORAGE_KEYS.pendingStagedSwap}`;
+
+/** First legs whose swap is still running in this page: never offered twice. */
+const stagedInFlight = new Set<string>();
+
+function stagedKey(from: Address, networkId: string): string {
+  return `${from.toLowerCase()}:${networkId}`;
+}
+
+function readMarker(value: unknown): StagedSwapMarker | null {
+  if (typeof value !== "object" || value === null) return null;
+  const marker = value as Partial<StagedSwapMarker>;
+  return typeof marker.from === "string"
+    && typeof marker.networkId === "string"
+    && typeof marker.stage1Hash === "string"
+    && /^0x[0-9a-fA-F]{64}$/u.test(marker.stage1Hash)
+    && typeof marker.tokenOutId === "string"
+    && typeof marker.tokenOutSymbol === "string"
+    && typeof marker.at === "number"
+    ? marker as StagedSwapMarker
+    : null;
+}
+
+async function rememberStagedSwap(marker: StagedSwapMarker): Promise<void> {
+  await withNamedLock(STAGED_SWAP_LOCK, async () => {
+    const book = (await persistentStore.get<StagedSwapBook>(STORAGE_KEYS.pendingStagedSwap)) ?? {};
+    await persistentStore.set(STORAGE_KEYS.pendingStagedSwap, {
+      ...book,
+      [stagedKey(marker.from, marker.networkId)]: marker,
+    });
+  }).catch(() => {});
+}
+
+/** Removes the marker of this first leg only, never a newer one in the same slot. */
+async function forgetStagedSwap(from: Address, networkId: string, stage1Hash: Hex): Promise<void> {
+  await withNamedLock(STAGED_SWAP_LOCK, async () => {
+    const book = (await persistentStore.get<StagedSwapBook>(STORAGE_KEYS.pendingStagedSwap)) ?? {};
+    const key = stagedKey(from, networkId);
+    if (readMarker(book[key])?.stage1Hash.toLowerCase() !== stage1Hash.toLowerCase()) return;
+    const next = { ...book };
+    delete next[key];
+    await persistentStore.set(STORAGE_KEYS.pendingStagedSwap, next);
+  }).catch(() => {});
+}
+
+/** The user declined to finish; the swap is not offered again. */
+export function dismissPendingStagedSwap(pending: PendingStagedSwap): Promise<void> {
+  return forgetStagedSwap(pending.from, pending.networkId, pending.stage1Hash);
+}
+
+/**
+ * The account's two-stage swap that stopped after its first leg, on the active
+ * network, or null. It is offered only when that leg succeeded on chain, its
+ * NUSD is still in the wallet and it is less than a day old; finishing means a
+ * new quote for NUSD to the output token, never the old floor. A marker that
+ * fails any check for good is removed; one that cannot be checked yet (the
+ * receipt or the balance did not read) is kept for the next look.
+ */
+export async function loadPendingStagedSwap(
+  from: Address,
+  now = Date.now(),
+): Promise<PendingStagedSwap | null> {
+  const network = activeNetwork;
+  const client = publicClient;
+  const book = await persistentStore.get<StagedSwapBook>(STORAGE_KEYS.pendingStagedSwap).catch(() => null);
+  const marker = readMarker(book?.[stagedKey(from, network.id)]);
+  if (!marker || marker.from.toLowerCase() !== from.toLowerCase() || marker.networkId !== network.id) return null;
+  if (stagedInFlight.has(marker.stage1Hash.toLowerCase())) return null;
+  const forget = async () => {
+    await forgetStagedSwap(from, network.id, marker.stage1Hash);
+    return null;
+  };
+  if (!(now - marker.at <= STAGED_SWAP_TTL_MS)) return forget();
+  let receipt: TransactionReceipt;
+  try {
+    receipt = await client.getTransactionReceipt({ hash: marker.stage1Hash });
+  } catch {
+    return null;
+  }
+  if (receipt.status !== "success") return forget();
+  let delivered: bigint;
+  try {
+    delivered = deliveredTokenAmount(receipt, CONTRACTS.nusd, from);
+  } catch {
+    return forget();
+  }
+  let balance: bigint;
+  try {
+    balance = await client.readContract({
+      address: CONTRACTS.nusd,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [from],
+    });
+  } catch {
+    return null;
+  }
+  if (balance < delivered) return forget();
+  return { ...marker, delivered };
+}
+
 /** A staged route may not start its second leg until the first one has landed. */
 async function settled(client: SwapClient, hash: Hex): Promise<TransactionReceipt> {
   const receipt = await client.waitForTransactionReceipt({ hash, timeout: 180_000 });
@@ -596,7 +731,7 @@ export async function executeSwap(params: {
     tokenIn.id,
     tokenOut.id,
     amountIn,
-  )) {
+  ) || !quoteFresh(route, Date.now())) {
     throw new Error(t("err.quoteStale"));
   }
   if (route.kind === "none" || route.amountOut <= 0n) throw new Error(t("err.noLiquidity"));
@@ -676,66 +811,121 @@ export async function executeSwap(params: {
   // If the second leg cannot still deliver minOut it reverts and leaves the
   // bridge asset in the wallet instead of settling below the displayed limit.
 
-  if (route.kind === "oracle-mint") {
-    const minted = await writeCall({
-      from,
-      address: CONTRACTS.nusd,
-      abi: nusdOracleAbi,
-      functionName: "mintAtOracle",
-      args: [applySlippage(bridgeAmount, slippageBps), from],
-      value: amountIn,
-      kind: "swap",
-      label,
-      detailLabel: { key: "swap.step1Oracle", params: { symbol: tokenIn.symbol } },
-    }, context);
-    const receipt = await settled(client, minted);
-    const delivered = deliveredTokenAmount(receipt, CONTRACTS.nusd, from);
+  // Stage one has its own history line: it delivers NUSD, not the output token.
+  const firstLabel = {
+    key: "tx.swapStep1",
+    params: { paid, bridged: formatAmount(bridgeAmount, NUSD_TOKEN.decimals, 4) },
+  } as const;
+  // Written from signing callbacks, so held in an object the checks below read.
+  const staged: { first?: Hex; finalSigned: boolean } = { finalSigned: false };
+  // Only the first leg's own signature writes the marker, never an approval.
+  const firstContext: TxExecutionContext = {
+    ...context,
+    onSigned: (hash) => {
+      staged.first = hash;
+      stagedInFlight.add(hash.toLowerCase());
+      void rememberStagedSwap({
+        from,
+        networkId: network.id,
+        stage1Hash: hash,
+        tokenOutId: tokenOut.id,
+        tokenOutSymbol: tokenOut.symbol,
+        at: Date.now(),
+      });
+    },
+  };
+  const finalContext: TxExecutionContext = {
+    ...context,
+    onSigned: () => {
+      staged.finalSigned = true;
+      if (staged.first) void forgetStagedSwap(from, network.id, staged.first);
+    },
+  };
+  /**
+   * Stage two failed after stage one delivered. Once the second leg is signed
+   * its outcome may be unknown, so its own error stands; before that, nothing of
+   * stage two went out and the user is told what they now hold.
+   */
+  const stagedFailure = async (first: Hex, delivered: bigint, cause: unknown): Promise<never> => {
+    if (staged.finalSigned) throw cause;
+    await forgetStagedSwap(from, network.id, first);
+    throw new StagedSwapError(first, delivered, formatAmount(delivered, NUSD_TOKEN.decimals, 4), cause);
+  };
+
+  try {
+    if (route.kind === "oracle-mint") {
+      const minted = await writeCall({
+        from,
+        address: CONTRACTS.nusd,
+        abi: nusdOracleAbi,
+        functionName: "mintAtOracle",
+        args: [applySlippage(bridgeAmount, slippageBps), from],
+        value: amountIn,
+        kind: "swap",
+        label: firstLabel,
+        detailLabel: { key: "swap.step1Oracle", params: { symbol: tokenIn.symbol } },
+      }, firstContext);
+      // Outside the stage-two guard: a first leg that reverted or delivered
+      // nothing is not "step 1 done".
+      const receipt = await settled(client, minted);
+      const delivered = deliveredTokenAmount(receipt, CONTRACTS.nusd, from);
+      try {
+        await ensureAllowance({
+          from,
+          token: CONTRACTS.nusd,
+          spender: CONTRACTS.dexRouter,
+          amount: delivered,
+          symbol: "NUSD",
+        }, context);
+        return await routerSwap({
+          from,
+          amountIn: delivered,
+          minOut,
+          path: route.path,
+          payNative: false,
+          receiveNative: isNative(tokenOut),
+          label,
+          detailLabel: { key: "swap.step2Pool", params: { symbol: tokenOut.symbol } },
+        }, finalContext);
+      } catch (cause) {
+        return await stagedFailure(minted, delivered, cause);
+      }
+    }
+
     await ensureAllowance({
       from,
-      token: CONTRACTS.nusd,
+      token: poolAddress(tokenIn),
       spender: CONTRACTS.dexRouter,
-      amount: delivered,
-      symbol: "NUSD",
+      amount: amountIn,
+      symbol: tokenIn.symbol,
     }, context);
-    return routerSwap({
+    const sold = await routerSwap({
       from,
-      amountIn: delivered,
-      minOut,
+      amountIn,
+      minOut: applySlippage(bridgeAmount, slippageBps),
       path: route.path,
       payNative: false,
-      receiveNative: isNative(tokenOut),
-      label,
-      detailLabel: { key: "swap.step2Pool", params: { symbol: tokenOut.symbol } },
-    }, context);
+      receiveNative: false,
+      label: firstLabel,
+      detailLabel: { key: "swap.step1Pool", params: { symbol: tokenIn.symbol } },
+    }, firstContext);
+    const receipt = await settled(client, sold);
+    const delivered = deliveredTokenAmount(receipt, CONTRACTS.nusd, from);
+    try {
+      return await writeCall({
+        from,
+        address: CONTRACTS.nusd,
+        abi: nusdOracleAbi,
+        functionName: "redeemAtOracle",
+        args: [delivered, minOut, from],
+        kind: "swap",
+        label,
+        detailLabel: { key: "swap.step2Oracle", params: { symbol: tokenOut.symbol } },
+      }, finalContext);
+    } catch (cause) {
+      return await stagedFailure(sold, delivered, cause);
+    }
+  } finally {
+    if (staged.first) stagedInFlight.delete(staged.first.toLowerCase());
   }
-
-  await ensureAllowance({
-    from,
-    token: poolAddress(tokenIn),
-    spender: CONTRACTS.dexRouter,
-    amount: amountIn,
-    symbol: tokenIn.symbol,
-  }, context);
-  const sold = await routerSwap({
-    from,
-    amountIn,
-    minOut: applySlippage(bridgeAmount, slippageBps),
-    path: route.path,
-    payNative: false,
-    receiveNative: false,
-    label,
-    detailLabel: { key: "swap.step1Pool", params: { symbol: tokenIn.symbol } },
-  }, context);
-  const receipt = await settled(client, sold);
-  const delivered = deliveredTokenAmount(receipt, CONTRACTS.nusd, from);
-  return writeCall({
-    from,
-    address: CONTRACTS.nusd,
-    abi: nusdOracleAbi,
-    functionName: "redeemAtOracle",
-    args: [delivered, minOut, from],
-    kind: "swap",
-    label,
-    detailLabel: { key: "swap.step2Oracle", params: { symbol: tokenOut.symbol } },
-  }, context);
 }

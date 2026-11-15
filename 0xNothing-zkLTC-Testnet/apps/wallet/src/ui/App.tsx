@@ -1,12 +1,14 @@
-import { lazy, Suspense, type ReactNode } from "react";
+import { lazy, Suspense, type ReactNode, useEffect } from "react";
 import { t } from "../core/i18n";
 import { isLitvmNetwork, LITVM_NETWORK } from "../config/networks";
-import { isPopupSurface } from "../core/platform/env";
+import { extensionView, isAndroid, isPopupSurface, platform } from "../core/platform/env";
 import { BottomNav } from "./components/BottomNav";
 import { Note } from "./components/kit";
 import { Screen } from "./components/Screen";
 import { ToastBar } from "./components/ToastBar";
-import { goHome, type RouteName, useRoute } from "./router";
+import { useResolvedTheme } from "./hooks/useResolvedTheme";
+import { clearSendDraft } from "./lib/sendDraft";
+import { backAction, goHome, type RouteName, useRoute } from "./router";
 import { Home } from "./screens/Home";
 import { Onboarding } from "./screens/Onboarding";
 import { Unlock } from "./screens/Unlock";
@@ -85,10 +87,50 @@ function Opening(): ReactNode {
   );
 }
 
+declare global {
+  interface Window {
+    /** Android shell contract: true when the Back press was handled here. */
+    __walletBack?: () => boolean;
+  }
+}
+
 export function App(): ReactNode {
   const { phase, settings } = useWallet();
+  const theme = useResolvedTheme(settings.theme);
   const route = useRoute();
   const surface = isPopupSurface() ? "popup" : "full";
+  const view = extensionView() ?? undefined;
+
+  // A Send draft does not outlive a lock. Every lock path (the button, the
+  // auto-lock alarm, the idle lock in the worker) ends with a surface seeing
+  // "locked", here, before the wallet can be opened again, so the draft goes then.
+  useEffect(() => {
+    if (phase === "locked") void clearSendDraft().catch(() => undefined);
+  }, [phase]);
+
+  // Android Back (MainActivity asks this); the extension has no Back to handle.
+  useEffect(() => {
+    if (!isAndroid) return undefined;
+    window.__walletBack = (): boolean => {
+      const action = backAction({
+        ready: phase === "ready",
+        route: route.name,
+        modalOpen: document.querySelector('[aria-modal="true"]') !== null,
+      });
+      if (action === "escape") {
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+        return true;
+      }
+      if (action === "home") {
+        goHome();
+        return true;
+      }
+      return false;
+    };
+    return () => {
+      delete window.__walletBack;
+    };
+  }, [phase, route.name]);
 
   const body = phase === "loading"
     ? <Opening />
@@ -106,7 +148,13 @@ export function App(): ReactNode {
     && (route.name === "home" || route.name === "swap" || route.name === "dapps");
 
   return (
-    <div className="w-root" data-surface={surface} data-theme={settings.theme}>
+    <div
+      className="w-root"
+      data-surface={surface}
+      data-view={view}
+      data-platform={platform}
+      data-theme={theme}
+    >
       <main className="w-shell">{body}</main>
       {nav ? <BottomNav current={route.name} /> : null}
       <ToastBar />

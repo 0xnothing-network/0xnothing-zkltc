@@ -1,7 +1,10 @@
 import { type ReactNode, useId } from "react";
-import type { WalletToken } from "../../config/assets";
-import { Icon } from "./kit";
+import { impersonatesBuiltin, type WalletToken } from "../../config/assets";
+import { t } from "../../core/i18n";
+import { Icon, Note } from "./kit";
 import { TokenLogo } from "./TokenLogo";
+import { tokenOptionText } from "../lib/tokenLabel";
+import { VerifiedMark } from "./VerifiedMark";
 
 /**
  * Token picker. A native `<select>` on purpose: it is the one control that a
@@ -33,7 +36,10 @@ export function TokenSelect({
       <div className="w-token-select" data-disabled={disabled ? "true" : undefined}>
         <span className="w-token-select-face" aria-hidden="true">
           <TokenLogo token={value} size={24} />
-          <strong>{value.symbol}</strong>
+          <strong className="w-token-symbol">
+            {value.symbol}
+            <VerifiedMark verified={value.verified} />
+          </strong>
           {meta === undefined
             ? <span>{value.name}</span>
             : <span id={`${selectId}-meta`} className="w-token-select-meta">{meta}</span>}
@@ -53,11 +59,14 @@ export function TokenSelect({
         >
           {tokens.map((token) => (
             <option key={token.id} value={token.id}>
-              {token.symbol} — {token.name}
+              {tokenOptionText(token, t("tok.notOfficial"))}
             </option>
           ))}
         </select>
       </div>
+      {impersonatesBuiltin(value)
+        ? <Note tone="error">{t("tok.notOfficialWarn", { symbol: value.symbol })}</Note>
+        : null}
     </div>
   );
 }

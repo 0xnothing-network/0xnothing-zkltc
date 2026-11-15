@@ -1,15 +1,16 @@
 import { type ReactNode, useEffect, useState } from "react";
-import { formatUnits } from "viem";
+import { formatUnits, type Hex } from "viem";
 import { NATIVE_TOKEN, NUSD_TOKEN } from "../../config/assets";
 import { txUrl } from "../../config/chain";
 import { t } from "../../core/i18n";
-import { describeError } from "../../core/lib/errors";
+import { BroadcastUnknownError, describeError } from "../../core/lib/errors";
 import { formatAmount, formatBalance, formatUsdWad, parseAmount } from "../../core/lib/format";
 import {
   applySlippage,
   NATIVE_GAS_RESERVE_WEI,
   spendableForSwap,
 } from "../../core/lib/swapMath";
+import type { TxKind } from "../../core/services/history";
 import {
   loadOracleState,
   mintNusd,
@@ -24,10 +25,14 @@ import { Screen } from "../components/Screen";
 import { TokenLogo } from "../components/TokenLogo";
 import { TransactionReview } from "../components/TransactionReview";
 import { useActionGate } from "../hooks/useActionGate";
+import { useBroadcastHold } from "../hooks/useBroadcastHold";
 import { useLiveRead } from "../hooks/useLiveRead";
 import { reviewKey } from "../lib/reviewKey";
 import { goHome } from "../router";
 import { useWallet } from "../state/WalletContext";
+
+/** History kinds a mint or redeem writes (not its approval); a pending one holds a reopened screen. */
+const MINT_KINDS: readonly TxKind[] = ["mint-nusd", "redeem-nusd"];
 
 /**
  * MINT NUSD, and its mirror image on the same screen. zkLTC in at the DIA feed
@@ -49,6 +54,7 @@ export function MintNusd(): ReactNode {
   const [reviewQuote, setReviewQuote] = useState<bigint | null>(null);
   const [reviewIdentity, setReviewIdentity] = useState<string | null>(null);
   const confirmGate = useActionGate();
+  const broadcast = useBroadcastHold(address, network, MINT_KINDS);
 
   // Oracle panel and balances are requested together, so the client-level
   // multicall collapses them into one round trip instead of two.
@@ -148,6 +154,7 @@ export function MintNusd(): ReactNode {
       || !address
       || parsed === null
       || reviewQuote === null
+      || broadcast.held
       || !confirmGate.tryEnter()
     ) {
       return;
@@ -162,20 +169,8 @@ export function MintNusd(): ReactNode {
     };
     setBusy(true);
     setError(null);
-    try {
-      const hash = submitted.mint
-        ? await mintNusd({
-            from: submitted.from,
-            collateralWei: submitted.amount,
-            quotedNusd: submitted.quote,
-            slippageBps: submitted.slippageBps,
-          })
-        : await redeemNusd({
-            from: submitted.from,
-            amountNusd: submitted.amount,
-            quotedCollateralWei: submitted.quote,
-            slippageBps: submitted.slippageBps,
-          });
+    // Also run when a held broadcast is later found mined: the job went through.
+    const sent = (hash: Hex): void => {
       notify(
         t(submitted.mint ? "mint.toastMint" : "mint.toastRedeem", {
           amount: formatAmount(
@@ -188,11 +183,32 @@ export function MintNusd(): ReactNode {
         "ok",
         txUrl(hash, submitted.network),
       );
+      setError(null);
       setAmount("");
       setReviewOpen(false);
       setReviewIdentity(null);
       refresh();
+    };
+    try {
+      sent(submitted.mint
+        ? await mintNusd({
+            from: submitted.from,
+            collateralWei: submitted.amount,
+            quotedNusd: submitted.quote,
+            slippageBps: submitted.slippageBps,
+          })
+        : await redeemNusd({
+            from: submitted.from,
+            amountNusd: submitted.amount,
+            quotedCollateralWei: submitted.quote,
+            slippageBps: submitted.slippageBps,
+          }));
     } catch (cause) {
+      // The node may hold it: keep the form, hold Confirm, link the hash.
+      if (cause instanceof BroadcastUnknownError) {
+        broadcast.hold(cause.hash, sent);
+        notify(describeError(cause), "error", txUrl(cause.hash, submitted.network));
+      }
       setError(describeError(cause));
     } finally {
       confirmGate.leave();
@@ -369,8 +385,9 @@ export function MintNusd(): ReactNode {
       {reviewOpen && reviewCurrent && reviewQuote !== null && parsed !== null && address !== null ? (
         <TransactionReview
           title={t("apr.titleTx")}
+          armKey={currentReviewIdentity}
           busy={busy}
-          ready={ready && reviewCurrent}
+          ready={ready && reviewCurrent && !broadcast.held}
           onClose={() => setReviewOpen(false)}
           onConfirm={() => void confirm()}
           error={error}

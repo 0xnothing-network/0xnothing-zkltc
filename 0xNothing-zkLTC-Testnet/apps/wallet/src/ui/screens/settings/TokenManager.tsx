@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from "react";
 import { isAddress } from "viem";
+import { BUILTIN_SYMBOLS } from "../../../config/assets";
 import { t } from "../../../core/i18n";
 import { describeError } from "../../../core/lib/errors";
 import { shortenAddress } from "../../../core/lib/format";
@@ -121,6 +122,9 @@ export function TokenManager(): ReactNode {
                 <Row label={t("tok.name")} value={preview.data.name} />
                 <Row label={t("tok.decimals")} value={preview.data.decimals.toString()} />
               </Rows>
+            ) : null}
+            {preview.data !== null && BUILTIN_SYMBOLS.has(preview.data.symbol.trim().toUpperCase()) ? (
+              <Note tone="error">{t("tok.notOfficialWarn", { symbol: preview.data.symbol })}</Note>
             ) : null}
             {preview.error !== null ? <Note tone="warn">{preview.error}</Note> : null}
             <div className="w-btn-row">

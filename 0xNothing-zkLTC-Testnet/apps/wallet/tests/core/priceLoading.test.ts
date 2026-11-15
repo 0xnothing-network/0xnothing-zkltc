@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
+import * as viem from "viem";
 
 const wad = 10n ** 18n;
 const token = { id: "pump", address: "0xtoken", decimals: 18, priceSource: "pool" };
@@ -38,6 +39,7 @@ function fixture(lifecycle = 3) {
     },
   };
   const imports: Record<string, unknown> = {
+    viem,
     "../../abis": {},
     "../../config/contracts": { CONTRACTS: { nusd: "0xnusd", dexFactory: "0xfactory", pumpFactory: "0xpump" } },
     "../lib/format": { WAD: wad },
@@ -83,4 +85,54 @@ test("oracle failure rejects the read even when the DEX branch already succeeded
   await f.reservesStarted.promise;
   f.adapter.reject(new Error("oracle offline"));
   await rejected;
+});
+
+/** Only a pool-priced import: no oracle leg, so the adapter is never asked. */
+function unpricedFixture(pair: () => Promise<string>, status: () => unknown) {
+  const client = {
+    readContract: async ({ functionName }: { functionName: string }) =>
+      functionName === "getPair" ? pair() : token.address,
+    multicall: async () => [status(), { status: "failure", error: new Error("no spot") }],
+  };
+  const imports: Record<string, unknown> = {
+    viem,
+    "../../abis": {},
+    "../../config/contracts": { CONTRACTS: { nusd: "0xnusd", dexFactory: "0xfactory", pumpFactory: "0xpump" } },
+    "../lib/format": { WAD: wad },
+    "../rpc/client": { activeNetwork: { id: "test", rpcUrl: "https://rpc.invalid", builtin: true }, publicClient: client },
+    "./nusdOracle": { nusdOracleAddress: async () => null },
+  };
+  const file = new URL("../../src/core/services/prices.ts", import.meta.url);
+  const code = ts.transpileModule(readFileSync(file, "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const exports = {} as { loadPrices(tokens: unknown[]): Promise<Map<string, { priceWad: bigint; source: string; stale: boolean }>> };
+  runInNewContext(code, { exports, require: (name: string) => imports[name] });
+  return exports;
+}
+
+const ZERO = "0x0000000000000000000000000000000000000000";
+const marketNotFound = () => ({
+  status: "failure",
+  error: new viem.ContractFunctionRevertedError({ abi: [], data: "0x7db1be50", functionName: "status" }),
+});
+
+test("a token with no NUSD pair and no Pump market is settled as unpriced, not stale", async () => {
+  const price = (await unpricedFixture(async () => ZERO, marketNotFound).loadPrices([token])).get("pump");
+  // Built in another realm, so compared field by field.
+  assert.deepEqual([price?.priceWad, price?.source, price?.stale], [0n, "none", false]);
+  const notLaunched = unpricedFixture(async () => ZERO, () => ({ status: "success", result: 0 }));
+  assert.equal((await notLaunched.loadPrices([token])).get("pump")?.stale, false);
+});
+
+test("a failed read is never taken for a missing price", async () => {
+  // The pair lookup itself failed.
+  const pairDown = unpricedFixture(async () => { throw new Error("rpc down"); }, marketNotFound);
+  assert.equal((await pairDown.loadPrices([token])).get("pump")?.stale, true);
+  // The factory said no pair, but the Pump answer was lost.
+  const pumpDown = unpricedFixture(async () => ZERO, () => ({ status: "failure", error: new Error("HTTP request failed.") }));
+  assert.equal((await pumpDown.loadPrices([token])).get("pump")?.stale, true);
+  // A live curve with no spot price yet is not "no market".
+  const trading = unpricedFixture(async () => ZERO, () => ({ status: "success", result: 1 }));
+  assert.equal((await trading.loadPrices([token])).get("pump")?.stale, true);
 });

@@ -13,13 +13,17 @@ import { ensureAllowance, type TxExecutionContext, writeCall } from "./tx";
  * Withdrawals are bounded by `maxWithdraw`, which accounts for liquidity that
  * borrowers have already drawn — the UI quotes that number rather than the
  * supplied balance.
+ *
+ * The user's own position and the liquidity behind it are null when their read
+ * failed: "0 supplied" for a deposit the node did not report reads as lost
+ * funds, and a 0 cap would refuse every withdrawal as an invalid amount.
  */
 export interface LendState {
-  supplied: bigint;
-  maxWithdraw: bigint;
+  supplied: bigint | null;
+  maxWithdraw: bigint | null;
   supplyRateWad: bigint;
   lenderRateWad: bigint;
-  availableLiquidity: bigint;
+  availableLiquidity: bigint | null;
   totalSupplied: bigint;
   totalBorrowed: bigint;
   supplyPaused: boolean;
@@ -43,15 +47,16 @@ export async function loadLendState(account: Address): Promise<LendState> {
     ] as const,
   });
 
-  const num = (index: number): bigint =>
-    calls[index]?.status === "success" ? (calls[index]!.result as bigint) : 0n;
+  const read = (index: number): bigint | null =>
+    calls[index]?.status === "success" ? (calls[index]!.result as bigint) : null;
+  const num = (index: number): bigint => read(index) ?? 0n;
 
   return {
-    supplied: num(0),
-    maxWithdraw: num(1),
+    supplied: read(0),
+    maxWithdraw: read(1),
     supplyRateWad: num(2),
     lenderRateWad: num(3),
-    availableLiquidity: num(4),
+    availableLiquidity: read(4),
     totalSupplied: num(5),
     totalBorrowed: num(6),
     // Fail closed on both switches: an unreadable flag blocks the action.

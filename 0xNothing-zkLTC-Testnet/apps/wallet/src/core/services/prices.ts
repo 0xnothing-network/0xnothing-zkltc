@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import { type Address, BaseError, ContractFunctionRevertedError } from "viem";
 import { dexFactoryAbi, dexPoolAbi, diaOracleAdapterAbi, zeroXPumpAbi } from "../../abis";
 import type { WalletToken } from "../../config/assets";
 import type { WalletNetwork } from "../../config/networks";
@@ -35,6 +35,8 @@ export type PriceMap = ReadonlyMap<string, TokenPrice>;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const PRICE_TTL_MS = 1_500;
 const PAIR_MISS_TTL_MS = 10_000;
+/** `MarketNotFound()`: the Pump factory's answer for a token it never launched. */
+const PUMP_MARKET_NOT_FOUND = "0x7db1be50";
 const CACHE_LIMIT = 8;
 
 interface CachedPrices {
@@ -44,9 +46,16 @@ interface CachedPrices {
 
 const priceCache = new Map<string, CachedPrices>();
 const priceLoads = new Map<string, Promise<PriceMap>>();
+/**
+ * A pair lookup's outcome. "missing" is the factory's own answer (no NUSD pair
+ * exists); "failed" is a read that never got one. Only the first may count as
+ * a settled "no price".
+ */
+type PairLookup = Address | "missing" | "failed";
+
 const pairCache = new Map<string, Address>();
-const pairRetryAfter = new Map<string, number>();
-const pairLoads = new Map<string, Promise<Address | null>>();
+const pairRetryAfter = new Map<string, { until: number; outcome: "missing" | "failed" }>();
+const pairLoads = new Map<string, Promise<PairLookup>>();
 const token0Cache = new Map<string, Address>();
 const token0Loads = new Map<string, Promise<Address | null>>();
 
@@ -67,15 +76,16 @@ function rememberPrices(key: string, value: PriceMap): void {
   if (oldest !== undefined) priceCache.delete(oldest);
 }
 
-function pairFor(token: Address, network: WalletNetwork, client: ReadClient): Promise<Address | null> {
+function pairFor(token: Address, network: WalletNetwork, client: ReadClient): Promise<PairLookup> {
   const key = `${network.id}:${token.toLowerCase()}`;
   const cached = pairCache.get(key);
   if (cached !== undefined) return Promise.resolve(cached);
   const active = pairLoads.get(key);
   if (active !== undefined) return active;
-  if (Date.now() < (pairRetryAfter.get(key) ?? 0)) return Promise.resolve(null);
+  const retry = pairRetryAfter.get(key);
+  if (retry !== undefined && Date.now() < retry.until) return Promise.resolve(retry.outcome);
 
-  const request: Promise<Address | null> = client
+  const request: Promise<PairLookup> = client
     .readContract({
       address: CONTRACTS.dexFactory,
       abi: dexFactoryAbi,
@@ -84,16 +94,16 @@ function pairFor(token: Address, network: WalletNetwork, client: ReadClient): Pr
     })
     .then((pair) => {
       if (pair === ZERO_ADDRESS) {
-        pairRetryAfter.set(key, Date.now() + PAIR_MISS_TTL_MS);
-        return null;
+        pairRetryAfter.set(key, { until: Date.now() + PAIR_MISS_TTL_MS, outcome: "missing" });
+        return "missing";
       }
       pairRetryAfter.delete(key);
       pairCache.set(key, pair);
       return pair;
     })
-    .catch(() => {
-      pairRetryAfter.set(key, Date.now() + PRICE_TTL_MS);
-      return null;
+    .catch((): PairLookup => {
+      pairRetryAfter.set(key, { until: Date.now() + PRICE_TTL_MS, outcome: "failed" });
+      return "failed";
     });
   pairLoads.set(key, request);
   void request.then(() => {
@@ -213,7 +223,7 @@ async function fetchPrices(
   const dexPromise = pairsPromise.then(async (pairAddresses) => {
     const withPair = poolTokens.flatMap((token, index) => {
       const pair = pairAddresses[index];
-      return pair ? [{ token, pair }] : [];
+      return pair !== undefined && pair !== "missing" && pair !== "failed" ? [{ token, pair }] : [];
     });
     const [token0s, reserves] = await Promise.all([
       Promise.all(withPair.map((entry) => token0For(entry.pair, network, client))),
@@ -225,9 +235,9 @@ async function fetchPrices(
         ),
       }) : Promise.resolve([]),
     ]);
-    return { withPair, token0s, reserves };
+    return { pairAddresses, withPair, token0s, reserves };
   });
-  const [oracleCalls, pumpCalls, { withPair, token0s, reserves }] = await Promise.all([
+  const [oracleCalls, pumpCalls, { pairAddresses, withPair, token0s, reserves }] = await Promise.all([
     oraclePromise,
     pumpPromise,
     dexPromise,
@@ -294,12 +304,42 @@ async function fetchPrices(
     }
   });
 
+  // A token with no NUSD pair and no Pump market has no price, and that is a
+  // settled answer, not a failed read: it stays unpriced on every load. Left
+  // stale, one such import kept every portfolio incomplete and the 24h change
+  // never came back. Both "no" answers must come from the chain itself.
+  const unpriced = new Set(
+    poolTokens.flatMap((token, index) => pairAddresses[index] === "missing"
+      && pumpHasNoMarket(pumpCalls?.[index * 2]) ? [token.id] : []),
+  );
+
   for (const token of tokens) {
     if (!prices.has(token.id)) {
       // A missing pair or failed metadata read is not a real zero-dollar
       // quote. Mark it stale so callers do not record a false portfolio loss.
-      prices.set(token.id, { priceWad: 0n, source: "none", stale: true });
+      prices.set(token.id, { priceWad: 0n, source: "none", stale: !unpriced.has(token.id) });
     }
   }
   return prices;
+}
+
+/**
+ * True when the Pump factory answered that it has no live curve for the token:
+ * a status outside trading, or its `MarketNotFound()` revert. A dropped or
+ * unreadable answer is not that, and keeps the price stale.
+ */
+function pumpHasNoMarket(
+  statusCall: { status: "success"; result: unknown } | { status: "failure"; error: Error } | undefined,
+): boolean {
+  if (statusCall === undefined) return false;
+  if (statusCall.status === "success") {
+    const lifecycle = Number(statusCall.result);
+    return lifecycle !== 1 && lifecycle !== 2;
+  }
+  const error = statusCall.error;
+  const reverted = error instanceof BaseError
+    ? error.walk((cause) => cause instanceof ContractFunctionRevertedError)
+    : null;
+  return reverted instanceof ContractFunctionRevertedError
+    && (reverted.data?.errorName === "MarketNotFound" || reverted.signature === PUMP_MARKET_NOT_FOUND);
 }

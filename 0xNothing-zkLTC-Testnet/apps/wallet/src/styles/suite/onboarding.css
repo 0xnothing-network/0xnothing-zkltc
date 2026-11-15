@@ -64,6 +64,14 @@
   box-shadow: var(--w-card-shadow);
 }
 
+/* Android: a long-press on a revealed secret opens Copy, Share, Translate and
+   Lens, and the clipboard syncs; the words are written down, never selected. */
+.w-root[data-platform="android"] :is(.w-seed, .w-word, .w-secret) {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
 .w-root .w-onb .w-word {
   align-items: center;
   color: var(--text-1);
@@ -103,6 +111,12 @@
   font-family: var(--font-num);
   font-size: 13px;
   line-height: 20px;
+}
+
+/* Backup check: the asked word in the same mono face, the choices as the same chips. */
+.w-root .w-onb[data-step="verify"] input.w-input {
+  font-family: var(--font-num);
+  font-size: 13px;
 }
 
 .w-root .w-onb-suggest {
@@ -161,4 +175,9 @@
 /* Reset: Cancel and Erase share the foot, each 44px. */
 .w-root .w-onb[data-step="reset"] .w-flow-actions > .w-btn-row > .w-btn {
   min-height: 44px;
+}
+
+/* Password strength: a strong password reads in the positive tone (weak reuses warn). */
+.w-root .w-caption[data-tone="ok"] {
+  color: var(--positive);
 }

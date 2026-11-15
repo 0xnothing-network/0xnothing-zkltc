@@ -5,6 +5,7 @@ import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { rewardStakingAbi } from "../../src/abis/index.ts";
 import { formatAmount } from "../../src/core/lib/format.ts";
+import { evaluateModule } from "../../../web/tests/helpers/evaluateModule.ts";
 
 interface PointsModule {
   POINTS_LOCK_OPTIONS: readonly { duration: number; multiplierBps: number }[];
@@ -107,10 +108,104 @@ test("stake weight, stream share and daily reward use integer contract units", (
   assert.equal(dailyReward(rate, WAD, 0n), 0n);
 });
 
-test("position reads stay bounded to the newest 50", () => {
-  assert.match(source, /const POSITION_READ_LIMIT = 50;/u);
-  assert.match(source, /allIds\.slice\(-POSITION_READ_LIMIT\)/u);
-  assert.match(source, /positionsTruncated: allIds\.length > POSITION_READ_LIMIT/u);
+test("position reads stay bounded: the newest 50 first, pages of 50, never more than 500", () => {
+  assert.match(source, /export const POSITION_PAGE = 50;/u);
+  assert.match(source, /export const POSITION_READ_CAP = 500;/u);
+  assert.match(source, /const readLimit = positionReadLimit\(limit\);/u);
+  assert.match(source, /allIds\.slice\(-readLimit\)/u);
+  assert.match(source, /positionsTruncated: allIds\.length > readLimit/u);
+});
+
+function pointsWithPositions(count: number) {
+  const owner = `0x${"11".repeat(20)}`;
+  const ids = Array.from({ length: count }, (_, index) => BigInt(index + 1));
+  const reads: number[] = [];
+  const module = evaluateModule<{
+    loadPointsState(account: string, limit?: number): Promise<{
+      positions: Array<{ id: bigint }>;
+      positionsRead: number;
+      positionsTruncated: boolean;
+      positionCount: bigint;
+      totalLocked: bigint;
+    }>;
+    positionReadLimit(requested: number): number;
+  }>(new URL("../../src/core/services/points.ts", import.meta.url), {
+    "../../abis": { rewardStakingAbi: [] },
+    "../../config/contracts": { CONTRACTS: { rewardStaking: `0x${"22".repeat(20)}` } },
+    "../lib/format": { formatAmount },
+    "../rpc/client": {
+      activeNetwork: {},
+      publicClient: {
+        multicall: async ({ contracts }: { contracts: Array<{ functionName: string; args?: unknown[] }> }) => {
+          if (contracts[0]?.functionName === "accountState") {
+            return [
+              { status: "success", result: [0n, 0n, 0n] },
+              { status: "success", result: ids },
+              { status: "success", result: 0n },
+              { status: "success", result: 0n },
+              { status: "success", result: 0n },
+            ];
+          }
+          reads.push(contracts.length);
+          return contracts.map(({ args }) => ({
+            status: "success",
+            result: [owner, 0n, 0, (args![0] as bigint) % 2n === 0n, 1n, 1n],
+          }));
+        },
+      },
+    },
+    "./tx": {},
+  });
+  return { module, owner, reads };
+}
+
+test("older positions load page by page, newest first, up to the cap", async () => {
+  const { module, owner, reads } = pointsWithPositions(612);
+  const first = await module.loadPointsState(owner);
+  assert.equal(first.positions.length, 50);
+  assert.equal(first.positions[0]!.id, 612n, "newest first");
+  assert.equal(first.positions.at(-1)!.id, 563n);
+  assert.equal(first.positionsRead, 50);
+  assert.equal(first.positionsTruncated, true);
+  assert.equal(first.positionCount, 612n);
+  const second = await module.loadPointsState(owner, 100);
+  assert.equal(second.positions.at(-1)!.id, 513n, "the next 50 older ones are on screen and can be withdrawn");
+  assert.equal(second.totalLocked, 50n, "only the positions not withdrawn count");
+  const capped = await module.loadPointsState(owner, 10_000);
+  assert.equal(capped.positionsRead, 500);
+  assert.equal(capped.positionsTruncated, true);
+  assert.deepEqual(reads, [50, 100, 500]);
+  for (const [requested, expected] of [[0, 50], [-5, 50], [Number.NaN, 50], [1.5, 50], [150, 150], [501, 500]] as const) {
+    assert.equal(module.positionReadLimit(requested), expected, String(requested));
+  }
+  const small = pointsWithPositions(30);
+  const all = await small.module.loadPointsState(small.owner, 100);
+  assert.equal(all.positionsRead, 30);
+  assert.equal(all.positionsTruncated, false);
+});
+
+test("Earn pages back from the same read and resets the page for another account or network", () => {
+  const earn = readFileSync(new URL("../../src/ui/screens/Earn.tsx", import.meta.url), "utf8");
+  assert.match(earn, /const pageKey = `\$\{address \?\? ""\}:\$\{network\.id\}`;/u);
+  assert.match(earn, /const positionLimit = paging\.key === pageKey \? paging\.limit : POSITION_PAGE;/u);
+  assert.match(earn, /loadPointsState\(address, positionLimit\)/u);
+  assert.match(earn, /state\?\.positionsTruncated === true && positionLimit < POSITION_READ_CAP/u);
+  assert.match(earn, /limit: Math\.min\(positionLimit \+ POSITION_PAGE, POSITION_READ_CAP\)/u);
+  // The page size is not part of the read's identity: loading older keeps the list on screen.
+  // Paged back, no block-by-block re-read of up to 500 positions.
+  assert.ok(earn.includes("{ identity: [address, network.id, network.rpcUrl, tokens], live: positionLimit === POSITION_PAGE }"));
+});
+
+test("Load older is busy until the read has caught up with the page asked for", () => {
+  const earn = readFileSync(new URL("../../src/ui/screens/Earn.tsx", import.meta.url), "utf8");
+  // read.loading stays false while the previous page is shown, so it cannot gate the button.
+  assert.ok(earn.includes("const pagePending = state !== null && state.positionsRead < Math.min(positionLimit, Number(state.positionCount));"));
+  assert.match(earn, /disabled=\{pagePending\}\n\s+aria-busy=\{pagePending\}/u);
+  assert.ok(earn.includes(`{pagePending ? t("common.working") : t("earn.loadOlder")}`));
+  const pagePending = (read: number, limit: number, count: number) => read < Math.min(limit, count);
+  assert.equal(pagePending(50, 100, 120), true, "the second page was asked for and not read yet");
+  assert.equal(pagePending(100, 100, 120), false);
+  assert.equal(pagePending(70, 100, 70), false, "fewer positions than the limit");
 });
 
 test("approval and staking stay pinned to one execution context", () => {

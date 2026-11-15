@@ -1,7 +1,21 @@
 import { type ReactNode, useState } from "react";
 import { t } from "../../core/i18n";
-import { checkMnemonic, completeWord, newMnemonic } from "../../core/keyring/mnemonic";
-import { createVault, MIN_WALLET_PASSWORD_LENGTH } from "../../core/keyring/vault";
+import {
+  backupCheckChoices,
+  backupCheckPositions,
+  checkMnemonic,
+  completeWord,
+  newMnemonic,
+  sameWord,
+} from "../../core/keyring/mnemonic";
+import {
+  createVault,
+  MIN_WALLET_PASSWORD_LENGTH,
+  passwordProblem,
+  passwordProblemText,
+  passwordStrength,
+  type PasswordStrength,
+} from "../../core/keyring/vault";
 import { describeError } from "../../core/lib/errors";
 import { Button, Icon, Note, Wordmark } from "../components/kit";
 import { useActionGate } from "../hooks/useActionGate";
@@ -9,16 +23,31 @@ import { Screen } from "../components/Screen";
 import { useWallet } from "../state/WalletContext";
 
 /**
- * First run. Three steps and no network call: a wallet is created or restored
- * entirely on the device, and the password never leaves it either — it only ever
- * derives the AES key the vault is sealed with.
+ * First run, with no network call: a wallet is created or restored entirely on
+ * the device, and the password never leaves it either — it only ever derives the
+ * AES key the vault is sealed with.
  *
  * The phrase is checked against the BIP-39 checksum before it is accepted, so a
  * mistyped word is refused here instead of quietly restoring an empty account.
  * A new phrase has no copy button, for the reason RevealSecrets gives: the
  * clipboard keeps it long after this screen is gone.
+ *
+ * A new phrase is also asked back before it is sealed — three words at random
+ * positions — because a ticked "I have written it down" proves nothing, and a
+ * wallet without a real backup is lost with the device. A wrong word ends the
+ * check and sends the user back to the same words; restoring skips the step.
  */
-type Step = "choose" | "create" | "import" | "password";
+type Step = "choose" | "create" | "verify" | "import" | "password";
+
+/** The backup check in progress: which positions, which one is asked, its choices. */
+type BackupCheck = { positions: number[]; round: number; choices: string[] };
+
+/** The meter only informs; what blocks Continue is `passwordProblem`. */
+const STRENGTH_TONE: Record<PasswordStrength, "warn" | "ok" | undefined> = {
+  weak: "warn",
+  fair: undefined,
+  strong: "ok",
+};
 
 export function Onboarding(): ReactNode {
   const { network, openWallet } = useWallet();
@@ -26,6 +55,9 @@ export function Onboarding(): ReactNode {
   const [phrase, setPhrase] = useState("");
   const [typed, setTyped] = useState("");
   const [saved, setSaved] = useState(false);
+  const [check, setCheck] = useState<BackupCheck | null>(null);
+  const [answer, setAnswer] = useState("");
+  const [wrong, setWrong] = useState(false);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showSecret, setShowSecret] = useState(false);
@@ -37,14 +69,56 @@ export function Onboarding(): ReactNode {
   const tail = typed.split(/\s+/u).at(-1) ?? "";
   const suggestions = completeWord(tail);
   const typedReady = typed.trim().length > 0;
-  const passwordTooShort = password.length > 0 && password.length < MIN_WALLET_PASSWORD_LENGTH;
+  // The same check createVault runs, so Continue never enables for a password it refuses.
+  const problem = passwordProblem(password);
+  const passwordTooShort = password.length > 0 && problem === "onb.shortPassword";
+  const passwordRefused = password.length > 0 && problem !== null && !passwordTooShort;
   const passwordsMismatch = confirm.length > 0 && password !== confirm;
-  const passwordReady = password.length >= MIN_WALLET_PASSWORD_LENGTH && confirm === password;
+  const passwordReady = problem === null && confirm === password;
+  const strength = passwordStrength(password);
 
   const startCreate = (): void => {
     setPhrase(newMnemonic());
+    // Restore text left from an earlier visit would make Back and the step count
+    // treat this as a restore; it is a secret, too, with no reason to linger.
+    setTyped("");
     setSaved(false);
+    setCheck(null);
     setError(null);
+    setStep("create");
+  };
+
+  // Fresh positions on every visit, so going back and forth cannot be learnt by rote.
+  const startCheck = (): void => {
+    const positions = backupCheckPositions(words.length);
+    setCheck({ positions, round: 0, choices: backupCheckChoices(words, positions[0]!) });
+    setAnswer("");
+    setWrong(false);
+    setError(null);
+    setStep("verify");
+  };
+
+  const answerCheck = (value: string): void => {
+    if (check === null || wrong) return;
+    const position = check.positions[check.round]!;
+    if (!sameWord(value, words[position] ?? "")) {
+      setWrong(true);
+      return;
+    }
+    setAnswer("");
+    const round = check.round + 1;
+    if (round >= check.positions.length) {
+      setCheck(null);
+      setStep("password");
+      return;
+    }
+    setCheck({ ...check, round, choices: backupCheckChoices(words, check.positions[round]!) });
+  };
+
+  const backToPhrase = (): void => {
+    setCheck(null);
+    setAnswer("");
+    setWrong(false);
     setStep("create");
   };
 
@@ -75,8 +149,8 @@ export function Onboarding(): ReactNode {
   };
   const install = async (): Promise<void> => {
     if (busy) return;
-    if (password.length < MIN_WALLET_PASSWORD_LENGTH) {
-      setError(t("onb.shortPassword", { min: MIN_WALLET_PASSWORD_LENGTH }));
+    if (problem !== null) {
+      setError(passwordProblemText(problem));
       return;
     }
     if (password !== confirm) {
@@ -90,6 +164,7 @@ export function Onboarding(): ReactNode {
       await createVault(password, phrase);
       // Nothing keeps the phrase after this point; it lives in the sealed vault.
       setPhrase("");
+      setCheck(null);
       setTyped("");
       setPassword("");
       setConfirm("");
@@ -140,7 +215,7 @@ export function Onboarding(): ReactNode {
     return (
       <Screen
         title={t("onb.phraseTitle")}
-        step="2 / 3"
+        step="2 / 4"
         onBack={() => {
           setPhrase("");
           setSaved(false);
@@ -178,13 +253,70 @@ export function Onboarding(): ReactNode {
               variant="primary"
               block
               disabled={!saved}
-              onClick={() => {
-                setError(null);
-                setStep("password");
-              }}
+              onClick={startCheck}
             >
               {t("common.continue")}
             </Button>
+          </div>
+        </div>
+      </Screen>
+    );
+  }
+  if (step === "verify" && check !== null) {
+    const position = check.positions[check.round]!;
+    return (
+      <Screen title={t("onb.verifyTitle")} step="3 / 4" onBack={backToPhrase}>
+        <div className="w-flow w-onb" data-step="verify">
+          <div className="w-flow-main">
+            <Note>{t("onb.verifyIntro")}</Note>
+            <label className="w-field">
+              <span className="w-label">{t("onb.verifyWord", { n: position + 1 })}</span>
+              <input
+                key={position}
+                className="w-input"
+                value={answer}
+                autoFocus
+                readOnly={wrong}
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="none"
+                autoComplete="off"
+                aria-invalid={wrong}
+                onChange={(event) => setAnswer(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && answer.trim().length > 0) answerCheck(answer);
+                }}
+              />
+            </label>
+            {wrong ? (
+              <div role="alert">
+                <Note tone="error">{t("onb.verifyWrong")}</Note>
+              </div>
+            ) : (
+              <div className="w-btn-row w-onb-suggest">
+                {check.choices.map((word) => (
+                  <Button key={word} size="sm" onClick={() => answerCheck(word)}>
+                    {word}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="w-flow-actions">
+            {wrong ? (
+              <Button variant="primary" block onClick={backToPhrase}>
+                {t("onb.verifyBack")}
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                block
+                disabled={answer.trim().length === 0}
+                onClick={() => answerCheck(answer)}
+              >
+                {t("common.continue")}
+              </Button>
+            )}
           </div>
         </div>
       </Screen>
@@ -202,6 +334,7 @@ export function Onboarding(): ReactNode {
                 value={typed}
                 rows={4}
                 spellCheck={false}
+                autoCorrect="off"
                 autoCapitalize="none"
                 autoComplete="off"
                 autoFocus
@@ -254,7 +387,7 @@ export function Onboarding(): ReactNode {
   return (
     <Screen
       title={t("common.password")}
-      step="3 / 3"
+      step={typed.trim().length > 0 ? "3 / 3" : "4 / 4"}
       onBack={() => {
         if (!busy) back();
       }}
@@ -275,7 +408,7 @@ export function Onboarding(): ReactNode {
                 autoFocus
                 disabled={busy}
                 aria-label={t("common.password")}
-                aria-invalid={passwordTooShort}
+                aria-invalid={passwordTooShort || passwordRefused}
                 onChange={(event) => {
                   setPassword(event.target.value);
                   setError(null);
@@ -328,6 +461,15 @@ export function Onboarding(): ReactNode {
           <p className="w-caption" data-tone={passwordTooShort ? "warn" : undefined}>
             {t("onb.shortPassword", { min: MIN_WALLET_PASSWORD_LENGTH })}
           </p>
+          {password.length > 0 ? (
+            <p className="w-caption" data-tone={STRENGTH_TONE[strength]}>
+              {t("pwd.strengthLabel", { level: t(`pwd.strength.${strength}`) })}
+              {strength === "strong" ? null : ` · ${t("pwd.hint")}`}
+            </p>
+          ) : null}
+          {passwordRefused && problem !== null ? (
+            <Note tone="warn">{passwordProblemText(problem)}</Note>
+          ) : null}
           {passwordsMismatch ? <Note tone="error">{t("onb.mismatch")}</Note> : null}
           <Note boxed>{t("onb.passwordNote")}</Note>
           {error ? (

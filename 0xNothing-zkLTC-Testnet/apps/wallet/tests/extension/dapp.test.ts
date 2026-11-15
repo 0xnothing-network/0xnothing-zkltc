@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  approvalView,
   DAPP_APPROVAL_EXECUTION_BUDGET_MS,
+  DAPP_MAYBE_SENT_ERROR,
   DAPP_REQUEST_TIMEOUT_MS,
+  DAPP_SIGN_RESERVE_MS,
+  expiryAnswer,
+  MAX_PENDING_CONNECTS,
   MAX_PENDING_PER_ORIGIN,
+  MAX_PENDING_PER_TAB,
   MAX_PENDING_REQUESTS,
   type DappRequest,
   liveResolutions,
@@ -11,7 +17,10 @@ import {
   planPendingClaim,
   planPendingClaimRelease,
   planStalePending,
+  planTabGone,
   sanitizePendingRequests,
+  tabDocuments,
+  unclaimedNotice,
 } from "../../src/core/services/dapp.ts";
 
 function request(
@@ -177,4 +186,198 @@ test("persisted approval rows are validated before the UI or worker uses them", 
     { ...valid, approvalClaim: "not-a-uuid" },
     null,
   ]), []);
+});
+
+const CLAIM = "11111111-1111-4111-8111-111111111111";
+
+test("a window that cannot claim says why instead of closing, and answers only an expired row", () => {
+  assert.deepEqual(unclaimedNotice("expired", false), { notice: "apr.expired", rejectExpired: true });
+  // A missing row was mostly answered by the worker (page gone, sweep, timeout),
+  // so the notice names no cause.
+  assert.deepEqual(unclaimedNotice("missing", false), { notice: "apr.gone", rejectExpired: false });
+  assert.deepEqual(unclaimedNotice("missing", true), { notice: "apr.gone", rejectExpired: false });
+  assert.deepEqual(unclaimedNotice("claimed", false), { notice: "apr.alreadyHandled", rejectExpired: false });
+  assert.deepEqual(unclaimedNotice("invalid-claim", false), { notice: "apr.alreadyHandled", rejectExpired: false });
+  // A transaction this window signed and still holds may be out.
+  assert.deepEqual(unclaimedNotice("claimed", true), { notice: "apr.maybeSent", rejectExpired: false });
+});
+
+test("one tab cannot hold more than its share of the queue, across any number of origins", () => {
+  const now = 1_000_001;
+  const tab = Array.from({ length: MAX_PENDING_PER_TAB }, (_, index) => ({
+    ...request(`frame-${index}`, `https://s${index}.evil.example`, "sign"),
+    tabId: 7,
+  }));
+  assert.deepEqual(
+    planPendingAdmission(tab, { ...request("fifth", "https://s9.evil.example", "sign"), tabId: 7 }, now),
+    { accepted: false, reason: "tab-limit" },
+  );
+  // Another tab, and a 1.0.9 row without a tab, are not counted against it.
+  assert.equal(planPendingAdmission(tab, { ...request("other", "https://app.example"), tabId: 8 }, now).accepted, true);
+  assert.equal(planPendingAdmission(tab, request("untabbed", "https://app.example"), now).accepted, true);
+});
+
+test("unconnected sites cannot fill the queue with connects, and a connected site still gets in", () => {
+  const now = 1_000_001;
+  const connects = Array.from({ length: MAX_PENDING_CONNECTS }, (_, index) => ({
+    ...request(`connect-${index}`, `https://s${index}.evil.example`, "connect"),
+    tabId: index,
+  }));
+  assert.deepEqual(
+    planPendingAdmission(connects, { ...request("seventh", "https://s99.evil.example", "connect"), tabId: 99 }, now),
+    { accepted: false, reason: "connect-limit" },
+  );
+  const tx = planPendingAdmission(connects, { ...request("tx", "https://defi.example"), tabId: 100 }, now);
+  assert.equal(tx.accepted, true);
+  assert.ok(MAX_PENDING_REQUESTS - MAX_PENDING_CONNECTS >= 18);
+});
+
+test("a claimed row outlives the timeout by the execution budget and is then answered as maybe sent", () => {
+  const at = 1_000_000;
+  const claimed = { ...request("claimed", "https://app.example"), approvalClaim: CLAIM };
+  const unclaimed = request("unclaimed", "https://other.example");
+  const next = request("next", "https://new.example");
+  const at241 = planPendingAdmission([claimed, unclaimed], next, at + 241_000);
+  assert.equal(at241.accepted, true);
+  if (!at241.accepted) return;
+  assert.deepEqual(at241.queue.map((entry) => entry.id), ["claimed", "next"]);
+  assert.deepEqual(at241.expiredIds, ["unclaimed"]);
+  assert.deepEqual(at241.maybeSentIds, []);
+  const at301 = planPendingAdmission([claimed], next, at + 301_000);
+  assert.equal(at301.accepted, true);
+  if (!at301.accepted) return;
+  assert.deepEqual(at301.expiredIds, ["claimed"]);
+  assert.deepEqual(at301.maybeSentIds, ["claimed"]);
+  // The unclaimed row still goes at exactly the timeout.
+  const at240 = planPendingAdmission([unclaimed], next, at + DAPP_REQUEST_TIMEOUT_MS);
+  assert.equal(at240.accepted && at240.expiredIds[0], "unclaimed");
+
+  const stale241 = planStalePending([claimed, unclaimed], at + 241_000);
+  assert.deepEqual(stale241.fresh.map((entry) => entry.id), ["claimed"]);
+  assert.deepEqual(stale241.stale.map((entry) => entry.id), ["unclaimed"]);
+  const limit = at + DAPP_REQUEST_TIMEOUT_MS + DAPP_APPROVAL_EXECUTION_BUDGET_MS;
+  assert.deepEqual(planStalePending([claimed], limit - 1).fresh.map((entry) => entry.id), ["claimed"]);
+  assert.deepEqual(planStalePending([claimed], limit).stale.map((entry) => entry.id), ["claimed"]);
+  assert.deepEqual(planStalePending([claimed], at + 301_000).stale.map((entry) => entry.id), ["claimed"]);
+
+  assert.deepEqual(expiryAnswer(unclaimed), { error: "Request expired", code: 4001 });
+  assert.deepEqual(expiryAnswer(claimed), { error: DAPP_MAYBE_SENT_ERROR, code: -32603 });
+  assert.doesNotMatch(DAPP_MAYBE_SENT_ERROR, /reject/iu);
+});
+
+test("the time budgets fit inside each other and inside the page's own timeout", () => {
+  // claim needs the budget left, signing needs the reserve left, so preparing gets the gap.
+  assert.ok(DAPP_SIGN_RESERVE_MS < DAPP_APPROVAL_EXECUTION_BUDGET_MS);
+  assert.ok(DAPP_APPROVAL_EXECUTION_BUDGET_MS - DAPP_SIGN_RESERVE_MS >= 20_000);
+});
+
+test("a gone tab loses its unclaimed rows; claimed rows, other tabs and untabbed rows stay", () => {
+  const queue: DappRequest[] = [
+    { ...request("connect", "https://app.example", "connect"), tabId: 3 },
+    { ...request("sign", "https://frame.example", "sign"), tabId: 3 },
+    { ...request("claimed", "https://app.example"), tabId: 3, approvalClaim: CLAIM },
+    { ...request("other-tab", "https://app.example", "sign"), tabId: 4 },
+    request("untabbed", "https://app.example", "sign"),
+  ];
+  const { fresh, gone } = planTabGone(queue, 3);
+  assert.deepEqual(gone.map((entry) => entry.id), ["connect", "sign"]);
+  assert.deepEqual(fresh.map((entry) => entry.id), ["claimed", "other-tab", "untabbed"]);
+  assert.deepEqual(planTabGone(queue, 9).gone, []);
+});
+
+test("a stored tab id is kept only when it is a browser tab id, and 1.0.9 rows still read", () => {
+  const valid = {
+    id: "request-1",
+    origin: "https://app.example",
+    kind: "sign",
+    at: Date.now(),
+    account: "0x1111111111111111111111111111111111111111",
+    message: "hello",
+  };
+  assert.equal(sanitizePendingRequests([{ ...valid, tabId: 12 }])[0]?.tabId, 12);
+  assert.equal(sanitizePendingRequests([{ ...valid, tabId: 0 }])[0]?.tabId, 0);
+  for (const tabId of [-1, 1.5, "12", Number.NaN, null]) {
+    const [row] = sanitizePendingRequests([{ ...valid, tabId }]);
+    assert.equal(row?.id, valid.id, String(tabId));
+    assert.equal("tabId" in (row ?? {}), false, String(tabId));
+  }
+  const [old] = sanitizePendingRequests([valid]);
+  assert.equal(old?.id, valid.id);
+  assert.equal("tabId" in (old ?? {}), false);
+});
+
+const DOC_A = "0123456789ABCDEF0123456789ABCDEF";
+const DOC_B = "FEDCBA9876543210FEDCBA9876543210";
+const DOC_NEW = "00000000000000000000000000000001";
+
+test("a loaded tab loses only the rows whose document did not answer", () => {
+  const queue: DappRequest[] = [
+    { ...request("old-page", "https://app.example", "connect"), tabId: 3, documentId: DOC_A },
+    { ...request("same-page", "https://app.example", "sign"), tabId: 3, documentId: DOC_B },
+    { ...request("claimed", "https://app.example"), tabId: 3, documentId: DOC_A, approvalClaim: CLAIM },
+    { ...request("no-document", "https://app.example", "sign"), tabId: 3 },
+    { ...request("other-tab", "https://app.example", "sign"), tabId: 4, documentId: DOC_A },
+    // Queued after the documents were asked: its page is the new, live one.
+    { ...request("arrived-later", "https://app.example", "sign"), tabId: 3, documentId: DOC_NEW },
+  ];
+  // Only the unclaimed rows of that tab that name a document are asked about, once each.
+  assert.deepEqual(tabDocuments(queue, 3), [DOC_A, DOC_B, DOC_NEW]);
+  assert.deepEqual(tabDocuments(queue, 4), [DOC_A]);
+  assert.deepEqual(tabDocuments(queue, 9), []);
+
+  // A pushState: every asked document answered, so only the row without one goes.
+  const pushState = planTabGone(queue, 3, new Set());
+  assert.deepEqual(pushState.gone.map((entry) => entry.id), ["no-document"]);
+  // A real navigation: the old document did not answer.
+  const navigated = planTabGone(queue, 3, new Set([DOC_A]));
+  assert.deepEqual(navigated.gone.map((entry) => entry.id), ["old-page", "no-document"]);
+  assert.deepEqual(
+    navigated.fresh.map((entry) => entry.id),
+    ["same-page", "claimed", "other-tab", "arrived-later"],
+  );
+  // A closed tab, asked nothing, loses every unclaimed row it had.
+  assert.deepEqual(planTabGone(queue, 3).gone.map((entry) => entry.id), ["old-page", "same-page", "no-document", "arrived-later"]);
+});
+
+test("a stored document id is kept only in Chromium's shape, and rows without one still read", () => {
+  const valid = {
+    id: "request-1",
+    origin: "https://app.example",
+    kind: "sign",
+    at: Date.now(),
+    account: "0x1111111111111111111111111111111111111111",
+    message: "hello",
+    tabId: 5,
+  };
+  assert.equal(sanitizePendingRequests([{ ...valid, documentId: DOC_A }])[0]?.documentId, DOC_A);
+  assert.equal(sanitizePendingRequests([{ ...valid, documentId: DOC_A.toLowerCase() }])[0]?.documentId, DOC_A.toLowerCase());
+  for (const documentId of [`${DOC_A}0`, DOC_A.slice(1), "G".repeat(32), 12, null, { id: DOC_A }]) {
+    const [row] = sanitizePendingRequests([{ ...valid, documentId }]);
+    assert.equal(row?.id, valid.id, String(documentId));
+    assert.equal("documentId" in (row ?? {}), false, String(documentId));
+  }
+  // A 1.0.9 row has neither a tab nor a document.
+  const { tabId: _tab, ...old } = valid;
+  const [read] = sanitizePendingRequests([old]);
+  assert.equal(read?.id, valid.id);
+  assert.equal("documentId" in (read ?? {}), false);
+});
+
+test("an approval window shows only rows it can act on, so a row claimed elsewhere cannot trap it", () => {
+  const elsewhere = { ...request("elsewhere", "https://a.example"), approvalClaim: CLAIM };
+  const unclaimed = request("unclaimed", "https://b.example", "sign");
+  const nobody = () => false;
+  // The window was opened for a request now answered; the claimed row is skipped.
+  const view = approvalView([elsewhere, unclaimed], "answered", nobody);
+  assert.equal(view.request?.id, "unclaimed");
+  assert.deepEqual(view.actionable.map((entry) => entry.id), ["unclaimed"]);
+  // Even when it is the one the window was opened with.
+  assert.equal(approvalView([elsewhere, unclaimed], "elsewhere", nobody).request?.id, "unclaimed");
+  // Nothing left to act on: the window has nothing to show and closes.
+  assert.deepEqual(approvalView([elsewhere], "elsewhere", nobody), { request: null, actionable: [] });
+  // A claim this window holds (a signed transaction, or the one it is working on) stays shown.
+  const mine = approvalView([elsewhere, unclaimed], "elsewhere", (id) => id === "elsewhere");
+  assert.equal(mine.request?.id, "elsewhere");
+  assert.equal(mine.actionable.length, 2);
+  assert.deepEqual(approvalView([], null, nobody), { request: null, actionable: [] });
 });

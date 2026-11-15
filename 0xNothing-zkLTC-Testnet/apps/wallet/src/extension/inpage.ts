@@ -6,8 +6,10 @@ import {
   PROVIDER_NAME,
   PROVIDER_RDNS,
   newProviderUuid,
+  readProviderState,
   type RpcCall,
   type RpcFailure,
+  sameAccounts,
   TO_CONTENT,
 } from "./protocol";
 
@@ -87,10 +89,19 @@ function initializeProvider(): void {
     if (event.source !== window) return;
     const message = event.data;
     if (!isContentMessage(message)) return;
-    if (message.event) {
-      if (message.event.name === "chainChanged") chainId = message.event.data as string;
-      if (message.event.name === "accountsChanged") accounts = message.event.data as string[];
-      emit(message.event.name, message.event.data);
+    // A pulled state, after the wallet pinged: emit only what differs from what this
+    // provider last reported, so a ping that changed nothing for this site is silent.
+    if (message.state !== undefined) {
+      const next = readProviderState(message.state);
+      if (!next) return;
+      if (next.chainId !== undefined && next.chainId.toLowerCase() !== chainId.toLowerCase()) {
+        chainId = next.chainId;
+        emit("chainChanged", chainId);
+      }
+      if (!sameAccounts(next.accounts, accounts)) {
+        accounts = next.accounts;
+        emit("accountsChanged", [...accounts]);
+      }
       return;
     }
     if (!message.id) return;
@@ -125,8 +136,9 @@ function initializeProvider(): void {
         throw new ProviderRpcError({ code: -32600, message: "Invalid request" });
       }
       const call = { method: args.method, params: args.params ?? [] };
-      // The relay drops what it cannot forward as bounded JSON (object params,
-      // undefined fields, BigInt); failing here spares the page a 250 s timeout.
+      // The relay drops what it cannot forward as bounded JSON (object params
+      // other than watchAsset's, undefined fields, BigInt); failing here spares
+      // the page a 250 s timeout.
       if (!isBoundedRpcCall(call)) {
         throw new ProviderRpcError({ code: -32602, message: "Invalid params" });
       }

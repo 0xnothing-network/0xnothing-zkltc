@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "0xWallet",
   "short_name": "0xWallet",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "__MSG_extDescription__",
   "default_locale": "en",
   "minimum_chrome_version": "120",
@@ -26,16 +26,30 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "permissions": ["storage", "alarms"],
+  "side_panel": {
+    "default_path": "index.html?surface=panel"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+W",
+        "mac": "Alt+Shift+W"
+      }
+    }
+  },
+  "permissions": ["storage", "alarms", "idle", "sidePanel", "activeTab"],
+  "optional_permissions": ["notifications"],
   "host_permissions": [
     "https://rpc.testnet.liteforge.zeeve.net/*",
     "https://0xnothing.xyz/*",
-    "https://api.goldsky.com/*",
+    "https://api.goldsky.com/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
     "http://127.0.0.1/*",
     "http://localhost/*",
     "http://[::1]/*"
   ],
-  "optional_host_permissions": ["https://*/*"],
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { t } from "../../core/i18n";
 import { copyText } from "../../core/platform/env";
+import { announce } from "../lib/announce";
 
 /**
  * Copy-to-clipboard with a two-second acknowledgement. `copyText` already falls
@@ -34,6 +36,8 @@ export function useCopy(): { copied: boolean; copy: (text: string) => Promise<bo
     const ok = await copyText(text);
     if (!mountedRef.current || requestRef.current !== request || !ok) return ok;
     setCopied(true);
+    // The icon swap is silent to a screen reader; say it.
+    announce(t("common.copied"));
     resetTimer.current = setTimeout(() => {
       resetTimer.current = null;
       if (mountedRef.current && requestRef.current === request) setCopied(false);

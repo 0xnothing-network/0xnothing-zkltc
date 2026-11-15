@@ -213,8 +213,11 @@ async function fetchPortfolio(
   return {
     rows,
     // A missing supplied balance understates the total just as a missing row
-    // does, and neither belongs in the 24h snapshot book.
-    complete: !suppliedFailed && rows.every((row) => !row.stale),
+    // does, and neither belongs in the 24h snapshot book. A row whose balance
+    // was read as zero is worth zero at any price, so its price leg cannot
+    // make the total wrong.
+    complete: !suppliedFailed
+      && rows.every((row) => !row.stale || (row.readError === null && row.balance === 0n)),
     totalWad: holdingsWad + suppliedNusd,
     suppliedNusd,
     blockNumber,
@@ -257,28 +260,43 @@ const MATCH_TOLERANCE_MS = 6 * 60 * 60_000;
 const SNAPSHOT_LOCK = `portfolio:${STORAGE_KEYS.snapshots}`;
 
 /**
+ * A series is kept per chain and address. 1.0.9 keyed it by the whole profile
+ * (name, explorer and RPC included), so renaming a custom network or giving it
+ * a new RPC restarted the 24h baseline; that key is still read, and its series
+ * moves to the chain key on the next sample.
+ */
+function snapshotKeys(address: Address, network: WalletNetwork): { key: string; legacyKey: string } {
+  const account = address.toLowerCase();
+  return {
+    key: JSON.stringify([network.chainId, account]),
+    legacyKey: JSON.stringify([networkIdentity(network), account]),
+  };
+}
+
+/**
  * These local samples are the fallback for a portfolio that market candles do
  * not cover. They also keep 24h useful on custom networks without an indexer.
  */
 export async function recordSnapshot(address: Address, totalWad: bigint, network: WalletNetwork): Promise<void> {
-  const key = JSON.stringify([networkIdentity(network), address.toLowerCase()]);
+  const { key, legacyKey } = snapshotKeys(address, network);
   await withNamedLock(SNAPSHOT_LOCK, async () => {
     const book = (await persistentStore.get<SnapshotBook>(STORAGE_KEYS.snapshots)) ?? {};
-    const series = book[key] ?? [];
+    const series = book[key] ?? book[legacyKey] ?? [];
     const last = series[series.length - 1];
     const now = Date.now();
     if (last && now - last.at < SNAPSHOT_INTERVAL_MS) return;
     const next = [...series, { at: now, totalWad: totalWad.toString() }].slice(-SNAPSHOT_KEEP);
-    await persistentStore.set(STORAGE_KEYS.snapshots, { ...book, [key]: next });
+    const { [legacyKey]: _moved, ...rest } = book;
+    await persistentStore.set(STORAGE_KEYS.snapshots, { ...rest, [key]: next });
   });
 }
 
 /** Fractional change (0.0125 = +1.25%), or null when there is no baseline yet. */
 export async function change24h(address: Address, totalWad: bigint, network: WalletNetwork): Promise<number | null> {
   // Older address-only samples have no provable network and cannot be reused.
-  const key = JSON.stringify([networkIdentity(network), address.toLowerCase()]);
+  const { key, legacyKey } = snapshotKeys(address, network);
   const book = await persistentStore.get<SnapshotBook>(STORAGE_KEYS.snapshots);
-  const series = book?.[key];
+  const series = book?.[key] ?? book?.[legacyKey];
   if (!series || series.length === 0) return null;
 
   const target = Date.now() - DAY_MS;
