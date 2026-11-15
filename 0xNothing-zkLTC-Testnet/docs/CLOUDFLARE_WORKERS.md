@@ -1,8 +1,12 @@
 # Direct Cloudflare Workers web deployment
 
 Since 2026-11-12 this Worker is the only host of the web app. It serves
-`0xnothing.app`, `0xnothing.network` and `www.0xnothing.network`; the Vercel
-project and the Railway deployment are retired. The root `Dockerfile` still
+`0xnothing.app`, `0xnothing.network`, `www.0xnothing.network` and
+`0xnothing.xyz`; the Vercel project and the Railway deployment are retired.
+Every public host must be a route in `wrangler.jsonc`: `wrangler deploy` syncs
+the Worker's custom domains to that list, so a host added only in the dashboard
+is detached by the next deployment (this took `0xnothing.xyz` down on
+2026-11-15). The root `Dockerfile` still
 builds a standalone image for self-hosting if the Worker ever has to be replaced.
 
 ```text

@@ -21,6 +21,12 @@
     {
       "pattern": "www.0xnothing.network",
       "custom_domain": true
+    },
+    // The wallet's PUBLIC_APP_URL and host permission name this host: a deploy that
+    // leaves it out detaches it from the Worker.
+    {
+      "pattern": "0xnothing.xyz",
+      "custom_domain": true
     }
   ],
   // Workers Cache: Cloudflare answers from its edge cache before the Worker runs, by
@@ -41,7 +47,7 @@
   },
   "vars": {
     "CLOUDFLARE_WORKERS": "true",
-    "UPLOAD_SIGNING_DOMAIN": "0xnothing.app,0xnothing.network,www.0xnothing.network",
+    "UPLOAD_SIGNING_DOMAIN": "0xnothing.app,0xnothing.network,www.0xnothing.network,0xnothing.xyz",
     "UPLOAD_TRUSTED_PROXY_CLIENT_IP_HEADER": "cf-connecting-ip",
     "FI_TRUSTED_PROXY_CLIENT_IP_HEADER": "cf-connecting-ip"
   },
