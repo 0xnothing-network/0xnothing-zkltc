@@ -18,7 +18,8 @@ const sections = [
         <p>
           This Privacy Policy describes how the 0xWallet Chrome extension handles
           information. 0xWallet is a self-custodial EVM wallet for LitVM LiteForge
-          testnet. The extension does not require a 0xNothing account.
+          testnet. The extension does not require a 0xNothing account. Assets on
+          this testnet are test assets and have no monetary value.
         </p>
       </>
     ),
@@ -40,18 +41,34 @@ const sections = [
           </li>
           <li>
             <strong>Wallet configuration:</strong> account labels, selected and
-            custom networks, custom tokens, security settings, and approved dApp
-            connections.
+            custom networks, a custom RPC address for LitVM LiteForge, custom
+            tokens, security and display settings, and approved dApp connections.
           </li>
           <li>
-            <strong>dApp interaction information:</strong> the requesting page
-            origin and JSON-RPC method needed to expose the EIP-1193/EIP-6963
-            provider, enforce site permissions, and show approval requests.
+            <strong>Records the wallet keeps for the user:</strong> recent
+            recipients and the names given to them, a record of the token
+            approvals signed from the wallet, a send form draft kept for up to
+            ten minutes, and, when notifications are on, the text of
+            notifications already shown. A history export is a CSV file the user
+            saves on their own device.
+          </li>
+          <li>
+            <strong>dApp interaction information:</strong> the origin and page
+            title of a site that sends a request, the JSON-RPC method, and the
+            content of the request (a transaction, a message or typed data to
+            sign, or a token or network suggestion), as needed to expose the
+            EIP-1193/EIP-6963 provider, enforce site permissions, and show
+            approval requests. When the user opens the Dapp screen from the
+            toolbar, the origin of the current tab is read to show whether that
+            site is connected; it is not stored.
           </li>
         </ul>
         <p>
-          The extension does not read page content, form contents, personal
-          communications, or a list of the user&apos;s general browsing history.
+          All of the above is kept on the user&apos;s device. The extension does
+          not read the content of web pages, form contents, or personal
+          communications, and does not record the user&apos;s general browsing
+          history; it stores only the origins of sites the user connected or
+          that sent a wallet request.
         </p>
       </>
     ),
@@ -72,6 +89,11 @@ const sections = [
           removed when the wallet locks or the browser session ends. Persistent
           wallet data remains until the user removes it or resets the wallet.
         </p>
+        <p>
+          The wallet locks by itself after a period without use (15 minutes by
+          default; the user can choose from 1 to 60 minutes), when the computer
+          is locked, and whenever the user chooses Lock now.
+        </p>
       </>
     ),
   },
@@ -82,17 +104,36 @@ const sections = [
         <p>The extension communicates with:</p>
         <ul>
           <li>
-            LitVM LiteForge or a user-selected custom RPC endpoint to read public
-            blockchain state, estimate gas, broadcast a user-approved signed
-            transaction, and retrieve its receipt.
+            The LitVM LiteForge RPC endpoint, or an RPC endpoint the user chose,
+            to read public blockchain state, estimate gas, broadcast a
+            user-approved signed transaction, and retrieve its receipt. These
+            requests contain the account&apos;s public address. An RPC endpoint
+            the user chose can be a custom network added in Settings, a custom
+            RPC address set for LitVM LiteForge, or a network a website
+            suggested and the user approved.
+          </li>
+          <li>
+            A website can ask the wallet provider for public blockchain data
+            (for example a balance or a contract read). The wallet forwards such
+            read-only calls to the active RPC endpoint, as injected wallets do.
           </li>
           <li>
             0xNothing and Goldsky endpoints to retrieve public 0xPump and 0xFi
-            token, pool, metadata, and market information.
+            token, pool, metadata, and market information. These requests never
+            contain the wallet address. To show the 24-hour change on Home, the
+            wallet asks for the price history of the 0xPump tokens the account
+            holds, by token contract address; together with the IP address of
+            the request, that can tell the server which of those tokens a user
+            holds.
+          </li>
+          <li>
+            Token images, loaded through the 0xNothing image proxy or from
+            public IPFS gateways (dweb.link, ipfs.io, and Pinata gateways).
           </li>
           <li>
             A dApp selected by the user when the user approves a connection,
-            signature, or transaction request.
+            signature, or transaction request. A site receives the account
+            address only after the user connects that account to it.
           </li>
         </ul>
         <p>
@@ -101,6 +142,8 @@ const sections = [
           their own policies. Public addresses, contract calls, and broadcast
           transactions may be visible on the public blockchain. Passwords,
           recovery phrases, private keys, and derived unlock keys are never sent.
+          The extension contains no analytics, advertising, telemetry, or error
+          reporting code.
         </p>
       </>
     ),
@@ -115,15 +158,45 @@ const sections = [
           device, and keeps the temporary unlock key in session storage.
         </li>
         <li>
-          <strong>Alarms</strong> maintains a pending dApp approval workflow while
-          Chrome may suspend the Manifest V3 service worker. The alarm is removed
-          when no approval is pending.
+          <strong>Alarms</strong> runs the auto-lock timer, maintains a pending
+          dApp approval workflow while Chrome may suspend the Manifest V3
+          service worker, and, only when notifications are on, checks whether a
+          pending transaction has confirmed. An alarm is removed when it is no
+          longer needed.
         </li>
         <li>
-          <strong>Host access</strong> exposes the wallet provider to dApps and
-          permits the RPC and public market-data requests described above. Access
-          to a custom RPC origin is requested only after the user adds that
-          network.
+          <strong>Idle</strong> tells the wallet that the computer was locked, so
+          that the wallet locks too. It is used for nothing else.
+        </li>
+        <li>
+          <strong>Side panel</strong> lets the user keep the wallet open beside
+          a page in Chrome&apos;s side panel.
+        </li>
+        <li>
+          <strong>Active tab</strong> lets the wallet, after the user opens it
+          from the toolbar or with its keyboard shortcut, read the origin of the
+          current tab to show whether that site is connected. Nothing from the
+          tab is stored.
+        </li>
+        <li>
+          <strong>Notifications</strong> is optional and is requested only when
+          the user turns notifications on in Settings. The wallet then reports
+          when one of its own transactions confirms or fails, and when a site
+          request is waiting. A notification about a transaction that a website
+          requested shows that website&apos;s host name. Turning notifications
+          off returns the permission.
+        </li>
+        <li>
+          <strong>Host access</strong> permits the RPC and public market-data
+          requests described above. Access to another RPC origin is requested
+          only when the user adds or approves that network or RPC address, one
+          origin at a time, and is given back when no saved network uses it.
+        </li>
+        <li>
+          <strong>Content scripts</strong> run on every http and https page and
+          frame to expose the wallet provider to dApps. They add the provider
+          and relay wallet requests; they do not read or change page content,
+          forms, or cookies.
         </li>
       </ul>
     ),
@@ -152,6 +225,10 @@ const sections = [
           Information is disclosed only when necessary to complete a user-requested
           RPC, indexing, dApp, or blockchain operation, or when required by law.
         </p>
+        <p>
+          The use of information received by 0xWallet complies with the Chrome
+          Web Store User Data Policy, including the Limited Use requirements.
+        </p>
       </>
     ),
   },
@@ -161,7 +238,9 @@ const sections = [
       <>
         <p>
           Users can lock the wallet, revoke dApp connections, remove custom
-          networks or tokens, or reset the wallet from its settings. Uninstalling
+          networks or tokens, rename or remove saved recipients, turn
+          notifications off, return to the default RPC address, or reset the
+          wallet from its settings. Uninstalling
           the extension removes its local Chrome storage. Information already
           published to a blockchain cannot be altered or deleted by 0xNothing.
         </p>
@@ -237,7 +316,7 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
           <p className="mt-6 max-w-2xl text-sm leading-7 text-white/55">
-            Effective August 30, 2026. This policy explains what the extension
+            Effective November 15, 2026. This policy explains what the extension
             handles, what stays on the device, and what is sent to network
             services when the user requests a wallet operation.
           </p>
