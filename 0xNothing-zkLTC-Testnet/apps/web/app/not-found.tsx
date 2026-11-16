@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 
 export default function NotFound() {
   return (
@@ -9,8 +10,8 @@ export default function NotFound() {
         <h1>Page not found</h1>
         <p>This page may have moved or the address may be incorrect.</p>
         <nav aria-label="Recovery links">
-          <Link href="/">Back to home <span aria-hidden="true">&gt;</span></Link>
-          <Link href="/docs">Read the docs <span aria-hidden="true">&gt;</span></Link>
+          <Link href="/">Back to home <ArrowRight size={14} aria-hidden="true" /></Link>
+          <Link href="/docs">Read the docs <ArrowRight size={14} aria-hidden="true" /></Link>
         </nav>
       </div>
       <p className="pixel-not-found-network">LitVM Testnet</p>

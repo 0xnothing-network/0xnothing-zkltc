@@ -27,7 +27,9 @@
   --line-strong: #2f353c;
   --text-1: #f2f4f6;
   --text-2: #a9b0b9;
-  --text-3: #7d8590;
+  --text-3: #848c97;
+  /* Selected segment of every segmented control. */
+  --seg-on: var(--surface-3);
 
   /* Shared status */
   --positive: #3dd68c;
@@ -105,11 +107,12 @@
   --line-strong: #cdd2d8;
   --text-1: #0e1116;
   --text-2: #48505a;
-  --text-3: #69717b;
-  --positive: #0f8a55;
-  --negative: #d6334a;
-  --warning: #b7791f;
-  --info: #3e6fe0;
+  --text-3: #626a74;
+  --seg-on: #ffffff;
+  --positive: #0b7a4b;
+  --negative: #c42a40;
+  --warning: #946110;
+  --info: #3360d0;
   --edge-highlight: inset 0 1px 0 rgba(255, 255, 255, .9);
   --accent-hub: #0e1116;
   --accent-pump: #9be27a;
@@ -134,9 +137,13 @@
 .pixel-product { --accent: var(--accent-pixel); --accent-ink: #1d0629; --accent-text: var(--accent-pixel); }
 /* NUSD reuses the 0xFi and 0xPump surfaces, so its root and the mint panel's pump scope both take the NUSD accent. */
 .fi-root.nusd-product, .nusd-product .pump-shell { --accent: var(--accent-nusd); --accent-ink: #04181a; --accent-text: var(--accent-nusd); }
+/* --ring is computed on :root from the hub accent; recompute it where a product sets its own. */
+:is(.pump-shell, .fi-root, .pixel-product) { --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent); }
 :root[data-theme="light"] .pump-shell { --accent-ink: #0b1a05; --accent-text: #3c7a1e; }
 :root[data-theme="light"] :is(.fi-root, .pixel-product) { --accent-ink: #ffffff; }
-:root[data-theme="light"] :is(.fi-root.nusd-product, .nusd-product .pump-shell) { --accent-ink: #ffffff; --accent-text: var(--accent-nusd); }
+/* Light accent text darker than the fill so it reaches 4.5:1 on every surface. */
+:root[data-theme="light"] .fi-root { --accent-text: #3360d0; }
+:root[data-theme="light"] :is(.fi-root.nusd-product, .nusd-product .pump-shell) { --accent-ink: #ffffff; --accent-text: #0b7a70; }
 
 /*
  * Aliases. Product stylesheets predate the system; mapping their

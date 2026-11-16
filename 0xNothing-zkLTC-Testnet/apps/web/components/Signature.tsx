@@ -38,7 +38,7 @@ export function HealthGauge({ risk, value, caption, warnAt = .85, dangerAt = 1 }
 export function TxSteps({ step, total, failed = false, done = false }: { step: number; total: number; failed?: boolean; done?: boolean }) {
   if (!Number.isSafeInteger(total) || total < 2) return null;
   return (
-    <ol className="ox-tx-steps" aria-label={`Step ${Math.min(step, total)} of ${total}`}>
+    <ol className="ox-tx-steps" aria-label={`Step ${Math.min(step, total)} of ${total}${failed ? ", failed" : done ? ", done" : ""}`}>
       {Array.from({ length: total }, (_, index) => {
         const number = index + 1;
         const state = done || number < step ? "complete" : number === step ? (failed ? "failed" : "active") : "pending";

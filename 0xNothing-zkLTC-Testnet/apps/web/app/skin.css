@@ -132,17 +132,23 @@
 .fi-root.fi-root .fi-button:disabled,
 .pump-shell.pump-shell .pump-button:disabled,
 .pixel-product.pixel-product :is(.pixel-btn):disabled {
-  border-color: var(--line) !important;
-  background: var(--surface-2) !important;
+  border-color: var(--line-strong) !important;
+  background: var(--surface-3) !important;
   color: var(--text-3) !important;
   box-shadow: none !important;
   filter: none;
   opacity: 1;
 }
 
-/* Trade sides use the shared status colours, never the product accent. */
-.pump-shell.pump-shell .pump-trade-tabs button.active.buy { background: var(--positive) !important; color: #04150c !important; }
-.pump-shell.pump-shell .pump-trade-tabs button.active.sell { background: var(--negative) !important; color: #1a0408 !important; }
+/* Trade sides: the neutral selected segment, the label alone in the status colour. */
+.pump-shell.pump-shell .pump-trade-tabs button.active:is(.buy, .sell) {
+  background: var(--seg-on) !important;
+  box-shadow: var(--edge-highlight), 0 0 0 1px var(--line-strong) !important;
+}
+.pump-shell.pump-shell .pump-trade-tabs button.active.buy { color: var(--positive) !important; }
+.pump-shell.pump-shell .pump-trade-tabs button.active.sell { color: var(--negative) !important; }
+/* The light warning fill is dark enough that a dark ink drops under 4.5:1; white reaches 5.28. */
+:root[data-theme="light"] .pixel-product.pixel-product .pixel-btn-amber { color: #ffffff !important; }
 
 /* Fields. Amount fields focus with the accent border (accent use #3). */
 .fi-root.fi-root :is(.fi-amount-input, .fi-market-search, .fi-input),
@@ -157,7 +163,7 @@
 .fi-root.fi-root :is(.fi-amount-input, .fi-market-search):focus-within,
 .pump-shell.pump-shell :is(.pump-search, .pump-field input, .pump-field textarea, .pump-amount-field):focus-within,
 .pixel-product.pixel-product :is(textarea, select, input):focus-visible {
-  border-color: var(--accent) !important;
+  border-color: var(--accent-text) !important;
   box-shadow: var(--ring) !important;
   outline: none;
 }
@@ -177,7 +183,7 @@
   text-transform: none;
 }
 .fi-root.fi-root .fi-segmented button.active,
-.pump-shell.pump-shell .pump-segmented button.active { background: var(--surface-3); color: var(--text-1); box-shadow: var(--e-1); }
+.pump-shell.pump-shell .pump-segmented button.active { background: var(--seg-on); color: var(--text-1); box-shadow: var(--edge-highlight), 0 0 0 1px var(--line-strong); }
 
 /* Status tags: coloured text in a hairline box. No tinted pill, no dot. */
 .fi-root.fi-root :is(.fi-swap-asset-badge, .fi-status),
@@ -241,7 +247,7 @@
   background: var(--surface-3);
 }
 .pump-shell.pump-shell .pump-progress::after { display: none; }
-.pump-shell.pump-shell .pump-progress span { position: relative; background: var(--accent); border-radius: 0; }
+.pump-shell.pump-shell .pump-progress span { position: relative; background: var(--accent-text); border-radius: 0; }
 
 /* Information pages */
 .ox-docs-root.ox-docs-root .ox-docs-section-heading,
@@ -289,15 +295,16 @@
 .fi-root.fi-root .fi-inline-danger :is(strong, svg) { color: var(--negative); }
 .fi-root.fi-root .fi-market-explorer > .fi-inline-state { margin-bottom: 12px; }
 .ox-docs-root.ox-docs-root .ox-docs-warning {
-  border: 1px solid color-mix(in srgb, var(--warning) 32%, var(--line));
-  background: var(--surface-1);
+  border: 1px solid color-mix(in srgb, var(--warning) 28%, var(--line));
+  border-left: 2px solid var(--warning);
+  background: color-mix(in srgb, var(--warning) 6%, transparent);
 }
 .ox-docs-root.ox-docs-root .ox-docs-warning span { color: var(--text-2); }
 
 /* Segmented controls: readable labels and an active segment that reads as raised. */
 .fi-root.fi-root .fi-segmented button, .pump-shell.pump-shell .pump-segmented button { font-size: 13px; }
 .fi-root.fi-root .fi-segmented button.active,
-.pump-shell.pump-shell .pump-segmented button.active { box-shadow: var(--e-1), 0 0 0 1px var(--line-strong); }
+.pump-shell.pump-shell .pump-segmented button.active { box-shadow: var(--edge-highlight), 0 0 0 1px var(--line-strong); }
 
 /* Filter rows: search, sort and segments share one 44px line. Touch keeps its larger targets. */
 @media (hover: hover) and (pointer: fine) {
@@ -332,6 +339,6 @@
 }
 
 @media (max-width: 640px) {
-  /* Same 16px page gutter as 0xPump. */
-  .fi-root.fi-root .fi-page { width: calc(100% - 32px); padding-top: 24px; }
+  /* The gutter comes from the 0xFi page container (the header's inline padding). */
+  .fi-root.fi-root .fi-page { padding-top: 24px; }
 }

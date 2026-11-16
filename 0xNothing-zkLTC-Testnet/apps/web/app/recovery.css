@@ -25,7 +25,7 @@
 .nothing-recovery-code,
 .nothing-recovery-reference {
   color: var(--muted, var(--text-2));
-  font-size: 0.6875rem;
+  font-size: 12px;
   letter-spacing: 0.05em;
 }
 
@@ -64,7 +64,8 @@
   min-height: 3rem;
   padding: 0.875rem 1.125rem;
   border: 1px solid var(--border-strong, var(--line-strong));
-  font-size: 0.75rem;
+  border-radius: var(--r-md);
+  font-size: 14px;
   transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease;
 }
 

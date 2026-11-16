@@ -20,11 +20,6 @@
   .pump-field textarea, .pixel-generator-panel textarea) {
   transition: border-color var(--ui-fast) var(--ui-ease), box-shadow var(--ui-fast) var(--ui-ease);
 }
-:is(.fi-root.fi-root, .pump-shell.pump-shell, .pixel-product.pixel-product)
-  :is(.fi-amount-input, .fi-market-search, .pump-search):focus-within {
-  border-color: var(--pixel-ui-action);
-  box-shadow: 0 0 0 1px var(--pixel-ui-action);
-}
 :is(.fi-root, .pump-shell, .pixel-product) :is(.fi-table-wrap, .pump-table-wrap,
   .fi-swap-asset-results) {
   scrollbar-width: thin;
@@ -32,15 +27,9 @@
   overscroll-behavior: contain;
 }
 :is(.fi-root, .pump-shell, .pixel-product) :is(h1, h2, h3) { text-wrap: balance; }
-.fi-root.fi-root .fi-swap-asset-picker { box-shadow: 6px 6px 0 var(--bg); }
 .fi-root.fi-root .fi-swap-asset-picker-heading { padding-bottom: 8px; border-bottom: 1px solid var(--fi-line); }
 
-.fi-root.fi-root .fi-table th, .pump-shell.pump-shell .pump-table th {
-  background: var(--pixel-ui-raised);
-  color: var(--pixel-ui-muted);
-  font-weight: 400;
-  white-space: nowrap;
-}
+.fi-root.fi-root .fi-table th, .pump-shell.pump-shell .pump-table th { white-space: nowrap; }
 .fi-root.fi-root .fi-table td, .pump-shell.pump-shell .pump-table td { font-variant-numeric: tabular-nums; }
 .fi-root.fi-root .fi-table tbody tr:hover, .pump-shell.pump-shell .pump-table tbody tr:hover { background: var(--hover); }
 .fi-root.fi-root .fi-empty-state, .pump-shell.pump-shell .pump-empty-state,

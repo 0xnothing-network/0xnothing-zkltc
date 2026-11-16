@@ -21,7 +21,7 @@
 .ox-tx-steps li { display: flex; align-items: center; flex: 1; min-width: 0; }
 .ox-tx-steps li:last-child { flex: none; }
 .ox-tx-steps li:not(:last-child)::after { content: ""; flex: 1; height: 2px; margin: 0 6px; border-radius: 2px; background: var(--line-strong); }
-.ox-tx-steps li[data-state="complete"]:not(:last-child)::after { background: var(--accent); }
+.ox-tx-steps li[data-state="complete"]:not(:last-child)::after { background: var(--accent-text); }
 .ox-tx-steps span {
   display: grid;
   place-items: center;
@@ -34,7 +34,7 @@
   font-family: var(--font-num);
   font-size: 12px;
 }
-.ox-tx-steps li[data-state="active"] span { border-color: var(--accent); color: var(--text-1); box-shadow: var(--ring); }
+.ox-tx-steps li[data-state="active"] span { border-color: var(--accent-text); color: var(--text-1); box-shadow: var(--ring); }
 .ox-tx-steps li[data-state="complete"] span { border-color: transparent; background: var(--accent); color: var(--accent-ink); }
 .ox-tx-steps li[data-state="failed"] span { border-color: var(--negative); color: var(--negative); }
 @media (prefers-reduced-motion: no-preference) {

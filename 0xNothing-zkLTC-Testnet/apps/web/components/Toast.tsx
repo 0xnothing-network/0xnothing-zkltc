@@ -177,7 +177,7 @@ function ToastViewport({
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none fixed z-[100] top-4 left-4 w-[calc(100dvw-2rem)] max-w-[calc(100dvw-2rem)] sm:left-auto sm:right-4 sm:w-full sm:max-w-sm flex flex-col gap-2"
+      className="pointer-events-none fixed z-[100] top-[68px] left-4 w-[calc(100dvw-2rem)] max-w-[calc(100dvw-2rem)] sm:left-auto sm:right-4 sm:w-full sm:max-w-sm flex flex-col gap-2"
     >
       {toasts.map((toast) => (
         <ToastCard key={toast.id} toast={toast} onDismiss={onDismiss} onPause={onPause} onResume={onResume} />
@@ -186,24 +186,20 @@ function ToastViewport({
   );
 }
 
-const KIND_STYLES: Record<ToastKind, { ring: string; icon: string; iconColor: string }> = {
+const KIND_STYLES: Record<ToastKind, { icon: string; iconColor: string }> = {
   success: {
-    ring: "ring-(--positive)/40 bg-(--surface-2)/95 border-(--positive)/30",
     icon: "M5 13l4 4L19 7",
     iconColor: "text-(--positive)",
   },
   error: {
-    ring: "ring-(--negative)/40 bg-(--surface-2)/95 border-(--negative)/30",
     icon: "M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
     iconColor: "text-(--negative)",
   },
   warning: {
-    ring: "ring-(--warning)/40 bg-(--surface-2)/95 border-(--warning)/30",
     icon: "M12 9v3m0 4h.01M5.07 19h13.86a2 2 0 001.74-3L13.74 4a2 2 0 00-3.48 0L3.33 16a2 2 0 001.74 3z",
     iconColor: "text-(--warning)",
   },
   info: {
-    ring: "ring-(--accent)/40 bg-(--surface-2)/95 border-(--accent)/30",
     icon: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
     iconColor: "text-(--accent-text)",
   },
@@ -237,9 +233,7 @@ function ToastCard({
       }}
       className={[
         "toast-card pointer-events-auto",
-        "border backdrop-blur-md shadow-[6px_6px_0_0_var(--pixel-shadow),0_24px_70px_rgba(0,0,0,0.42)]",
-        "ring-1 px-3.5 py-3 min-w-0",
-        styles.ring,
+        "px-3.5 py-3 min-w-0",
       ].join(" ")}
       style={{ animation: "toast-in 220ms cubic-bezier(0.16, 1, 0.3, 1)" }}
     >

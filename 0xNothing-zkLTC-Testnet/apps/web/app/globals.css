@@ -228,23 +228,6 @@ input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.1);
 }
 
-/* Pixel spinner */
-@keyframes pixel-spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Mobile menu animation */
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 /* ============================================
    Toast Notifications
    ============================================ */
@@ -259,98 +242,16 @@ input[type="range"]::-webkit-slider-thumb:hover {
   }
 }
 
-@keyframes toast-out {
-  from {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.98);
-  }
-}
-
 .toast-card {
-  border-radius: 0;
+  border-radius: var(--r-md);
   /* Animation declared inline so we can use ease curve + cubic-bezier. */
   transform-origin: top right;
   will-change: transform, opacity;
 }
 
-.toast-card[data-leaving="true"] {
-  animation: toast-out 160ms ease-in forwards;
-  pointer-events: none;
-}
-
-/* Page transition animations */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fadeInUp {
-  animation: fadeInUp 0.4s ease-out forwards;
-}
-
-.animate-fadeInUp-delay-2 {
-  opacity: 0;
-  animation: fadeInUp 0.5s ease-out 0.2s forwards;
-}
-
-/* NFT Grid Cards Animation */
-
-@keyframes gridFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes cardSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* Pixel page animations */
-.hero-fade-in {
-  opacity: 0;
-  transform: translateY(20px);
-  animation: pixelFadeUp 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-.hero-fade-in { animation-delay: 0.05s; }
-.hero-fade-in-delay { animation-delay: 0.2s; opacity: 0; transform: translateY(20px); animation: pixelFadeUp 0.7s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards; }
-
-@keyframes pixelFadeUp {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  .hero-fade-in,
-.hero-fade-in-delay,
-.animate-fadeInUp,
-.animate-fadeInUp-delay-2 {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-
-  .animate-slideDown,
-.toast-card {
+  .toast-card {
     animation: none !important;
     transform: none !important;
   }
@@ -422,11 +323,6 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .pixel-shell {
   position: relative;
   isolation: isolate;
-  background:
-    linear-gradient(color-mix(in srgb, var(--accent) 3.5%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--accent) 3.5%, transparent) 1px, transparent 1px),
-    var(--bg);
-  background-size: 32px 32px;
 }
 
 .pixel-loader-card {
@@ -484,9 +380,9 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .pixel-loader-label {
   color: var(--text-3);
-  font-family: var(--font-brand);
-  font-size: 11px;
-  letter-spacing: .14em;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  letter-spacing: 0;
 }
 
 @keyframes pixelLoaderLogo {
@@ -534,7 +430,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
 html,
 body {
   background: var(--background);
-  overflow-x: hidden;
+  /* clip, not hidden: hidden made body a scroll container, so sticky headers stuck to it and scrolled away. */
+  overflow-x: clip;
 }
 
 body {

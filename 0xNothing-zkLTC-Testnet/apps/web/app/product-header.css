@@ -70,7 +70,7 @@
   font-weight: 500;
   white-space: nowrap;
 }
-.ox-header .ox-switcher a::before { content: ""; width: 6px; height: 6px; border-radius: 2px; background: var(--line-strong); }
+.ox-header .ox-switcher a::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 1px; background: var(--line-strong); }
 .ox-header .ox-switcher a[data-product="pump"]::before { background: var(--accent-pump); }
 .ox-header .ox-switcher a[data-product="fi"]::before { background: var(--accent-fi); }
 .ox-header .ox-switcher a[data-product="pixel"]::before { background: var(--accent-pixel); }
@@ -80,7 +80,8 @@
 .ox-header .ox-switcher a:hover:not(.active) { color: var(--text-1); }
 
 /* Primary navigation: the active item carries the accent underline. */
-.ox-nav { display: flex; align-items: stretch; align-self: stretch; gap: 0; min-width: 0; margin-left: 4px; }
+/* min-width 0 plus a horizontal clip: links that do not fit are cut at the nav's own edge, never under the right cluster. */
+.ox-nav { display: flex; align-items: stretch; align-self: stretch; gap: 0; min-width: 0; margin-left: 4px; margin-right: 4px; overflow-x: clip; overflow-clip-margin: 4px; }
 .ox-header .ox-nav-link {
   position: relative;
   display: inline-flex;
@@ -102,10 +103,18 @@
   bottom: -1px;
   height: 2px;
   border-radius: 2px 2px 0 0;
-  background: var(--accent);
+  background: var(--accent-text);
 }
 
+/*
+ * Beside the desktop nav the right cluster never shrinks; with the 12px row gap and the nav's
+ * 4px margin it keeps 16px from the last link. Without the nav (900px and below) it may shrink
+ * so the network pill gives way and the menu button stays reachable.
+ */
 .ox-header-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; min-width: 0; }
+@media (min-width: 901px) {
+  .ox-header-actions { flex: none; }
+}
 .ox-network-pill {
   display: inline-flex;
   align-items: center;
@@ -147,7 +156,7 @@
 .ox-header .ox-wallet-button:hover { border-color: var(--line-strong); }
 .ox-wallet-balances { display: inline-flex; gap: 10px; padding-right: 10px; border-right: 1px solid var(--line); }
 .ox-wallet-balances > span { display: inline-flex; align-items: baseline; gap: 4px; white-space: nowrap; }
-.ox-wallet-balances small { color: var(--text-3); font-family: var(--font-ui); font-size: 11px; }
+.ox-wallet-balances small { color: var(--text-3); font-family: var(--font-ui); font-size: 12px; }
 .ox-wallet-avatar {
   width: 18px;
   height: 18px;
@@ -168,6 +177,10 @@
 .ox-wallet-menu-summary { display: grid; gap: 2px; padding: 10px 10px 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
 .ox-wallet-menu-summary span { color: var(--text-3); font-size: 12px; }
 .ox-wallet-menu-summary strong { font-family: var(--font-num); font-size: 14px; font-weight: 500; }
+/* Balances move from the button into the menu where the header row is too narrow for them (below 1440px). */
+.ox-wallet-menu-balances { display: none; gap: 2px; margin-top: 6px; }
+.ox-wallet-menu-summary .ox-wallet-menu-balances span { display: flex; align-items: baseline; gap: 4px; color: var(--text-3); font-size: 12px; white-space: nowrap; }
+.ox-wallet-menu-balances b { color: var(--text-1); font-family: var(--font-num); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .ox-header .ox-wallet-menu :is(button, a) {
   display: flex;
   align-items: center;
@@ -220,29 +233,71 @@
 .ox-theme-toggle, .ox-menu-button { position: relative; }
 @media (pointer: coarse) {
   .ox-theme-toggle::after, .ox-menu-button::after { content: ""; position: absolute; inset: -4px; }
+  .ox-header :is(.ox-connect, .ox-wallet-button, .ox-network-pill) { min-height: 40px; }
+  .ox-header .ox-switcher-mobile a { min-height: 40px; }
 }
 .ox-header :is(a, button):focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
 
-.ox-mobile-panel { display: grid; gap: 12px; padding: 12px clamp(14px, 2.4vw, 32px) 16px; border-top: 1px solid var(--line); }
+.ox-mobile-panel {
+  display: grid;
+  gap: 12px;
+  max-height: calc(100dvh - 56px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px clamp(14px, 2.4vw, 32px) 16px;
+  border-top: 1px solid var(--line);
+}
 .ox-mobile-nav { display: grid; gap: 2px; }
 .ox-header .ox-mobile-nav .ox-nav-link { min-height: 44px; border-radius: var(--r-md); }
-.ox-header .ox-mobile-nav .ox-nav-link.active { background: var(--surface-2); box-shadow: inset 2px 0 0 var(--accent); }
+.ox-header .ox-mobile-nav .ox-nav-link.active { background: var(--surface-2); }
+/* Active row: a straight 2px bar inset 8px top and bottom, not a border bent by the row radius. */
 .ox-header .ox-mobile-nav .ox-nav-link.active::after { display: none; }
+.ox-header .ox-mobile-nav .ox-nav-link.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--accent-text);
+}
 .ox-switcher-mobile { justify-content: space-between; }
 .ox-header .ox-switcher-mobile a { flex: 1; justify-content: center; }
 
+@media (max-width: 1439.98px) {
+  .ox-wallet-balances { display: none; }
+  .ox-wallet-menu-balances { display: grid; }
+}
+/* The ok pill collapses to its status mark; the label stays for screen readers and in the title. */
+@media (max-width: 1319.98px) {
+  .ox-network-pill[data-state="ok"] { padding: 0 12px; gap: 0; }
+  .ox-network-pill[data-state="ok"] .ox-network-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
 @media (max-width: 1240px) {
   .ox-header-inner > .ox-switcher { display: none; }
-}
-@media (max-width: 1080px) {
-  .ox-wallet-balances { display: none; }
+  /* Between 901 and 1240px the menu button opens a panel with the product switcher only. */
+  .ox-menu-button { display: grid; }
 }
 @media (max-width: 900px) {
   .ox-nav { display: none; }
-  .ox-menu-button { display: grid; }
 }
-@media (min-width: 901px) {
+@media (min-width: 901px) and (max-width: 1240px) {
+  .ox-mobile-nav { display: none; }
+}
+@media (min-width: 1241px) {
   .ox-mobile-panel { display: none; }
+}
+/* 0xFi shows its bottom tab bar at 760px and below, so its menu keeps only the product switcher. */
+@media (max-width: 760px) {
+  .ox-header[data-product="fi"] .ox-mobile-nav { display: none; }
 }
 @media (max-width: 560px) {
   .ox-network-pill[data-state="ok"] { display: none; }

@@ -63,8 +63,18 @@ export function ProductHeader({ product, nav, isActive, notify, className = "" }
     args: address ? [address] : undefined, chainId: CHAIN_ID, query: { enabled: readsEnabled },
   });
   const current = PRODUCTS.find((entry) => entry.id === product)!;
+  const nusdBalance = compact(nusd.data, 18, 2);
+  const nativeBalance = native.data ? compact(native.data.value, native.data.decimals, 3) : "--";
 
   useEffect(() => setMounted(true), []);
+
+  // Disconnect unmounts the wallet button; once the Connect button has rendered, focus moves there instead of <body>.
+  const focusConnect = useRef(false);
+  useEffect(() => {
+    if (isConnected || !focusConnect.current) return;
+    focusConnect.current = false;
+    headerRef.current?.querySelector<HTMLElement>(".ox-connect")?.focus();
+  }, [isConnected]);
 
   const closeWallet = useCallback((restoreFocus = false) => {
     setWalletOpen(false);
@@ -145,7 +155,7 @@ export function ProductHeader({ product, nav, isActive, notify, className = "" }
     return (
       <Link key={item.href} href={item.href} className={`ox-nav-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined}
         onClick={mobile ? () => setMenuOpen(false) : undefined}>
-        {mobile ? item.icon : null}{item.label}
+        {item.label}
       </Link>
     );
   });
@@ -171,16 +181,16 @@ export function ProductHeader({ product, nav, isActive, notify, className = "" }
               <i aria-hidden="true" /><span className="ox-network-label">{switching ? "Switching" : "Switch to LiteForge"}</span>
             </button>
           ) : (
-            <span className="ox-network-pill" data-state="ok" title={`LiteForge testnet · chain ${CHAIN_ID}`}><i aria-hidden="true" />LiteForge</span>
+            <span className="ox-network-pill" data-state="ok" title={`LiteForge testnet · chain ${CHAIN_ID}`}><i aria-hidden="true" /><span className="ox-network-label">LiteForge</span></span>
           )}
           {mounted && isConnected && address ? (
             <div className="ox-wallet" onBlur={(event) => { const next = event.relatedTarget as Node | null; if (walletOpen && next && !event.currentTarget.contains(next)) closeWallet(); }}>
               <button ref={walletButton} type="button" className="ox-wallet-button" aria-haspopup="menu" aria-expanded={walletOpen} aria-controls="ox-wallet-menu" title={address}
                 onClick={() => setWalletOpen((open) => !open)}>
                 {!wrongChain ? (
-                  <span className="ox-wallet-balances" aria-label="Wallet balances">
-                    <span>{compact(nusd.data, 18, 2)}<small>NUSD</small></span>
-                    <span>{native.data ? compact(native.data.value, native.data.decimals, 3) : "--"}<small>zkLTC</small></span>
+                  <span className="ox-wallet-balances">
+                    <span>{nusdBalance}{" "}<small>NUSD</small></span>
+                    <span>{nativeBalance}{" "}<small>zkLTC</small></span>
                   </span>
                 ) : null}
                 <span className="ox-wallet-avatar" aria-hidden="true" style={{ "--seed": `${parseInt(address.slice(2, 8), 16) % 360}deg` } as React.CSSProperties} />
@@ -188,11 +198,19 @@ export function ProductHeader({ product, nav, isActive, notify, className = "" }
                 <CaretDown size={12} aria-hidden="true" />
               </button>
               {walletOpen ? (
-                <div id="ox-wallet-menu" ref={walletMenu} className="ox-wallet-menu" role="menu" onKeyDown={onWalletMenuKey}>
-                  <div className="ox-wallet-menu-summary"><span>Connected wallet</span><strong>{shortenAddress(address)}</strong></div>
+                <div id="ox-wallet-menu" ref={walletMenu} className="ox-wallet-menu" role="menu" aria-label="Wallet" onKeyDown={onWalletMenuKey}>
+                  <div className="ox-wallet-menu-summary" role="none">
+                    <span>Connected wallet</span><strong>{shortenAddress(address)}</strong>
+                    {!wrongChain ? (
+                      <span className="ox-wallet-menu-balances">
+                        <span><b>{nusdBalance}</b>{" "}NUSD</span>
+                        <span><b>{nativeBalance}</b>{" "}zkLTC</span>
+                      </span>
+                    ) : null}
+                  </div>
                   <button type="button" role="menuitem" onClick={() => void copyAddress()}><Copy size={15} aria-hidden="true" />Copy address</button>
-                  <a role="menuitem" href={getAddressExplorerUrl(address)} target="_blank" rel="noopener noreferrer"><ArrowSquareOut size={15} aria-hidden="true" />View on explorer</a>
-                  <button type="button" role="menuitem" className="danger" onClick={() => { closeWallet(); disconnect(); }}><SignOut size={15} aria-hidden="true" />Disconnect</button>
+                  <a role="menuitem" href={getAddressExplorerUrl(address)} target="_blank" rel="noopener noreferrer" onClick={() => closeWallet()}><ArrowSquareOut size={15} aria-hidden="true" />View on explorer</a>
+                  <button type="button" role="menuitem" className="danger" onClick={() => { focusConnect.current = true; closeWallet(); disconnect(); }}><SignOut size={15} aria-hidden="true" />Disconnect</button>
                 </div>
               ) : null}
             </div>
