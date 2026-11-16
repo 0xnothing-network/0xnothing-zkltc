@@ -66,17 +66,14 @@ export const AIPromptGenerator = memo(function AIPromptGenerator({ gridSize, onA
   );
 
   return (
-    <div className="pixel-generator-panel bg-(--surface-1) rounded-2xl p-3 sm:p-5 border border-(--line)">
-      <div className="flex items-center gap-2 mb-3">
-        <svg width="18" height="18" fill="none" stroke="#6366F1" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
-          <path d="M12 6v6l4 2" />
-        </svg>
-        <h3 id="pixel-grid-parser-title" className="text-(--text-1) font-bold text-sm" style={{ fontFamily: "var(--font-ui)" }}>
+    <div className="pixel-generator-panel bg-(--surface-1) rounded-2xl border border-(--line) overflow-hidden">
+      <div className="px-4 py-3 border-b border-(--line)">
+        <h3 id="pixel-grid-parser-title" className="text-(--text-1) font-bold text-sm uppercase" style={{ fontFamily: "var(--font-ui)" }}>
           Grid Data Parser
         </h3>
       </div>
 
+      <div className="p-3 sm:p-4">
       <textarea
         value={generated}
         onChange={(e) => setGenerated(e.target.value)}
@@ -102,15 +99,16 @@ export const AIPromptGenerator = memo(function AIPromptGenerator({ gridSize, onA
         aria-disabled={!generated.trim() || undefined}
         aria-live="polite"
         className={
-          "w-full py-3 sm:py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all mt-2 " +
+          "w-full py-3 sm:py-2.5 rounded-xl font-bold text-xs uppercase transition-all mt-2 " +
           (parsed
-            ? "bg-(--positive) text-(--text-1)"
+            ? "border border-(--positive) bg-transparent text-(--positive)"
             : "bg-(--surface-2) border border-(--line) text-(--text-3) hover:bg-(--surface-3) hover:text-(--text-1)")
         }
         style={{ fontFamily: "var(--font-ui)" }}
       >
         {parsed ? "APPLIED!" : "Apply to Canvas"}
       </button>
+      </div>
     </div>
   );
 });

@@ -9,9 +9,15 @@
 
 /* Studio */
 .pixel-studio-intro { border-bottom: 1px solid var(--line); }
-.pixel-studio-intro-inner { max-width: 1440px; padding-block: 28px; }
+.pixel-studio-intro-inner { max-width: 1440px; padding-block: 12px; }
 .pixel-studio-intro-inner p { margin-left: 0; max-width: 68ch; color: var(--text-2); font-size: 14px; line-height: 1.6; }
 .pixel-product :is(.pixel-studio-intro h1, .pixel-collection-heading h1) { margin-bottom: 8px; }
+/* One page title on the editor, gallery and market: 28px on phones, 32px from
+   768px. Same weight as skin.css's (0,3,1) clamp, and this file loads later. */
+.pixel-product.pixel-product :is(.pixel-studio-intro, .pixel-collection-heading) h1 { font-size: 28px; line-height: 1.15; }
+@media (min-width: 768px) {
+  .pixel-product.pixel-product :is(.pixel-studio-intro, .pixel-collection-heading) h1 { font-size: 32px; }
+}
 .pixel-product .pixel-workspace { max-width: 1440px; }
 .pixel-product .pixel-workspace-grid { gap: 16px; align-items: start; }
 .pixel-product .pixel-drawing-column {
@@ -22,12 +28,16 @@
   box-shadow: var(--e-1);
 }
 .pixel-product .pixel-tools-panel { padding: 18px; gap: 20px; }
-.pixel-product .pixel-tools-panel > :not(:first-child) { padding-top: 20px; border-top: 1px solid var(--line); }
+/* Section rules between the tool groups; the buttons keep their own box. */
+.pixel-product .pixel-tools-panel > div:not(:first-child) { padding-top: 20px; border-top: 1px solid var(--line); }
 .pixel-product .pixel-tools-panel :is(p, button) { font-variant-numeric: tabular-nums; }
 .pixel-product .pixel-color-button { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-1) 10%, transparent); }
-.pixel-product .pixel-mint-panel > div:first-child { padding: 16px 20px; border-color: var(--line); }
-.pixel-product .pixel-mint-panel > div:nth-child(2) { padding: 20px; }
-.pixel-product .pixel-generator-panel { padding: 20px; }
+/* Mint and parser panels share one header band with a 1px line below. */
+.pixel-product :is(.pixel-mint-panel, .pixel-generator-panel) > div:first-child { padding: 16px 20px; border-color: var(--line); }
+.pixel-product :is(.pixel-mint-panel, .pixel-generator-panel) > div:nth-child(2) { padding: 20px; }
+/* The parser title is uppercase like MINT YOUR ARTWORK; skin.css (0,2,1) sets
+   text-transform: none on every pixel h3, so the Tailwind class alone loses. */
+.pixel-product.pixel-product .pixel-generator-panel h3 { text-transform: uppercase; }
 .pixel-product .pixel-generator-panel textarea { min-height: 100px; padding: 12px; font-size: 13px; line-height: 1.6; }
 
 /* Collection and market pages */
@@ -72,5 +82,10 @@
   .pixel-product .nft-card > a:first-child { padding: 6px; }
   .pixel-product .nft-card > div:last-child { padding: 12px; }
   .pixel-product .pixel-collection-heading { padding-bottom: 20px; margin-bottom: 20px; }
-  .pixel-product .pixel-tools-panel { padding: 16px; }
+  .pixel-product .pixel-tools-panel { padding: 12px; }
+  /* Drawing first: palette and current colour right under the canvas, then the
+     grid size; Import and Clear move to the bottom. */
+  .pixel-product .pixel-tools-panel > .pixel-tools-import { order: 1; }
+  .pixel-product .pixel-tools-panel > .pixel-tools-clear { order: 2; }
+  .pixel-product .pixel-tools-panel > div.pixel-tools-palette { padding-top: 0; border-top: 0; }
 }

@@ -348,7 +348,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
 
   if (!mounted) {
     return (
-      <div className="pixel-panel flex h-32 items-center justify-center p-4" role="status" aria-label="Mint panel loading">
+      <div className="pixel-panel flex min-h-[460px] items-center justify-center p-4" role="status" aria-label="Mint panel loading">
         <PixelLoadingIndicator compact />
       </div>
     );
@@ -369,11 +369,9 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
         <div
           className="relative rounded-xl overflow-hidden border"
           style={{
-            background: "#0F0F23",
+            background: "var(--surface-2)",
             aspectRatio: "1 / 1",
-            borderColor: hasDrawing
-              ? "rgba(99,102,241,0.15)"
-              : "rgba(255,255,255,0.05)",
+            borderColor: hasDrawing ? "var(--line-strong)" : "var(--line)",
           }}
         >
           {hasDrawing && previewBase64 ? (
@@ -386,7 +384,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
             />
           ) : hasDrawing ? (
             <div className="grid h-full w-full place-items-center" role="status" aria-label="Preparing preview">
-              <span aria-hidden="true" className="h-7 w-7 animate-spin rounded-full border-2 border-(--text-1)/15 border-t-white/70" />
+              <span aria-hidden="true" className="h-7 w-7 animate-spin rounded-full border-2 border-(--text-1)/15 border-t-(--text-2)" />
             </div>
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center gap-2">
@@ -394,15 +392,17 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
                 width="40"
                 height="40"
                 fill="none"
-                stroke="rgba(255,255,255,0.1)"
+                stroke="currentColor"
                 strokeWidth="1"
                 viewBox="0 0 24 24"
+                className="text-(--line-strong)"
+                aria-hidden="true"
               >
                 <rect x="3" y="3" width="18" height="18" rx="2" />
                 <path d="M3 9h18M9 21V9" />
               </svg>
               <p
-                className="text-(--text-3) text-xs text-center px-4"
+                className="text-(--text-2) text-xs text-center px-4"
                 style={{ fontFamily: "var(--font-ui)" }}
               >
                 Draw something to see preview
@@ -413,22 +413,22 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
             <div className="absolute top-2 right-2 flex items-center gap-1.5" role="status" aria-live="polite">
               {isCheckingOriginal ? (
                 <span
-                  className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-black/40 text-(--accent-text)"
+                  className="flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-(--line-strong) bg-(--surface-1) text-(--text-2)"
                   style={{ fontFamily: "var(--font-ui)" }}
                 >
-                  <span className="w-2.5 h-2.5 border border-(--accent)/50 border-t-indigo-400 rounded-full animate-spin" />
+                  <span className="w-2.5 h-2.5 border border-(--line-strong) border-t-(--text-2) rounded-full animate-spin" />
                   CHECKING
                 </span>
               ) : isOriginal === false || originalCheckFailed ? (
                 <span
-                  className="text-xs px-2 py-1 rounded-md bg-(--negative)/20 text-(--negative) border border-(--negative)/30 font-bold"
+                  className="text-xs px-2 py-1 rounded-md bg-(--surface-1) text-(--negative) border border-(--negative) font-bold"
                   style={{ fontFamily: "var(--font-ui)" }}
                 >
                   {originalCheckFailed ? "CHECK FAILED" : "TAKEN"}
                 </span>
               ) : isOriginal === true ? (
                 <span
-                  className="text-xs px-2 py-1 rounded-md bg-(--positive)/20 text-(--positive) border border-(--positive)/30 font-bold"
+                  className="text-xs px-2 py-1 rounded-md bg-(--surface-1) text-(--positive) border border-(--positive) font-bold"
                   style={{ fontFamily: "var(--font-ui)" }}
                 >
                   ORIGINAL
@@ -454,28 +454,13 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
           </div>
         </div>
 
-        <p className="text-xs text-(--text-2)">{runCount.toLocaleString()}/4,096 color runs · fully on-chain</p>
+        <p className="text-xs text-(--text-2)">{runCount.toLocaleString()}/4,096 color runs · <span className="whitespace-nowrap">fully on-chain</span></p>
         {encodingError ? <p className="text-xs text-(--negative)" role="alert">{encodingError}</p> : null}
         {pixelUtf8Bytes(name.trim()) > 64 || pixelUtf8Bytes(description) > 1024 ? <p className="text-xs text-(--negative)" role="alert">Name: {pixelUtf8Bytes(name.trim())}/64 UTF-8 bytes · Description: {pixelUtf8Bytes(description)}/1024 UTF-8 bytes</p> : null}
         <div className="h-px bg-(--surface-3)" />
 
         {!isConnected ? (
-          <div className="flex items-center gap-3 py-1">
-            <div className="w-9 h-9 rounded-xl bg-(--accent)/10 border border-(--accent)/20 flex items-center justify-center flex-shrink-0">
-              <svg
-                width="16"
-                height="16"
-                fill="none"
-                stroke="#6366F1"
-                strokeWidth="1.5"
-                viewBox="0 0 24 24"
-              >
-                <path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7" />
-                <path d="M16 16l2 2 4-4" />
-              </svg>
-            </div>
-            <p className="text-(--text-3) text-sm">Connect wallet to mint</p>
-          </div>
+          <p className="py-1 text-(--text-2) text-sm">Connect wallet to mint</p>
         ) : (
           <>
             <div>
@@ -484,6 +469,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Artwork name"
+                aria-label="Artwork name"
                 maxLength={64}
                 aria-describedby="pixel-mint-bytes"
                 aria-invalid={pixelUtf8Bytes(name.trim()) > 64 || undefined}
@@ -498,6 +484,7 @@ export const MintPanel = memo(function MintPanel({ pixelData, gridSize, isCanvas
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Description (stored on-chain)"
+                aria-label="Description"
                 maxLength={1024}
                 rows={2}
                 aria-describedby="pixel-mint-bytes"

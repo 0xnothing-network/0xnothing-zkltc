@@ -56,17 +56,17 @@ export default function GalleryPage() {
   }, [data, sort]);
 
   return (
-    <div className="pixel-collection-page min-h-[calc(100vh-64px)] px-3 py-6 sm:px-5 sm:py-10 max-w-7xl mx-auto" style={{ fontFamily: "var(--font-ui)" }}>
+    <div className="pixel-collection-page min-h-[calc(100dvh-64px)] px-3 py-6 sm:px-5 sm:py-10 max-w-7xl mx-auto" style={{ fontFamily: "var(--font-ui)" }}>
       <div className="pixel-collection-heading mb-6 sm:mb-10 flex items-end justify-between flex-wrap gap-4">
         <div>
           <h1
-            className="hero-fade-in text-2xl sm:text-4xl font-bold text-(--text-1) mb-2"
+            className="text-(--text-1) mb-2"
             style={{ fontFamily: "var(--font-ui)" }}
           >
-            MY GALLERY
+            My gallery
           </h1>
           <p
-            className="hero-fade-in-delay text-(--text-2) text-sm"
+            className="text-(--text-2) text-sm"
             style={{ fontFamily: "var(--font-ui)" }}
           >
             Your 0xPIXEL collection
@@ -74,7 +74,7 @@ export default function GalleryPage() {
         </div>
         <Link
           href="/0xpixel"
-          className="animate-fadeInUp-delay-2 pixel-btn pixel-btn-indigo"
+          className="pixel-btn pixel-btn-indigo"
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -123,6 +123,7 @@ export default function GalleryPage() {
               {sorted.length} {sorted.length === 1 ? "pixel" : "pixels"}
             </div>
             <select
+              aria-label="Sort"
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
               className="bg-(--surface-2) border border-(--line) text-(--text-1) text-sm rounded-lg px-3 py-2.5 sm:px-4 sm:py-2 focus:outline-none focus:border-(--accent) transition-colors cursor-pointer"
@@ -153,7 +154,8 @@ export default function GalleryPage() {
 
 function NotConnected() {
   return (
-    <div className="pixel-collection-empty animate-fadeInUp text-center py-20">
+    // A compact box: product.css sets a 320px floor for empty states, the inline style beats it.
+    <div className="pixel-collection-empty text-center" style={{ minHeight: 200, padding: "32px 24px" }}>
       <h2
         className="text-xl font-bold text-(--text-1) mb-2"
         style={{ fontFamily: "var(--font-ui)" }}
@@ -161,7 +163,7 @@ function NotConnected() {
         Connect Your Wallet
       </h2>
       <p
-        className="text-(--text-2) max-w-sm mx-auto"
+        className="text-(--text-2) max-w-2xl mx-auto"
         style={{ fontFamily: "var(--font-ui)" }}
       >
         Connect a wallet to view your 0xPIXEL collection
@@ -172,14 +174,14 @@ function NotConnected() {
 
 function EmptyState() {
   return (
-    <div className="pixel-collection-empty animate-fadeInUp text-center py-20">
-      <div className="w-24 h-24 mx-auto mb-6 bg-(--surface-1) rounded-2xl flex items-center justify-center border border-(--line)">
+    <div className="pixel-collection-empty text-center py-20">
+      <div className="mx-auto mb-6 text-(--text-3)">
         <svg
           width="48"
           height="48"
           viewBox="0 0 24 24"
           fill="none"
-          stroke="#6366F1"
+          stroke="currentColor"
           strokeWidth="1.5"
         >
           <path d="M3 3h18v18H3z" />
@@ -223,7 +225,7 @@ function ErrorState({
 }) {
   return (
     <div
-      className="animate-fadeInUp text-center py-16 bg-(--surface-1) border border-(--negative)/30 rounded-2xl"
+      className="text-center py-16 bg-(--surface-1) border border-(--negative)/30 rounded-2xl"
       role="alert"
     >
       <p

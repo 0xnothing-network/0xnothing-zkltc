@@ -33,7 +33,17 @@ const NO_OFFERS = { offers: false } as const;
 const NO_LISTINGS = { listings: false } as const;
 const HEADER_ONLY = { listings: false, offers: false } as const;
 
-function amount(value: bigint) { return formatUnits(value, 18); }
+// Display only, en-US grouping. Prices keep every decimal; balances show 4 decimals
+// (cut, so a balance never reads higher than it is) and the volume 2; the full value goes in a title.
+function grouped(text: string) {
+  const [whole, fraction] = text.split(".");
+  return `${BigInt(whole).toLocaleString("en-US")}${fraction ? `.${fraction}` : ""}`;
+}
+function amount(value: bigint) { return grouped(formatUnits(value, 18)); }
+function shortAmount(value: bigint, decimals = 4, round = false) {
+  const unit = 10n ** BigInt(18 - decimals);
+  return grouped(formatUnits((round ? value + unit / 2n : value) / unit, decimals));
+}
 
 function ArtworkPreview({ collection, tokenId, name, compact = false }: { collection: Address; tokenId: bigint | string; name: string; compact?: boolean }) {
   const [failed, setFailed] = useState(false);
@@ -183,6 +193,9 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
   const tradeStep = !tradeAsset ? 0 : !tradeAmount ? 1 : 2;
   const listingBurn = state && listedPrice ? listedPrice * BigInt(state.burnBps) / 10_000n : undefined;
   const listingCreatorFee = state && listedPrice ? listedPrice * BigInt(state.creatorBps) / 10_000n : undefined;
+  const walletValues = address && state && !market.isError
+    ? { total: state.balance + state.credit, balance: state.balance, credit: state.credit }
+    : undefined;
   function nftName(collection: Address, tokenId: bigint) {
     return artwork.data?.tokens[nusdArtworkKey(collection, tokenId)]?.name || `0xPixel #${tokenId}`;
   }
@@ -241,7 +254,7 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
   return <section className={styles.page} aria-labelledby="nusd-market-title" lang="en">
     <div className={styles.topline}>
       <span className={styles.eyebrow}>0xPixel / marketplace</span>
-      <span className={styles.network}><span aria-hidden="true" />LiteForge · Testnet</span>
+      <span className={styles.network}>LiteForge · Testnet</span>
     </div>
     <header className={styles.hero}>
       <div className={styles.intro}>
@@ -256,13 +269,13 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
       <aside className={styles.walletPanel} aria-label="Your NUSD balances">
         <div className={styles.walletHeading}><span><Wallet size={18} aria-hidden="true" />Trading wallet</span><span className={styles.small}>{address ? shortenAddress(address) : "Not connected"}</span></div>
         <p className={styles.balanceLabel}>Spendable NUSD</p>
-        <p className={styles.totalBalance}>{address && state && !market.isError ? amount(state.balance + state.credit) : "—"}<span>NUSD</span></p>
+        <p className={styles.totalBalance}>{walletValues ? <span className={styles.balanceValue} title={`${amount(walletValues.total)} NUSD`}>{shortAmount(walletValues.total)}</span> : <span className={styles.emptyValue}>—</span>}<span>NUSD</span></p>
         <dl className={styles.walletBreakdown}>
-          <div><dt>In wallet</dt><dd>{address && state && !market.isError ? amount(state.balance) : "—"}</dd></div>
-          <div><dt>Marketplace credits</dt><dd>{address && state && !market.isError ? amount(state.credit) : "—"}</dd></div>
+          <div><dt>In wallet</dt><dd title={walletValues ? `${amount(walletValues.balance)} NUSD` : undefined}>{walletValues ? shortAmount(walletValues.balance) : <span className={styles.emptyValue}>—</span>}</dd></div>
+          <div><dt>Marketplace credits</dt><dd title={walletValues ? `${amount(walletValues.credit)} NUSD` : undefined}>{walletValues ? shortAmount(walletValues.credit) : <span className={styles.emptyValue}>—</span>}</dd></div>
         </dl>
         {NUSD_MARKETPLACE_ADDRESS && (!address
-          ? <button className={styles.primaryButton} disabled={connection.isPending} onClick={() => {
+          ? <button className={styles.secondaryButton} disabled={connection.isPending} onClick={() => {
               const connector = connection.connectors.find((item) => item.type === "injected") ?? connection.connectors[0];
               if (!connector) { setMessage("Install a browser wallet first."); return; }
               void connection.connectAsync({ connector }).catch(() => setMessage("Could not connect wallet. Check the request in your wallet."));
@@ -286,7 +299,7 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
       <dl className={styles.marketStats}>
         <div><dt>Active listings</dt><dd>{state ? state.listingCount.toString() : "—"}</dd></div>
         <div><dt>Active offers</dt><dd>{state ? state.offerCount.toString() : "—"}</dd></div>
-        <div><dt>Trading volume</dt><dd>{state ? amount(state.volume) : "—"}<span>NUSD</span></dd></div>
+        <div><dt>Trading volume</dt><dd title={state ? `${amount(state.volume)} NUSD` : undefined}>{state ? shortAmount(state.volume, 2, true) : "—"}<span>NUSD</span></dd></div>
         <div><dt>Sale fee</dt><dd>{state ? `${state.feeBps / 100}%` : "—"}<span>{state ? `${state.burnBps / 100}% burned · ${state.creatorBps / 100}% creator` : ""}</span></dd></div>
       </dl>
 
@@ -321,9 +334,9 @@ export function NusdMarketplaceDashboard({ initialTokenKey = "" }: { initialToke
               return <article className={styles.nftCard} key={listing.id.toString()} aria-label={name}>
                 <a className={styles.artLink} href={getTokenExplorerUrl(listing.collection, listing.tokenId)} target="_blank" rel="noopener noreferrer" aria-label={`View ${name} on explorer`}><ArtworkPreview key={nusdArtworkKey(listing.collection, listing.tokenId)} collection={listing.collection} tokenId={listing.tokenId} name={name} /><span className={styles.tokenBadge}>#{listing.tokenId.toString()}</span><span className={styles.artExternal}><ArrowUpRight size={18} aria-hidden="true" /></span></a>
                 <div className={styles.cardBody}>
-                  <div className={styles.cardEyebrow}><span>0xPixel NFT</span><span title={listing.collection}>{shortenAddress(listing.collection)}</span></div>
                   <h3 title={name}>{name}</h3>
-                  <p className={styles.seller}>{isSeller ? "Listed by you" : `Seller · ${shortenAddress(listing.seller)}`}</p>
+                  <p className={styles.cardMeta} title={listing.collection}>0xPixel NFT · {shortenAddress(listing.collection)}</p>
+                  <p className={styles.seller}>{isSeller ? "Listed by you" : `Seller ${shortenAddress(listing.seller)}`}</p>
                   <div className={styles.priceRow}><span>Listing price</span><strong>{amount(listing.price)}<small>NUSD</small></strong></div>
                   {!isSeller && address && funding && <details className={styles.fundingDetails}><summary>Payment breakdown</summary><dl><div><dt>From marketplace credits</dt><dd>{amount(funding.creditUsed)} NUSD</dd></div><div><dt>From your wallet</dt><dd>{amount(funding.walletPayment)} NUSD</dd></div></dl><p>Approve only the NUSD needed from your wallet. zkLTC pays for gas.</p></details>}
                   {isSeller ? <button className={styles.secondaryButton} disabled={!ready} onClick={() => void act(() => ({ call: call("cancelListing", [listing.id]), settlement: false }))}>Cancel listing</button>

@@ -46,25 +46,25 @@ export const Toolbar = memo(function Toolbar({
 
   return (
     <div
-      className="pixel-tools-panel animate-fadeInUp bg-(--surface-1) rounded-2xl p-3 sm:p-5 border border-(--line) flex flex-col gap-4 sm:gap-6"
+      className="pixel-tools-panel bg-(--surface-1) rounded-2xl p-3 sm:p-5 border border-(--line) flex flex-col gap-4 sm:gap-6"
     >
       <>
           <button
             type="button"
             onClick={onImport}
-            className="w-full rounded-xl border border-(--accent)/40 bg-(--accent)/10 py-3 text-xs font-bold uppercase tracking-wider text-(--accent-text) transition-colors hover:bg-(--accent)/20"
+            className="pixel-tools-import pixel-btn pixel-btn-secondary w-full"
           >
             Import Image
           </button>
           {/* Color Palette Section */}
-          <div>
+          <div className="pixel-tools-palette">
             <p
-              className="text-(--text-3) text-xs uppercase tracking-wider mb-2"
+              className="text-(--text-3) text-xs uppercase mb-2"
               style={{ fontFamily: "var(--font-ui)" }}
             >
               Color Palette
             </p>
-            <div className="grid grid-cols-8 sm:grid-cols-8 gap-1.5 mb-3">
+            <div className="grid grid-cols-8 sm:grid-cols-8 gap-1 sm:gap-1.5 mb-3">
               {PALETTE_COLORS.map((color) => (
                 <ColorButton
                   key={color}
@@ -98,7 +98,7 @@ export const Toolbar = memo(function Toolbar({
             <div>
               <p
                 id="pixel-custom-color-label"
-                className="text-(--text-3) text-xs uppercase tracking-wider mb-1.5"
+                className="text-(--text-3) text-xs uppercase mb-1.5"
                 style={{ fontFamily: "var(--font-ui)" }}
               >
                 Custom Color
@@ -143,7 +143,7 @@ export const Toolbar = memo(function Toolbar({
           {recentColors.length > 0 && (
             <div>
               <p
-                className="text-(--text-3) text-xs uppercase tracking-wider mb-2"
+                className="text-(--text-3) text-xs uppercase mb-2"
                 style={{ fontFamily: "var(--font-ui)" }}
               >
                 Recent
@@ -155,7 +155,7 @@ export const Toolbar = memo(function Toolbar({
                     type="button"
                     aria-pressed={selectedColor === color}
                     onClick={() => handleColorSelect(color)}
-                    className="relative w-6 h-6 rounded-md transition-all duration-100 motion-safe:hover:scale-110 after:absolute after:-inset-[3px]"
+                    className="relative w-10 h-10 sm:w-7 sm:h-7 rounded-md transition-all duration-100 motion-safe:hover:scale-110"
                     style={{
                       backgroundColor: color,
                       outline: selectedColor === color ? "2px solid var(--text-1)" : "2px solid transparent",
@@ -171,7 +171,7 @@ export const Toolbar = memo(function Toolbar({
           {/* Grid Size Selector */}
           <div>
             <p
-              className="text-(--text-3) text-xs uppercase tracking-wider mb-2"
+              className="text-(--text-3) text-xs uppercase mb-2"
               style={{ fontFamily: "var(--font-ui)" }}
             >
               Grid Size
@@ -184,10 +184,10 @@ export const Toolbar = memo(function Toolbar({
                   aria-pressed={gridSize === size}
                   onClick={() => onGridSizeChange(size)}
                   className={
-                    "flex-1 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-all " +
+                    "flex-1 min-h-10 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-all border " +
                     (gridSize === size
-                      ? "bg-(--accent) text-(--accent-ink)"
-                      : "bg-(--surface-2) border border-(--line) text-(--text-3) hover:bg-(--surface-1) hover:text-(--text-1)")
+                      ? "border-transparent bg-(--accent)/20 text-(--accent-text)"
+                      : "bg-(--surface-2) border-(--line) text-(--text-3) hover:bg-(--surface-1) hover:text-(--text-1)")
                   }
                   style={{ fontFamily: "var(--font-ui)" }}
                 >
@@ -201,7 +201,7 @@ export const Toolbar = memo(function Toolbar({
           <button
             type="button"
             onClick={onClear}
-            className="w-full py-3 sm:py-2.5 rounded-xl bg-(--negative)/10 border border-(--negative)/20 text-(--negative) text-xs font-bold uppercase tracking-wider hover:bg-(--negative)/20 hover:border-(--negative)/30 active:translate-y-[1px] transition-all flex items-center justify-center gap-1.5"
+            className="pixel-tools-clear pixel-btn pixel-btn-red w-full gap-1.5"
             style={{ fontFamily: "var(--font-ui)" }}
           >
             <svg
@@ -240,7 +240,7 @@ function ColorButton({
       type="button"
       aria-pressed={isSelected}
       onClick={onClick}
-      className="pixel-color-button aspect-square min-h-8 rounded sm:min-h-0"
+      className="pixel-color-button aspect-square min-h-10 rounded sm:min-h-0"
       style={{
         backgroundColor: color,
         outline: isSelected ? "2px solid var(--text-1)" : "2px solid transparent",

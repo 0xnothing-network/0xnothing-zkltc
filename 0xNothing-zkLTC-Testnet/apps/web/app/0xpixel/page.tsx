@@ -32,20 +32,26 @@ const MintPanel = dynamic(
 );
 function PanelSkeleton({ label }: { label: string }) {
   return (
-    <div className="pixel-panel flex h-32 items-center justify-center p-4" role="status" aria-label={`${label} loading`}>
+    <div className="pixel-panel flex min-h-[460px] items-center justify-center p-4" role="status" aria-label={`${label} loading`}>
       <PixelLoadingIndicator compact />
     </div>
   );
 }
 
+// Mirrors the mounted Canvas column (tool strip, square frame, hint line) so the
+// columns around it do not move when the chunk arrives.
 function CanvasSkeleton() {
   return (
-    <div
-      className="pixel-canvas-skeleton flex aspect-square w-full max-w-[640px] items-center justify-center border border-(--line)"
-      role="status"
-      aria-label="Canvas loading"
-    >
-      <PixelLoadingIndicator compact />
+    <div className="flex w-full flex-col items-center gap-3">
+      <div aria-hidden="true" className="pixel-canvas-skeleton-strip h-[52px] w-full max-w-[min(100%,640px)]" />
+      <div
+        className="pixel-canvas-skeleton flex aspect-square w-full max-w-[min(100%,520px)] items-center justify-center rounded-xl border border-(--line)"
+        role="status"
+        aria-label="Canvas loading"
+      >
+        <PixelLoadingIndicator compact />
+      </div>
+      <div aria-hidden="true" className="h-4 w-full" />
     </div>
   );
 }
@@ -134,7 +140,7 @@ export default function PixelPage() {
       <section className="pixel-studio-intro relative overflow-hidden border-b border-(--text-1)/5">
         <div className="pixel-studio-intro-inner max-w-7xl mx-auto px-4 pt-7 pb-6 relative sm:px-5 sm:pt-12 sm:pb-10">
           <h1
-            className="text-2xl sm:text-3xl md:text-5xl font-bold text-(--text-1) mb-3 sm:mb-4 tracking-tight leading-tight hero-fade-in text-balance"
+            className="text-2xl sm:text-3xl md:text-5xl font-bold text-(--text-1) mb-3 sm:mb-4 tracking-tight leading-tight text-balance"
             style={{ fontFamily: "var(--font-ui)" }}
           >
             Create your{" "}
@@ -143,7 +149,7 @@ export default function PixelPage() {
             </span>
           </h1>
           <p
-            className="text-(--text-2) text-sm sm:text-base md:text-lg max-w-md mx-auto hero-fade-in-delay"
+            className="text-(--text-2) text-sm sm:text-base md:text-lg max-w-md mx-auto"
             style={{ fontFamily: "var(--font-ui)" }}
           >
             Draw. Mint. Trade on LitVM.

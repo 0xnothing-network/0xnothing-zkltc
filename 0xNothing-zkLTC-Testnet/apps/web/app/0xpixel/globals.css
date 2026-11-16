@@ -20,10 +20,8 @@
   font: 600 14px/1.2 var(--font-ui);
   cursor: pointer;
   user-select: none;
-  transition: background-color 160ms var(--ease), border-color 160ms var(--ease), filter 160ms var(--ease), transform 120ms var(--ease);
 }
 :where(.pixel-product) :is(.pixel-btn):hover:not(:disabled) { border-color: var(--text-3); }
-:where(.pixel-product) :is(.pixel-btn):active:not(:disabled) { transform: scale(.98); }
 :where(.pixel-product) :is(.pixel-btn):disabled {
   border-color: var(--line);
   background: var(--surface-2);
@@ -48,7 +46,7 @@
   color: var(--negative);
 }
 :where(.pixel-product) .pixel-btn-secondary { background: transparent; }
-:where(.pixel-product) :is(.pixel-btn-sm) { min-height: 34px; padding: 0 12px; font-size: 13px; border-radius: var(--r-sm); }
+:where(.pixel-product) :is(.pixel-btn-sm) { padding: 0 12px; font-size: 13px; border-radius: var(--r-sm); }
 :where(.pixel-product) .pixel-btn-icon { width: 40px; padding: 0; }
 :where(.pixel-product) a:is(.pixel-btn) { text-decoration: none; }
 
@@ -74,7 +72,9 @@
 @keyframes pixel-spin { to { transform: rotate(360deg); } }
 
 /* Drawing canvas: a quiet grid on the inset surface. */
-:where(.pixel-product) .pixel-canvas-frame { max-width: min(100%, calc(100dvh - 285px)) !important; }
+/* Height cap keeps the whole canvas and its hint above the fold (header, title
+   band and tool strip take about 340px); never below 280px on a landscape phone. */
+:where(.pixel-product) :is(.pixel-canvas-frame, .pixel-canvas-skeleton) { max-width: min(100%, max(280px, calc(100dvh - 340px))) !important; }
 :where(.pixel-product) :is(.pixel-canvas-frame, .pixel-canvas-skeleton) {
   background:
     linear-gradient(color-mix(in srgb, var(--text-1) 5%, transparent) 1px, transparent 1px),
@@ -93,25 +93,18 @@
   :where(.pixel-product) .canvas-tool-strip {
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: dense;
     gap: .5rem;
     max-width: min(100%, 520px) !important;
     overflow: visible !important;
     padding-bottom: 0 !important;
   }
   :where(.pixel-product) .canvas-tool-strip > * { width: 100%; min-width: 0; justify-content: center; }
-  :where(.pixel-product) .canvas-tool-strip > :is(:first-child, :last-child) { grid-column: 1 / -1; }
+  /* Rows: tools | zoom | brush | symmetry + export | sub-grid. */
+  :where(.pixel-product) .canvas-tool-strip > :not(:nth-child(4), :last-child) { grid-column: 1 / -1; }
   :where(.pixel-product) .canvas-tool-strip > :last-child > .pixel-btn { width: 100%; }
-  /* Invisible 40px-tall touch target; the drawn button keeps its size. */
-  :where(.pixel-product) .canvas-tool-strip > div > button:not(.pixel-btn) { position: relative; }
-  :where(.pixel-product) .canvas-tool-strip > div > button:not(.pixel-btn)::after {
-    content: "";
-    position: absolute;
-    inset: min(0px, calc((100% - 40px) / 2)) 0;
-  }
-}
-
-/* Grid entrance */
-@media (prefers-reduced-motion: no-preference) {
-  :where(.pixel-product) .nft-grid { animation: pixel-grid-in .4s var(--ease); }
-  @keyframes pixel-grid-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  /* Every strip button shares its box evenly and is at least 40px square at 390px. */
+  :where(.pixel-product) .canvas-tool-strip > div > button:not(.pixel-btn) { flex: 1 1 0; width: auto; min-width: 0; height: 40px; }
+  /* The loading placeholder reserves the five-row strip (5 x 50px + 4 x 8px). */
+  :where(.pixel-product) .pixel-canvas-skeleton-strip { height: 282px; }
 }
