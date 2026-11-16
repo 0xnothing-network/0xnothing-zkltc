@@ -114,10 +114,14 @@ function Metric({
   return (
     <div className={`${styles.card} ${accent ? styles.cardAccent : ""}`}>
       <div className={styles.cardTop}><span>{label}</span>{icon}</div>
-      {loading ? <span className={styles.skeleton} aria-label="Loading" /> : <strong className={`${styles.value} ${accent ? styles.valueAccent : ""}`}>{value ?? "Unavailable"}</strong>}
+      {loading ? <span className={styles.skeleton} role="img" aria-label="Loading" /> : <strong className={`${styles.value} ${accent ? styles.valueAccent : ""}`}>{value ?? "Unavailable"}</strong>}
       <span className={styles.subvalue}>{note ?? "Live RPC read"}</span>
     </div>
   );
+}
+
+function Row({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
+  return <div className={styles.row}><dt>{label}</dt><dd>{children}</dd></div>;
 }
 
 export default function DevPage() {
@@ -336,7 +340,7 @@ export default function DevPage() {
             <span className={styles.brandText}><strong>0xNothing</strong><span>Developer console</span></span>
           </Link>
           <div className={styles.headerActions}>
-            <span className={styles.network}><span className={styles.networkDot} />{onExpectedChain ? "LitVM testnet" : `Chain ${chainId || "unknown"}`}</span>
+            <span className={styles.network} data-state={onExpectedChain ? "ok" : "wrong"}><span className={styles.networkDot} />{onExpectedChain ? "LitVM testnet" : `Chain ${chainId || "unknown"}`}</span>
             <span className={styles.address}>{shortAddress(address)}</span>
           </div>
         </div>
@@ -368,14 +372,14 @@ export default function DevPage() {
 
         <section className={styles.section}>
           <div className={styles.sectionHeader}><div><span className={styles.eyebrow}>Protocol revenue</span><h2>Where fees sit</h2></div><p className={styles.sectionNote}>Only balances and withdrawal methods exposed by the published ABIs appear here.</p></div>
-          <div className={`${styles.grid} ${styles.gridThree}`}>
+          <div className={`${styles.grid} ${styles.gridTwo}`}>
             <div className={styles.card + " " + styles.formCard}>
               <div className={styles.cardTop}><span>0xPump</span><Coin size={16} /></div>
-              {!pumpReady ? <div className={styles.empty}><strong>Not published</strong><p>0xPump address is absent from the testnet manifest.</p></div> : <><strong className={styles.value}>{amount(pumpFees.data as bigint | undefined)}</strong><span className={styles.subvalue}>Accrued protocol fees</span><span className={styles.address}>NUSD held: {amount(pumpNusdBalance.data as bigint | undefined)}<br />Trade fee: {basisPoints(pumpTradeFee.data as bigint | undefined)} · Create fee: {amount(pumpCreateFee.data as bigint | undefined)}<br />Markets: {pumpMarkets.data === undefined ? "Loading" : String(pumpMarkets.data)}<br />Authority: {shortAddress(pumpAuthority as string | undefined)}{controllerOwnsPump ? " via graduation controller" : " direct"}</span><span className={styles.subvalue}>Anyone sends these fees to the fee splitter (70% stakers / 20% burned / 10% treasury).</span><a className={styles.button} href="/nusd/earn">Open the public revenue panel</a></>}
+              {!pumpReady ? <div className={styles.empty}><strong>Not published</strong><p>0xPump address is absent from the testnet manifest.</p></div> : <><strong className={styles.value}>{amount(pumpFees.data as bigint | undefined)}</strong><span className={styles.subvalue}>Accrued protocol fees</span><dl className={styles.rows}><Row label="NUSD held">{amount(pumpNusdBalance.data as bigint | undefined)}</Row><Row label="Trade fee">{basisPoints(pumpTradeFee.data as bigint | undefined)}</Row><Row label="Create fee">{amount(pumpCreateFee.data as bigint | undefined)}</Row><Row label="Markets">{pumpMarkets.data === undefined ? "Loading" : String(pumpMarkets.data)}</Row><Row label="Authority">{shortAddress(pumpAuthority as string | undefined)}<span className={styles.rowNote}>{controllerOwnsPump ? " via graduation controller" : " direct"}</span></Row></dl><span className={styles.subvalue}>Anyone sends these fees to the fee splitter (70% stakers / 20% burned / 10% treasury).</span><a className={styles.button} href="/nusd/earn">Open the public revenue panel</a></>}
             </div>
             <div className={styles.card + " " + styles.formCard}>
               <div className={styles.cardTop}><span>0xFi router</span><Gauge size={16} /></div>
-              {!fiReady && fiRouterFactory.isLoading ? <span className={styles.skeleton} aria-label="Loading" /> : !fiReady ? <div className={styles.empty}><strong>Router address missing</strong><p>Fee reads stay unavailable until the testnet manifest publishes the DEX router.</p></div> : <><strong className={styles.value}>{amount(fiNusdRouterBalance.data as bigint | undefined)}</strong><span className={styles.subvalue}>NUSD currently held by router</span><span className={styles.address}>LP fee: {basisPoints(fiLpFee.data as bigint | undefined)}<br />Router fee: {basisPoints(fiDirectFee.data as bigint | undefined)} when either end is NUSD or zkLTC · {basisPoints(fiRouteFee.data as bigint | undefined)} for a cross swap</span><div className={styles.address}>Accrued fee ledger<br />{fiFeeOptions.map((item) => <span key={item.key}>{item.label} ({shortAddress(item.address)}): {amount(item.data as bigint | undefined, item.label, item.decimals)} · balance {amount(item.balance as bigint | undefined, item.label, item.decimals)}<br /></span>)}</div><span className={styles.subvalue}>A permissionless call sends both to the fee splitter: NUSD fees split 70/20/10, zkLTC fees 90% to the NUSD reserve and 10% to the treasury.</span><a className={styles.button} href="/nusd/earn">Open the public revenue panel</a></>}
+              {!fiReady && fiRouterFactory.isLoading ? <span className={styles.skeleton} role="img" aria-label="Loading" /> : !fiReady ? <div className={styles.empty}><strong>Router address missing</strong><p>Fee reads stay unavailable until the testnet manifest publishes the DEX router.</p></div> : <><strong className={styles.value}>{amount(fiNusdRouterBalance.data as bigint | undefined)}</strong><span className={styles.subvalue}>NUSD currently held by router</span><div><dl className={styles.rows}><Row label="LP fee">{basisPoints(fiLpFee.data as bigint | undefined)}</Row></dl><p className={styles.rowsNote}>Router fee: {basisPoints(fiDirectFee.data as bigint | undefined)} when either end is NUSD or zkLTC · {basisPoints(fiRouteFee.data as bigint | undefined)} for a cross swap</p></div><div><span className={styles.rowsTitle}>Accrued fee ledger</span><dl className={styles.rows}>{fiFeeOptions.map((item) => <Row key={item.key} label={<>{item.label} <span className={styles.rowAddress}>({shortAddress(item.address)})</span></>}>{amount(item.data as bigint | undefined, item.label, item.decimals)} · balance {amount(item.balance as bigint | undefined, item.label, item.decimals)}</Row>)}</dl></div><span className={styles.subvalue}>A permissionless call sends both to the fee splitter: NUSD fees split 70/20/10, zkLTC fees 90% to the NUSD reserve and 10% to the treasury.</span><a className={styles.button} href="/nusd/earn">Open the public revenue panel</a></>}
             </div>
             <div className={styles.card + " " + styles.formCard}>
               <div className={styles.cardTop}><span>Safe withdrawal policy</span><ShieldCheck size={16} /></div>
@@ -386,7 +390,7 @@ export default function DevPage() {
             </div>
             <div className={styles.card + " " + styles.formCard}>
               <div className={styles.cardTop}><span>Lending interest</span><Coin size={16} /></div>
-              {!lendingPool ? <div className={styles.empty}><strong>Pool not published</strong><p>Lending revenue reads stay unavailable until the testnet manifest publishes the pool.</p></div> : <><strong className={styles.value}>{amount(lendingInterest.data as bigint | undefined)}</strong><span className={styles.subvalue}>Protocol interest ledger</span><span className={styles.address}>NUSD held: {amount(lendingNusdBalance.data as bigint | undefined)}<br />Safe maximum: {amount(lendingMax)}<br />Owner: {shortAddress(lendingOwner.data as string | undefined)}</span><span className={styles.subvalue}>Anyone sweeps protocol interest to the fee splitter.</span><a className={styles.button} href="/nusd/earn">Open the public revenue panel</a></>}
+              {!lendingPool ? <div className={styles.empty}><strong>Pool not published</strong><p>Lending revenue reads stay unavailable until the testnet manifest publishes the pool.</p></div> : <><strong className={styles.value}>{amount(lendingInterest.data as bigint | undefined)}</strong><span className={styles.subvalue}>Protocol interest ledger</span><dl className={styles.rows}><Row label="NUSD held">{amount(lendingNusdBalance.data as bigint | undefined)}</Row><Row label="Safe maximum">{amount(lendingMax)}</Row><Row label="Owner">{shortAddress(lendingOwner.data as string | undefined)}</Row></dl><span className={styles.subvalue}>Anyone sweeps protocol interest to the fee splitter.</span><a className={styles.button} href="/nusd/earn">Open the public revenue panel</a></>}
             </div>
           </div>
         </section>
@@ -396,9 +400,9 @@ export default function DevPage() {
           <div className={`${styles.grid} ${styles.gridThree}`}>
             <div className={styles.card + " " + styles.formCard}>
               <div className={styles.cardTop}><span>0xPixel</span><Coin size={16} /></div>
-              <strong className={styles.value}>{amount(pixelPending.data as bigint | undefined, "zkLTC")}</strong>
+              {address && pixelPending.isLoading ? <span className={styles.skeleton} role="img" aria-label="Loading" /> : <strong className={styles.value}>{address ? amount(pixelPending.data as bigint | undefined, "zkLTC") : "--"}</strong>}
               <span className={styles.subvalue}>Pending withdrawal for connected wallet</span>
-              <span className={styles.address}>Dev wallet: {shortAddress(pixelDevWallet.data as string | undefined)}<br />Contract balance: {pixelBalance.data ? `${formatUnits(pixelBalance.data.value, pixelBalance.data.decimals)} ${pixelBalance.data.symbol}` : "Loading"}</span>
+              <dl className={styles.rows}><Row label="Dev wallet">{shortAddress(pixelDevWallet.data as string | undefined)}</Row><Row label="Contract balance">{pixelBalance.data ? `${formatUnits(pixelBalance.data.value, pixelBalance.data.decimals)} ${pixelBalance.data.symbol}` : "Loading"}</Row></dl>
               <button className={styles.button} aria-busy={isSubmitting || isWriting || undefined} disabled={disableControls || !isPixelDev || (pixelPending.data as bigint | undefined ?? 0n) === 0n} onClick={() => submitContractWrite({ address: PIXEL_CLASSIC_ADDRESS, abi: PixelClassicABI, functionName: "withdraw", args: [] }, "pixel")}>Claim own Pixel balance</button>
               {!isPixelDev ? <span className={styles.subvalue}>Only the connected dev wallet can claim its own pending balance.</span> : null}
             </div>
@@ -406,8 +410,9 @@ export default function DevPage() {
               <div className={styles.cardTop}><span>0xMarketplace · NUSD</span><ShieldCheck size={16} /></div>
               <strong className={styles.value}>Reusable NUSD credits</strong>
               <span className={styles.subvalue}>Only the credited wallet can spend or withdraw its balance.</span>
-              <span className={styles.address}>Marketplace: {shortAddress(NUSD_MARKETPLACE_ADDRESS)}<br />Seller proceeds, royalties and platform fees are NUSD credits.<br />The owner cannot withdraw other users' escrow or credits.</span>
-              <Link className={styles.monoLink} href="/0xpixel/marketplace">Open marketplace / claim own credits <ArrowSquareOut size={12} /></Link>
+              <dl className={styles.rows}><Row label="Marketplace">{shortAddress(NUSD_MARKETPLACE_ADDRESS)}</Row></dl>
+              <p>Seller proceeds, royalties and platform fees are NUSD credits.<br />The owner cannot withdraw other users&apos; escrow or credits.</p>
+              <Link className={styles.button} href="/0xpixel/marketplace">Open marketplace / claim own credits <ArrowSquareOut size={12} aria-hidden="true" /></Link>
             </div>
             <div className={styles.card + " " + styles.formCard}>
               <div className={styles.cardTop}><span>Authority model</span><LockKey size={16} /></div>
@@ -420,7 +425,7 @@ export default function DevPage() {
 
         <section className={styles.section}>
           <div className={styles.sectionHeader}><div><span className={styles.eyebrow}>RWA</span><h2>Trading reserves</h2></div></div>
-          <RwaDashboard admin />
+          <div className={styles.rwaSlot}><RwaDashboard admin /></div>
         </section>
 
         <section className={styles.section}>

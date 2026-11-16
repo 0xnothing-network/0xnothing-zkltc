@@ -5,7 +5,6 @@ import {
   ArrowRight,
   ArrowSquareOut,
   ArrowsLeftRight,
-  BookOpenText,
   CheckCircle,
   Coins,
   GlobeHemisphereWest,
@@ -14,6 +13,8 @@ import {
   Warning,
 } from "@phosphor-icons/react/dist/ssr";
 import { DocsCodeBlock } from "./DocsCodeBlock";
+import { DocsMobileNav, DocsSidebarNav } from "./DocsNav";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { deployment } from "@fi/config/deployment";
 import testnet from "@fi/config/testnet.generated.json";
 import { NUSD_MARKETPLACE_ADDRESS } from "@/lib/nusdMarketplaceConfig";
@@ -690,6 +691,7 @@ export default function DocsPage() {
           </Link>
           <nav aria-label="Documentation actions">
             <span className="ox-docs-network-label">LitVM Testnet</span>
+            <ThemeToggle />
             <Link href="/0xFi">Open 0xFi <ArrowRight size={13} aria-hidden="true" /></Link>
           </nav>
         </div>
@@ -697,32 +699,18 @@ export default function DocsPage() {
 
       <div className="ox-docs-shell">
         <aside className="ox-docs-sidebar">
-          <nav aria-label="Documentation navigation">
-            {NAV_GROUPS.map((group) => (
-              <div className="ox-docs-nav-group" key={group.label}>
-                <strong>{group.label}</strong>
-                {group.items.map((item) => <a href={item.href} key={item.href}>{item.label}</a>)}
-              </div>
-            ))}
-          </nav>
+          <DocsSidebarNav groups={NAV_GROUPS} />
           <div className="ox-docs-sidebar-meta">
             <span>Network</span><strong>Chain 4441</strong><small>Testnet only</small>
           </div>
         </aside>
 
         <main className="ox-docs-main">
-          <details className="ox-docs-mobile-nav">
-            <summary>Browse documentation</summary>
-            <nav aria-label="Mobile documentation navigation">
-              {NAV_GROUPS.map((group) => group.items.map((item) => (
-                <a href={item.href} key={item.href}>{item.label}</a>
-              )))}
-            </nav>
-          </details>
+          <DocsMobileNav groups={NAV_GROUPS} />
 
           <section className="ox-docs-hero">
             <div>
-              <span className="ox-docs-eyebrow"><BookOpenText size={15} aria-hidden="true" /> Developer documentation</span>
+              <span className="ox-docs-eyebrow">Developer documentation</span>
               <h1>Build across 0xNothing.</h1>
               <p>One testnet stack for onchain art, token markets, a zkLTC-backed dollar, DeFi, and the world arriving with mainnet.</p>
               <div className="ox-docs-hero-actions">
@@ -890,7 +878,7 @@ export default function DocsPage() {
                 <div><strong>Synths</strong><span>Lock NUSD and mint nBTC or nETH at the DIA price. Users supply 150% collateral, or 100% when the safety reserve qualifies. The mint fee is 0.1%.</span></div>
                 <div><strong>RWA</strong><span>The RWA market contract charges a 1% fee. No RWA market is deployed or listed on testnet yet.</span></div>
               </div>
-              <div className="ox-docs-fee-table-wrap" tabIndex={0}>
+              <div className="ox-docs-fee-table-wrap" tabIndex={0} role="region" aria-label="0xFi">
                 <table>
                   <thead><tr><th>Swap</th><th>LP fee</th><th>Router fee</th><th>Nominal total</th></tr></thead>
                   <tbody>
@@ -928,7 +916,7 @@ export default function DocsPage() {
                 title="Developer guides"
                 description="One guide per product in the repository, checked against the deployed manifests and ABIs. Each pairs with a prompts file for coding agents."
               />
-              <div className="ox-docs-fee-table-wrap" tabIndex={0}>
+              <div className="ox-docs-fee-table-wrap" tabIndex={0} role="region" aria-label="Developer guides">
                 <table>
                   <thead><tr><th>Product</th><th>Flows covered</th><th>Guide</th><th>Agent prompts</th></tr></thead>
                   <tbody>
@@ -956,7 +944,7 @@ export default function DocsPage() {
                 title="Integrate 0xFi swaps"
                 description="Choose the correct execution surface, quote against current state, simulate the exact request, then ask the wallet to sign."
               />
-              <div className="ox-docs-fee-table-wrap" tabIndex={0}>
+              <div className="ox-docs-fee-table-wrap" tabIndex={0} role="region" aria-label="Integrate 0xFi swaps">
                 <table>
                   <thead><tr><th>User action</th><th>Contract</th><th>Method</th></tr></thead>
                   <tbody>
@@ -996,7 +984,7 @@ export default function DocsPage() {
                 title="Integrate 0xPump"
                 description="Read the market over RPC, quote on the curve, then buy or sell with a minimum output and a deadline."
               />
-              <div className="ox-docs-fee-table-wrap" tabIndex={0}>
+              <div className="ox-docs-fee-table-wrap" tabIndex={0} role="region" aria-label="Integrate 0xPump">
                 <table>
                   <thead><tr><th>User action</th><th>Contract</th><th>Method</th></tr></thead>
                   <tbody>
@@ -1032,7 +1020,7 @@ export default function DocsPage() {
                 title="Integrate NUSD"
                 description="One contract, OracleNUSDv2, is the ERC-20, the mint and redeem desk, and the zkLTC reserve. RewardStaking runs Earn."
               />
-              <div className="ox-docs-fee-table-wrap" tabIndex={0}>
+              <div className="ox-docs-fee-table-wrap" tabIndex={0} role="region" aria-label="Integrate NUSD">
                 <table>
                   <thead><tr><th>User action</th><th>Contract</th><th>Method</th></tr></thead>
                   <tbody>
@@ -1068,7 +1056,7 @@ export default function DocsPage() {
                 title="Integrate 0xPixel"
                 description="Mint original artwork to 0xPixel V2, read it back from the contract, and trade it on the NUSD NFT marketplace."
               />
-              <div className="ox-docs-fee-table-wrap" tabIndex={0}>
+              <div className="ox-docs-fee-table-wrap" tabIndex={0} role="region" aria-label="Integrate 0xPixel">
                 <table>
                   <thead><tr><th>User action</th><th>Contract</th><th>Method</th></tr></thead>
                   <tbody>

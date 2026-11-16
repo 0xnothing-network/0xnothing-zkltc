@@ -15,7 +15,7 @@
 
 .nothing-header,
 .nothing-footer { padding-inline: var(--home-gutter); }
-.nothing-header { position: sticky; top: 0; z-index: 10; padding-block: 14px; }
+.nothing-header { position: sticky; top: 0; z-index: 10; padding-block: 14px; background: var(--bg); }
 .nothing-header-inner,
 .nothing-footer-inner {
   width: min(100%, 1200px);
@@ -39,22 +39,25 @@
   color: var(--text-2);
 }
 .nothing-x-logo { width: 15px; height: 15px; fill: currentColor; }
+.nothing-header-actions { display: flex; align-items: center; gap: 8px; }
+.nothing-header-actions .ox-theme-toggle { width: 40px; height: 40px; }
 
+/* Sized so the four product rows sit above the fold on a 1280x800 screen. */
 .nothing-main {
   flex: 1;
   width: 100%;
   max-width: calc(1200px + 2 * var(--home-gutter));
   margin-inline: auto;
-  padding: clamp(48px, 9vh, 112px) var(--home-gutter) 72px;
+  padding: clamp(32px, 6vh, 64px) var(--home-gutter) 72px;
   display: grid;
   align-content: center;
-  gap: clamp(48px, 8vh, 88px);
+  gap: clamp(32px, 5vh, 56px);
   box-sizing: border-box;
 }
 .nothing-stage {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(260px, .85fr);
-  align-items: end;
+  grid-template-columns: minmax(0, 1.15fr) minmax(240px, .85fr);
+  align-items: start;
   gap: clamp(32px, 6vw, 96px);
 }
 .nothing-eyebrow {
@@ -83,7 +86,7 @@
 .nothing-intro { margin: 22px 0 0; max-width: 36ch; color: var(--text-2); font-size: clamp(16px, 1.4vw, 19px); line-height: 1.55; }
 
 /* Real artwork, square tiles, no rounding: it is pixel art. */
-.nothing-mosaic { margin: 0; display: grid; gap: 12px; }
+.nothing-mosaic { justify-self: end; width: min(100%, clamp(240px, 38vh, 420px)); margin: 0; display: grid; gap: 12px; }
 .nothing-mosaic figcaption { color: var(--text-3); font-family: var(--font-brand); font-size: 12px; }
 .nothing-mosaic-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .nothing-mosaic-tile {
@@ -103,10 +106,21 @@
   background: var(--bg);
   color: var(--text-2);
   font-family: var(--font-num);
-  font-size: 11px;
+  font-size: 12px;
   opacity: 0;
 }
-.nothing-mosaic-tile[data-skeleton] { background: var(--surface-1); }
+.nothing-mosaic-tile[data-skeleton] {
+  background: linear-gradient(90deg, var(--surface-1), var(--surface-2), var(--surface-1));
+  background-size: 200% 100%;
+  animation: nothing-skeleton 1.5s steps(6, end) infinite;
+}
+@keyframes nothing-skeleton {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+/* A failed image reads as its number instead of a blank square. */
+.nothing-mosaic-tile[data-broken] img { display: none; }
+.nothing-mosaic-tile[data-broken] span { opacity: 1; }
 
 /* Products as an index, ruled like a table of contents. */
 .nothing-nav { display: grid; border-top: 1px solid var(--line-strong); }
@@ -117,7 +131,7 @@
   grid-template-columns: 56px minmax(140px, .7fr) minmax(0, 1fr) 32px;
   align-items: center;
   gap: 16px;
-  min-height: 76px;
+  min-height: 68px;
   padding: 0 4px;
   border-bottom: 1px solid var(--line);
   color: var(--text-1);
@@ -126,7 +140,7 @@
 .nothing-link[href="/0xFi"] { --product: var(--accent-fi); }
 .nothing-link[href="/0xpixel"] { --product: var(--accent-pixel); }
 .nothing-link[href="/nusd"] { --product: var(--accent-nusd); }
-.nothing-link-index { color: var(--text-3); font-family: var(--font-num); font-size: 13px; }
+.nothing-link-index { color: var(--text-3); font-family: var(--font-num); font-size: 14px; font-variant-numeric: tabular-nums; }
 .nothing-link-name { display: inline-flex; align-items: center; gap: 12px; font-size: clamp(20px, 2vw, 26px); font-weight: 600; letter-spacing: -.025em; }
 .nothing-link-name::before { content: ""; width: 10px; height: 10px; background: var(--product); }
 .nothing-link-description { color: var(--text-2); font-size: 15px; }
@@ -155,17 +169,25 @@
 .nothing-mosaic-tile:focus-visible span { opacity: 1; }
 
 @media (max-width: 860px) {
-  .nothing-stage { grid-template-columns: minmax(0, 1fr); align-items: start; }
-  .nothing-mosaic { max-width: 300px; }
+  .nothing-main { padding-top: 40px; gap: 32px; }
+  .nothing-stage { grid-template-columns: minmax(0, 1fr); align-items: start; gap: 24px; }
+  .nothing-eyebrow { margin-bottom: 16px; }
+  /* The tiles fill the column: six in one row on a tablet, three per row on a phone. */
+  .nothing-mosaic { justify-self: stretch; width: 100%; }
+  .nothing-mosaic-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .nothing-mosaic-tile:nth-child(n + 7) { display: none; }
-  .nothing-link { grid-template-columns: 40px minmax(0, 1fr) 24px; grid-template-rows: auto auto; row-gap: 2px; padding-block: 14px; }
+  .nothing-link { grid-template-columns: 40px minmax(0, 1fr) 24px; grid-template-rows: auto auto; row-gap: 2px; padding-block: 12px; }
   .nothing-link-index { grid-row: 1 / 3; }
   .nothing-link-description { grid-column: 2; font-size: 14px; }
   .nothing-link-arrow { grid-column: 3; grid-row: 1 / 3; }
+}
+@media (max-width: 560px) {
+  .nothing-mosaic-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 350px) {
   .nothing-footer-inner { flex-wrap: wrap; gap: 4px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .nothing-link, .nothing-link-arrow, .nothing-link-name::before, .nothing-x, .nothing-footer-nav a { transition: none; }
+  .nothing-mosaic-tile[data-skeleton] { animation: none; }
 }

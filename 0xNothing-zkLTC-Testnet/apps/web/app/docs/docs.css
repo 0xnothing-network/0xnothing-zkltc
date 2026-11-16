@@ -128,7 +128,6 @@
 .ox-docs-footer-actions a:hover {
   background: var(--text-1);
   border-color: var(--text-1);
-  transform: translate(-1px, -1px);
 }
 
 .ox-docs-topbar nav a:active,
@@ -240,11 +239,10 @@
 }
 
 .ox-docs-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--accent-text);
+  color: var(--docs-faint);
+  font-family: var(--font-brand);
   font-size: 12px;
+  font-weight: 400;
   letter-spacing: 0;
 }
 
@@ -328,11 +326,16 @@
   min-height: 62px;
   align-items: center;
   gap: 12px;
-  border: 1px solid rgba(220, 197, 128, 0.24);
+  border: 1px solid color-mix(in srgb, var(--warning) 28%, var(--docs-line));
   border-left: 2px solid var(--warning);
   margin-top: 20px;
   padding: 12px 14px;
-  background: rgba(216, 197, 142, 0.035);
+  background: color-mix(in srgb, var(--warning) 6%, transparent);
+  color: var(--docs-text);
+}
+
+.ox-docs-warning > svg {
+  flex-shrink: 0;
   color: var(--warning);
 }
 
@@ -347,7 +350,7 @@
 }
 
 .ox-docs-warning span {
-  color: var(--warning);
+  color: var(--docs-muted);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -391,10 +394,10 @@
 .ox-docs-flow > div {
   display: grid;
   min-height: 92px;
-  align-content: center;
+  align-content: start;
   gap: 8px;
   border-right: 1px solid var(--docs-line);
-  padding: 14px;
+  padding: 16px 14px;
 }
 
 .ox-docs-flow > div:last-child {
@@ -439,7 +442,7 @@
 
 .ox-docs-code-language {
   margin-left: 12px;
-  color: var(--docs-faint);
+  color: var(--docs-muted);
   font-size: 12px;
 }
 
@@ -508,11 +511,17 @@
   font-weight: 500;
 }
 
+/* Name, use and address read as one block: 4px, 8px, then 20px to the rule.
+   The address link keeps its 44px target, so its half-leading is pulled back. */
 .ox-docs-contract {
   display: grid;
-  gap: 10px;
+  gap: 0;
   border-bottom: 1px solid var(--docs-line);
-  padding: 15px 0;
+  padding: 16px 0 6px;
+}
+
+.ox-docs-contract > a {
+  margin-top: -6px;
 }
 
 .ox-docs-contract > div {
@@ -563,11 +572,39 @@
 
 .ox-docs-disclosure summary,
 .ox-docs-mobile-nav summary {
+  display: flex;
   min-height: 46px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 15px;
   color: var(--docs-text);
   cursor: pointer;
   font-size: 12px;
+  list-style: none;
+}
+
+.ox-docs-disclosure summary::-webkit-details-marker,
+.ox-docs-mobile-nav summary::-webkit-details-marker {
+  display: none;
+}
+
+/* The same thin chevron as the home product rows; it turns down when open. */
+.ox-docs-disclosure summary::after,
+.ox-docs-mobile-nav summary::after {
+  content: ">";
+  content: ">" / "";
+  flex-shrink: 0;
+  color: var(--docs-faint);
+  font-family: var(--font-brand);
+  font-size: 14px;
+  line-height: 1;
+  transition: transform 160ms ease;
+}
+
+.ox-docs-disclosure[open] summary::after,
+.ox-docs-mobile-nav[open] summary::after {
+  transform: rotate(90deg);
 }
 
 .ox-docs-pool-addresses {
@@ -596,7 +633,7 @@
 
 .ox-docs-ecosystem-map {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 1px;
   margin-top: 32px;
   background: var(--docs-line-strong);
@@ -846,6 +883,11 @@
   background: var(--docs-panel-strong);
 }
 
+/* No empty cell: a lone last item spans the row. */
+.ox-docs-fi-surfaces > div:last-child:nth-child(even) {
+  grid-column: 1 / -1;
+}
+
 .ox-docs-fi-surfaces span {
   color: var(--docs-muted);
   font-size: 12px;
@@ -874,7 +916,7 @@
 
 .ox-docs-fee-table-wrap th {
   background: var(--docs-panel-strong);
-  color: var(--docs-faint);
+  color: var(--docs-muted);
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0;
@@ -916,16 +958,19 @@
   background: color-mix(in srgb, var(--text-1) 2.5%, transparent);
 }
 
+/* A plain hairline tag, like every status tag in the system. */
 .ox-docs-universe-status {
   display: inline-flex;
-  min-height: 28px;
+  min-height: 24px;
   align-items: center;
-  border: 1px solid var(--docs-line-strong);
+  border: 1px solid currentColor;
+  border-radius: var(--r-xs);
   margin-bottom: 22px;
-  padding: 0 10px;
-  background: var(--docs-panel-strong);
-  color: var(--accent-text);
+  padding: 0 8px;
+  background: none;
+  color: var(--docs-muted);
   font-size: 12px;
+  font-weight: 500;
   letter-spacing: 0;
 }
 
@@ -1046,6 +1091,10 @@
   .ox-docs-ecosystem-map {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .ox-docs-ecosystem-map > div:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 960px) {
@@ -1091,6 +1140,12 @@
   .ox-docs-mobile-nav a:hover {
     color: var(--docs-text);
   }
+
+  .ox-docs-mobile-nav[open] nav {
+    max-height: calc(100dvh - 140px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 
 @media (max-width: 760px) {
@@ -1121,9 +1176,9 @@
     font-size: clamp(32px, 8vw, 40px);
   }
 
+  /* The first fact row draws the only top rule. */
   .ox-docs-hero dl {
-    border-top: 1px solid var(--docs-line-strong);
-    padding: 18px 0;
+    padding: 0 0 18px;
   }
 
   .ox-docs-mobile-nav nav {
@@ -1289,21 +1344,25 @@
 
 /* Reading surfaces share the Nothing neutral palette; code and metadata stay monospaced. */
 .ox-docs-root { background: var(--docs-bg); }
-.ox-docs-root :is(code, pre, dt, dd),
-.ox-docs-eyebrow, .ox-docs-network-label, .ox-docs-nav-group > strong,
+.ox-docs-root :is(dt, dd),
+.ox-docs-network-label, .ox-docs-nav-group > strong,
 .ox-docs-facts strong, .ox-docs-code figcaption {
   font-family: var(--font-ui), monospace;
   font-variant-numeric: tabular-nums;
 }
+/* Code, inline code and contract addresses are set in Geist Mono. */
+.ox-docs-root :is(code, pre) {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+.ox-docs-copy code, .ox-docs-contract a, .ox-docs-pool-addresses a { font-size: 13px; }
 .ox-docs-main { width: 100%; max-width: 1180px; padding-top: 28px; }
 .ox-docs-hero { grid-template-columns: minmax(0, 1.6fr) minmax(230px, .75fr); }
 .ox-docs-hero h1 { font-weight: 400; line-height: 1.04; letter-spacing: -.025em; }
 .ox-docs-hero p, .ox-docs-section-heading p, .ox-docs-copy { font-size: 14px; line-height: 1.8; max-width: 65ch; }
 .ox-docs-nav-group a { min-height: 44px; border-radius: var(--r-md); font-size: 13px; }
 .ox-docs-section-heading h2 { line-height: 1.2; }
-.ox-docs-topbar nav a, .ox-docs-hero-actions a, .ox-docs-footer-actions a,
-.ox-docs-universe-status { border-radius: var(--r-md); }
-.ox-docs-topbar nav a:hover, .ox-docs-hero-actions a:hover, .ox-docs-footer-actions a:hover { transform: translateY(-1px); }
+.ox-docs-topbar nav a, .ox-docs-hero-actions a, .ox-docs-footer-actions a { border-radius: var(--r-md); }
 .ox-docs-code, .ox-docs-disclosure, .ox-docs-mobile-nav, .ox-docs-fee-table-wrap,
 .ox-docs-warning, .ox-docs-facts, .ox-docs-flow, .ox-docs-lifecycle > div,
 .ox-docs-ecosystem-map, .ox-docs-mechanism-grid, .ox-docs-universe-grid,
@@ -1323,6 +1382,9 @@
 .ox-docs-root :is(p, li) { text-wrap: pretty; }
 @media (max-width: 1180px) and (min-width: 961px) {
   .ox-docs-main { padding-inline: 28px; }
+}
+/* The facts stack under the hero copy at full width until the phone layout takes over. */
+@media (max-width: 1180px) and (min-width: 761px) {
   .ox-docs-hero { grid-template-columns: 1fr; }
   .ox-docs-hero > div { border-right: 0; padding-right: 0; }
   .ox-docs-hero dl { padding: 0 0 24px; }
@@ -1357,19 +1419,23 @@
 /* Long-form pages: quieter separators and readable anchors. */
 .ox-docs-root .ox-docs-hero { border-bottom: 1px solid var(--docs-line-strong); }
 .ox-docs-root .ox-docs-section { scroll-margin-top: 88px; }
-.ox-docs-root .ox-docs-section-heading { margin-bottom: 28px; }
+.ox-docs-root .ox-docs-section-heading { margin-bottom: 28px; padding-bottom: 24px; }
 .ox-docs-root .ox-docs-code { border-top: 2px solid var(--docs-line-strong); box-shadow: var(--e-2); }
 .ox-docs-root .ox-docs-code figcaption { background: var(--docs-panel-strong); }
-.ox-docs-root .ox-docs-code pre { scrollbar-width: thin; scrollbar-color: var(--docs-line-strong) var(--docs-bg); overscroll-behavior: contain; }
+.ox-docs-root .ox-docs-code pre { scrollbar-width: thin; scrollbar-color: var(--docs-line-strong) var(--docs-bg); overscroll-behavior-x: contain; }
+/* Long lines stop one gutter short of the card edge: the scrollport ends at a transparent border. */
+.ox-docs-root .ox-docs-code pre { padding-right: 0; border-right: 24px solid transparent; }
 .ox-docs-root .ox-docs-nav-group a { border-left: 2px solid transparent; transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease; }
 .ox-docs-root .ox-docs-nav-group a:hover { border-left-color: var(--docs-accent); background: var(--docs-panel); }
+.ox-docs-root .ox-docs-nav-group a[aria-current] { border-left-color: var(--docs-accent); color: var(--docs-text); }
 .ox-docs-root :is(.ox-docs-hero-actions a, .ox-docs-topbar nav a, .ox-docs-footer-actions a, .ox-docs-code button) { transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease; }
 @media (max-width: 760px) {
   .ox-docs-root .ox-docs-hero > div { min-height: 0; padding-block: 24px 30px; }
   .ox-docs-root .ox-docs-section { padding-block: 40px; }
-  .ox-docs-root .ox-docs-code pre { max-height: 420px; }
+  .ox-docs-root .ox-docs-code pre { max-height: 420px; border-right-width: 16px; }
 }
-@media (prefers-reduced-motion: reduce) { .ox-docs-root :is(a, button) { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { .ox-docs-root :is(a, button), .ox-docs-root summary::after { transition: none !important; } }
+.ox-docs-topbar .ox-theme-toggle { width: 40px; height: 40px; }
 
 /* Developer guides: links inside tables and prose, indexer notes. */
 .ox-docs-fee-table-wrap a {

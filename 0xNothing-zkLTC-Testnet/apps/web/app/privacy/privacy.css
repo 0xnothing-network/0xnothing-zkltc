@@ -3,22 +3,17 @@
   color: var(--text-1);
   font-family: var(--font-ui), monospace;
 }
-.ox-privacy > [aria-hidden="true"] { opacity: .12; }
 .ox-privacy header { background: var(--surface-1); border-color: var(--line); }
-.ox-privacy header a { font-size: 13px; letter-spacing: .16em; color: var(--text-1); font-weight: 600; }
-.ox-privacy header span { font-size: 12px; letter-spacing: .1em; color: var(--text-2); }
+.ox-privacy header a { font-size: 13px; letter-spacing: 0; color: var(--text-1); font-weight: 600; }
+.ox-privacy header span { font-size: 12px; letter-spacing: 0; color: var(--text-2); }
 .ox-privacy main { padding-top: clamp(48px, 7vw, 92px); padding-bottom: 80px; }
 .ox-privacy main > div:first-child > p:first-child {
-  display: inline-flex;
-  padding: 7px 10px;
-  margin-bottom: 22px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-md);
-  background: var(--surface-2);
-  color: var(--accent-text);
-  font-family: var(--font-ui), monospace;
+  margin-bottom: 16px;
+  color: var(--text-3);
+  font-family: var(--font-brand);
   font-size: 12px;
-  letter-spacing: .12em;
+  font-weight: 400;
+  letter-spacing: 0;
 }
 .ox-privacy h1 {
   font-size: clamp(32px, 5vw, 40px);
@@ -36,7 +31,7 @@
   font-size: 12px;
   font-weight: 500;
   line-height: 1.8;
-  letter-spacing: .045em;
+  letter-spacing: 0;
 }
 .ox-privacy section > div { color: var(--text-2); font-size: 14px; line-height: 1.8; max-width: 68ch; }
 .ox-privacy section strong { color: var(--text-1); font-weight: 600; }
@@ -44,14 +39,14 @@
 .ox-privacy section a:hover { text-decoration-color: var(--text-1); }
 .ox-privacy p, .ox-privacy li { text-wrap: pretty; }
 .ox-privacy footer { border-color: var(--line); background: var(--surface-2); }
-.ox-privacy footer > div { color: var(--text-2); font-size: 12px; line-height: 1.8; letter-spacing: .08em; }
+.ox-privacy footer > div { color: var(--text-2); font-size: 12px; line-height: 1.8; letter-spacing: 0; }
 .ox-privacy a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--r-md); }
 @media (min-width: 768px) {
   .ox-privacy section { grid-template-columns: 190px minmax(0, 1fr); gap: 44px; }
 }
 @media (max-width: 600px) {
   .ox-privacy section { padding-block: 28px; gap: 14px; }
-  .ox-privacy header span { font-size: 12px; letter-spacing: .04em; }
+  .ox-privacy header span { font-size: 12px; }
   .ox-privacy main > div:last-child { margin-top: 40px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -59,10 +54,11 @@
 }
 
 /* Editorial policy layout with clearer section anchors. */
-.ox-privacy main > div:first-child { padding-bottom: 32px; border-bottom: 2px solid var(--line-strong); }
+.ox-privacy main > div:first-child { padding-bottom: 32px; border-bottom: 1px solid var(--line); }
 .ox-privacy main > div:last-child { margin-top: 16px; border-top: 0; }
 .ox-privacy section { scroll-margin-top: 80px; }
-.ox-privacy section h2 { color: var(--accent-text); font-size: 13px; }
+.ox-privacy section h2 { color: var(--text-1); font-size: 18px; font-weight: 600; line-height: 1.4; }
+.ox-privacy section h2 .ox-privacy-num { color: var(--text-3); font-family: var(--font-num); font-variant-numeric: tabular-nums; font-weight: 400; }
 .ox-privacy section a { text-underline-offset: 4px; }
-@media (min-width: 768px) { .ox-privacy section h2 { position: sticky; top: 88px; align-self: start; } }
+@media (min-width: 768px) { .ox-privacy section h2 { position: sticky; top: 24px; align-self: start; font-size: 13px; } }
 @media (max-width: 600px) { .ox-privacy main { padding-top: 32px; padding-bottom: 48px; } }

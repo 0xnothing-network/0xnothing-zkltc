@@ -45,7 +45,7 @@
   place-items: center;
   width: 31px;
   height: 31px;
-  border: 1px solid rgba(211, 220, 231, 0.55);
+  border: 1px solid var(--line-strong);
   color: var(--accent-text);
   font-size: 12px;
   letter-spacing: -0.1em;
@@ -64,22 +64,18 @@
 
 .brandText span,
 .eyebrow,
-.muted,
-.meta,
 .address,
 .sectionNote {
   color: rgba(215, 224, 235, 0.52);
 }
 
 .brandText span,
-.eyebrow,
-.meta {
+.eyebrow {
   font-size: 12px;
   letter-spacing: 0;
 }
 
-.headerActions,
-.stackActions {
+.headerActions {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -97,6 +93,7 @@
   gap: 7px;
   padding: 8px 10px;
   border: 1px solid var(--line);
+  border-radius: 4px;
   color: var(--text-2);
   font-size: 12px;
   letter-spacing: 0;
@@ -105,8 +102,17 @@
 .networkDot {
   width: 6px;
   height: 6px;
-  background: var(--accent);
-  box-shadow: 0 0 0 3px rgba(211, 220, 231, 0.12);
+  background: var(--positive);
+  box-shadow: none;
+}
+
+.network[data-state="wrong"] {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.network[data-state="wrong"] .networkDot {
+  background: var(--warning);
 }
 
 .main {
@@ -176,12 +182,30 @@
 }
 
 .bannerError {
-  border-color: rgba(255, 170, 150, 0.35);
-  background: rgba(255, 106, 82, 0.06);
+  border-color: color-mix(in srgb, var(--negative) 40%, var(--line));
+  background: color-mix(in srgb, var(--negative) 6%, var(--surface-2));
 }
 
 .bannerError svg {
-  color: var(--text-2);
+  color: var(--negative);
+}
+
+.banner > span {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.banner > .button {
+  flex: 0 0 auto;
+  align-self: center;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* The banner icon rule must not reach the button's own icon. */
+.banner .button svg {
+  margin-top: 0;
+  color: currentColor;
 }
 
 .section {
@@ -189,10 +213,9 @@
 }
 
 .sectionHeader {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 18px;
+  display: grid;
+  align-items: start;
+  gap: 8px;
   margin-bottom: 14px;
 }
 
@@ -205,11 +228,11 @@
 }
 
 .sectionNote {
-  max-width: 420px;
+  max-width: 640px;
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.6;
-  text-align: right;
+  text-align: left;
 }
 
 .grid {
@@ -220,6 +243,10 @@
 
 .gridThree {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gridTwo {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .card {
@@ -256,7 +283,7 @@
   font-size: clamp(19px, 2vw, 27px);
   line-height: 1.1;
   letter-spacing: -0.06em;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .valueAccent {
@@ -295,14 +322,97 @@
 }
 
 .statusGood .statusDot {
-  background: var(--accent);
-  box-shadow: 0 0 0 3px rgba(211, 220, 231, 0.11);
+  background: var(--positive);
+  box-shadow: none;
 }
 
 .formCard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.formCard > .value,
+.formCard > .skeleton {
+  margin-top: 0;
+}
+
+.formCard > .value + .subvalue,
+.formCard > .skeleton + .subvalue {
+  margin-top: -16px;
+}
+
+.formCard > .button {
+  margin-top: auto;
+}
+
+.rows {
   display: grid;
-  gap: 17px;
-  align-content: start;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.rowsTitle {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.formCard .rowsNote {
+  margin-top: 8px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  column-gap: 16px;
+  row-gap: 2px;
+  min-width: 0;
+  padding-block: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.row:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.row:last-child {
+  padding-bottom: 0;
+}
+
+.row dt {
+  min-width: 0;
+  color: var(--text-2);
+}
+
+.row dd {
+  max-width: 100%;
+  margin: 0 0 0 auto;
+  overflow: hidden;
+  color: var(--text-1);
+  font-family: var(--font-num);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowNote {
+  color: var(--text-2);
+  font-family: var(--font-ui);
+}
+
+.rowAddress {
+  color: var(--text-3);
+  font-family: var(--font-num);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .formCard h3 {
@@ -312,66 +422,20 @@
 }
 
 .formCard p {
-  margin: -8px 0 0;
-  color: rgba(215, 224, 235, 0.52);
+  margin: 0;
+  color: var(--text-2);
   font-size: 12px;
   line-height: 1.7;
 }
 
-.field {
-  display: grid;
-  gap: 7px;
-}
-
-.field label {
-  color: rgba(215, 224, 235, 0.54);
-  font-size: 12px;
-  letter-spacing: 0;
-}
-
-.field input,
-.field select {
-  width: 100%;
-  min-width: 0;
-  min-height: 44px;
-  padding: 10px 11px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-md);
-  outline: none;
-  background: var(--surface-1);
-  color: var(--text-1);
-  font: inherit;
-  font-size: 12px;
-}
-
-.field select {
-  appearance: none;
-}
-
-.field input:focus,
-.field select:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(211, 220, 231, 0.13);
-}
-
-.checkbox {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  color: var(--text-2);
-  font-size: 12px;
-  line-height: 1.55;
-}
-
-.checkbox input {
-  flex: 0 0 auto;
-  margin-top: 2px;
-  accent-color: var(--accent);
-}
-
 .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   min-height: 44px;
   padding: 9px 13px;
+  text-align: center;
   border: 1px solid rgba(211, 220, 231, 0.34);
   border-radius: var(--r-md);
   background: rgba(211, 220, 231, 0.09);
@@ -385,7 +449,7 @@
 
 .button:hover:not(:disabled) {
   border-color: var(--accent);
-  background: rgba(211, 220, 231, 0.16);
+  background: var(--hover);
 }
 
 .button:active:not(:disabled) {
@@ -401,12 +465,6 @@
 .button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
-}
-
-.buttonDanger {
-  border-color: rgba(255, 178, 157, 0.35);
-  background: rgba(255, 106, 82, 0.08);
-  color: var(--text-2);
 }
 
 .empty {
@@ -441,8 +499,9 @@
 .skeleton {
   display: block;
   width: 74%;
-  height: 24px;
+  height: 1.25em;
   margin-top: 18px;
+  font-size: clamp(19px, 2vw, 27px);
   background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2));
   background-size: 200% 100%;
   animation: shimmer 1.5s steps(6, end) infinite;
@@ -465,7 +524,8 @@
   }
 
   .grid,
-  .gridThree {
+  .gridThree,
+  .gridTwo {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -510,8 +570,18 @@
   }
 
   .grid,
-  .gridThree {
+  .gridThree,
+  .gridTwo {
     grid-template-columns: 1fr;
+  }
+
+  .banner {
+    flex-wrap: wrap;
+  }
+
+  .banner > .button {
+    flex: 1 0 100%;
+    margin-left: 0;
   }
 
   .card {
@@ -535,35 +605,32 @@
 
 /* Operator surfaces: readable explanations, stable numeric alignment, clear form boundaries. */
 .shell { font-family: var(--font-ui), monospace; }
-.brandText span, .eyebrow, .meta, .network, .cardTop, .value, .subvalue, .address,
-.status, .field input, .field select, .monoLink { font-family: var(--font-ui), monospace; font-variant-numeric: tabular-nums; }
-.brandMark, .network { border-radius: var(--r-md); }
+.brandText span, .eyebrow, .network, .cardTop, .subvalue, .status { font-family: var(--font-ui), monospace; }
+.value { font-family: var(--font-ui); font-variant-numeric: tabular-nums; }
+.address, .monoLink { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.brandMark { border-radius: var(--r-md); }
 .brandMark { background: var(--surface-2); }
-.brandText span, .eyebrow, .muted, .meta, .address, .sectionNote,
-.cardTop, .subvalue, .formCard p, .field label { color: var(--text-2); }
-.hero h1 { line-height: 1.06; letter-spacing: -.025em; font-weight: 400; }
+.brandText span, .eyebrow, .address, .sectionNote,
+.cardTop, .subvalue, .formCard p { color: var(--text-2); }
+.hero h1 { line-height: 1.06; letter-spacing: -.025em; font-weight: 600; }
 .hero p { color: var(--text-2); font-size: 14px; line-height: 1.8; max-width: 65ch; }
 .heroAside { border-left-color: var(--line-strong); }
 .heroAside p { font-size: 13px; }
 .banner { border-radius: var(--r-md); font-size: 13px; }
 .section { margin-top: 48px; }
 .sectionHeader { margin-bottom: 18px; }
-.sectionHeader h2 { font-size: 25px; line-height: 1.25; letter-spacing: -.03em; }
+.sectionHeader h2 { font-size: 25px; line-height: 1.25; letter-spacing: -.02em; }
 .grid { gap: 14px; }
 .card { border-radius: var(--r-md); padding: 22px; background: var(--surface-2); }
 .cardAccent { background: var(--surface-2); }
-.value { letter-spacing: -.045em; line-height: 1.25; }
-.formCard { gap: 20px; }
+.value { letter-spacing: 0; line-height: 1.25; }
+.formCard { gap: 24px; }
 .formCard h3 { font-size: 17px; }
-.formCard p { font-size: 14px; line-height: 1.8; }
-.field { gap: 9px; }
-.field input, .field select { min-height: 46px; transition: border-color 120ms steps(2, end), box-shadow 120ms steps(2, end); }
-.field select { appearance: auto; }
+.formCard p { font-size: 13px; line-height: 1.7; }
 .button { font-size: 12px; min-height: 44px; font-weight: 600; }
 
-.buttonDanger:hover:not(:disabled) { background: rgba(255, 106, 82, .15); border-color: var(--text-2); }
 .empty { border-radius: var(--r-md); background: var(--surface-2); padding: 26px; }
-.empty p, .checkbox { font-size: 13px; }
+.empty p { font-size: 13px; }
 .skeleton { border-radius: var(--r-md); }
 .shell :global(a:focus-visible) { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: var(--r-md); }
 @media (max-width: 600px) {
@@ -572,40 +639,40 @@
   .hero h1 { line-height: 1.1; }
   .headerActions { gap: 8px; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .field input, .field select { transition: none; }
-}
 
 /* Shared pixel controls retain distinct danger and disabled states. */
 .button { border-color: var(--line-strong); background: var(--surface-2); box-shadow: var(--e-2); font-size: 12px; }
 .button:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: var(--e-2); }
 .button:disabled { box-shadow: none; }
 
-.buttonDanger { border-color: var(--line-strong); background: var(--surface-2); color: var(--text-2); }
-.field label, .eyebrow, .meta, .cardTop { font-size: 12px; }
-.field input, .field select { min-height: 44px; font-size: 14px; }
-.field input:focus-visible, .field select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; box-shadow: none; }
-.banner, .empty p, .checkbox { font-size: 14px; line-height: 1.8; }
-@media (max-width: 600px) {
-  .field input, .field select { font-size: 16px; }
-}
+.eyebrow, .cardTop { font-size: 12px; }
+.banner, .empty p { font-size: 14px; line-height: 1.8; }
 
 /* Operator console follows the same form rhythm as public applications. */
 .card { border-top: 2px solid var(--line-strong); }
 .cardAccent { border-top-color: var(--line-strong); }
 .formCard { padding: 24px; border: 1px solid var(--line); background: var(--surface-2); }
 .sectionHeader { padding-bottom: 16px; border-bottom: 1px solid var(--line); }
-.field input, .field select { transition: border-color 160ms ease, background-color 160ms ease; }
 .button { transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease; }
 
-/* Operator console shares the public pixel terminal frame. */
+/* Operator console frame. */
 .shell { background-color: var(--pixel-ui-bg); background-image: var(--pixel-pattern); }
-.header { background: var(--surface-1); border-bottom: 3px double var(--pixel-ui-border-strong); box-shadow: 0 4px 0 var(--bg); }
+.header { background: var(--surface-1); border-bottom: 1px solid var(--line); }
 .card, .formCard { background: var(--pixel-ui-panel); border: 1px solid var(--pixel-window-edge); box-shadow: var(--pixel-ui-shadow); }
 .cardAccent { background: var(--line); border-color: var(--text-2); }
-.sectionHeader { border-bottom: 3px double var(--pixel-ui-border-strong); }
-.sectionHeader h2 { font-weight: 400; text-shadow: 2px 2px 0 var(--line-strong); }
+.sectionHeader { border-bottom: 1px solid var(--line); }
+.sectionHeader h2 { font-weight: 600; }
 .button { box-shadow: var(--pixel-control-shadow); }
-.button:active:not(:disabled) { box-shadow: inset 1px 1px 0 #0005, 1px 1px 0 var(--bg); }
+.button:active:not(:disabled) { box-shadow: inset 1px 1px 0 var(--pressed), 1px 1px 0 var(--bg); }
 @media (max-width: 600px) { .formCard { padding: 16px; } }
-@media (prefers-reduced-motion: reduce) { .button, .field input, .field select { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .button { transition: none; } }
+
+/* RWA reserves on the console: standard card, capped measure for the policy line. */
+.rwaSlot :global(.rwa-policy) { max-width: 640px; margin: 0; }
+.rwaSlot :global(.rwa-market) {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.rwaSlot :global(.rwa-market > h2) { margin: 0 0 8px; color: var(--text-1); font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+.rwaSlot :global(.rwa-market > p) { color: var(--text-2); font-size: 13px; }

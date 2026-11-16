@@ -42,10 +42,11 @@ export function DocsCodeBlock({
         <span className="ox-docs-code-language">{language}</span>
         <button type="button" onClick={() => void copyCode()} aria-label={`Copy ${label}`}>
           <CopyIcon size={14} weight="bold" aria-hidden="true" />
-          <span aria-live="polite">{copyLabel}</span>
+          <span aria-hidden="true">{copyLabel}</span>
         </button>
+        <span className="sr-only" aria-live="polite">{copyState === "idle" ? "" : copyLabel}</span>
       </figcaption>
-      <pre tabIndex={0}><code>{code}</code></pre>
+      <pre tabIndex={0} aria-label={label}><code>{code}</code></pre>
     </figure>
   );
 }

@@ -29,10 +29,10 @@ export function HomeMosaic() {
           tile.tokenId ? (
             <Link key={tile.id} href="/0xpixel/marketplace" className="nothing-mosaic-tile" aria-label={`0xPixel #${tile.tokenId}`}>
               {/* eslint-disable-next-line @next/next/no-img-element -- pixel art is served pre-sized and must stay unoptimised */}
-              <img src={getPixelImageUrl(tile.tokenId, tile.collection)} alt="" width={96} height={96} loading="lazy" />
+              <img src={getPixelImageUrl(tile.tokenId, tile.collection)} alt="" width={96} height={96} decoding="async" onError={(event) => event.currentTarget.parentElement?.setAttribute("data-broken", "")} />
               <span>#{tile.tokenId}</span>
             </Link>
-          ) : <span key={tile.id} className="nothing-mosaic-tile" data-skeleton="" />
+          ) : <span key={tile.id} className="nothing-mosaic-tile" data-skeleton="" aria-hidden="true" />
         ))}
       </div>
     </figure>
