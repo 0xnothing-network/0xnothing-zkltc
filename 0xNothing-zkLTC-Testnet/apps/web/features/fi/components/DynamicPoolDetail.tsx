@@ -44,7 +44,7 @@ function displayMarketPrice(value: number | undefined): string {
   const verySmall = Math.abs(value) < 0.0001;
   return `$${value.toLocaleString("en-US", {
     minimumFractionDigits: verySmall ? 8 : 2,
-    maximumFractionDigits: verySmall ? 12 : Math.abs(value) < 1 ? 8 : 6,
+    maximumFractionDigits: verySmall ? 12 : Math.abs(value) < 1 ? 8 : 2,
   })}`;
 }
 
@@ -667,37 +667,9 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
           </details>
         </div>
         <aside className="fi-panel fi-sticky-panel fi-trade-panel fi-primary-action">
-          {poolLoading ? (
-            <div className="fi-inline-state" role="status">
-              <HourglassSimple size={17} weight="bold" aria-hidden="true" />
-              <div><strong>Loading pool</strong></div>
-            </div>
-          ) : null}
-          {poolReadError ? (
-            <div className="fi-inline-state fi-inline-danger" role="alert">
-              <Warning size={17} weight="bold" aria-hidden="true" />
-              <div><strong>Pool unavailable</strong></div>
-              <button type="button" className="fi-inline-retry" onClick={retryPoolReads} aria-label="Retry pool data" title="Retry pool data">
-                <ArrowClockwise size={15} weight="bold" aria-hidden="true" />
-              </button>
-            </div>
-          ) : null}
-          {poolReady && !poolHasLiquidity && mode !== "add" ? (
-            <div className="fi-inline-state fi-inline-warning" role="status"><div><strong>No liquidity</strong></div></div>
-          ) : null}
-          {mode === "swap" && routeReadError ? (
-            <div className="fi-inline-state fi-inline-danger" role="alert">
-              <Warning size={17} weight="bold" aria-hidden="true" />
-              <div><strong>Route unavailable</strong></div>
-              <button type="button" className="fi-inline-retry" onClick={() => void swapsPaused.refetch()} aria-label="Retry route data" title="Retry route data">
-                <ArrowClockwise size={15} weight="bold" aria-hidden="true" />
-              </button>
-            </div>
-          ) : null}
-          {swapsPaused.data ? <div className="fi-inline-state fi-inline-danger" role="alert"><div><strong>Swaps paused</strong></div></div> : null}
           <div className="fi-segmented" role="group" aria-label="Pool action">
-            <button type="button" className={mode === "swap" ? "active positive" : ""} aria-pressed={mode === "swap"} disabled={tx.pending} onClick={() => { setMode("swap"); tx.reset(); }}>Swap</button>
-            <button type="button" className={mode === "add" ? "active positive" : ""} aria-pressed={mode === "add"} disabled={tx.pending} onClick={() => { setMode("add"); tx.reset(); }}>Add</button>
+            <button type="button" className={mode === "swap" ? "active" : ""} aria-pressed={mode === "swap"} disabled={tx.pending} onClick={() => { setMode("swap"); tx.reset(); }}>Swap</button>
+            <button type="button" className={mode === "add" ? "active" : ""} aria-pressed={mode === "add"} disabled={tx.pending} onClick={() => { setMode("add"); tx.reset(); }}>Add</button>
             <button type="button" className={mode === "remove" ? "active" : ""} aria-pressed={mode === "remove"} disabled={tx.pending} onClick={() => { setMode("remove"); tx.reset(); }}>Remove</button>
           </div>
           <form className="fi-form" onSubmit={(event) => {
@@ -760,6 +732,35 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
             )}
             <TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
           </form>
+          {/* Pool and route notices sit below the form so their arrival does not move it. */}
+          {poolLoading ? (
+            <div className="fi-inline-state" role="status">
+              <HourglassSimple size={17} weight="bold" aria-hidden="true" />
+              <div><strong>Loading pool</strong></div>
+            </div>
+          ) : null}
+          {poolReadError ? (
+            <div className="fi-inline-state fi-inline-danger" role="alert">
+              <Warning size={17} weight="bold" aria-hidden="true" />
+              <div><strong>Pool unavailable</strong></div>
+              <button type="button" className="fi-inline-retry" onClick={retryPoolReads} aria-label="Retry pool data" title="Retry pool data">
+                <ArrowClockwise size={15} weight="bold" aria-hidden="true" />
+              </button>
+            </div>
+          ) : null}
+          {poolReady && !poolHasLiquidity && mode !== "add" ? (
+            <div className="fi-inline-state fi-inline-warning" role="status"><div><strong>No liquidity</strong></div></div>
+          ) : null}
+          {mode === "swap" && routeReadError ? (
+            <div className="fi-inline-state fi-inline-danger" role="alert">
+              <Warning size={17} weight="bold" aria-hidden="true" />
+              <div><strong>Route unavailable</strong></div>
+              <button type="button" className="fi-inline-retry" onClick={() => void swapsPaused.refetch()} aria-label="Retry route data" title="Retry route data">
+                <ArrowClockwise size={15} weight="bold" aria-hidden="true" />
+              </button>
+            </div>
+          ) : null}
+          {swapsPaused.data ? <div className="fi-inline-state fi-inline-danger" role="alert"><div><strong>Swaps paused</strong></div></div> : null}
           {poolReady && (lpBalance !== undefined && lpBalance > 0n || hasLockedLp || hasBurnedLp) ? (
             <details className="fi-settings-details fi-lock-lp-details">
               <summary>
@@ -823,7 +824,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
                 ))}
                 {lpBalance !== undefined && lpBalance > 0n ? <>
                   <div className="fi-segmented" role="group" aria-label="LP action">
-                    <button type="button" className={lpActionMode === "lock" ? "active positive" : ""} aria-pressed={lpActionMode === "lock"} disabled={tx.pending} onClick={() => { setLpActionMode("lock"); tx.reset(); }}>Lock</button>
+                    <button type="button" className={lpActionMode === "lock" ? "active" : ""} aria-pressed={lpActionMode === "lock"} disabled={tx.pending} onClick={() => { setLpActionMode("lock"); tx.reset(); }}>Lock</button>
                     <button type="button" className={lpActionMode === "burn" ? "active" : ""} aria-pressed={lpActionMode === "burn"} disabled={tx.pending} onClick={() => { setLpActionMode("burn"); tx.reset(); }}>Burn</button>
                   </div>
                   {lpActionMode === "lock" ? <>
@@ -838,7 +839,7 @@ export function DynamicPoolDetail({ pool }: { pool: Address }) {
                       error={lockError}
                     />
                     <div className="fi-segmented" role="group" aria-label="Lock type">
-                      <button type="button" className={lockMode === "permanent" ? "active positive" : ""} aria-pressed={lockMode === "permanent"} onClick={() => setLockMode("permanent")}>Permanent</button>
+                      <button type="button" className={lockMode === "permanent" ? "active" : ""} aria-pressed={lockMode === "permanent"} onClick={() => setLockMode("permanent")}>Permanent</button>
                       <button type="button" className={lockMode === "timed" ? "active" : ""} aria-pressed={lockMode === "timed"} onClick={() => setLockMode("timed")}>Timed</button>
                     </div>
                     {lockMode === "timed" ? (

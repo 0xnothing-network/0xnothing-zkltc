@@ -28,9 +28,11 @@ export function OracleFeedTable({ compact = false }: { compact?: boolean }) {
   const now = Math.floor(Date.now() / 1000);
   return (
     <section className={compact ? "fi-panel fi-panel-flush" : "fi-panel"}>
-      <div className={compact ? "fi-table-panel-heading" : ""}>
-        <PanelHeading title="Oracle prices" label="Powered by DIA" />
-      </div>
+      {compact ? (
+        <div className="fi-table-panel-heading">
+          <PanelHeading title="Oracle prices" label="Powered by DIA" />
+        </div>
+      ) : <PanelHeading title="Oracle prices" label="Powered by DIA" />}
       <div className="fi-table-wrap" tabIndex={0} aria-label="DIA oracle feed table" aria-busy={query.isLoading || undefined}>
         <table className="fi-table fi-oracle-table">
           <caption>DIA prices and freshness used for 0xFi risk checks</caption>

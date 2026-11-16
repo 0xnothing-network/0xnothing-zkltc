@@ -169,16 +169,16 @@ export function CreatePoolForm() {
             aria-invalid={Boolean(inputError) || undefined}
             aria-describedby={inputError ? "create-pool-token-address-error" : undefined}
           />
-          {inputError ? (
-            <span
-              id="create-pool-token-address-error"
-              className="fi-inline-state fi-inline-warning"
-              role="status"
-            >
-              {inputError}
-            </span>
-          ) : null}
         </label>
+        {inputError ? (
+          <span
+            id="create-pool-token-address-error"
+            className="fi-inline-state fi-inline-warning"
+            role="status"
+          >
+            {inputError}
+          </span>
+        ) : null}
 
         {normalizedAddress && !inputError && tokenMetadataLoading ? (
           <div className="fi-inline-state" role="status">

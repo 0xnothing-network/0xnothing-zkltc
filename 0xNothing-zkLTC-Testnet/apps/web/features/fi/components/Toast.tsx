@@ -68,13 +68,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="fi-toast-viewport">
+      <div className="fi-toast-viewport" aria-live="polite" aria-relevant="additions">
         {items.map((item) => (
           <div
             className="fi-toast"
             data-kind={item.kind}
-            role={item.kind === "error" ? "alert" : "status"}
-            aria-live={item.kind === "error" ? "assertive" : "polite"}
+            role={item.kind === "error" ? "alert" : undefined}
             aria-atomic="true"
             onMouseEnter={() => pauseDismiss(item.id)}
             onMouseLeave={() => resumeDismiss(item.id)}

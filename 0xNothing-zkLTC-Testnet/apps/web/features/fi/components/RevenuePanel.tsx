@@ -74,7 +74,7 @@ export function RevenuePanel() {
   const treasuryZkltc = value(6) === undefined || nativeTreasury.data === undefined ? undefined : value(6)! + nativeTreasury.data.value;
 
   return (
-    <details className="fi-panel fi-revenue-panel">
+    <details className="fi-panel fi-revenue-panel fi-expander">
       <summary>
         <span className="fi-revenue-title">Revenue and treasury</span>
         <span className="fi-revenue-summary">

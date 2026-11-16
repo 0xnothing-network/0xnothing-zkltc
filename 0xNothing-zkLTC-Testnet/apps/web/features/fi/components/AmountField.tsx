@@ -36,7 +36,7 @@ export function AmountField({
     <div className="fi-field">
       <div className="fi-field-label-row">
         <label htmlFor={id}>{label}</label>
-        {balance ? <span title={`Balance ${balance}`}>Balance {balance}</span> : null}
+        {balance ? <span title={`Balance ${balance}`}>Balance <b className="fi-num">{balance}</b></span> : null}
       </div>
       <div className="fi-amount-input" data-invalid={Boolean(error) || undefined}>
         <input
@@ -65,7 +65,7 @@ export function AmountField({
         </div>
       </div>
       {helper ? <small id={helperId}>{helper}</small> : null}
-      {error ? <small id={errorId} className="fi-field-error" aria-live="polite">{error}</small> : null}
+      {error ? <small id={errorId} className="fi-field-error" role="alert">{error}</small> : null}
     </div>
   );
 }

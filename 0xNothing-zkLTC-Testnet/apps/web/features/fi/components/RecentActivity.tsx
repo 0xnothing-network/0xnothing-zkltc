@@ -2,6 +2,7 @@
 
 import { memo, useId } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ArrowUpRight } from "@phosphor-icons/react";
 import type { ActivityPoint, DataEnvelope } from "@fi/lib/data";
 import { deployment } from "@fi/config/deployment";
 import { EmptyState, ErrorState, PanelHeading, SkeletonRows } from "@fi/components/UiStates";
@@ -23,17 +24,12 @@ function formatActivityAmount(value: string): string {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return value;
   const magnitude = Math.abs(parsed);
-  const maximumFractionDigits = magnitude === 0
-    ? 0
-    : magnitude >= 1_000
-      ? 2
-      : magnitude >= 1
-        ? 4
-        : Math.min(12, Math.max(6, Math.ceil(-Math.log10(magnitude)) + 4));
-  return parsed.toLocaleString("en-US", {
-    maximumFractionDigits,
-    signDisplay: value.trim().startsWith("+") ? "always" : "auto",
-  });
+  const signed = value.trim().startsWith("+");
+  // Display cap: 6 significant digits; dust below 0.000001 reads as "<0.000001".
+  if (magnitude > 0 && magnitude < 0.000001) return `${parsed < 0 ? "-" : signed ? "+" : ""}<0.000001`;
+  return parsed.toLocaleString("en-US", magnitude >= 1_000_000
+    ? { maximumFractionDigits: 0, signDisplay: signed ? "always" : "auto" }
+    : { maximumSignificantDigits: 6, signDisplay: signed ? "always" : "auto" });
 }
 
 async function fetchActivity(pair: string, signal: AbortSignal): Promise<ActivityPoint[]> {
@@ -75,18 +71,18 @@ export const RecentActivity = memo(function RecentActivity({ pair }: { pair: str
       ) : null}
       {activity.length ? (
         <div className="fi-table-wrap" tabIndex={0} role="region" aria-labelledby={captionId}>
-          <table className="fi-table">
+          <table className="fi-table fi-activity-table">
             <caption id={captionId}>Latest indexed activity for {pair}</caption>
             <thead><tr><th scope="col">Type</th><th scope="col">Amount</th><th scope="col">Time</th><th scope="col">Tx</th></tr></thead>
             <tbody>
               {activity.map((event) => (
                 <tr key={event.id}>
-                  <td><span className="fi-status" data-state={event.type === "swap" ? "live" : "warning"}>{event.type.toUpperCase()}</span></td>
+                  <td><span className="fi-status">{event.type.charAt(0).toUpperCase() + event.type.slice(1)}</span></td>
                   <td title={`${event.amount0} / ${event.amount1}`}>
                     {formatActivityAmount(event.amount0)} / {formatActivityAmount(event.amount1)}
                   </td>
                   <td>{formatRelativeTimestamp(event.timestamp)}</td>
-                  <td>{isTransactionHash(event.transactionHash) ? <a className="fi-text-link" href={`${deployment.chain.explorerUrl}/tx/${event.transactionHash}`} target="_blank" rel="noopener noreferrer">{shortValue(event.transactionHash)}</a> : "Invalid hash"}</td>
+                  <td>{isTransactionHash(event.transactionHash) ? <a className="fi-text-link" href={`${deployment.chain.explorerUrl}/tx/${event.transactionHash}`} target="_blank" rel="noopener noreferrer">{shortValue(event.transactionHash)}<ArrowUpRight size={12} weight="bold" aria-hidden="true" /></a> : "Invalid hash"}</td>
                 </tr>
               ))}
             </tbody>

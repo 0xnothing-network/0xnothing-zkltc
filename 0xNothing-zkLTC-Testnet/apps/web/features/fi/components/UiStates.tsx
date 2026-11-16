@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { TxSteps } from "@/components/Signature";
 import {
+  ArrowLeft,
   ArrowSquareOut,
   ChartLineDown,
   Warning,
@@ -166,9 +167,10 @@ export function TransactionStatus({
   );
 }
 
-export function RouteLink({ href, children }: { href: `/${string}`; children: React.ReactNode }) {
+export function RouteLink({ href, children, back = false }: { href: `/${string}`; children: React.ReactNode; back?: boolean }) {
   return (
-    <Link className="fi-text-link" href={fiPath(href)}>
+    <Link className={back ? "fi-text-link fi-back-link" : "fi-text-link"} href={fiPath(href)}>
+      {back ? <ArrowLeft size={14} weight="bold" aria-hidden="true" /> : null}
       {children}
     </Link>
   );

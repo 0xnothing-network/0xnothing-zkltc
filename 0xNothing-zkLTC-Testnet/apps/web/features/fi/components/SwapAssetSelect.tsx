@@ -67,7 +67,7 @@ export function SwapAssetSelect({ id, label, value, assets, onChange, onAddressS
   }
   function show() {
     setSearch("");
-    setActiveIndex(0);
+    setActiveIndex(Math.max(0, assets.findIndex((asset) => asset.value === value)));
     setOpen(true);
   }
   function choose(index: number) {

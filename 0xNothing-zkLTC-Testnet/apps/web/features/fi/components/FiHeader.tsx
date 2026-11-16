@@ -41,7 +41,7 @@ export function FiHeader() {
   const toast = useToast();
   const [mounted, setMounted] = useState(false);
   const { chainId, isConnected } = useAccount();
-  const { switchChain } = useSwitchChain();
+  const { switchChain, isPending } = useSwitchChain();
   const wrongChain = Boolean(isConnected && chainId !== deployment.chain.id);
 
   useEffect(() => setMounted(true), []);
@@ -59,7 +59,7 @@ export function FiHeader() {
       {mounted && wrongChain ? (
         <div className="fi-network-guard" role="alert">
           Wallet is connected to chain {chainId}. Transactions require LitVM chain {deployment.chain.id}.
-          <button type="button" onClick={() => switchChain({ chainId: deployment.chain.id })}>Switch now</button>
+          <button type="button" disabled={isPending} aria-busy={isPending || undefined} onClick={() => switchChain({ chainId: deployment.chain.id })}>Switch now</button>
         </div>
       ) : null}
       <nav className="fi-mobile-dock" aria-label="Primary mobile navigation">

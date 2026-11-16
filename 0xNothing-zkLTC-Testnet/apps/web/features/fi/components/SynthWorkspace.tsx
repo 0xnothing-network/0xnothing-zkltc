@@ -263,7 +263,6 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
     : sponsorshipActive
       ? "1:1 reserve-backed"
       : "150% collateral";
-  const modeTone = sponsorshipActive ? "positive" : "warning";
   const safetyTvlDetail = totalSafetyReserve === undefined || entryTvl === undefined
     ? "--"
     : `${formatAmount(totalSafetyReserve, 18, 0)} / ${formatAmount(entryTvl, 18, 0)} NUSD`;
@@ -271,7 +270,7 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
   return (
     <>
       <MetricStrip metrics={[
-        { label: "Vault mode", value: modeLabel, tone: modeTone },
+        { label: "Vault mode", value: modeLabel },
         { label: "Reserve funded", value: safetyProgress === undefined ? "--" : `${safetyProgress.toFixed(safetyProgress < 1 ? 2 : 0)}%` },
         { label: "Your mint capacity", value: `${formatTokenAmount(maxMintable)} ${synth}` },
         { label: "Health factor", value: healthDisplay, tone: healthTone },
@@ -279,21 +278,29 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
       <div className="fi-workspace-grid fi-workspace-balance">
         <section className="fi-panel">
           <PanelHeading title={`${synth} position`} />
-          <div className="fi-preview-value">
-            <span>Synth debt</span>
-            <strong>{formatTokenAmount(synthDebt)} {synth}</strong>
-          </div>
-          <dl className="fi-position-list">
-            <div className="fi-position-row"><span>Locked collateral</span><strong>{formatAmount(userCollateral)} NUSD</strong></div>
-            <div className="fi-position-row"><span>Withdrawable</span><strong>{formatAmount(maxWithdrawable)} NUSD</strong></div>
-          </dl>
-          {synthDebt !== undefined && synthDebt > 0n ? (
-            <HealthGauge
-              risk={healthNumber === undefined || healthNumber <= 0 ? undefined : 1 / healthNumber}
-              value={healthNumber === undefined ? "--" : healthNumber.toFixed(2)}
-              caption="Health factor"
-            />
-          ) : null}
+          {!isConnected ? (
+            <div className="fi-inline-state">
+              <div><strong>No wallet connected</strong><span>Connect to view collateral, debt, and position health.</span></div>
+            </div>
+          ) : (
+            <>
+              <div className="fi-preview-value">
+                <span>Synth debt</span>
+                <strong>{formatTokenAmount(synthDebt)} {synth}</strong>
+              </div>
+              <dl className="fi-position-list">
+                <div className="fi-position-row"><span>Locked collateral</span><strong>{formatAmount(userCollateral)} NUSD</strong></div>
+                <div className="fi-position-row"><span>Withdrawable</span><strong>{formatAmount(maxWithdrawable)} NUSD</strong></div>
+              </dl>
+              {synthDebt !== undefined && synthDebt > 0n ? (
+                <HealthGauge
+                  risk={healthNumber === undefined || healthNumber <= 0 ? undefined : 1 / healthNumber}
+                  value={healthNumber === undefined ? "--" : healthNumber.toFixed(2)}
+                  caption="Health factor"
+                />
+              ) : null}
+            </>
+          )}
           <details className="fi-pool-details">
             <summary>Reserve details</summary>
             <dl>
@@ -307,7 +314,7 @@ export function SynthWorkspace({ initialSynth = "nBTC" }: { initialSynth?: Synth
         <section className="fi-panel fi-sticky-panel">
           <PanelHeading title={`${synth} vault`} />
           {!configured ? <NotDeployed feature={`${synth} vault`} /> : null}
-          {configured && !vaultStatus.ready ? (
+          {configured && !vaultStatus.ready && !vaultStatus.checking ? (
             <div className="fi-inline-state fi-inline-warning">
               <div><strong>{vaultStatus.title}</strong><span>{vaultStatus.message}</span></div>
             </div>

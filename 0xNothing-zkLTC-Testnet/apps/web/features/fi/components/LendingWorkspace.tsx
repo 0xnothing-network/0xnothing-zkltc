@@ -79,7 +79,7 @@ export function LendingWorkspace() {
       <MetricStrip metrics={[
         { label: "Total supplied", value: `${formatAmount(totalSupplied)} NUSD` },
         { label: "Total borrowed", value: `${formatAmount(totalBorrowed)} NUSD` },
-        { label: "Available", value: availableIsDust ? "Unavailable" : `${formatAmount(available)} NUSD`, tone: availableIsDust ? "warning" : "positive" },
+        { label: "Available", value: availableIsDust ? "Unavailable" : `${formatAmount(available)} NUSD`, tone: availableIsDust ? "warning" : undefined },
         { label: "Supply APR", value: formatPercentWad(lending.lenderRate) },
       ]} />
       <div className="fi-workspace-grid fi-workspace-balance">
@@ -102,7 +102,7 @@ export function LendingWorkspace() {
         <section className="fi-panel fi-sticky-panel">
           <PanelHeading title="NUSD market" />
           {!pool || !assets.NUSD.address ? <NotDeployed feature="NUSD lending" /> : null}
-          {pool && !lending.ready ? (
+          {pool && !lending.ready && !lending.checking ? (
             <div className="fi-inline-state fi-inline-warning">
               <div><strong>{lending.title}</strong><span>{lending.message}</span></div>
             </div>

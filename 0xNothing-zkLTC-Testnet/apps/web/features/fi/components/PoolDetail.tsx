@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { ArrowRight } from "@phosphor-icons/react";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
 import { formatUnits, zeroAddress } from "viem";
 import { AmountField } from "@fi/components/AmountField";
@@ -269,11 +270,11 @@ export function PoolDetail({
             title={earnFlowEnabled ? "Get LP tokens" : "Liquidity"}
             trailing={earnFlowEnabled
               ? <Link className="fi-text-link" href={farmHref}>Back to Earn</Link>
-              : <Link className="fi-text-link" href={`${fiPath("/swap")}?in=${tokenA}&out=${tokenB}`}>Swap pair</Link>}
+              : <Link className="fi-text-link fi-heading-link" href={`${fiPath("/swap")}?in=${tokenA}&out=${tokenB}`}>Swap pair <ArrowRight size={12} weight="bold" aria-hidden="true" /></Link>}
           />
           {!configured ? <NotDeployed feature={`${pairLabel} liquidity`} /> : null}
           <div className="fi-segmented" role="group" aria-label="Liquidity action">
-            <button type="button" className={mode === "add" ? "active positive" : ""} aria-pressed={mode === "add"} disabled={tx.pending} onClick={() => { setMode("add"); tx.reset(); }}>Add LP</button>
+            <button type="button" className={mode === "add" ? "active" : ""} aria-pressed={mode === "add"} disabled={tx.pending} onClick={() => { setMode("add"); tx.reset(); }}>Add LP</button>
             <button type="button" className={mode === "remove" ? "active" : ""} aria-pressed={mode === "remove"} disabled={tx.pending} onClick={() => { setMode("remove"); tx.reset(); }}>Remove LP</button>
           </div>
           <form className="fi-form" onSubmit={(event) => {

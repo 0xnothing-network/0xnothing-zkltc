@@ -7,6 +7,7 @@ import { deployment, explorerAddressUrl } from "@fi/config/deployment";
 import { useProtocolTransaction } from "@fi/lib/hooks/useProtocolTransaction";
 import { useRwaMarket } from "@fi/lib/hooks/useRwaMarket";
 import { ConnectWalletButton } from "./ConnectWalletButton";
+import { SkeletonRows, TransactionStatus } from "./UiStates";
 import { rwaMarkets } from "../../../../../shared/rwa/markets";
 import { rwaMarketAbi } from "../../../../../shared/rwa/abi";
 import { parseRwaAmount, tradeLimit, type RwaMarketConfig } from "../../../../../shared/rwa/core";
@@ -64,9 +65,9 @@ function RwaMarketPanel({ config, admin }: { config: RwaMarketConfig; admin: boo
 
   return <section className="rwa-market" aria-label={config.name}>
     <header className="rwa-heading"><div><span className="rwa-eyebrow">{config.assetSymbol} / {config.settlementSymbol}</span><h2>{config.name}</h2></div>
-      <span className="rwa-status">{state.isError ? "Read unavailable" : !data ? "Loading…" : data.paused ? "Paused" : !data.price ? "Price unavailable" : "Open"}</span></header>
+      <span className="fi-status" data-state={state.isError ? "offline" : !data ? "warning" : data.paused ? "warning" : !data.price ? "offline" : "live"}>{state.isError ? "Read unavailable" : !data ? "Loading…" : data.paused ? "Paused" : !data.price ? "Price unavailable" : "Open"}</span></header>
     <p>Issuer: {config.issuer}. <a href={config.documentationUrl} target="_blank" rel="noreferrer">Asset documentation ↗</a></p>
-    {state.isError ? <p role="alert">Market data unavailable. Trading is disabled. <button type="button" onClick={() => void state.refetch()}>Retry</button></p> : null}
+    {state.isError ? <p role="alert" className="fi-inline-state fi-inline-danger">Market data unavailable. Trading is disabled. <button type="button" className="fi-button fi-button-muted" onClick={() => void state.refetch()}>Retry</button></p> : null}
     {data ? <>
       <dl className="rwa-metrics">
         <div><dt>Your RWA balance</dt><dd>{address ? `${formatUnits(data.assetBalance, config.assetDecimals)} ${config.assetSymbol}` : "Connect wallet"}</dd></div>
@@ -78,7 +79,7 @@ function RwaMarketPanel({ config, admin }: { config: RwaMarketConfig; admin: boo
       </dl>
       <p className="rwa-muted">Inventory: {formatUnits(data.inventory, config.assetDecimals)} {config.assetSymbol}. Price: {data.price ? `${formatUnits(data.price, 18)} ${config.settlementSymbol}` : "unavailable"}
         {data.priceUpdatedAt ? ` · updated ${new Date(Number(data.priceUpdatedAt) * 1000).toISOString()}` : " · trading stopped until all sources recover"}.</p>
-    </> : null}
+    </> : !state.isError ? <SkeletonRows count={3} label="Loading market" /> : null}
     {admin ? <div className="rwa-form">
       <p>Only the onchain owner can operate this reserve. Withdrawals go to the connected owner. Funding and reinvestment permanently commit funds to market liquidity.</p>
       <p>Withdrawable fees: {data ? cash(data.withdrawable) : "—"}. <a href={data ? explorerAddressUrl(data.owner) : explorerAddressUrl(config.market)} target="_blank" rel="noreferrer">View authority ↗</a></p>
@@ -90,7 +91,7 @@ function RwaMarketPanel({ config, admin }: { config: RwaMarketConfig; admin: boo
         <button disabled={!isOwner || !correctChain || state.isError || busy || !data} onClick={() => void manage("setPaused")}>{data?.paused ? "Open market" : "Pause trading"}</button>
       </div>
     </div> : <form className="rwa-form" onSubmit={(e) => { e.preventDefault(); void trade(); }}>
-      <div className="rwa-actions" aria-label="Trade direction">
+      <div className="rwa-actions" role="group" aria-label="Trade direction">
         <button type="button" aria-pressed={buy} disabled={busy} onClick={() => { setBuy(true); tx.reset(); }}>{`Buy ${config.assetSymbol}`}</button>
         <button type="button" aria-pressed={!buy} disabled={busy} onClick={() => { setBuy(false); tx.reset(); }}>{`Sell ${config.assetSymbol}`}</button>
       </div>
@@ -102,14 +103,13 @@ function RwaMarketPanel({ config, admin }: { config: RwaMarketConfig; admin: boo
         <div><dt>{buy ? "Total payment" : "You receive"}</dt><dd>{cash(quote.data.values[2])}</dd></div>
         <div><dt>{buy ? "Maximum payment · 0.5% slippage" : "Minimum received · 0.5% slippage"}</dt><dd>{limit ? cash(limit) : "—"}</dd></div>
       </dl> : null}
-      {quote.isError ? <p role="alert">No executable quote. Check price availability, inventory, trade limits and sell liquidity.</p> : null}
-      {address && quote.data && !enough ? <p role="alert">Insufficient balance for this trade and its maximum payment.</p> : null}
-      {!address ? <ConnectWalletButton /> : <button className="rwa-submit" disabled={!ready}>{busy ? "Confirming…" : buy ? "Buy · fee 1%" : "Sell · fee 1%"}</button>}
+      {quote.isError ? <p role="alert" className="fi-inline-state fi-inline-danger">No executable quote. Check price availability, inventory, trade limits and sell liquidity.</p> : null}
+      {address && quote.data && !enough ? <p role="alert" className="fi-inline-state fi-inline-danger">Insufficient balance for this trade and its maximum payment.</p> : null}
+      {!address ? <ConnectWalletButton /> : <button className="rwa-submit fi-button fi-button-primary fi-button-block" disabled={!ready}>{busy ? "Confirming…" : buy ? "Buy · fee 1%" : "Sell · fee 1%"}</button>}
     </form>}
-    {address && !correctChain ? <p role="alert">Switch your wallet to LitVM LiteForge (chain {config.chainId}).</p> : null}
-    <p role="status">{notice || tx.message}</p>
-    {tx.hash ? <a href={`${deployment.chain.explorerUrl}/tx/${tx.hash}`} target="_blank" rel="noreferrer">View transaction ↗</a> : null}
-    <details><summary>Contracts and price sources</summary><a href={explorerAddressUrl(config.market)} target="_blank" rel="noreferrer">Market: {config.market}</a>
+    {address && !correctChain ? <p role="alert" className="fi-inline-state fi-inline-warning">Switch your wallet to LitVM LiteForge (chain {config.chainId}).</p> : null}
+    {notice ? <p role="status">{notice}</p> : null}<TransactionStatus phase={tx.phase} message={tx.message} hash={tx.hash} step={tx.step} totalSteps={tx.totalSteps} />
+    <details className="fi-expander"><summary>Contracts and price sources</summary><a href={explorerAddressUrl(config.market)} target="_blank" rel="noreferrer">Market: {config.market}</a>
       <ol>{config.sourceUrls.map((url, i) => <li key={`${i}:${url}`}><a href={url} target="_blank" rel="noreferrer">{i < 2 ? "Asset / USD" : "Settlement / USD"} source {i % 2 + 1} ↗</a></li>)}</ol>
     </details>
   </section>;
@@ -119,7 +119,7 @@ export function RwaDashboard({ admin = false }: { admin?: boolean }) {
   const markets = rwaMarkets.filter((market) => market.chainId === deployment.chain.id);
   return <div className="rwa-dashboard">
     <p className="rwa-policy">Onchain trading is available around the clock while prices are valid and liquidity is available. Each buy and sell charges 1% into the fee reserve. Dev withdrawals cannot remove trading liquidity or the protected reserve floor.</p>
-    {markets.length === 0 ? <section className="rwa-market"><h2>No RWA market activated</h2><p>Trading opens after an issuer token, independent price sources and funded reserves are verified on this network.</p></section>
+    {markets.length === 0 ? <section className="fi-panel rwa-empty"><h2>No RWA market activated</h2><p>Trading opens after an issuer token, independent price sources and funded reserves are verified on this network.</p></section>
       : markets.map((config) => <RwaMarketPanel key={config.market} config={config} admin={admin} />)}
   </div>;
 }

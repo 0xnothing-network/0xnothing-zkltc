@@ -41,7 +41,7 @@ const RIGHT_PADDING_BARS = 4;
 const CHART_FRESH_MS = 12_000;
 
 function price(value: number): string {
-  return value.toLocaleString(undefined, {
+  return value.toLocaleString("en-US", {
     maximumFractionDigits: value < 0.0001 ? 18 : value < 1 ? 8 : 4,
   });
 }
@@ -195,7 +195,7 @@ function updateSeriesData<T extends { time: Time }>(
 }
 
 function compact(value: number): string {
-  return value.toLocaleString(undefined, {
+  return value.toLocaleString("en-US", {
     notation: value >= 10_000 ? "compact" : "standard",
     maximumFractionDigits: 2,
   });
@@ -625,11 +625,11 @@ export function MarketChart({
         )}
       </div>
       {readout ? (
-        <div className="fi-chart-summary" aria-live={hover ? "off" : "polite"}>
+        <div className="fi-chart-summary">
           <strong>{price(readout.close)}</strong>
           {priceSource === "oracle" ? (
             <>
-              <span data-tone="positive">DIA</span>
+              <span className="fi-chart-source">DIA</span>
               <span className="fi-chart-rangevol">
                 {oracleUpdatedAt ? `Updated ${new Date(oracleUpdatedAt * 1000).toLocaleString()}` : "Live snapshot"}
               </span>
@@ -643,15 +643,15 @@ export function MarketChart({
             </>
           )}
         </div>
-      ) : initialLoading || (!loading && candles.length === 0) ? <div className="fi-chart-summary" aria-hidden="true" /> : null}
-      <div className="fi-chart-frame">
+      ) : initialLoading ? <div className="fi-chart-summary" aria-hidden="true" /> : null}
+      <div className="fi-chart-frame" data-empty={!initialLoading && candles.length === 0 ? "true" : undefined}>
         {candles.length > 0 ? (
           <div className="fi-chart" ref={hostRef} data-updating={loading || undefined} aria-hidden="true" />
         ) : null}
         {initialLoading ? <div className="fi-chart-overlay"><SkeletonRows count={4} label="Loading price chart" /></div> : null}
+        {!loading && error && candles.length === 0 ? <ErrorState message={error} onRetry={() => void load()} /> : null}
+        {!initialLoading && !error && candles.length === 0 ? <EmptyState title={priceSource === "oracle" ? "Oracle price unavailable" : "No candles yet"} /> : null}
       </div>
-      {!loading && error && candles.length === 0 ? <ErrorState message={error} onRetry={() => void load()} /> : null}
-      {!initialLoading && !error && candles.length === 0 ? <EmptyState title={priceSource === "oracle" ? "Oracle price unavailable" : "No candles yet"} /> : null}
       {candles.length > 0 ? (
         <details className="fi-chart-a11y">
           <summary>{priceSource === "oracle" ? "Oracle snapshot" : "OHLC data"}</summary>

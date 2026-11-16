@@ -224,7 +224,7 @@ export function BorrowWorkspace() {
   return (
     <>
       <MetricStrip metrics={[
-        { label: "Available NUSD", value: availableIsDust ? "Unavailable" : formatAmount(available), tone: availableIsDust ? "warning" : "positive" },
+        { label: "Available NUSD", value: availableIsDust ? "Unavailable" : formatAmount(available), tone: availableIsDust ? "warning" : undefined },
         { label: "Borrow APR", value: formatPercentWad(lending.borrowRate) },
         { label: "Max borrow", value: `${formatAmount(maxBorrow)} NUSD` },
         { label: "Current LTV", value: debt === 0n ? "No debt" : formatBps(currentLtvBps), tone: risk.tone },
@@ -242,7 +242,7 @@ export function BorrowWorkspace() {
               <dl className="fi-position-list">
                 <div className="fi-position-row"><span>Collateral value</span><strong>{formatAmount(accountRisk?.[0])} NUSD</strong></div>
                 <div className="fi-position-row"><span>Debt</span><strong>{formatAmount(debt)} NUSD</strong></div>
-                <div className="fi-position-row"><span>Position health</span><strong className="fi-health-value" data-state={risk.state}>{risk.label}</strong></div>
+                <div className="fi-position-row"><span>Position health</span><strong className="fi-health-value" data-state={risk.state} data-tone={risk.tone}>{risk.label}</strong></div>
               </dl>
               {debt !== undefined && debt > 0n && selectedConfig ? (
                 <HealthGauge

@@ -5,7 +5,7 @@ import { formatUnits, type Address } from "viem";
 import { useAccount, useReadContracts } from "wagmi";
 import { AmountField } from "@fi/components/AmountField";
 import { ConnectWalletButton } from "@fi/components/ConnectWalletButton";
-import { NotDeployed, TransactionStatus } from "@fi/components/UiStates";
+import { NotDeployed, SkeletonRows, TransactionStatus } from "@fi/components/UiStates";
 import { useToast } from "@fi/components/Toast";
 import { deployment } from "@fi/config/deployment";
 import { erc20Abi } from "@fi/lib/abis/erc20";
@@ -165,7 +165,7 @@ export function RewardsDashboard() {
   }, [amount, amountText, walletNusd]);
 
   const caption = streaming
-    ? <><strong>{formatAmount(rewardRate === undefined ? undefined : rewardRate * SECONDS_PER_DAY, 18, 2)}</strong> NUSD/day to stakers · this stream ends {formatDate(periodFinish)}</>
+    ? <><strong>{formatAmount(rewardRate === undefined ? undefined : rewardRate * SECONDS_PER_DAY, 18, 2)}</strong> NUSD/day to stakers · this stream ends <span className="fi-num">{formatDate(periodFinish)}</span></>
     : queued
       ? <><strong>{formatAmount(queued, 18, 4)}</strong> NUSD queued · it starts streaming with the next stake</>
       : <>No rewards streaming yet · fees start a new 7-day stream as they arrive</>;
@@ -246,8 +246,8 @@ export function RewardsDashboard() {
             <dd data-tone="positive"><LiveClaimable atRead={claimableAtRead} readAtMs={wallet.dataUpdatedAt} perSecond={yourRate} periodFinish={periodFinish} /><small>NUSD</small></dd>
             {claimable ? (
               <span className="fi-round-actions">
-                <button type="button" className="fi-round-claim" disabled={tx.pending} onClick={() => void claim()}>Claim</button>
-                <button type="button" className="fi-round-claim" disabled={tx.pending} onClick={() => void restake()}>Restake {selectedLock.days}d</button>
+                <button type="button" className="fi-button fi-button-muted fi-round-claim" disabled={tx.pending} onClick={() => void claim()}>Claim</button>
+                <button type="button" className="fi-button fi-button-muted fi-round-claim" disabled={tx.pending} onClick={() => void restake()}>Restake {selectedLock.days}d</button>
               </span>
             ) : null}
           </div>
@@ -256,7 +256,7 @@ export function RewardsDashboard() {
             <dd>{formatAmount(totalPrincipal, 18, 2)}<small>NUSD · APR {formatApr(rewardRate, totalWeight)} at 1x</small></dd>
           </div>
         </dl>
-        <details className="fi-round-help">
+        <details className="fi-round-help fi-expander">
           <summary>How rewards work</summary>
           <ol>
             <li>70% of every NUSD fee (0xPump, 0xFi swaps, lending, synth mints) and 80% of each NUSD surplus release go to stakers.</li>
@@ -293,10 +293,14 @@ export function RewardsDashboard() {
         <article className="fi-panel fi-earn-locks" aria-labelledby="rewards-positions-title">
           <header className="fi-earn-locks-head">
             <h2 id="rewards-positions-title" className="fi-earn-title">Your locks</h2>
-            <span>{allPositionIds === undefined ? "--" : allPositionIds.length}{weight ? ` · ${formatAmount(weight, 18, 2)} 0xPoints/day` : ""}</span>
+            {isConnected ? (
+              <span>{allPositionIds === undefined ? "--" : `${allPositionIds.length} ${allPositionIds.length === 1 ? "lock" : "locks"}`}{weight ? ` · ${formatAmount(weight, 18, 2)} 0xPoints/day` : ""}</span>
+            ) : null}
           </header>
           {!isConnected ? <p className="fi-earn-empty">Connect a wallet to see your locks and rewards.</p> : allPositionIds?.length === 0 ? (
             <p className="fi-earn-empty">No NUSD locks yet. New stakes appear here without a refresh.</p>
+          ) : positionIds.length > 0 && positionReads.isPending ? (
+            <SkeletonRows count={Math.min(positionIds.length, 4)} label="Loading locks" />
           ) : (
             <ul className="fi-lock-list">
               {positions.map(({ id, position }) => {
@@ -308,9 +312,9 @@ export function RewardsDashboard() {
                       <strong>{formatAmount(position.amount)} NUSD</strong>
                       <small>#{id.toString()} · {option ? `${option.days}d ${option.multiplier}` : `${Math.round(position.lockDuration / 86_400)}d`} · {position.withdrawn ? "withdrawn" : `unlocks ${formatDate(position.unlockTime).slice(0, 10)}`}</small>
                     </div>
-                    {position.withdrawn ? null : (
-                      <button type="button" className="fi-button fi-button-muted" disabled={!matured || tx.pending} onClick={() => void withdraw(id)}>{matured ? "Withdraw" : "Locked"}</button>
-                    )}
+                    {position.withdrawn ? null : matured ? (
+                      <button type="button" className="fi-button fi-button-muted" disabled={tx.pending} onClick={() => void withdraw(id)}>Withdraw</button>
+                    ) : <span className="fi-status fi-lock-tag">Locked</span>}
                   </li>
                 );
               })}

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CaretUpDown, MagnifyingGlass } from "@phosphor-icons/react";
+import { ArrowRight, CaretDown, CaretUp, CaretUpDown, MagnifyingGlass } from "@phosphor-icons/react";
 import { memo, useDeferredValue, useMemo, useState } from "react";
 import type { Address } from "viem";
 import { TokenPairLogos } from "@fi/components/TokenLogo";
@@ -115,7 +115,6 @@ const preloadMarketChart = () => { void import("@fi/components/MarketChart"); };
 // Rows keep their pool object across refreshes (structural sharing), so only changed markets re-render.
 const MarketRow = memo(function MarketRow({ pool, canonical }: { pool: PoolPoint; canonical: Set<string> }) {
   const type = marketType(pool, canonical);
-  const live = hasLiquidity(pool);
   const change = pool.priceChange24h;
   const nusd = deployment.contracts.nusd?.toLowerCase();
   const token0IsNusd = Boolean(nusd && pool.token0.id.toLowerCase() === nusd);
@@ -135,7 +134,7 @@ const MarketRow = memo(function MarketRow({ pool, canonical }: { pool: PoolPoint
           <TokenPairLogos token0={displayToken0} token1={displayToken1} size="sm" />
           <span>
             <strong>{firstSymbol}<i>/</i>{secondSymbol}</strong>
-            <small><i data-state={live ? "live" : "empty"} />{type === "graduated" ? "0xPump" : type === "canonical" ? "Core" : "DEX"}</small>
+            <small className="fi-market-kind">{type === "graduated" ? "0xPump" : type === "canonical" ? "Core" : "DEX"}</small>
           </span>
         </span>
         <span className="fi-market-cell">
@@ -222,7 +221,7 @@ export function PoolDirectory({
       <div className="fi-market-toolbar">
         <div className="fi-market-title">
           {title ? <h1 id="fi-market-title">{title}</h1> : null}
-          <span>{markets.length} markets</span>
+          <span>{loading && indexedPools.length === 0 ? "--" : markets.length} markets</span>
         </div>
         <label className="fi-market-search">
           <span className="sr-only">Search markets</span>
@@ -249,8 +248,17 @@ export function PoolDirectory({
         </div>
       </div>
 
+      <div className="fi-market-table">
       <div className="fi-market-list-head">
-        <span>Market</span>
+        <span className="fi-market-head-label">
+          Market
+          {/* One-line status inside the header row: it appears without moving the list. */}
+          {poolsQuery.warning ? (
+            <small className="fi-status" data-state="warning" role="status">
+              Market data delayed<span className="sr-only"> Showing the latest available snapshot.</span>
+            </small>
+          ) : null}
+        </span>
         {(["price", "change", "tvl"] as const).map((key) => (
           <button
             type="button"
@@ -263,20 +271,18 @@ export function PoolDirectory({
             key={key}
           >
             {key === "change" ? "24h" : key === "tvl" ? "TVL" : "Price"}
-            <CaretUpDown size={11} aria-hidden="true" />
+            {sortKey === key
+              ? (sortDirection === "asc" ? <CaretUp size={12} aria-hidden="true" /> : <CaretDown size={12} aria-hidden="true" />)
+              : <CaretUpDown size={12} aria-hidden="true" />}
           </button>
         ))}
         <span />
       </div>
-      {poolsQuery.warning ? (
-        <div className="fi-inline-state fi-inline-warning" role="status">
-          <div><strong>Market data delayed</strong><span>Showing the latest available snapshot.</span></div>
-        </div>
-      ) : null}
       <ul className="fi-market-list">
         {markets.map((pool) => <MarketRow pool={pool} canonical={canonical} key={pool.id} />)}
       </ul>
       {loading && indexedPools.length === 0 ? <SkeletonRows count={4} label="Loading DEX markets" /> : null}
+      </div>
       {!loading && error ? <ErrorState message={error} onRetry={() => void poolsQuery.refetch()} /> : null}
       {!loading && !error && markets.length === 0 ? (
         <EmptyState title={indexedPools.length === 0 ? "No markets yet" : "No matching markets"} />

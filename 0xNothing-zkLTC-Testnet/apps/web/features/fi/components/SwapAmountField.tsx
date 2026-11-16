@@ -47,7 +47,7 @@ export function SwapAmountField({
     <div className="fi-field">
       <div className="fi-field-label-row">
         <label htmlFor={id}>{label}</label>
-        {balance ? <span title={`Balance ${balance}`}>Balance {balance}</span> : null}
+        {balance ? <span title={`Balance ${balance}`}>Balance <b className="fi-num">{balance}</b></span> : null}
       </div>
       <div
         className="fi-amount-input"
@@ -86,7 +86,7 @@ export function SwapAmountField({
         </div>
       </div>
       {helper ? <small id={helperId}>{helper}</small> : null}
-      {error ? <small id={errorId} className="fi-field-error" aria-live="polite">{error}</small> : null}
+      <small id={`${id}-error`} className="fi-field-error" aria-live="polite">{error ?? ""}</small>
     </div>
   );
 }

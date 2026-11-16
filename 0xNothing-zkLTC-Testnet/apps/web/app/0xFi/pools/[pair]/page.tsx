@@ -25,12 +25,10 @@ export default async function PoolPage({
     <div className="fi-page fi-trade-page">
       {pair ? (
         <>
-          <PageHeading
-            title={`${displayPair![0]} / ${displayPair![1]}`}
-            action={fromEarn
-              ? <RouteLink href={`/earn?pair=${slug}`}>Back to Earn</RouteLink>
-              : <RouteLink href="/pools">Back to pools</RouteLink>}
-          />
+          {fromEarn
+            ? <RouteLink href={`/earn?pair=${slug}`} back>Back to Earn</RouteLink>
+            : <RouteLink href="/pools" back>Back to pools</RouteLink>}
+          <PageHeading title={`${displayPair![0]} / ${displayPair![1]}`} />
           <PoolDetail pair={pair} fromEarn={fromEarn} initialMode={initialMode} />
         </>
       ) : <DynamicPoolDetail key={pool} pool={pool!} />}

@@ -248,7 +248,7 @@ function FarmRow({
           <span className="fi-label">LP farm</span>
           <h2 id={`farm-title-${slug}`}>{tokenA}/{tokenB}</h2>
         </div>
-        <span className="fi-status" data-state={programStatus.tone} aria-live="polite">{programStatus.label}</span>
+        <span className="fi-status" data-state={programStatus.tone}>{programStatus.label}</span>
         <div className="fi-farm-summary-actions">
           <Link className="fi-button fi-button-muted" href={fiPath(`/pools/${slug}?action=add&from=earn`)}>Add LP</Link>
           <button

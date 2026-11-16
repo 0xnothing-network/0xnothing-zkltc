@@ -357,7 +357,6 @@
   min-width: 0;
   overflow-wrap: anywhere;
   color: var(--fi-text);
-  font-size: 22px;
   font-weight: 500;
   letter-spacing: -0.045em;
   line-height: 1.3;
@@ -430,11 +429,12 @@
 
 .fi-loading-amount {
   display: grid;
-  min-height: 78px;
+  min-height: 88px;
   grid-template-columns: 1fr 108px;
   align-items: center;
   gap: 18px;
   border: 1px solid var(--fi-line-strong);
+  border-radius: var(--r-md);
   padding: 14px 16px;
 }
 
@@ -447,6 +447,7 @@
   z-index: 1;
   margin: -9px auto;
   border: 1px solid var(--fi-line-strong);
+  border-radius: var(--r-md);
   background: var(--fi-panel);
 }
 
@@ -491,6 +492,11 @@
   top: calc(var(--fi-header-height) + 16px);
 }
 
+/* A short viewport cannot hold the whole form panel; let it scroll with the page. */
+@media (max-height: 860px) {
+  .fi-sticky-panel { position: static; }
+}
+
 .fi-position-list {
   margin-top: 17px;
   border-top: 1px solid var(--fi-line);
@@ -498,7 +504,7 @@
 
 .fi-position-row {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) minmax(100px, auto) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   min-height: 58px;
   align-items: center;
   gap: 14px;
@@ -507,8 +513,12 @@
 }
 
 .fi-position-row strong {
+  min-width: 0;
+  font-family: var(--font-num);
   font-size: 12px;
   font-weight: 500;
+  overflow-wrap: break-word;
+  text-align: right;
 }
 
 .fi-position-row span {
@@ -564,19 +574,13 @@
   color: var(--fi-text);
 }
 
-.fi-segmented button.active {
-  background: var(--accent);
-  color: var(--fi-bg);
-}
-
-.fi-segmented button.active.positive {
-  background: var(--positive);
-  color: var(--accent-ink);
-}
-
+/* One selected-segment style for every segmented control, filter row and chart period. */
+.fi-segmented button.active,
+.fi-segmented button.active.positive,
 .fi-segmented button.active.danger {
-  background: var(--accent);
-  color: var(--fi-bg);
+  background: var(--seg-on);
+  color: var(--text-1);
+  box-shadow: var(--edge-highlight), 0 0 0 1px var(--line-strong);
 }
 
 .fi-form {
@@ -669,7 +673,7 @@
 }
 
 .fi-amount-input:hover {
-  border-color: rgba(237, 245, 240, 0.38);
+  border-color: color-mix(in srgb, var(--text-1) 38%, transparent);
 }
 
 .fi-amount-input:focus-within {
@@ -678,7 +682,7 @@
 }
 
 .fi-amount-input[data-invalid="true"] {
-  border-color: rgba(255, 102, 125, 0.72);
+  border-color: var(--negative);
 }
 
 .fi-amount-input input {
@@ -740,13 +744,13 @@
   align-items: stretch;
   border: 0;
   border-left: 1px solid var(--fi-line-strong);
-  background: rgba(155, 231, 189, 0.025);
+  background: transparent;
   transition: border-color 100ms steps(2, end), background-color 100ms steps(2, end);
 }
 
 .fi-amount-controls:focus-within {
   border-left-color: var(--line-strong);
-  background: rgba(155, 231, 189, 0.045);
+  background: var(--hover);
 }
 
 .fi-amount-asset {
@@ -787,7 +791,7 @@
   background: transparent;
   color: var(--accent-text);
   font-size: var(--fi-text-label);
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   transition: background-color 100ms steps(2, end), color 100ms steps(2, end);
 }
 
@@ -810,6 +814,8 @@
 .fi-field .fi-field-error {
   color: var(--negative);
 }
+
+.fi-field .fi-field-error:empty { display: none; }
 
 .fi-select-field select {
   width: 100%;
@@ -934,6 +940,7 @@
 
 .fi-swap-asset-badge {
   border: 1px solid var(--fi-line-strong);
+  border-radius: var(--r-xs);
   padding: 3px 5px;
   color: var(--fi-muted);
   font-size: 12px;
@@ -996,28 +1003,33 @@
   place-items: center;
   margin: -7px auto;
   border: 1px solid var(--fi-line-strong);
+  border-radius: var(--r-md);
   background: var(--fi-panel);
   color: var(--accent-text);
   font-size: 15px;
   line-height: 1;
 }
 
+/* Quote facts: one line per fact, label left in muted text, value right in the number face. */
 .fi-primary-action .fi-form-details {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 16px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
 }
 
 .fi-primary-action .fi-form-details > div {
-  display: grid;
-  align-content: start;
-  justify-content: stretch;
-  gap: 4px;
+  min-height: 40px;
 }
 
 .fi-primary-action .fi-form-details strong,
 .fi-primary-action .fi-form-details dd {
   font-weight: 400;
-  text-align: left;
+  text-align: right;
+}
+
+.fi-form-details dd {
+  color: var(--fi-text);
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
 }
 
 .fi-inline-state {
@@ -1226,20 +1238,17 @@
   align-items: center;
   gap: 6px;
   border: 1px solid currentColor;
+  border-radius: var(--r-xs);
   padding: 0 7px;
+  background: transparent;
   color: var(--fi-muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1;
 }
 
-.fi-status::before {
-  content: "";
-  width: 4px;
-  height: 4px;
-  flex: none;
-  background: currentColor;
-}
+/* Status tag: a hairline box in the status colour, no dot. Shared by swap, pools, lend and farm. */
+.fi-status::before { content: none; }
 
 .fi-status[data-state="live"],
 .fi-status[data-state="healthy"] { color: var(--positive); }
@@ -1259,6 +1268,16 @@
 
 .fi-text-link:hover {
   color: var(--accent-text);
+}
+
+/* The 4-column activity table fits a phone without the 720px floor. */
+@media (max-width: 600px) {
+  .fi-activity-table { min-width: 0; }
+  .fi-activity-table :is(th, td) { padding-inline: 8px; }
+}
+
+@media (pointer: coarse) {
+  .fi-table .fi-text-link { min-height: 40px; }
 }
 
 .fi-chart-panel {
@@ -1370,15 +1389,18 @@
 .fi-preview-value strong {
   min-width: 0;
   overflow-wrap: anywhere;
-  color: var(--accent-text);
+  color: var(--fi-text);
+  font-family: var(--font-num);
   font-size: 27px;
   font-weight: 500;
   line-height: 1.1;
 }
 
 .fi-health-value {
-  color: var(--accent-text);
+  color: var(--fi-text);
 }
+
+.fi-health-value[data-tone="positive"] { color: var(--positive); }
 
 .fi-health-value[data-state="warning"] { color: var(--warning); }
 .fi-health-value[data-state="danger"] { color: var(--negative); }
@@ -1398,8 +1420,10 @@
 }
 
 .fi-slippage-options button.active {
-  border-color: var(--accent);
-  color: var(--accent-text);
+  border-color: transparent;
+  background: var(--seg-on);
+  color: var(--text-1);
+  box-shadow: var(--edge-highlight), 0 0 0 1px var(--line-strong);
 }
 
 .fi-toast-viewport {
@@ -1555,11 +1579,7 @@
   .fi-panel-flush,
   .fi-chart-panel { padding: 0; }
   .fi-metric-strip { grid-template-columns: 1fr 1fr; }
-  .fi-metric-strip > div { padding: 13px; }
-  .fi-metric-strip dd { font-size: 13px; }
   .fi-panel-heading { grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 8px; }
-  .fi-position-row { grid-template-columns: minmax(0, 1fr) auto; }
-  .fi-position-row strong { min-width: 0; overflow-wrap: anywhere; text-align: right; }
   .fi-skeleton-row { grid-template-columns: minmax(0, 1fr) 70px; }
   .fi-skeleton-row span:nth-child(2) { display: none; }
 }
@@ -1570,6 +1590,10 @@
   }
 
   .fi-root :is( .fi-slippage-options button, .fi-inline-retry, .fi-toast button) {
+    min-height: 44px;
+  }
+
+  .fi-root :is(.fi-lock-list .fi-button, .fi-revenue-harvest, .fi-farm-summary-actions .fi-button) {
     min-height: 44px;
   }
 
@@ -1686,7 +1710,7 @@
   outline: 0;
   background: transparent;
   color: var(--fi-text);
-  font-size: 12px;
+  font-size: var(--fi-text-body);
 }
 
 .fi-market-search input::placeholder { color: var(--fi-dim); }
@@ -1736,21 +1760,23 @@
   background: var(--fi-panel);
 }
 
+/* No stray bordered box while the list loads, errors or is empty. */
+.fi-market-list:empty { display: none; }
+
 .fi-market-item { margin: 0; }
 
 .fi-market-row {
   min-height: 78px;
   border-bottom: 1px solid var(--fi-line);
   padding: 0 10px;
-  transition: background-color 100ms steps(2, end), transform 100ms steps(2, end);
+  transition: background-color 120ms ease;
 }
 
 .fi-market-item:last-child .fi-market-row { border-bottom: 0; }
 .fi-market-row:hover {
-  background: rgba(142, 233, 184, 0.035);
-  box-shadow: inset 2px 0 0 var(--accent);
+  background: var(--hover);
+  box-shadow: none;
 }
-.fi-market-row:active { transform: translateY(1px); }
 
 .fi-market-pair {
   display: flex;
@@ -1772,16 +1798,17 @@
 .fi-market-cell[data-tone="positive"] strong { color: var(--positive); }
 .fi-market-cell[data-tone="danger"] strong { color: var(--negative); }
 .fi-market-cell[data-tone="muted"] strong { color: var(--fi-muted); }
-.fi-market-arrow { justify-self: end; color: var(--fi-dim); transition: color 100ms steps(2, end), transform 100ms steps(2, end); }
-.fi-market-row:hover .fi-market-arrow { color: var(--accent-text); transform: translateX(2px); }
+.fi-market-arrow { justify-self: end; color: var(--fi-dim); transition: color 120ms ease; }
+.fi-market-row:hover .fi-market-arrow { color: var(--fi-text); transform: none; }
 
 @media (max-width: 850px) {
   .fi-market-toolbar { grid-template-columns: minmax(150px, 1fr) minmax(200px, 1fr); }
   .fi-market-toolbar .fi-segmented { grid-column: 1 / -1; }
   .fi-market-list-head,
-  .fi-market-row { grid-template-columns: minmax(210px, 1fr) 110px 80px 26px; }
-  .fi-market-list-head > :nth-child(4),
-  .fi-market-row > :nth-child(4) { display: none; }
+  .fi-market-row { grid-template-columns: minmax(210px, 1fr) 110px 96px 26px; }
+  /* Tablet keeps TVL and drops the 24h column first. */
+  .fi-market-list-head > :nth-child(3),
+  .fi-market-row > :nth-child(3) { display: none; }
 }
 
 @media (max-width: 600px) {
@@ -1821,6 +1848,7 @@
   .fi-market-cell { justify-items: end; gap: 2px; }
   .fi-market-cell small { display: block; }
   .fi-market-cell strong { font-size: 12px; }
+  .fi-market-row > .fi-market-cell:nth-child(3) strong { font-weight: 400; }
 }
 
 .fi-trade-page {
@@ -1829,7 +1857,7 @@
 
 .fi-trade-header {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) auto;
+  grid-template-columns: var(--fi-control-height) minmax(0, 1fr) auto;
   min-height: 78px;
   align-items: center;
   gap: 16px;
@@ -1908,7 +1936,9 @@
 }
 
 .fi-pool-details {
+  overflow: hidden;
   border: 1px solid var(--fi-line);
+  border-radius: var(--r-md);
   background: var(--fi-panel);
 }
 
@@ -1916,6 +1946,8 @@
   display: flex;
   min-height: 44px;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 0 15px;
   color: var(--fi-muted);
   cursor: pointer;
@@ -1961,7 +1993,7 @@
   }
 
   .fi-trade-header {
-    grid-template-columns: 42px minmax(0, 1fr);
+    grid-template-columns: var(--fi-control-height) minmax(0, 1fr);
     gap: 12px;
     padding-bottom: 14px;
   }
@@ -2072,7 +2104,7 @@
 }
 
 .fi-farm-row:hover {
-  border-color: rgba(177, 232, 201, 0.34);
+  border-color: var(--line-strong);
 }
 
 .fi-farm-row[data-program-state="active"],
@@ -2156,13 +2188,18 @@
 }
 
 .fi-farm-row > .fi-trade-quote dt {
+  overflow: hidden;
   color: var(--fi-muted);
   font-size: 12px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fi-farm-row > .fi-trade-quote dd {
   color: var(--fi-text);
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
   font-weight: 500;
 }
@@ -2314,8 +2351,10 @@
 
 .fi-earn-steps li > span {
   grid-row: 1 / span 2;
-  color: var(--accent-text);
-  font-size: 18px;
+  color: var(--text-3);
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
   line-height: 1;
 }
 
@@ -2476,9 +2515,32 @@
 }
 
 .fi-settings-details summary::-webkit-details-marker { display: none; }
-.fi-settings-details summary strong { color: var(--fi-text); font-size: inherit; font-weight: 400; }
-.fi-settings-details summary strong::after { content: " [+]"; color: var(--accent-text); }
-.fi-settings-details[open] summary strong::after { content: " [-]"; }
+.fi-settings-details summary strong { margin-left: auto; color: var(--fi-text); font-size: inherit; font-weight: 400; }
+
+/*
+ * Shared expander marker: a CSS chevron in --text-3 at the right end of the
+ * summary row, rotating when open. Reuse it by adding class "fi-expander" to a <details>
+ * (or the details selector to these lists); hide that summary's own marker first.
+ */
+:is(.fi-expander, .fi-settings-details, .fi-pool-details) > summary { list-style: none; }
+:is(.fi-expander, .fi-settings-details, .fi-pool-details) > summary::-webkit-details-marker { display: none; }
+:is(.fi-expander, .fi-settings-details, .fi-pool-details) > summary::after {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border-right: 1.5px solid var(--text-3);
+  border-bottom: 1.5px solid var(--text-3);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 120ms ease;
+}
+:is(.fi-expander, .fi-settings-details, .fi-pool-details)[open] > summary::after { transform: translateY(2px) rotate(225deg); }
+/* The settings row already pushes its value right; the chevron follows it. */
+.fi-settings-details > summary::after { margin-left: 0; }
+@media (prefers-reduced-motion: reduce) {
+  :is(.fi-expander, .fi-settings-details, .fi-pool-details) > summary::after { transition: none; }
+}
 .fi-settings-details[open] summary { border-bottom: 1px solid var(--fi-line); }
 .fi-settings-details .fi-slippage-control,
 .fi-settings-details .fi-disclosure-body { padding: 12px; }
@@ -3230,13 +3292,14 @@
   border: 1px solid var(--fi-line-strong);
   border-top: 1px solid var(--line-strong);
   background: var(--fi-panel);
+  border-radius: var(--r-lg);
   box-shadow: var(--e-2);
   padding: 12px;
 }
 .fi-swap-asset-picker-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .fi-swap-asset-picker-heading strong { font-size: 13px; }
-.fi-swap-asset-picker-heading button { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--fi-line); background: var(--fi-input); color: var(--fi-text); }
-.fi-swap-asset-search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--fi-line-strong); padding: 0 10px; background: var(--fi-input); }
+.fi-swap-asset-picker-heading button { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--fi-line); border-radius: var(--r-md); background: var(--fi-input); color: var(--fi-text); }
+.fi-swap-asset-search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--fi-line-strong); border-radius: var(--r-md); padding: 0 10px; background: var(--fi-input); }
 .fi-swap-asset-search:focus-within { outline: 1px solid var(--accent); }
 .fi-root .fi-amount-input .fi-swap-asset-search input { width: 100%; min-width: 0; height: 46px; padding: 0; border: 0; outline: 0; font-size: 14px; background: transparent; color: var(--fi-text); }
 .fi-swap-asset-search-status { flex: none; margin: 10px 0; font-size: 12px; line-height: 1.5; color: var(--fi-muted); }
@@ -3244,6 +3307,14 @@
 .fi-swap-asset-option-copy .fi-swap-asset-address { overflow: visible; text-overflow: clip; overflow-wrap: anywhere; white-space: normal; }
 @media (max-width: 640px) {
   .fi-swap-asset-picker { position: fixed; top: 12dvh; bottom: auto; right: 12px; left: 12px; width: auto; max-height: 70dvh; }
+  .fi-root .fi-amount-input .fi-swap-asset-search input { font-size: 16px; }
+}
+/* Touch screens of any width get 16px fields so iOS does not zoom on focus. Placed after the
+ * search-field rules above so it wins over them. */
+@media (pointer: coarse) {
+  /* The amount and RWA fields are already larger than 16px: leave their size alone. */
+  .fi-root :is(input, select, textarea):not(.fi-amount-input input, .rwa-form input),
+  .fi-root .fi-market-search input,
   .fi-root .fi-amount-input .fi-swap-asset-search input { font-size: 16px; }
 }
 
@@ -3276,6 +3347,7 @@
   .fi-root .fi-panel-heading h2 { font-size: 18px; }
   .fi-root .fi-metric-strip > div { padding: 14px; }
   .fi-root .fi-metric-strip dt { font-size: 12px; }
+  .fi-root .fi-metric-strip dd { font-size: 16px; overflow-wrap: break-word; }
   .fi-root .fi-workspace-grid { gap: 16px; }
   .fi-root .fi-market-row { min-height: 76px; }
   .fi-root .fi-table td { padding-block: 14px; }
@@ -3390,13 +3462,8 @@
 }
 .fi-round-claim {
   justify-self: start;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--accent);
-  font-size: var(--fi-text-body);
-  font-weight: 600;
-  cursor: pointer;
+  min-height: 40px;
+  padding: 0 14px;
 }
 .fi-round-claim:disabled {
   opacity: 0.5;
@@ -3405,7 +3472,7 @@
 .fi-round-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px;
 }
 .fi-round-help {
   color: var(--fi-muted);
@@ -3456,6 +3523,8 @@
   color: var(--fi-muted);
   font-family: var(--font-num);
   font-size: var(--fi-text-body);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
 }
 .fi-earn-empty {
   margin: 0;
@@ -3490,11 +3559,10 @@
   font-size: var(--fi-text-data);
 }
 .fi-lock-list small {
-  overflow: hidden;
   color: var(--fi-muted);
   font-size: var(--fi-text-label);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 .fi-lock-list li[data-state="withdrawn"] {
   opacity: 0.55;
@@ -3520,13 +3588,6 @@
 }
 .fi-revenue-panel > summary::-webkit-details-marker {
   display: none;
-}
-.fi-revenue-panel > summary::after {
-  content: "+";
-  color: var(--fi-muted);
-}
-.fi-revenue-panel[open] > summary::after {
-  content: "−";
 }
 .fi-revenue-title {
   color: var(--fi-text);
@@ -3614,4 +3675,433 @@
   .fi-revenue-amount {
     grid-column: 1;
   }
+}
+
+/* ===== UI pass 2026-11-16, fi-trade lane. Shared pieces the fi-credit lane can reuse:
+ *  .fi-root .fi-page    one page container: the header's inner width and gutter
+ *  .fi-num              number face
+ *  .fi-status           status tag, .fi-segmented button.active,
+ *  .fi-expander         chevron: defined above with the settings disclosure. ===== */
+
+.fi-root .fi-page {
+  width: min(100%, 1440px);
+  max-width: none;
+  padding-inline: clamp(14px, 2.4vw, 32px);
+}
+/* The swap page is a single card: it stays a centred 580px column inside the same gutter. */
+.fi-root .fi-page.fi-trade-dashboard { max-width: calc(580px + 2 * clamp(14px, 2.4vw, 32px)); }
+
+.fi-num {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-weight: inherit;
+  white-space: nowrap;
+}
+
+.fi-field-label-row .fi-num { color: var(--fi-text); }
+
+/* Back link above a page title: muted, arrow first, 40px tap height. */
+.fi-back-link {
+  min-height: 40px;
+  font-size: 13px;
+  text-decoration-line: none;
+}
+.fi-back-link:hover,
+.fi-back-link:focus-visible { text-decoration-line: underline; }
+.fi-page > .fi-back-link + .fi-page-heading { padding-top: 4px; }
+
+/* Panel-heading and table links: muted, small arrow, underline on hover. */
+.fi-heading-link,
+.fi-activity-table .fi-text-link {
+  color: var(--text-2);
+  text-decoration-line: none;
+}
+.fi-heading-link:hover,
+.fi-heading-link:focus-visible,
+.fi-activity-table .fi-text-link:hover,
+.fi-activity-table .fi-text-link:focus-visible { text-decoration-line: underline; }
+@media (pointer: coarse) {
+  .fi-heading-link { min-height: 40px; }
+}
+
+/* Create pool: a centred single card like the swap card. */
+.fi-create-page > :is(.fi-page-heading, .fi-panel) {
+  max-width: 580px;
+  margin-inline: auto;
+}
+.fi-create-page > .fi-back-link { margin-inline: max(0px, calc((100% - 580px) / 2)); }
+.fi-root .fi-create-page .fi-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 16px;
+  font-family: var(--font-num);
+  font-size: 14px;
+}
+/* Touch screens keep 16px here too, so iOS does not zoom on focus. */
+@media (pointer: coarse) {
+  .fi-root .fi-create-page .fi-input { font-size: 16px; }
+}
+.fi-create-page .fi-hint {
+  color: var(--fi-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Chart. */
+.fi-chart-frame[data-empty="true"] {
+  display: grid;
+  height: auto;
+  min-height: 360px;
+}
+.fi-root.fi-root .fi-chart-frame > .fi-empty-state {
+  min-height: 0;
+  padding: 24px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+@media (max-width: 760px) {
+  .fi-chart-frame[data-empty="true"] { min-height: 280px; }
+}
+.fi-chart-summary strong {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+.fi-chart-summary .fi-chart-source {
+  display: inline-flex;
+  min-height: 20px;
+  align-items: center;
+  border: 1px solid currentColor;
+  border-radius: var(--r-xs);
+  padding: 0 6px;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+}
+.fi-chart-heading > small {
+  display: inline-flex;
+  flex: none;
+  min-height: var(--fi-control-height);
+  align-items: center;
+}
+
+/* Activity table: numbers in the number face; two-line rows on phones. */
+.fi-activity-table td:nth-child(2),
+.fi-activity-table .fi-text-link {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 600px) {
+  .fi-activity-table,
+  .fi-activity-table tbody { display: block; width: 100%; }
+  .fi-activity-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .fi-activity-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "type time" "amount tx";
+    align-items: center;
+    gap: 6px 12px;
+    border-bottom: 1px solid var(--line);
+    padding: 10px 16px;
+  }
+  .fi-root .fi-activity-table td,
+  .fi-root .fi-activity-table td:first-child {
+    position: static;
+    height: auto;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    line-height: 1.4;
+  }
+  .fi-activity-table td:nth-child(1) { grid-area: type; }
+  .fi-activity-table td:nth-child(2) { grid-area: amount; text-align: right; white-space: normal; }
+  .fi-activity-table td:nth-child(3) { grid-area: time; color: var(--fi-muted); }
+  .fi-activity-table td:nth-child(4) { grid-area: tx; }
+  .fi-root .fi-table.fi-activity-table .fi-text-link { min-height: 0; }
+}
+@media (max-width: 600px) and (pointer: coarse) {
+  .fi-root .fi-table.fi-activity-table .fi-text-link { min-height: 40px; }
+}
+
+/* Flip button and liquidity plus: one 40px rounded tile, soft card shadow, no halo. */
+.fi-root .fi-swap-arrow,
+.fi-root .fi-swap-arrow:active:not(:disabled) {
+  border-top-color: var(--line-strong);
+  box-shadow: var(--e-1);
+}
+.fi-root .fi-liquidity-plus {
+  width: 40px;
+  height: 40px;
+  margin: -9px auto;
+  border-top-color: var(--line-strong);
+  border-radius: var(--r-md);
+  box-shadow: var(--e-1);
+}
+
+/* Pool details: the standard card. The chevron is the shared expander marker. */
+.fi-root .fi-pool-details {
+  border: 1px solid var(--line);
+  border-top-color: var(--line-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface-1);
+  box-shadow: var(--e-1);
+}
+.fi-root .fi-pool-details > summary {
+  min-height: 48px;
+  padding: 0 16px;
+  font-size: 13px;
+}
+.fi-pool-details dd {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Action panel stays in view while the activity column scrolls, unless the screen is short. */
+@media (max-height: 860px) {
+  .fi-trade-page :is(.fi-sticky-panel, .fi-primary-action.fi-sticky-panel) { position: static; }
+}
+
+/* Market list: header row inside the card, numbers right-aligned in the number face. */
+.fi-root.fi-root .fi-market-table {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background-color: var(--surface-1);
+  box-shadow: var(--e-1);
+}
+.fi-root.fi-root .fi-market-table > .fi-market-list {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+.fi-market-table > .fi-market-list-head {
+  min-height: 40px;
+  padding: 0 10px;
+}
+.fi-market-table > .fi-market-list-head > :is(span, button) { padding: 0; }
+.fi-market-table > .fi-market-list-head > button { justify-self: end; }
+.fi-market-head-label {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+.fi-market-table .fi-market-cell {
+  justify-items: end;
+  text-align: right;
+}
+.fi-market-cell strong {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fi-market-pair small.fi-market-kind {
+  min-height: 20px;
+  width: fit-content;
+  border: 1px solid currentColor;
+  border-radius: var(--r-xs);
+  padding: 0 6px;
+  color: var(--text-2);
+  font-weight: 500;
+  line-height: 1;
+}
+@media (max-width: 600px) {
+  .fi-market-table > .fi-market-list-head {
+    display: flex;
+    min-height: 36px;
+    padding: 0 16px;
+  }
+  .fi-market-table > .fi-market-list-head > :is(button, span:last-child) { display: none; }
+  .fi-market-row { padding: 12px 16px; }
+}
+
+/* Token picker: stays inside the card on phones, rounded close button, Geist placeholder. */
+.fi-swap-asset-picker-heading button { width: 40px; height: 40px; }
+.fi-root .fi-amount-input .fi-swap-asset-search input,
+.fi-root .fi-amount-input .fi-swap-asset-search input::placeholder {
+  font-family: var(--font-ui);
+  letter-spacing: 0;
+}
+.fi-swap-asset-search-status { margin: 12px 0 8px; }
+@media (max-width: 640px) {
+  .fi-swap-asset-select { position: static; }
+  .fi-swap-asset-picker {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    left: 0;
+    width: auto;
+    max-height: min(460px, 65dvh);
+  }
+}
+
+/* ===== UI pass 2026-11-16, fi-credit lane: lend, borrow, synth, farm, NUSD earn, RWA. ===== */
+
+/* Selected segment. The shared skin rule still paints --surface-3, which in
+ * the light theme is barely darker than the track; --seg-on is white there. */
+.fi-root.fi-root.fi-root .fi-segmented button.active {
+  background: var(--seg-on);
+  color: var(--text-1);
+  box-shadow: var(--edge-highlight), 0 0 0 1px var(--line-strong);
+}
+
+/* Status tag border: 1px solid currentColor. The shared skin rule draws it at 35%
+ * with !important, so this 0xFi-scoped rule needs the same weight to win. */
+/* The tag border keeps the shared 35% hairline of app/skin.css, the same as 0xPump. */
+
+/* Page subtitle wraps in balanced lines, never one orphan word. */
+.fi-root .fi-page-heading p { text-wrap: pretty; }
+
+/* The panel after a workspace grid keeps the grid's gap. */
+.fi-root .fi-workspace-grid + .fi-panel { margin-top: 20px; }
+@media (max-width: 760px) {
+  .fi-root .fi-workspace-grid + .fi-panel { margin-top: 16px; }
+}
+
+/* Columns end on one line: the short panel stretches; the sticky form keeps its height. */
+.fi-workspace-balance > .fi-panel:not(.fi-sticky-panel) { align-self: stretch; }
+.fi-earn-workspace { align-items: stretch; }
+.fi-earn-stake,
+.fi-earn-locks { align-content: start; }
+
+/* One panel header: 15px title, optional eyebrow, 1px divider, 16px to the content. */
+.fi-root .fi-round-head h2,
+.fi-root .fi-earn-title,
+.fi-root .fi-farm-summary h2 {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.fi-round-head,
+.fi-earn-locks-head,
+.fi-earn-stake > .fi-earn-title {
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--fi-line);
+  padding-bottom: 16px;
+}
+
+/* Headline figure: primary text, number face, one line, room above the divider. */
+.fi-preview-value strong {
+  overflow: hidden;
+  overflow-wrap: normal;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fi-preview-value + .fi-position-list { margin-top: 16px; }
+
+/* Metric values on phones wrap at their spaces, two lines reserved so nothing moves when data lands. */
+@media (max-width: 480px) {
+  .fi-root .fi-metric-strip dd {
+    min-height: 2.6em;
+    overflow: visible;
+    font-size: 15px;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: normal;
+  }
+}
+
+/* Inner disclosures: the inner fill and radius of the collateral rows,
+ * the shared chevron, rows a little shorter than the amount field, value in secondary text. */
+.fi-workspace-balance > .fi-panel > .fi-pool-details { margin-top: 16px; }
+.fi-root .fi-workspace-balance .fi-pool-details {
+  border: 1px solid var(--fi-line);
+  border-radius: var(--r-md);
+  background: var(--fi-input);
+  box-shadow: none;
+}
+.fi-root .fi-workspace-balance .fi-pool-details > summary {
+  min-height: 44px;
+  padding: 0 12px;
+}
+.fi-root .fi-workspace-balance .fi-settings-details > summary { min-height: 44px; }
+.fi-workspace-balance .fi-settings-details > summary strong { color: var(--text-2); }
+
+.fi-round-help.fi-expander {
+  border: 1px solid var(--fi-line);
+  border-radius: var(--r-md);
+  background: var(--fi-input);
+}
+.fi-round-help.fi-expander > summary {
+  display: flex;
+  width: auto;
+  min-height: 44px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  color: var(--fi-muted);
+  font-size: 13px;
+}
+.fi-round-help.fi-expander[open] > summary {
+  border-bottom: 1px solid var(--fi-line);
+  color: var(--fi-text);
+}
+.fi-round-help.fi-expander > ol {
+  margin: 0;
+  padding: 12px 12px 12px 30px;
+}
+
+/* Revenue and treasury: chevron, values never split from their unit,
+ * and on phones the values move under the title row. */
+.fi-revenue-panel > summary { align-items: center; }
+.fi-revenue-summary > span { white-space: nowrap; }
+@media (max-width: 600px) {
+  .fi-revenue-panel > summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .fi-revenue-title { grid-area: 1 / 1; }
+  .fi-revenue-panel > summary::after { grid-area: 1 / 2; }
+  .fi-revenue-summary {
+    grid-area: 2 / 1 / 3 / 3;
+    justify-content: flex-start;
+  }
+}
+
+/* Reward stream: the date stays whole; the secondary line under each figure is one line. */
+@media (max-width: 560px) {
+  .fi-round-stats dd small {
+    flex-basis: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* A lock that cannot be withdrawn yet is a neutral tag, not a dead button. */
+.fi-root.fi-root .fi-lock-list .fi-lock-tag {
+  flex: none;
+  color: var(--text-2);
+}
+
+/* Farm: one inner inset on phones, labels on one line, tag on the title baseline. */
+.fi-root .fi-panel:is(.fi-farm-row, .fi-earn-guide) { padding: 0; }
+.fi-farm-summary > :is(.fi-farm-identity, .fi-status) {
+  align-self: end;
+  align-self: last baseline;
+}
+@media (max-width: 760px) {
+  .fi-farm-summary,
+  .fi-earn-guide-heading { padding: 14px 18px; }
+  .fi-farm-row > .fi-section-stack { padding: 16px 18px; }
+  .fi-earn-steps li {
+    min-height: 56px;
+    padding: 10px 18px;
+  }
+  .fi-farm-row > .fi-trade-quote > div {
+    min-height: 0;
+    padding: 12px 10px;
+  }
+  .fi-farm-row > .fi-trade-quote > div:first-child { padding-left: 18px; }
 }

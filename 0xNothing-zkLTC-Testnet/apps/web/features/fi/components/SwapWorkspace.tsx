@@ -603,7 +603,7 @@ export function SwapWorkspace() {
       <h1 id="fi-swap-title" className="sr-only">Swap</h1>
       <PanelHeading
         title="Swap"
-        trailing={<span className="fi-status" data-state="healthy">{feeLabel === "--" ? "Fee --" : `${feeLabel} fee`}</span>}
+        trailing={<span className="fi-status">{feeLabel === "--" ? "Fee --" : `${feeLabel} fee`}</span>}
       />
       {!infrastructureConfigured ? <NotDeployed feature="The selected swap infrastructure" /> : null}
       {routePaused ? <div className="fi-inline-state fi-inline-danger" role="alert"><div><strong>Swaps paused</strong><p>Temporarily unavailable.</p></div></div> : null}
