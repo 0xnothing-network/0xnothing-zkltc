@@ -24,7 +24,7 @@ import { PumpTokenLogo } from "@/features/pump/components/PumpTokenLogo";
 import { TradePanel } from "@/features/pump/components/TradePanel";
 import { TradeHistory } from "@/features/pump/components/TradeHistory";
 import { TokenHolders } from "@/features/pump/components/TokenHolders";
-import { PumpConfigNotice, PumpErrorState, PumpInlineLoading } from "@/features/pump/components/PumpStates";
+import { PumpConfigNotice, PumpErrorState } from "@/features/pump/components/PumpStates";
 import { useToast } from "@/components/Toast";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { createPumpWalletGuard } from "@/features/pump/walletSession";
@@ -223,7 +223,24 @@ export function TokenDetail({ token }: { token: Address }) {
   });
 
   if (query.isLoading) {
-    return <main className="pump-page"><PumpInlineLoading label="Loading token market" /></main>;
+    // The frame of the final layout paints at once; values swap in place when the market lands.
+    return (
+      <main className="pump-page" aria-busy="true">
+        <Link href="/0xPump" className="pump-back-link">&larr; All markets</Link>
+        <section className="pump-token-identity">
+          <div className="pump-detail-logo pump-detail-logo-skeleton" aria-hidden="true" />
+          <div className="pump-token-identity-copy"><span className="sr-only" role="status">Loading token market</span></div>
+          <div className="pump-token-price"><span>Curve price</span><strong>--</strong><small aria-hidden="true">&nbsp;</small></div>
+        </section>
+        <section className="pump-detail-stats">
+          <div><span>Market cap</span><strong>--</strong></div>
+          <div><span>Total volume</span><strong>--</strong></div>
+          <div><span>Curve reserve</span><strong>--</strong></div>
+          <div><span>Trades</span><strong>--</strong></div>
+          <div><span>Curve progress</span><strong>--</strong></div>
+        </section>
+      </main>
+    );
   }
   // A failed background refresh keeps the last market on screen: replacing the page
   // would unmount the trade panel mid-entry or mid-transaction.
@@ -270,7 +287,7 @@ export function TokenDetail({ token }: { token: Address }) {
           <div className="pump-token-heading-line"><h1>{market.name}</h1><span className={`pump-status pump-status-${market.status.toLowerCase()}`}>{formatStatus(market.status)}</span></div>
           <p>${market.symbol}</p>
           <div className="pump-token-links">
-            <button type="button" title="Copy token address" onClick={() => {
+            <button type="button" title="Copy token address" aria-label={`Copy token address ${shortAddress(market.tokenAddress, 7, 6)}`} onClick={() => {
               void Promise.resolve().then(() => navigator.clipboard.writeText(market.tokenAddress)).then(
                 () => toast.success("Address copied", shortAddress(market.tokenAddress)),
                 () => toast.error("Copy blocked", "The browser denied clipboard access."),

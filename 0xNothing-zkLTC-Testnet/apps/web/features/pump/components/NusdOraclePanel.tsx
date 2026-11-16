@@ -359,7 +359,7 @@ export function NusdOraclePanel() {
       <div className="pump-panel-heading pump-vault-heading">
         <div><span className="pump-eyebrow">zkLTC reserve</span><h2>Mint or redeem NUSD</h2></div>
         <span className="pump-vault-oracle-status" data-state={oracleStatus}>
-          DIA {oracleStatus === "live" ? "LIVE" : oracleStatus === "loading" ? "CHECKING" : oracleStatus === "error" ? "UNAVAILABLE" : "NOT CONFIGURED"}
+          DIA <span className="pump-tag-word">{oracleStatus === "live" ? "LIVE" : oracleStatus === "loading" ? "CHECKING" : oracleStatus === "error" ? "UNAVAILABLE" : "NOT CONFIGURED"}</span>
         </span>
       </div>
 
@@ -389,14 +389,14 @@ export function NusdOraclePanel() {
       <div className="pump-vault-workspace">
         <div className="pump-vault-form">
           {mode === "mint" ? (
-            <div className="pump-field pump-vault-step">
-              <div className="pump-vault-field-head"><label htmlFor="nusd-mint-input"><span>01</span> zkLTC to deposit</label><small>Wallet {displayWad(nativeBalance.data?.value, nativeBalance.isLoading, 4)} zkLTC</small></div>
-              <div className="pump-vault-token-field"><input id="nusd-mint-input" inputMode="decimal" autoComplete="off" aria-describedby={actionError ? "nusd-action-error" : undefined} disabled={isSubmitting} value={mintAmount} onChange={(event) => setMintAmount(event.target.value)} placeholder="0.0" /><strong>zkLTC</strong></div>
+            <div className="pump-amount-field pump-vault-amount">
+              <span><label htmlFor="nusd-mint-input"><span>01</span> zkLTC to deposit</label><small>Wallet {displayWad(nativeBalance.data?.value, nativeBalance.isLoading, 4)} zkLTC</small></span>
+              <span><input id="nusd-mint-input" inputMode="decimal" autoComplete="off" aria-describedby={actionError ? "nusd-action-error" : undefined} disabled={isSubmitting} value={mintAmount} onChange={(event) => setMintAmount(event.target.value)} placeholder="0.0" /><strong>zkLTC</strong></span>
             </div>
           ) : (
-            <div className="pump-field pump-vault-step">
-              <div className="pump-vault-field-head"><label htmlFor="nusd-redeem-input"><span>01</span> NUSD to redeem</label><button type="button" disabled={isSubmitting || !nusdBalance.data} onClick={() => setRedeemAmount(formatInputAmount(nusdBalance.data ?? 0n))}>MAX {displayUsdWad(nusdBalance.data, nusdBalance.isLoading, 2)}</button></div>
-              <div className="pump-vault-token-field"><input id="nusd-redeem-input" inputMode="decimal" autoComplete="off" aria-describedby={actionError ? "nusd-action-error" : undefined} disabled={isSubmitting} value={redeemAmount} onChange={(event) => setRedeemAmount(event.target.value)} placeholder="0.0" /><strong>NUSD</strong></div>
+            <div className="pump-amount-field pump-vault-amount">
+              <span><label htmlFor="nusd-redeem-input"><span>01</span> NUSD to redeem</label><button type="button" disabled={isSubmitting || !nusdBalance.data} onClick={() => setRedeemAmount(formatInputAmount(nusdBalance.data ?? 0n))}>MAX {displayUsdWad(nusdBalance.data, nusdBalance.isLoading, 2)}</button></span>
+              <span><input id="nusd-redeem-input" inputMode="decimal" autoComplete="off" aria-describedby={actionError ? "nusd-action-error" : undefined} disabled={isSubmitting} value={redeemAmount} onChange={(event) => setRedeemAmount(event.target.value)} placeholder="0.0" /><strong>NUSD</strong></span>
             </div>
           )}
 

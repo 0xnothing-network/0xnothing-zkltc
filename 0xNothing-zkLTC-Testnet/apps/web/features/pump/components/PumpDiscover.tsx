@@ -48,7 +48,7 @@ export function PumpDiscover() {
   const handleTrendingRetry = useCallback(() => void refetchTrending(), [refetchTrending]);
 
   const trendingContent = useMemo(() => {
-    if (trendingQuery.isLoading && !trendingQuery.data) return <PumpLoadingGrid count={3} />;
+    if (trendingQuery.isLoading && !trendingQuery.data) return <PumpLoadingGrid count={3} gridClassName="pump-token-grid pump-trending-grid" />;
     if (trendingQuery.error && !trendingMarkets.length) {
       return <PumpErrorState message={trendingQuery.error.message} onRetry={handleTrendingRetry} />;
     }

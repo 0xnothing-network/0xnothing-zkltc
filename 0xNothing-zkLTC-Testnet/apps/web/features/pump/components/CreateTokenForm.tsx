@@ -404,11 +404,12 @@ export function CreateTokenForm() {
           <label className="pump-field"><span>Social <em>optional</em></span><input type="url" value={twitter} readOnly={busy} onChange={(event) => setTwitter(event.target.value)} placeholder="https://x.com/" /></label>
         </div>
 
-        {validation ? <p id="pump-create-validation" className="pump-form-hint" aria-live="polite">{validation}</p> : null}
+        <p id="pump-create-validation" className="pump-form-hint" aria-live="polite">{validation}</p>
         <button
           className="pump-button pump-button-primary pump-button-large pump-button-full"
           type="button"
           aria-describedby={validation ? "pump-create-validation" : undefined}
+          aria-disabled={validation ? true : undefined}
           aria-busy={busy}
           disabled={busy || !PUMP_CONFIGURED || !NUSD_CONFIGURED}
           onClick={() => void submit()}

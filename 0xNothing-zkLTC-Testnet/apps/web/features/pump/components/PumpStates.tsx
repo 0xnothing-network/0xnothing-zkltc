@@ -14,11 +14,17 @@ export function PumpConfigNotice({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export function PumpLoadingGrid({ count = 8 }: { count?: number }) {
+export function PumpLoadingGrid({
+  count = 8,
+  gridClassName = "pump-token-grid",
+}: {
+  count?: number;
+  gridClassName?: string;
+}) {
   return (
     <div className="pump-loading-state" role="status" aria-label="Loading token markets">
       <div className="pump-loading-marker"><PixelLoadingIndicator compact /></div>
-      <div className="pump-token-grid" aria-hidden="true">
+      <div className={gridClassName} aria-hidden="true">
         {Array.from({ length: count }).map((_, index) => (
           <div className="pump-token-card pump-skeleton" key={index}>
             <div className="pump-skeleton-logo" />

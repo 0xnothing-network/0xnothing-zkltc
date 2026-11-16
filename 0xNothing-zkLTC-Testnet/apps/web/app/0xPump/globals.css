@@ -29,7 +29,7 @@
 }
 
 .pump-loading-state .pump-token-card {
-  min-height: 220px;
+  min-height: 340px;
 }
 
 .pump-loading-rows .pump-loading-marker {
@@ -40,6 +40,10 @@
   display: grid;
   min-height: 150px;
   place-items: center;
+}
+
+.pump-page > .pump-inline-loading {
+  min-height: calc(100dvh - 160px);
 }
 
 .pump-route-loading {
@@ -128,12 +132,12 @@
   font-weight: 700;
   transition: border-color 120ms ease, background 120ms ease, color 120ms ease, transform 120ms ease;
 }
-.pump-button:hover:not(:disabled) { border-color: rgba(255,255,255,0.42); }
+.pump-button:hover:not(:disabled) { border-color: var(--text-3); }
 .pump-button:active:not(:disabled) { transform: translateY(1px); }
 .pump-button:disabled { cursor: not-allowed; opacity: 0.42; }
 .pump-button-primary { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
 .pump-button-primary:hover:not(:disabled) { border-color: var(--accent); background: var(--accent); }
-.pump-button-muted { background: rgba(255,255,255,0.04); }
+.pump-button-muted { background: var(--surface-2); }
 
 .pump-button-large { min-height: 48px; padding-inline: 22px; }
 .pump-button-full { width: 100%; }
@@ -141,9 +145,9 @@
 .pump-eyebrow {
   display: block;
   margin-bottom: 8px;
-  color: var(--accent-text);
+  color: var(--pump-muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
 }
 .pump-danger { color: var(--negative); }
 .pump-page-heading h1,
@@ -269,7 +273,13 @@
 .pump-market-controls .pump-segmented { flex: none; margin: 0; }
 .pump-segmented button { min-height: 36px; border: 0; padding: 0 13px; color: var(--pump-muted); font: inherit; font-size: 12px; }
 .pump-segmented button:hover { color: var(--pump-text); }
-.pump-segmented button.active { background: rgba(255,255,255,0.1); color: var(--pump-text); }
+/* Selected segment. Doubled class: it must beat the shared rule in app/skin.css. */
+.pump-shell.pump-shell .pump-segmented button.active,
+.pump-shell.pump-shell .pump-inline-options button.active {
+  background: var(--seg-on);
+  color: var(--text-1);
+  box-shadow: var(--edge-highlight), 0 0 0 1px var(--line-strong);
+}
 .pump-segmented button:disabled { cursor: not-allowed; opacity: 0.35; }
 
 .pump-token-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
@@ -283,7 +293,7 @@
   color: var(--pump-text);
   transition: border-color 150ms ease, transform 150ms ease;
 }
-.pump-token-card:hover { border-color: var(--pump-line-strong); transform: translateY(-2px); }
+.pump-token-card:hover { border-color: var(--pump-line-strong); }
 .pump-token-card-head,
 .pump-token-title-row,
 .pump-progress-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -306,7 +316,7 @@
 .pump-progress span { display: block; height: 100%; background: var(--accent); transition: width 250ms ease; }
 .pump-token-grid.pump-trending-grid { grid-template-columns: repeat(3, minmax(0, 360px)); }
 .pump-trending-grid .pump-token-card { border-color: color-mix(in srgb, var(--accent) 55%, transparent); padding: 16px; }
-.pump-trending-grid .pump-token-card:hover { border-color: var(--accent); }
+.pump-trending-grid .pump-token-card:hover { border-color: var(--pump-line-strong); }
 .pump-trending-grid .pump-token-logo { width: 48px; height: 48px; }
 .pump-trending-grid .pump-token-title-row { margin-top: 14px; }
 .pump-trending-grid .pump-token-metrics { gap: 12px 16px; margin: 18px 0; }
@@ -325,7 +335,7 @@
 
 .pump-panel { min-width: 0; border: 1px solid var(--pump-line); background: var(--pump-panel); padding: 22px; }
 .pump-create-grid { display: grid; grid-template-columns: minmax(0, 1000px); justify-content: center; margin-top: 24px; }
-.pump-fee-chip { display: inline-flex; min-height: 28px; align-items: center; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); padding: 0 10px; color: var(--accent-text); font-size: 12px; }
+.pump-fee-chip { display: inline-flex; min-height: 20px; align-items: center; border: 1px solid currentColor; border-radius: var(--r-xs); padding: 0 6px; background: transparent; color: var(--pump-muted); font-size: 12px; font-weight: 500; }
 .pump-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
 .pump-field { display: grid; min-width: 0; gap: 8px; color: var(--pump-muted); font-size: 12px; }
 .pump-field-wide { grid-column: 1 / -1; }
@@ -354,13 +364,14 @@
   flex: none;
   align-items: center;
   border: 1px solid var(--pump-line-strong);
+  border-radius: 4px;
   padding: 0 10px;
   color: var(--pump-muted);
   font-size: 12px;
   font-weight: 700;
 }
-.pump-vault-oracle-status[data-state="live"] { border-color: color-mix(in srgb, var(--accent) 50%, transparent); color: var(--positive); }
-.pump-vault-oracle-status[data-state="error"] { border-color: rgba(255, 107, 122, 0.52); color: var(--negative); }
+.pump-vault-oracle-status[data-state="live"] { border-color: currentColor; color: var(--positive); }
+.pump-vault-oracle-status[data-state="error"] { border-color: currentColor; color: var(--negative); }
 .pump-vault-oracle-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -376,7 +387,7 @@
 .pump-vault-oracle-strip span { display: block; margin-bottom: 7px; color: var(--pump-muted); font-size: 12px; }
 .pump-vault-oracle-strip strong { display: block; overflow-wrap: anywhere; color: var(--pump-text); font-size: 12px; font-weight: 500; }
 .pump-vault-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0 -22px; border-right: 0; border-left: 0; }
-.pump-vault-alert { margin: 16px 0 0; border-left: 2px solid var(--pump-muted); padding: 9px 12px; background: rgba(255, 255, 255, 0.025); color: var(--pump-muted); font-size: 12px; line-height: 1.55; }
+.pump-vault-alert { margin: 16px 0 0; border-left: 2px solid var(--pump-muted); padding: 9px 12px; background: var(--surface-2); color: var(--pump-muted); font-size: 12px; line-height: 1.55; }
 .pump-vault-alert.warning { border-left-color: var(--warning); color: var(--warning); }
 .pump-vault-alert button,
 .pump-inline-error button { border: 0; padding: 0 2px; color: inherit; font: inherit; text-decoration: underline; text-underline-offset: 3px; }
@@ -394,7 +405,7 @@
 .pump-vault-step { gap: 9px; }
 .pump-vault-field-head { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 12px; }
 .pump-vault-field-head label { min-width: 0; color: var(--pump-text); font-size: 12px; }
-.pump-vault-field-head label span { margin-right: 7px; color: var(--accent-text); }
+.pump-vault-field-head label span { margin-right: 7px; color: var(--pump-text); }
 .pump-vault-field-head small { min-width: 0; color: var(--pump-muted); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; text-align: right; text-transform: none; }
 .pump-vault-field-head button { min-height: 32px; flex: none; border: 0; padding: 0 4px; color: var(--accent-text); font: inherit; font-size: 12px; }
 .pump-vault-field-head button:hover { color: var(--accent-text); }
@@ -416,7 +427,7 @@
   flex-wrap: wrap;
   gap: 9px;
   margin-top: 14px;
-  color: var(--accent-text);
+  color: var(--pump-text);
   font-size: 30px;
   font-variant-numeric: tabular-nums;
   font-weight: 500;
@@ -457,8 +468,10 @@
 .pump-trade-panel { position: sticky; top: 80px; width: 100%; }
 .pump-trade-tabs { width: 100%; margin: 0 0 20px; }
 .pump-trade-tabs button { flex: 1; }
-.pump-trade-tabs button.active.buy { background: var(--positive); color: var(--accent-ink); }
-.pump-trade-tabs button.active.sell { background: var(--negative); color: #160508; }
+/* Rule 3: the neutral selected segment; only the label carries the side colour. */
+.pump-shell.pump-shell .pump-trade-tabs button.active:is(.buy, .sell) { background: var(--seg-on); box-shadow: var(--edge-highlight), 0 0 0 1px var(--line-strong); }
+.pump-shell.pump-shell .pump-trade-tabs button.active.buy { color: var(--positive); }
+.pump-shell.pump-shell .pump-trade-tabs button.active.sell { color: var(--negative); }
 .pump-amount-field { display: block; border: 1px solid var(--pump-line); padding: 13px; background: var(--bg); }
 .pump-amount-field > span { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .pump-amount-field > span:first-child { margin-bottom: 12px; color: var(--pump-muted); font-size: 12px; }
@@ -475,7 +488,7 @@
 .pump-trade-details strong { color: var(--pump-text); font-weight: 500; }
 .pump-inline-options { display: flex; gap: 3px; }
 .pump-inline-options button { min-width: 42px; min-height: 30px; border: 1px solid var(--pump-line); padding: 0 7px; color: var(--pump-muted); font: inherit; font-size: 12px; }
-.pump-inline-options button.active { border-color: var(--accent); color: var(--accent-text); }
+.pump-inline-options button.active { border-color: var(--pump-line-strong); color: var(--pump-text); }
 .pump-trade-details p { margin: 0; border-left: 2px solid var(--warning); padding-left: 9px; color: var(--warning); font-size: 12px; line-height: 1.5; }
 .pump-inline-error { margin: 14px 0; border-left: 2px solid var(--negative); padding: 8px 10px; background: rgba(255, 102, 125, 0.04); color: var(--negative); font-size: 12px; line-height: 1.5; }
 .pump-about p { margin: 16px 0; color: var(--text-2); font-size: 12px; line-height: 1.75; overflow-wrap: anywhere; white-space: pre-wrap; }
@@ -510,10 +523,10 @@
 .pump-holder-identity > a { display: inline-flex; width: fit-content; min-height: 28px; max-width: 100%; align-items: center; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; }
 .pump-holder-identity > a:hover { color: var(--accent-text); text-decoration-color: currentColor; }
 .pump-holder-identity small { display: flex; min-width: 0; align-items: center; flex-wrap: wrap; gap: 7px; color: var(--pump-muted); font-size: 12px; }
-.pump-holder-badge { display: inline-flex; min-height: 20px; align-items: center; border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); padding: 0 6px; color: var(--accent-text); font-size: 12px; font-style: normal; line-height: 1; }
+.pump-holder-badge { display: inline-flex; min-height: 20px; align-items: center; border: 1px solid var(--pump-line-strong); padding: 0 6px; color: var(--pump-muted); font-size: 12px; font-style: normal; line-height: 1; }
 .pump-holder-badge-system { border-color: rgba(248, 216, 107, 0.55); color: var(--warning); }
 .pump-holder-balance { min-width: 0; overflow-wrap: anywhere; text-align: right; }
-.pump-holder-share { color: var(--accent-text); font-size: 12px; font-weight: 500; text-align: right; }
+.pump-holder-share { color: var(--pump-text); font-size: 12px; font-weight: 500; text-align: right; }
 .pump-holder-system { background: rgba(248, 216, 107, 0.025); }
 
 .pump-history { margin-top: 14px; padding: 0; overflow: hidden; }
@@ -527,20 +540,23 @@
 .pump-table th { height: 38px; color: var(--pump-muted); font-weight: 400; }
 .pump-table th:first-child,
 .pump-table td:first-child { position: sticky; z-index: 1; left: 0; background: var(--pump-panel); text-align: left; }
+/* Trade side: the status tag, a hairline box in the side colour. */
 .pump-side {
   display: inline-flex;
-  min-width: 46px;
-  min-height: 22px;
+  min-height: 20px;
   align-items: center;
-  justify-content: center;
   border: 1px solid currentColor;
+  border-radius: var(--r-xs);
   padding: 0 6px;
+  background: transparent;
+  font-family: var(--font-ui);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
+  letter-spacing: 0;
   line-height: 1;
 }
-.pump-side-buy { background: color-mix(in srgb, var(--positive) 10%, transparent); color: var(--positive); }
-.pump-side-sell { background: rgba(255, 102, 125, 0.07); color: var(--negative); }
+.pump-side-buy { color: var(--positive); }
+.pump-side-sell { color: var(--negative); }
 .pump-table-empty { padding: 32px; color: var(--pump-muted); font-size: 12px; text-align: center; }
 .pump-empty-inline { display: flex; min-height: 90px; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid var(--pump-line); border-bottom: 1px solid var(--pump-line); color: var(--pump-muted); font-size: 12px; }
 .pump-empty-inline a { color: var(--accent-text); text-decoration: underline; text-underline-offset: 4px; }
@@ -709,7 +725,7 @@
 .pump-search:focus-within,
 .pump-amount-field:focus-within,
 .pump-logo-drop:focus-within { border-color: color-mix(in srgb, var(--accent) 72%, transparent); }
-.pump-logo-drop:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pump-logo-drop:focus-within { outline: 2px solid var(--accent-text); outline-offset: 2px; }
 .pump-shell .pump-token-card:focus-visible { outline-width: 2px !important; outline-offset: -2px; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -946,7 +962,7 @@
   }
 
   .pump-token-card {
-    contain-intrinsic-size: 340px;
+    contain-intrinsic-size: auto 340px;
   }
 
   .pump-portfolio-row {
@@ -1032,7 +1048,7 @@
 }
 
 .pump-shell .pump-button-muted:disabled {
-  background: rgba(255, 255, 255, 0.04) !important;
+  background: var(--surface-2) !important;
 }
 
 .pump-shell .pump-segmented button:disabled {
@@ -1386,7 +1402,7 @@
   }
 
   .pump-market-controls .pump-sort-select select {
-    font-size: 12px;
+    font-size: 16px;
   }
 
   .pump-market-section > .pump-token-grid {
@@ -1825,7 +1841,7 @@
 
   .pump-market-controls .pump-sort-select select {
     padding-inline: 6px;
-    font-size: 12px;
+    font-size: 16px;
   }
 }
 
@@ -1840,18 +1856,11 @@
 .pump-shell :is(.pump-button,.pump-panel,.pump-token-card,.pump-stats-section,.pump-portfolio-list) {
   box-shadow: var(--e-2);
 }
-.pump-shell :is(button,a,input,select,textarea) { transition-timing-function: steps(2, end); }
-.pump-shell .pump-button:active:not(:disabled) { transform: translate(2px,2px); box-shadow: var(--e-2); }
 .pump-shell :is(.pump-button,.pump-segmented button,.pump-inline-options button):focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-text);
   outline-offset: 3px;
 }
-.pump-shell .pump-token-card:hover { transform: translate(-2px,-2px); box-shadow: var(--e-2); }
-.pump-shell .pump-progress span { transition-timing-function: steps(8, end); }
 .pump-shell :is(.pump-token-logo,.pump-detail-logo,.pump-portfolio-logo,.pump-logo-preview) img { image-rendering: auto; }
-@media (hover: none) {
-  .pump-shell .pump-token-card:hover { transform: none; box-shadow: var(--e-2); }
-}
 @media (prefers-reduced-motion: reduce) {
   .pump-shell .pump-token-card,
   .pump-shell .pump-progress span,
@@ -1872,7 +1881,9 @@
   -webkit-font-smoothing: auto;
 }
 .pump-shell :is(h1,h2,h3) { letter-spacing: 0; text-wrap: balance; }
-.pump-shell :is(.pump-eyebrow,.pump-status,.pump-token-metrics,.pump-detail-stats,.pump-stat-strip,.pump-stats-primary,.pump-table,.pump-portfolio-value,.pump-token-price) { font-family: var(--font-ui), monospace; font-variant-numeric: tabular-nums; }
+/* Number face: values only, so labels and captions stay in Geist. */
+.pump-shell :is(.pump-token-metrics dd,.pump-detail-stats strong,.pump-stat-strip strong,.pump-stats-primary strong,.pump-table td,.pump-portfolio-value,.pump-token-price strong,.pump-stats-list dd,.pump-stats-lifecycle strong,.pump-stats-section-heading > strong,.pump-stats-market-volume,.pump-stats-market-trades,.pump-dev-claimable strong,.pump-trade-details strong) { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.pump-shell :is(.pump-vault-preview-amount,.pump-vault-oracle-strip strong,.pump-vault-metrics strong,.pump-amount-field input,.pump-amount-output strong,.pump-holder-balance,.pump-holder-share) { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
 
 .pump-page { padding-block: 36px 72px; }
 .pump-shell :is(.pump-button,.pump-search,.pump-sort-select select,.pump-field input,.pump-field textarea,.pump-inline-options button) { border-radius: var(--r-md); }
@@ -1881,16 +1892,16 @@
 .pump-page-heading { padding-block: 12px 30px; gap: 28px; }
 .pump-page-heading h1,.pump-token-identity h1 { font-size: clamp(26px,3.2vw,36px); font-weight: 600; line-height: 1.08; }
 .pump-page-heading p { font-size: 14px; line-height: 1.65; }
-.pump-eyebrow { font-size: 12px; letter-spacing: .09em; }
+.pump-eyebrow { font-size: 12px; letter-spacing: 0; }
 .pump-trending-section { padding-block: 4px 30px; }
 .pump-trending-heading h1 { font-size: clamp(24px,2.5vw,30px); font-weight: 600; }
 .pump-trending-grid { margin-top: 24px; }
 .pump-token-grid.pump-trending-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
 .pump-trending-grid .pump-token-card { border-color: var(--pump-line-strong); padding: 22px; }
-.pump-token-card { padding: 24px; transition: border-color 120ms steps(2, end),background-color 120ms steps(2, end),transform 120ms steps(2, end); }
-.pump-token-card:hover { background: var(--pump-panel-2); border-color: rgba(155,227,181,.45); }
+.pump-token-card { padding: 24px; transition: border-color 120ms ease,background-color 120ms ease; }
+.pump-token-card:hover { background: var(--pump-panel-2); border-color: var(--pump-line-strong); }
 .pump-token-logo,.pump-detail-logo,.pump-portfolio-logo,.pump-logo-preview { border-radius: var(--r-md); }
-.pump-status { border-color: currentColor; border-radius: var(--r-md); background: var(--pump-panel-2); font-size: 12px; }
+.pump-status { border-color: currentColor; border-radius: 4px; background: transparent; font-size: 12px; }
 .pump-token-title-row h3 { font-size: 16px; font-weight: 500; }
 .pump-token-title-row p { font-size: 12px; }
 .pump-token-age,.pump-token-metrics dt,.pump-progress-label { font-size: 12px; }
@@ -1936,10 +1947,10 @@
 .pump-table th,.pump-table td { font-size: 12px; height: 52px; }
 .pump-holder-row,.pump-holder-identity > a,.pump-holder-identity > strong { font-size: 12px; }
 .pump-holder-head,.pump-holder-identity small,.pump-source-label { font-size: 12px; }
-.pump-table tbody tr:hover { background: rgba(255,255,255,.025); }
+.pump-table tbody tr:hover { background: var(--surface-2); }
 .pump-portfolio-page { max-width: 1120px; }
 .pump-portfolio-heading > div { align-items: flex-start; flex-direction: column; gap: 12px; }
-.pump-portfolio-heading span { font-size: 12px; letter-spacing: .08em; }
+.pump-portfolio-heading span { font-size: 12px; letter-spacing: 0; }
 .pump-portfolio-page .pump-portfolio-section { padding-top: 30px; }
 .pump-portfolio-page .pump-section-heading { margin-bottom: 18px; }
 .pump-portfolio-page .pump-section-heading h2 { font-size: 23px; }
@@ -2042,10 +2053,12 @@
 .pump-shell .pump-field input, .pump-shell .pump-field textarea { font-size: 13px; padding: 12px 14px; }
 .pump-shell .pump-field em { color: var(--pump-muted); font-size: 12px; }
 .pump-shell .pump-logo-drop { min-height: 104px; padding: 16px; background: var(--pump-input); transition: border-color 160ms ease, background-color 160ms ease; }
-.pump-shell .pump-logo-drop:hover, .pump-shell .pump-logo-drop:focus-within { border-color: var(--accent); background: var(--pump-panel-2); }
+.pump-shell .pump-logo-drop:hover { border-color: var(--pump-line-strong); background: var(--pump-panel-2); }
+/* Focus keeps the accent: it is the field focus border (accent use #3). */
+.pump-shell .pump-logo-drop:focus-within { border-color: var(--accent); background: var(--pump-panel-2); }
 .pump-shell .pump-logo-drop:focus-within { outline: 2px solid var(--accent-text); outline-offset: 3px; }
 .pump-shell .pump-logo-drop .pump-logo-preview { width: 56px; height: 56px; }
-.pump-create-preview { position: sticky; top: 106px; min-width: 0; border: 1px solid var(--pump-line); border-top: 1px solid var(--line-strong); padding: 24px; background: var(--pump-panel); box-shadow: var(--pixel-ui-shadow); }
+.pump-create-preview { position: sticky; top: 106px; min-width: 0; border: 1px solid var(--pump-line); border-top: 1px solid var(--line-strong); border-radius: var(--r-md); padding: 24px; background: var(--pump-panel); box-shadow: var(--e-2); }
 .pump-create-preview-identity { display: flex; align-items: center; gap: 14px; margin-top: 24px; }
 .pump-create-preview-identity > div { min-width: 0; }
 .pump-create-preview-identity h2 { margin: 0 0 8px; font-size: 18px; line-height: 1.4; overflow-wrap: anywhere; }
@@ -2060,7 +2073,7 @@
 .pump-shell .pump-stats-detail-grid { gap: 16px; }
 .pump-shell .pump-stats-section { padding: 24px; }
 .pump-shell .pump-stat-strip { border-top: 2px solid var(--pump-line-strong); }
-.pump-shell .pump-portfolio-list { box-shadow: var(--pixel-ui-shadow); }
+.pump-shell .pump-portfolio-list { box-shadow: var(--e-2); }
 .pump-shell .pump-table td { padding-block: 16px; }
 .pump-shell .pump-trade-panel { border-top: 1px solid var(--line-strong); }
 .pump-shell .pump-chart-heading { padding: 18px 20px; border-bottom: 1px solid var(--pump-line); }
@@ -2083,5 +2096,398 @@
   .pump-shell .pump-stats-primary > div { padding: 16px; min-height: 122px; }
   .pump-shell .pump-stats-section { padding: 18px; }
   .pump-shell .pump-vault-preview { padding: 16px; }
+  .pump-shell .pump-sort-select select { font-size: 16px; }
 }
 @media (prefers-reduced-motion: reduce) { .pump-shell .pump-logo-drop { transition: none; } }
+
+/* Short viewports: a sticky column taller than the screen hides its lower controls. */
+@media (max-height: 860px) {
+  .pump-shell .pump-trade-panel,
+  .pump-shell .pump-create-preview { position: static; }
+}
+
+/*
+ * Shared pieces (UI pass 2026-11-16). One definition each, reused by every 0xPump
+ * and NUSD screen. Doubled class: these must beat the shared rules in app/skin.css.
+ * The selected segment sits with .pump-segmented above.
+ */
+
+/* Page container: the header's inner max-width and gutter (.ox-header-inner). */
+.pump-shell {
+  --pump-page-max: 1440px;
+  --pump-page-gutter: clamp(14px, 2.4vw, 32px);
+}
+
+/* Status tag: a hairline box in the status colour. .pump-tag alone is the neutral tag. */
+.pump-shell.pump-shell :is(.pump-tag, .pump-status, .pump-fee-chip, .pump-holder-badge, .pump-dev-badge) {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 20px;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent) !important;
+  border-radius: var(--r-xs);
+  padding: 0 6px;
+  background: transparent;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1;
+  text-transform: none;
+}
+.pump-shell.pump-shell :is(.pump-tag, .pump-fee-chip, .pump-holder-badge, .pump-dev-badge) { color: var(--text-2); }
+.pump-shell.pump-shell .pump-tag.is-positive { color: var(--positive); }
+.pump-shell.pump-shell .pump-tag.is-negative { color: var(--negative); }
+.pump-shell.pump-shell .pump-tag.is-warning { color: var(--warning); }
+.pump-shell.pump-shell .pump-tag.is-info { color: var(--info); }
+/* Curve names a role, not a status: the neutral tag like Creator. */
+.pump-shell.pump-shell .pump-holder-badge-system { color: var(--text-2); }
+
+/* Eyebrow. */
+.pump-shell.pump-shell .pump-eyebrow {
+  font-family: var(--font-brand);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-3);
+}
+.pump-shell.pump-shell .pump-eyebrow.pump-danger { color: var(--negative); }
+
+/* Disabled primary: graphite at full size, never a faded accent. */
+.pump-shell.pump-shell .pump-button-primary:is(:disabled, [aria-disabled="true"]) {
+  border: 1px solid var(--line-strong) !important;
+  background: var(--surface-3) !important;
+  color: var(--text-3) !important;
+  box-shadow: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+  cursor: not-allowed;
+}
+
+/* Number face for any value the lists above do not reach. */
+.pump-shell .pump-num { font-family: var(--font-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Card surface (skin.css): 1px line, silver top edge from the inset highlight, soft depth.
+   --e-2 adds a 1px ring outside the border, which drew a 2px edge on these cards. */
+.pump-shell.pump-shell :is(.pump-stats-section, .pump-dev-fees, .pump-create-preview, .pump-portfolio-list) {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface-1) !important;
+  box-shadow: var(--e-1);
+}
+.pump-shell.pump-shell .pump-stat-strip {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--e-1);
+}
+/* Nested summary box (You receive): the inner radius and the same line. */
+.pump-shell.pump-shell .pump-vault-preview {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--edge-highlight);
+}
+
+/*
+ * Visual pass (UI pass 2026-11-16, pump-a part 2).
+ */
+
+/* Page container: every 0xPump page starts at the header logo's left edge. */
+.pump-shell.pump-shell .pump-page {
+  width: 100%;
+  max-width: var(--pump-page-max);
+  margin-inline: auto;
+  padding-inline: var(--pump-page-gutter);
+}
+/* The portfolio content and the create grid fill the shared container, to the heading rule's edge. */
+.pump-shell.pump-shell .pump-portfolio-page > :not(.pump-page-heading) { max-width: none; }
+.pump-shell.pump-shell .pump-create-page > .pump-create-grid { max-width: none; }
+
+/* Title block: eyebrow above the H1, as on Create and Stats. */
+.pump-shell.pump-shell .pump-portfolio-heading > div { gap: 0; }
+.pump-shell.pump-shell .pump-section-count {
+  margin-left: 6px;
+  color: var(--pump-muted);
+  font-family: var(--font-num);
+  font-size: .7em;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Figures in the text colour; lime stays on symbols, primaries and progress cells. */
+.pump-shell.pump-shell .pump-stats-source span:first-child,
+.pump-shell.pump-shell .pump-stats-rank { color: var(--pump-muted); }
+.pump-shell.pump-shell :is(.pump-stats-primary-featured strong, .pump-stats-section-heading > strong, .pump-dev-claimable strong, .pump-portfolio-value strong, .pump-portfolio-current-value) { color: var(--pump-text); }
+.pump-shell.pump-shell .pump-portfolio-row:hover { border-color: var(--pump-line); background: var(--hover); }
+
+/* Discover: the strip's own edge separates it, so the trending section draws no rule. */
+.pump-shell.pump-shell .pump-trending-section { border-bottom: 0; }
+.pump-shell .pump-stat-strip strong { display: block; min-height: 1.3em; }
+
+/* Trending loading marker sits over the skeleton row, out of flow (CLS). */
+.pump-shell .pump-trending-section .pump-loading-state { position: relative; }
+.pump-shell .pump-trending-section .pump-loading-marker {
+  position: absolute;
+  inset: 24px 0 auto;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Create preview: label-left, value-right rows; the description sizes to its text. */
+.pump-shell.pump-shell .pump-create-preview-description { min-height: 0; margin: 16px 0; }
+.pump-shell.pump-shell .pump-create-preview dl > div {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+}
+.pump-shell.pump-shell .pump-create-preview dt { flex: none; }
+.pump-shell.pump-shell .pump-create-preview dd { min-width: 0; text-align: right; }
+
+/* Protocol fees: top-aligned columns, the button under the value block at its full width. */
+.pump-shell.pump-shell .pump-dev-fees-grid { align-items: start; }
+.pump-shell.pump-shell .pump-dev-fees-grid .pump-stats-list > div:first-child { padding-top: 0; }
+.pump-shell.pump-shell .pump-dev-fees-grid > .pump-button { white-space: nowrap; }
+/* From 1041px the first column is wide enough for the nowrap button; 761-1040 keeps the
+   full-width button row under both columns (the 1040px block above). */
+@media (min-width: 1041px) {
+  .pump-shell.pump-shell .pump-dev-fees-grid { grid-template-columns: minmax(240px, .8fr) minmax(280px, 1.2fr); }
+  .pump-shell.pump-shell .pump-dev-fees-grid > .pump-stats-list { grid-column: 2; grid-row: 1 / span 2; }
+  .pump-shell.pump-shell .pump-dev-fees-grid > .pump-button { grid-column: 1; grid-row: 2; }
+}
+
+/* Stats skeleton: labels and captions paint at once; values show "--". */
+.pump-shell.pump-shell .pump-stats-loading .pump-stats-primary strong { color: var(--text-3); }
+.pump-shell .pump-stats-caption-skeleton {
+  display: block;
+  width: 70%;
+  height: 8px;
+  background: var(--surface-2);
+  animation: pump-pulse 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { .pump-shell .pump-stats-caption-skeleton { animation: none; } }
+
+/* Top markets on a phone: rank, name over symbol, volume over "N trades" on the right. */
+@media (max-width: 760px) {
+  .pump-shell.pump-shell .pump-stats-market-list > a {
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    grid-template-areas: "rank name volume" "rank name trades";
+    min-height: 0;
+    align-items: start;
+    gap: 0 12px;
+    padding-block: 12px;
+  }
+  .pump-shell.pump-shell .pump-stats-market-list > a > .pump-status { display: none; }
+  .pump-shell.pump-shell .pump-stats-rank { grid-area: rank; line-height: 20px; }
+  .pump-shell.pump-shell .pump-stats-market-name { grid-area: name; }
+  .pump-shell.pump-shell .pump-stats-market-name strong { line-height: 20px; }
+  .pump-shell.pump-shell .pump-stats-market-name small { line-height: 18px; }
+  .pump-shell.pump-shell .pump-stats-market-volume { grid-area: volume; line-height: 20px; white-space: nowrap; }
+  .pump-shell.pump-shell .pump-stats-market-trades { grid-area: trades; display: block; margin-top: 4px; line-height: 18px; white-space: nowrap; }
+}
+
+@media (max-width: 640px) {
+  /* Feed card: 40px avatar beside name and symbol, age on the symbol line, 8px stat rows. */
+  .pump-shell.pump-shell .pump-market-section > .pump-token-grid .pump-token-card {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    contain-intrinsic-size: auto 200px;
+  }
+  .pump-shell.pump-shell .pump-market-section > .pump-token-grid .pump-token-logo { width: 40px; height: 40px; align-self: center; }
+  .pump-shell.pump-shell .pump-market-section > .pump-token-grid .pump-token-title-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 8px;
+  }
+  .pump-shell.pump-shell .pump-market-section > .pump-token-grid .pump-token-title-row > div { display: contents; }
+  .pump-shell.pump-shell .pump-market-section > .pump-token-grid .pump-token-title-row h3 { grid-column: 1 / -1; }
+  .pump-shell.pump-shell .pump-market-section > .pump-token-grid .pump-token-title-row p { margin-top: 2px; }
+  .pump-shell.pump-shell .pump-market-section > .pump-token-grid .pump-token-age {
+    min-width: 0;
+    margin-top: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pump-shell.pump-shell .pump-market-section > .pump-token-grid .pump-token-metrics { row-gap: 8px; margin: 12px 0 10px; }
+  .pump-shell.pump-shell .pump-market-section > .pump-token-grid .pump-token-metrics dt { margin-bottom: 2px; }
+  .pump-shell.pump-shell .pump-market-section .pump-loading-state .pump-token-card { min-height: 200px; contain-intrinsic-size: auto 200px; }
+
+  /* Trending: real and skeleton cards share one height, so the feed below never moves.
+     212px is the content height of a real card at 390px, read from the rules above. */
+  .pump-shell.pump-shell .pump-trending-grid .pump-token-card { min-height: 212px; }
+  .pump-shell.pump-shell .pump-trending-grid .pump-token-metrics { margin-top: auto; }
+  .pump-shell.pump-shell .pump-trending-section :is(.pump-empty-inline, .pump-empty-state) { min-height: 212px; margin-top: 24px; }
+}
+
+/*
+ * Token page and NUSD panels (UI pass 2026-11-16, pump-b).
+ */
+
+/* Oracle tags: the hairline status box. The word after "DIA" is set in lower case. */
+.pump-shell.pump-shell .pump-vault-oracle-status {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 20px;
+  align-items: center;
+  border: 1px solid currentColor;
+  border-radius: var(--r-xs);
+  padding: 0 6px;
+  background: transparent;
+  color: var(--text-2);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1;
+  text-transform: none;
+}
+.pump-shell.pump-shell .pump-vault-oracle-status[data-state="live"] { color: var(--positive); }
+.pump-shell.pump-shell .pump-vault-oracle-status[data-state="error"] { color: var(--negative); }
+.pump-shell .pump-tag-word { text-transform: lowercase; }
+
+/* Flush panels (chart, holders, trades): the heading and the rows take the About panel's gutter. */
+.pump-shell.pump-shell .pump-panel:is(.pump-holders, .pump-history, .pump-chart-panel) > .pump-panel-heading { padding: 28px; }
+.pump-shell.pump-shell .pump-table :is(th, td):first-child { padding-left: 28px; }
+.pump-shell.pump-shell .pump-table :is(th, td):last-child { padding-right: 28px; }
+.pump-shell.pump-shell .pump-holder-row { padding-inline: 28px; }
+.pump-shell.pump-shell .pump-holder-warning { margin-inline: 28px; }
+
+/* Chart: overlays cover the plot only, whatever the heading's height; the plot's own
+   background fills the axis corner. */
+.pump-shell.pump-shell .pump-chart { background: var(--bg); }
+.pump-shell.pump-shell :is(.pump-chart-message, .pump-chart-loading) { inset: auto 0 0; height: 400px; }
+.pump-shell.pump-shell .pump-chart-panel[aria-busy="true"] { min-height: 504px; }
+
+/* Numbers: right-aligned table columns in tabular figures. */
+.pump-shell.pump-shell .pump-table :is(th, td):not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+.pump-shell.pump-shell :is(.pump-holder-balance, .pump-holder-share) { font-variant-numeric: tabular-nums; }
+.pump-shell.pump-shell .pump-graduation-line > div:first-child strong { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+/* Stat grid: one padding for every cell, label and value top-aligned. */
+.pump-shell.pump-shell .pump-detail-stats { align-items: stretch; }
+.pump-shell.pump-shell .pump-detail-stats > div { padding: 20px; }
+.pump-shell.pump-shell .pump-detail-stats span { margin-bottom: 8px; }
+/* A value never wraps mid-number: it ends in an ellipsis instead. */
+.pump-shell.pump-shell .pump-detail-stats strong { display: block; min-width: 0; overflow: hidden; overflow-wrap: normal; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Identity: 24px under the back link. */
+.pump-shell.pump-shell .pump-page > .pump-back-link { display: inline-flex; align-items: center; margin-bottom: 0; }
+.pump-shell.pump-shell .pump-back-link + .pump-token-identity { padding-top: 12px; }
+.pump-shell.pump-shell .pump-detail-logo-skeleton { background: var(--surface-2); }
+
+/* Amount fields: one height for spend and receive, the label row 8px above the value row. */
+.pump-shell.pump-shell .pump-amount-field { padding: 12px 16px; }
+.pump-shell.pump-shell .pump-amount-field > span:first-child { min-height: 24px; margin-bottom: 8px; }
+.pump-shell.pump-shell .pump-amount-field > span:first-child button { min-height: 24px; }
+.pump-shell.pump-shell .pump-amount-field > span:last-child { min-height: 36px; align-items: center; }
+.pump-shell.pump-shell .pump-amount-field input { height: 36px; min-height: 0; padding: 0; }
+.pump-shell.pump-shell .pump-amount-output small { color: var(--pump-muted); font-size: 12px; }
+/* NUSD amount field: the same control, with the wallet balance in the label row. */
+.pump-shell.pump-shell .pump-vault-amount label { min-width: 0; }
+.pump-shell.pump-shell .pump-vault-amount label > span { margin-right: 6px; color: var(--text-2); }
+.pump-shell.pump-shell .pump-vault-amount small { min-width: 0; color: var(--pump-muted); font-size: 12px; overflow-wrap: normal; text-align: right; }
+/* Touch: the MAX control stays 24-28px tall in the label row; an overlay carries the 44px target. */
+@media (pointer: coarse) {
+  .pump-shell.pump-shell .pump-amount-field > span:first-child button { position: relative; }
+  .pump-shell.pump-shell .pump-amount-field > span:first-child button::after { content: ""; position: absolute; inset: -10px -6px; }
+}
+
+/* Slippage: the label centred on 36px chips. */
+.pump-shell.pump-shell .pump-trade-details > div { align-items: center; }
+/* .pump-trade-details lifts this over the 44px coarse-pointer rule in app/interface-polish.css. */
+.pump-shell.pump-shell .pump-trade-details .pump-inline-options button { height: 36px; min-height: 36px; }
+
+/* NUSD figures: eight values at one size in compact cells. */
+.pump-shell.pump-shell :is(.pump-vault-oracle-strip, .pump-vault-metrics) > div { padding: 12px 16px; }
+.pump-shell.pump-shell :is(.pump-vault-oracle-strip, .pump-vault-metrics) span { display: block; margin-bottom: 2px; line-height: 16px; }
+.pump-shell.pump-shell :is(.pump-vault-oracle-strip, .pump-vault-metrics) strong {
+  display: block;
+  overflow: hidden;
+  font-family: var(--font-num);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Mint / Redeem: sized like Buy / Sell, left-aligned above the amount field. */
+.pump-shell.pump-shell .pump-vault-tabs { width: min(100%, 320px); }
+
+@media (max-width: 1040px) {
+  /* The trade panel follows the stats, as on the phone. */
+  .pump-shell.pump-shell .pump-detail-main { display: contents; }
+  .pump-shell.pump-shell .pump-detail-grid > .pump-trade-panel { order: -1; }
+}
+
+@media (min-width: 761px) and (max-width: 1040px) {
+  /* 3 + 2: the second row spans the width, so no empty cell is left. */
+  .pump-shell.pump-shell .pump-detail-stats { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .pump-shell.pump-shell .pump-detail-stats > div { grid-column: span 2; }
+  .pump-shell.pump-shell .pump-detail-stats > div:nth-child(n + 4) { grid-column: span 3; }
+}
+
+@media (max-width: 760px) {
+  .pump-shell.pump-shell .pump-panel:is(.pump-holders, .pump-history, .pump-chart-panel) > .pump-panel-heading { padding: 20px; }
+  .pump-shell.pump-shell .pump-table :is(th, td):first-child { padding-left: 20px; }
+  .pump-shell.pump-shell .pump-table :is(th, td):last-child { padding-right: 20px; }
+  .pump-shell.pump-shell .pump-holder-row { padding-inline: 20px; }
+  .pump-shell.pump-shell .pump-holder-warning { margin-inline: 20px; }
+  .pump-shell.pump-shell :is(.pump-chart-message, .pump-chart-loading) { height: 320px; }
+  .pump-shell.pump-shell .pump-chart-panel[aria-busy="true"] { min-height: 464px; }
+
+  /* Stats 2 x 2; Curve progress spans the last row with its value on the right. */
+  .pump-shell.pump-shell .pump-detail-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pump-shell.pump-shell .pump-detail-stats > div { padding: 16px; }
+  .pump-shell.pump-shell .pump-detail-stats > div:last-child { display: flex; grid-column: 1 / -1; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .pump-shell.pump-shell .pump-detail-stats > div:last-child span { margin-bottom: 0; }
+
+  /* Identity: logo beside name and symbol; the address line starts at the content edge. */
+  .pump-shell.pump-shell .pump-token-identity { grid-template-columns: 72px minmax(0, 1fr); column-gap: 16px; row-gap: 0; align-items: start; }
+  .pump-shell.pump-shell .pump-token-identity-copy { display: contents; }
+  .pump-shell.pump-shell .pump-detail-logo { grid-column: 1; grid-row: 1 / span 2; }
+  .pump-shell.pump-shell .pump-token-heading-line { grid-column: 2; grid-row: 1; align-self: end; }
+  .pump-shell.pump-shell .pump-token-identity-copy > p { grid-column: 2; grid-row: 2; margin-bottom: 0; }
+  .pump-shell.pump-shell .pump-token-links { grid-column: 1 / -1; grid-row: 3; margin-top: 12px; }
+  .pump-shell.pump-shell .pump-token-price { grid-column: 1 / -1; grid-row: 4; margin-top: 12px; }
+
+  .pump-shell.pump-shell .pump-amount-field { padding: 12px 14px; }
+  .pump-shell.pump-shell .pump-amount-field > span:first-child { min-height: 28px; }
+  .pump-shell.pump-shell .pump-amount-field > span:first-child button { min-height: 28px; }
+  .pump-shell.pump-shell .pump-amount-field > span:last-child { min-height: 40px; }
+  .pump-shell.pump-shell .pump-amount-field input { height: 40px; }
+
+  .pump-shell.pump-shell :is(.pump-vault-oracle-strip, .pump-vault-metrics) > div { padding: 12px; }
+  .pump-shell.pump-shell :is(.pump-vault-oracle-strip, .pump-vault-metrics) strong { font-size: 16px; }
+}
+
+@media (max-width: 640px) {
+  .pump-shell.pump-shell :is(.pump-chart-message, .pump-chart-loading) { height: 280px; }
+  .pump-shell.pump-shell .pump-chart-panel[aria-busy="true"] { min-height: 424px; }
+}
+
+@media (max-width: 480px) {
+  .pump-shell.pump-shell .pump-token-identity { grid-template-columns: 60px minmax(0, 1fr); column-gap: 14px; }
+}
+
+/* Trending: a loading card is exactly as tall as a real trending card, so the feed below
+   never moves when the data lands. Measured on the build: 323px, and 212px for the compact
+   card at 760px and below. */
+.pump-shell.pump-shell .pump-trending-section .pump-loading-state .pump-token-card { min-height: 0; height: 323px; contain-intrinsic-size: auto 323px; }
+@media (max-width: 760px) {
+  .pump-shell.pump-shell .pump-trending-section .pump-loading-state .pump-token-card { height: 212px; contain-intrinsic-size: auto 212px; }
+}
+
+/* The three trending cards are always on screen. Deferred rendering made each one stand in
+   at its 340px placeholder for a frame before taking its real height, which pushed the feed
+   down and back up: the page's whole layout shift. */
+.pump-shell.pump-shell .pump-trending-grid .pump-token-card { content-visibility: visible; contain-intrinsic-size: none; }
+
+/* Touch: the slippage choices keep a 40px target. */
+@media (pointer: coarse) {
+  .pump-shell.pump-shell .pump-inline-options button { min-height: 40px; }
+}

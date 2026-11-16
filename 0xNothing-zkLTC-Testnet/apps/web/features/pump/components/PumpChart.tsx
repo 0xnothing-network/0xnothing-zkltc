@@ -146,9 +146,11 @@ function adaptivePriceFormat(points: CandlePoint[]) {
     .flatMap((point) => [point.open, point.high, point.low, point.close])
     .filter((price) => price > 0 && Number.isFinite(price));
   const reference = positivePrices.length ? Math.min(...positivePrices) : 1;
+  // Four significant digits of the smallest price: 0.0000015036 reads 0.000001504,
+  // enough to separate the curve's ticks without the axis taking a quarter of a phone.
   const precision = Math.min(
     18,
-    Math.max(2, Math.ceil(-Math.log10(reference)) + 4),
+    Math.max(2, Math.ceil(-Math.log10(reference)) + 3),
   );
   return {
     key: precision.toString(),
@@ -262,7 +264,10 @@ export function PumpChart({ token, tokenName }: { token: Address; tokenName: str
       localization: { timeFormatter: formatLocalCrosshairTime },
       rightPriceScale: {
         borderColor: palette.border,
-        scaleMargins: { top: 0.08, bottom: 0.24 },
+        // The top inset keeps the first tick clear of the heading line, and a corner
+        // label that would be cut is dropped rather than drawn in half.
+        scaleMargins: { top: 0.12, bottom: 0.24 },
+        entireTextOnly: true,
       },
       timeScale: {
         borderColor: palette.border,

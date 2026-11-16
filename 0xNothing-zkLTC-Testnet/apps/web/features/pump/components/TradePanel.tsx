@@ -241,6 +241,8 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
   const buttonLabel = market.status === "GRADUATED"
     ? "Graduated to DEX"
     : market.status === "READY" && mode === "buy" ? "Buy paused at READY"
+    : !isConnected ? "Connect wallet above"
+    : chainId !== PUMP_CHAIN_ID ? "Switch to LitVM"
     : pending ? "Confirming transaction"
     : needsApproval ? `Approve once and ${mode === "buy" ? "buy" : "sell"}`
     : mode === "buy" ? `Buy ${market.symbol}` : `Sell ${market.symbol}`;
@@ -253,7 +255,7 @@ export function TradePanel({ market, onComplete }: { market: PumpMarket; onCompl
       </div>
 
       <label className="pump-amount-field" htmlFor={amountId}>
-        <span><span>{mode === "buy" ? "Maximum spend" : "You pay"}</span><button type="button" disabled={pending} onClick={() => setAmount(formatUnits(sourceBalance, 18))}>Max {displayAmount(sourceBalance)}</button></span>
+        <span><span>{mode === "buy" ? "Maximum spend" : "You pay"}</span><button type="button" disabled={pending} onClick={() => setAmount(formatUnits(sourceBalance, 18))}>Max {(mode === "buy" ? nusdBalance.data : tokenBalance.data) === undefined ? "--" : displayAmount(sourceBalance)}</button></span>
         <span><input id={amountId} inputMode="decimal" autoComplete="off" autoCorrect="off" spellCheck={false} aria-invalid={amountWei > 0n && actualInput > sourceBalance} onKeyDown={(event) => { if (event.key === "Enter" && !event.repeat && !event.nativeEvent.isComposing && !submitDisabled) void submit(); }} disabled={pending} value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.0" /><strong>{mode === "buy" ? "NUSD" : market.symbol}</strong></span>
       </label>
 

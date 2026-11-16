@@ -5,6 +5,7 @@ import { formatUnits, parseAbi, parseUnits } from "viem";
 import { useAccount, useConfig, usePublicClient, useReadContract, useReadContracts, useSwitchChain, useWriteContract } from "wagmi";
 import { useToast } from "@/components/Toast";
 import { NUSD_CONFIGURED, PUMP_CHAIN_ID, PUMP_NUSD_ADDRESS } from "@/features/pump/config";
+import { formatStatus } from "@/features/pump/format";
 import { releaseAction, tryAcquireAction } from "@/lib/actionLock";
 import { decimalInput } from "@/lib/decimalInput";
 import { createPumpWalletGuard } from "@/features/pump/walletSession";
@@ -144,13 +145,14 @@ export function NusdEmergencyPanel() {
   else if (reported && !exitOpen && oracleFresh === false) status = `Failure reported. The price-free exit opens ${opensAt ? new Date(Number(opensAt) * 1000).toUTCString() : "after 7 days"}.`;
   else if (reported && oracleFresh) status = "The oracle recovered. Anyone can clear the failure report.";
   else if (exitOpen) status = "Emergency exit open: burn NUSD for your pro-rata share of the zkLTC reserve.";
+  if (oracleFresh === undefined && !reported) status = "Checking the DIA oracle.";
 
   return (
     <section className="pump-panel pump-vault pump-nusd-emergency" aria-labelledby="nusd-emergency-title">
       <div className="pump-panel-heading pump-vault-heading">
         <div><span className="pump-eyebrow">If the oracle stops</span><h2 id="nusd-emergency-title">Emergency exit</h2></div>
-        <span className="pump-vault-oracle-status" data-state={exitOpen ? "error" : oracleFresh === false ? "loading" : "live"}>
-          {exitOpen ? "EXIT OPEN" : reported ? "REPORTED" : oracleFresh === false ? "STALE" : "STANDBY"}
+        <span className="pump-vault-oracle-status" data-state={exitOpen ? "error" : oracleFresh === undefined || oracleFresh === false ? "loading" : "live"}>
+          {formatStatus(exitOpen ? "EXIT OPEN" : reported ? "REPORTED" : oracleFresh === undefined ? "CHECKING" : oracleFresh === false ? "STALE" : "STANDBY")}
         </span>
       </div>
       <p className="pump-vault-alert">{status} No admin can block this path.</p>

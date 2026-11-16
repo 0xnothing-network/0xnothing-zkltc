@@ -326,16 +326,24 @@ function ProtocolFeePanel({
   );
 }
 
+// Static labels and captions paint with the first frame; only the values wait for data.
+const SKELETON_METRICS: ReadonlyArray<{ label: string; caption: string | null }> = [
+  { label: "Total volume", caption: "Curve volume across every buy and sell" },
+  { label: "Protocol revenue", caption: "Creation and trading fees earned" },
+  { label: "Total trades", caption: null },
+  { label: "Markets launched", caption: null },
+];
+
 function StatsSkeleton() {
   return (
     <div className="pump-stats-loading" role="status" aria-label="Loading protocol statistics">
       <div className="pump-stats-source pump-skeleton-block" />
       <div className="pump-stats-primary">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="pump-stats-metric-skeleton" aria-hidden="true">
-            <span />
-            <strong />
-            <small />
+        {SKELETON_METRICS.map((metric, index) => (
+          <div key={metric.label} className={index === 0 ? "pump-stats-primary-featured" : undefined}>
+            <span>{metric.label}</span>
+            <strong aria-hidden="true">--</strong>
+            {metric.caption ? <small>{metric.caption}</small> : <small className="pump-stats-caption-skeleton" aria-hidden="true" />}
           </div>
         ))}
       </div>

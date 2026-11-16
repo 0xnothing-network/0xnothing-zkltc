@@ -5,7 +5,7 @@ import type { Address } from "viem";
 import { usePumpTrades } from "@/features/pump/hooks/usePumpData";
 import { useMinuteTick } from "@/features/pump/hooks/useMinuteTick";
 import type { PumpTrade } from "@/features/pump/types";
-import { formatDecimal, formatRelativeTime, formatWad, shortAddress } from "@/features/pump/format";
+import { formatDecimal, formatRelativeTime, formatStatus, formatWad, shortAddress } from "@/features/pump/format";
 import { PumpErrorState, PumpInlineLoading } from "@/features/pump/components/PumpStates";
 
 // Structural sharing keeps unchanged trade objects identical between polls, so a
@@ -14,7 +14,7 @@ const TradeRow = memo(function TradeRow({ trade }: { trade: PumpTrade }) {
   useMinuteTick(); // the Time column keeps moving without a parent render
   return (
     <tr>
-      <td><span className={`pump-side pump-side-${trade.side.toLowerCase()}`}>{trade.side}</span></td>
+      <td><span className={`pump-side pump-side-${trade.side.toLowerCase()}`}>{formatStatus(trade.side)}</span></td>
       <td>${formatWad(trade.nusdAmount, 4)}</td>
       <td>{formatWad(trade.tokenAmount, 4)}</td>
       <td>${formatDecimal(trade.priceNusd)}</td>

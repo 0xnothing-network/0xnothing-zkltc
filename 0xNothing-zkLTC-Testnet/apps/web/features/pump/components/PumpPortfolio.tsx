@@ -100,7 +100,7 @@ export function PumpPortfolio() {
   return (
     <main className="pump-page pump-portfolio-page">
       <section className="pump-page-heading pump-portfolio-heading">
-        <div><h1>Portfolio</h1><span>Wallet inventory</span></div>
+        <div><span className="pump-eyebrow">Wallet inventory</span><h1>Portfolio</h1></div>
       </section>
 
       {!portfolio.configured ? <PumpConfigNotice /> : null}
@@ -109,7 +109,7 @@ export function PumpPortfolio() {
       ) : (
         <>
           <section className="pump-portfolio-section">
-            <div className="pump-section-heading"><div><span className="pump-eyebrow">Balances</span><h2>Tokens held</h2></div><span>{portfolio.held.length}</span></div>
+            <div className="pump-section-heading"><div><span className="pump-eyebrow">Balances</span><h2>Tokens held <span className="pump-section-count">{portfolio.heldIsLoading ? "--" : portfolio.held.length}</span></h2></div></div>
             {portfolio.balanceWarning ? <p className="pump-source-note">{portfolio.balanceWarning}</p> : null}
             {portfolio.heldError && !portfolio.held.length ? (
               <PumpErrorState message={(portfolio.heldError as Error).message} onRetry={handleRefetchHeld} />
@@ -121,7 +121,7 @@ export function PumpPortfolio() {
           </section>
 
           <section className="pump-portfolio-section">
-            <div className="pump-section-heading"><div><span className="pump-eyebrow">Creator</span><h2>Markets created</h2></div><span>{portfolio.created.length}</span></div>
+            <div className="pump-section-heading"><div><span className="pump-eyebrow">Creator</span><h2>Markets created <span className="pump-section-count">{portfolio.createdIsLoading ? "--" : portfolio.created.length}</span></h2></div></div>
             {portfolio.createdError && !portfolio.created.length ? (
               <PumpErrorState message={(portfolio.createdError as Error).message} onRetry={handleRefetchCreated} />
             ) : portfolio.createdIsLoading ? (
