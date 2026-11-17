@@ -87,10 +87,6 @@ dataSources:
           file: ./abis/SyntheticVault.json
         - name: ERC20
           file: ./abis/ERC20.json
-      blockHandlers:
-        - handler: handleInitialize
-          filter:
-            kind: once
       eventHandlers:
         - event: CollateralDeposited(indexed address,indexed address,uint256)
           handler: handleCollateralDeposited
@@ -136,10 +132,6 @@ dataSources:
           file: ./abis/SyntheticVault.json
         - name: ERC20
           file: ./abis/ERC20.json
-      blockHandlers:
-        - handler: handleInitialize
-          filter:
-            kind: once
       eventHandlers:
         - event: CollateralDeposited(indexed address,indexed address,uint256)
           handler: handleCollateralDeposited
@@ -183,10 +175,6 @@ dataSources:
       abis:
         - name: LendingPool
           file: ./abis/LendingPool.json
-      blockHandlers:
-        - handler: handleInitialize
-          filter:
-            kind: once
       eventHandlers:
         - event: InterestAccrued(uint256,uint256,uint256)
           handler: handleInterestAccrued

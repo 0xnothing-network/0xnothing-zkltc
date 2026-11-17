@@ -732,7 +732,7 @@ Use the same pattern for `RedeemedAtOracle`, `EmergencyRedeemed`,
 `RewardClaimed`, `RewardRestaked`, `RewardsQueued`).
 
 **NUSD market data** (the WzkLTC/NUSD pool) is in the public 0xFi subgraph:
-`https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.0.0/gn`
+`https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.1.0/gn`
 (`goldskyEndpoint`, `testnet.generated.json:3`; schema `0xFi/subgraph/schema.graphql`,
 `Pool` `:20-45`, `Swap` `:47-65`, `Candle` `:87-101`). `Pool.id` is the
 lower-case pair address (`0xFi/subgraph/src/factory.ts:10`). In this pool

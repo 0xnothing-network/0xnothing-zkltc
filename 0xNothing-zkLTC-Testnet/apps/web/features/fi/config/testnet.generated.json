@@ -1,6 +1,6 @@
 {
   "appUrl": "https://0xnothing.xyz/0xFi",
-  "goldskyEndpoint": "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.0.0/gn",
+  "goldskyEndpoint": "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.1.0/gn",
   "deploymentBlock": "61141359",
   "nusd": "0x69320A82ACCeC1b8A5EF59fd02b217e7ea4aEa19",
   "wzkltc": "0xE93d4373CE1eDA3df6c3Ab7ed3ab07A07aA5939F",

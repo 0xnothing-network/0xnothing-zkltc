@@ -180,10 +180,11 @@ type SyntheticAction @entity(immutable: true) {
   logIndex: BigInt!
 }
 
+# Supplied and borrowed totals depend on the pool's NUSD balance and accrued interest, which
+# events do not carry and the RPC cannot serve historically: read totalSupplied() and
+# totalBorrowed() from the pool instead.
 type LendingMarket @entity(immutable: false) {
   id: Bytes!
-  totalSuppliedNusd: BigInt!
-  totalBorrowedNusd: BigInt!
   totalBadDebtNusd: BigInt!
   borrowIndexWad: BigInt!
   supplyCapNusd: BigInt!

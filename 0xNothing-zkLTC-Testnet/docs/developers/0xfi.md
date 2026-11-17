@@ -67,7 +67,7 @@ values are what users actually transact with.
 | nETH/NUSD gauge | `0x495A7d607a3e883ef746a5130e9B5BDFdF92C2B1` | `nethNusdGauge` (29) | `nETHNusdGauge` |
 | LP locker | `0x84d36BAc1f7C4E287380d35C1F51E6636AF56D5E` | `lpLocker` (33) | `lpLocker` |
 | Fee splitter | `0xAea1Ef82Dbe800BB3683009630813457D990a9B0` | `feeSplitter` (36) | `v3-core.json:6` |
-| 0xFi subgraph | `https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.0.0/gn` | `goldskyEndpoint` (3) | none |
+| 0xFi subgraph | `https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.1.0/gn` | `goldskyEndpoint` (3) | none |
 | Start block | `61141359` | `deploymentBlock` (4) | `0xFi/subgraph/subgraph.config.json:9` |
 
 Each `*Oracle` is a core `OracleRouter` labelled "LTC/USD", "BTC/USD" or
@@ -1087,34 +1087,33 @@ Never size a transaction or a minimum output from subgraph data.
 ### Subgraph
 
 Endpoint (`testnet.generated.json:3`):
-`https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.0.0/gn`.
+`https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.1.0/gn`.
 Its data sources start at the v3 contracts' own blocks: factory `61141544`,
 gauge factory `61141569`, nBTC vault `61141585`, nETH vault `61141589`,
 lending pool `61141614` (`0xFi/subgraph/subgraph.yaml:13,34,55,104,153`;
 `subgraph.config.json:10-14`). Schema: `0xFi/subgraph/schema.graphql`.
 
-**NUSD-denominated fields: check before you rely on them.** The mappings in this
-repository compare against a hard-coded NUSD address,
-`0x5317e21aba902c6c7087a84457bc02ffe99604d1` (`0xFi/subgraph/src/pair.ts:5`,
-`src/lending.ts:20`), which is the retired v1 NUSD, not the v3 NUSD
-`0x69320A82…`. Built from this source, v3 pools would get `Swap.amountNusd = 0`,
-`Pool.volumeNusd`/`Candle.volumeNusd`/`Protocol.totalVolumeNusd` that never grow,
-candle prices equal to `price0` whatever side NUSD is on (`pair.ts:82`), and
-`LendingAction.asset` set to the v1 address for NUSD actions. Compare a few
-values with RPC data before you display them; if they are zero, derive NUSD
-volume from `amount0In/1In/0Out/1Out` and the pool's token order yourself.
+**Deployment `zeroxfi-testnet/1.0.0` is frozen and wrong on NUSD fields.** It
+compared against the retired v1 NUSD `0x5317e21a…`, so its `Swap.amountNusd`,
+`volumeNusd` fields read 0 and its candle price is `price0` whatever side NUSD
+is on; it also stopped at block 70,634,530 because its handlers made
+`eth_call`s and the LiteForge RPC keeps only ~64 blocks of state. Use
+`zeroxfi-testnet/1.1.0`: it matches the v3 NUSD (`0xFi/subgraph/src/helpers.ts`)
+and makes no `eth_call`, so every value comes from event data. For the same
+reason `LendingMarket` has no supplied or borrowed totals there: read
+`totalSupplied()` and `totalBorrowed()` from the pool.
 
 | Entity | Lines | Notes |
 | --- | --- | --- |
 | `Protocol` | 1-10 | pairCount, swapCount, mintCount, burnCount, gaugeCount, totalVolumeNusd, updatedAt |
 | `Token` | 12-18 | id (address), symbol, name, decimals, createdAt |
-| `Pool` | 20-45 | id = pair address; token0, token1, reserve0, reserve1, price0, price1, volumeNusd, counts, protectedBootstrap, bootstrapped; derived swaps, liquidityEvents, candles, gauge. `price0` = token1 per token0, decimal-adjusted (`0xFi/subgraph/src/pair.ts:17-21`) |
-| `Swap` | 47-65 | sender (always the router), recipient, amount0In/1In/0Out/1Out, amountNusd (the NUSD side's in+out volume, 0 when neither token matches the mapping's NUSD constant, `pair.ts:87-89`; see the warning above), prices, reserves after, timestamp, blockNumber, txHash, logIndex |
+| `Pool` | 20-45 | id = pair address; token0, token1, reserve0, reserve1, price0, price1, volumeNusd, counts, protectedBootstrap, bootstrapped; derived swaps, liquidityEvents, candles, gauge. `price0` = token1 per token0, decimal-adjusted (`0xFi/subgraph/src/pair.ts:16-20`) |
+| `Swap` | 47-65 | sender (always the router), recipient, amount0In/1In/0Out/1Out, amountNusd (the NUSD side's in+out volume, 0 when neither token matches the mapping's NUSD constant, `pair.ts:87-88`; see the warning above), prices, reserves after, timestamp, blockNumber, txHash, logIndex |
 | `LiquidityEvent` | 72-85 | action `MINT` or `BURN`, sender, recipient, amount0, amount1, liquidity, timestamp |
-| `Candle` | 87-101 | period 60, 300, 3600, 14400 or 86400 s (`pair.ts:7`); id `<pool>-<period>-<bucket>`, bucket = floor(ts/period)·period (`pair.ts:159-160`); price is `price1` when token0 equals the mapping's NUSD constant, else `price0` (`pair.ts:82`; see the warning above) |
+| `Candle` | 87-101 | period 60, 300, 3600, 14400 or 86400 s (`pair.ts:6`); id `<pool>-<period>-<bucket>`, bucket = floor(ts/period)·period (`pair.ts:158-159`); price is `price1` when token0 equals the mapping's NUSD constant, else `price0` (`pair.ts:81`; see the warning above) |
 | `Gauge`, `GaugeAction` | 103-115, 124-135 | actions STAKE, WITHDRAW, REWARD, FUND |
 | `SyntheticMarket`, `SyntheticAction` | 137-153, 168-181 | |
-| `LendingMarket`, `LendingAction` | 183-197, 211-226 | |
+| `LendingMarket`, `LendingAction` | 186-198, 212-227 | |
 
 Event entity ids are `txHash.concatI32(logIndex)` (`0xFi/subgraph/src/helpers.ts:10`).
 `BigInt` and `BigDecimal` fields arrive as strings: convert with `BigInt(s)`.

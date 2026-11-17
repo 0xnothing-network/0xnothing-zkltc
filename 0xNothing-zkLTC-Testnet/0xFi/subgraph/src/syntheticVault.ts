@@ -1,5 +1,4 @@
-import { Address, BigInt, dataSource, ethereum } from "@graphprotocol/graph-ts";
-import { ERC20 } from "../generated/NbtcVault/ERC20";
+import { Address, BigInt, ethereum } from "@graphprotocol/graph-ts";
 import {
   BadDebtCovered,
   BadDebtRecognized,
@@ -13,44 +12,72 @@ import {
   ReserveCollateralReleased,
   SyntheticMinted,
   SyntheticRepaid,
-  SyntheticVault,
   WithdrawPauseUpdated,
 } from "../generated/NbtcVault/SyntheticVault";
 import { SyntheticAction, SyntheticMarket } from "../generated/schema";
-import { eventId, ZERO_BI } from "./helpers";
+import { eventId, NBTC, NETH, ZERO_BI } from "./helpers";
 
 const ZERO_ADDRESS = Address.zero();
+// Constructor facts of the v3 vaults (no eth_call while indexing; see helpers.ts).
+const NBTC_VAULT = Address.fromString("0x094343b925941d00424e8440c572231d6b93a751");
+const NETH_VAULT = Address.fromString("0xf909924f8bd003673d97667ea150173f87fafa1b");
+const SAFETY_RESERVE = Address.fromString("0xa8701a2ed4a085105ede2f68ba2383b98c5d6e6b");
+const NBTC_DEBT_CEILING = BigInt.fromString("10000000000000000");
+const NETH_DEBT_CEILING = BigInt.fromString("250000000000000000");
 
-export function handleInitialize(block: ethereum.Block): void {
-  refreshMarket(dataSource.address(), block.timestamp, true);
-}
+// Every total below mirrors the matching line in SyntheticVault.sol, which emits an event
+// for each change. The vaults were deployed active, so both pause flags start false.
 
 export function handleCollateralDeposited(event: CollateralDeposited): void {
   saveAction(event, "DEPOSIT", event.params.payer, event.params.account, event.params.account, event.params.amountNusd, ZERO_BI);
+  const market = loadMarket(event);
+  market.totalUserCollateralNusd = market.totalUserCollateralNusd.plus(event.params.amountNusd);
+  saveMarket(market);
 }
 
 export function handleReserveCollateralAllocated(event: ReserveCollateralAllocated): void {
   saveAction(event, "RESERVE_ALLOCATE", event.transaction.from, event.params.account, ZERO_ADDRESS, event.params.amountNusd, ZERO_BI);
+  const market = loadMarket(event);
+  market.totalReserveCollateralNusd = market.totalReserveCollateralNusd.plus(event.params.amountNusd);
+  saveMarket(market);
 }
 
 export function handleReserveCollateralReleased(event: ReserveCollateralReleased): void {
   saveAction(event, "RESERVE_RELEASE", event.transaction.from, event.params.account, ZERO_ADDRESS, event.params.amountNusd, ZERO_BI);
+  const market = loadMarket(event);
+  market.totalReserveCollateralNusd = market.totalReserveCollateralNusd.minus(event.params.amountNusd);
+  saveMarket(market);
 }
 
 export function handleReserveCollateralLost(event: ReserveCollateralLost): void {
   saveAction(event, "RESERVE_LOSS", event.transaction.from, event.params.account, ZERO_ADDRESS, event.params.amountNusd, ZERO_BI);
+  const market = loadMarket(event);
+  market.totalReserveCollateralNusd = market.totalReserveCollateralNusd.minus(event.params.amountNusd);
+  // Only liquidation emits this, before PositionLiquidated takes the whole seized amount
+  // from user collateral; adding the reserve share back leaves the user loss exact.
+  market.totalUserCollateralNusd = market.totalUserCollateralNusd.plus(event.params.amountNusd);
+  saveMarket(market);
 }
 
 export function handleSyntheticMinted(event: SyntheticMinted): void {
   saveAction(event, "MINT", event.params.account, event.params.account, event.params.recipient, ZERO_BI, event.params.amountSynthetic);
+  const market = loadMarket(event);
+  market.totalDebtSynthetic = market.totalDebtSynthetic.plus(event.params.amountSynthetic);
+  saveMarket(market);
 }
 
 export function handleSyntheticRepaid(event: SyntheticRepaid): void {
   saveAction(event, "REPAY", event.params.payer, event.params.account, event.params.account, ZERO_BI, event.params.amountSynthetic);
+  const market = loadMarket(event);
+  market.totalDebtSynthetic = market.totalDebtSynthetic.minus(event.params.amountSynthetic);
+  saveMarket(market);
 }
 
 export function handleCollateralWithdrawn(event: CollateralWithdrawn): void {
   saveAction(event, "WITHDRAW", event.params.account, event.params.account, event.params.recipient, event.params.amountNusd, ZERO_BI);
+  const market = loadMarket(event);
+  market.totalUserCollateralNusd = market.totalUserCollateralNusd.minus(event.params.amountNusd);
+  saveMarket(market);
 }
 
 export function handlePositionLiquidated(event: PositionLiquidated): void {
@@ -63,26 +90,43 @@ export function handlePositionLiquidated(event: PositionLiquidated): void {
     event.params.seizedNusd,
     event.params.repaidSynthetic,
   );
+  const market = loadMarket(event);
+  market.totalDebtSynthetic = market.totalDebtSynthetic.minus(event.params.repaidSynthetic);
+  market.totalUserCollateralNusd = market.totalUserCollateralNusd.minus(event.params.seizedNusd);
+  saveMarket(market);
 }
 
 export function handleBadDebtRecognized(event: BadDebtRecognized): void {
   saveAction(event, "BAD_DEBT", event.transaction.from, event.params.account, ZERO_ADDRESS, ZERO_BI, event.params.amountSynthetic);
+  const market = loadMarket(event);
+  market.totalDebtSynthetic = market.totalDebtSynthetic.minus(event.params.amountSynthetic);
+  market.totalBadDebtSynthetic = market.totalBadDebtSynthetic.plus(event.params.amountSynthetic);
+  saveMarket(market);
 }
 
 export function handleBadDebtCovered(event: BadDebtCovered): void {
   saveAction(event, "COVER_BAD_DEBT", event.params.payer, event.params.account, ZERO_ADDRESS, ZERO_BI, event.params.amountSynthetic);
+  const market = loadMarket(event);
+  market.totalBadDebtSynthetic = market.totalBadDebtSynthetic.minus(event.params.amountSynthetic);
+  saveMarket(market);
 }
 
 export function handleDebtCeilingUpdated(event: DebtCeilingUpdated): void {
-  refreshMarket(event.address, event.block.timestamp, true);
+  const market = loadMarket(event);
+  market.debtCeilingSynthetic = event.params.newCeilingSynthetic;
+  saveMarket(market);
 }
 
 export function handleMintPauseUpdated(event: MintPauseUpdated): void {
-  refreshMarket(event.address, event.block.timestamp, true);
+  const market = loadMarket(event);
+  market.mintPaused = event.params.paused;
+  saveMarket(market);
 }
 
 export function handleWithdrawPauseUpdated(event: WithdrawPauseUpdated): void {
-  refreshMarket(event.address, event.block.timestamp, true);
+  const market = loadMarket(event);
+  market.withdrawPaused = event.params.paused;
+  saveMarket(market);
 }
 
 function saveAction(
@@ -107,69 +151,32 @@ function saveAction(
   action.txHash = event.transaction.hash;
   action.logIndex = event.logIndex;
   action.save();
-  refreshMarket(event.address, event.block.timestamp, false);
 }
 
-function refreshMarket(address: Address, timestamp: BigInt, includeGovernance: boolean): void {
-  const contract = SyntheticVault.bind(address);
-  let market = SyntheticMarket.load(address);
-  let governance = includeGovernance;
+function loadMarket(event: ethereum.Event): SyntheticMarket {
+  let market = SyntheticMarket.load(event.address);
   if (market == null) {
-    // syntheticAsset() is immutable, so it doubles as the "is this a real vault" guard
-    // on first sight only. Later events reuse the stored asset instead of re-reading it.
-    const assetResult = contract.try_syntheticAsset();
-    if (assetResult.reverted) return;
-    const asset = assetResult.value;
-    market = new SyntheticMarket(address);
-    market.asset = asset;
-    const symbol = ERC20.bind(asset).try_symbol();
-    market.symbol = symbol.reverted ? "SYNTH" : symbol.value;
-    market.safetyReserve = ZERO_ADDRESS;
+    const isBtc = event.address.equals(NBTC_VAULT);
+    if (!isBtc && !event.address.equals(NETH_VAULT)) throw new Error("Unknown synthetic vault " + event.address.toHexString());
+    market = new SyntheticMarket(event.address);
+    market.asset = isBtc ? NBTC : NETH;
+    market.symbol = isBtc ? "nBTC" : "nETH";
+    market.safetyReserve = SAFETY_RESERVE;
     market.totalCollateralNusd = ZERO_BI;
     market.totalUserCollateralNusd = ZERO_BI;
     market.totalReserveCollateralNusd = ZERO_BI;
     market.totalDebtSynthetic = ZERO_BI;
     market.totalBadDebtSynthetic = ZERO_BI;
-    market.debtCeilingSynthetic = ZERO_BI;
-    market.mintPaused = true;
-    market.withdrawPaused = true;
-    market.governanceReady = false;
-    governance = true;
+    market.debtCeilingSynthetic = isBtc ? NBTC_DEBT_CEILING : NETH_DEBT_CEILING;
+    market.mintPaused = false;
+    market.withdrawPaused = false;
+    market.governanceReady = true;
   }
-  // The ceiling and both pause flags only move through DebtCeilingUpdated /
-  // MintPauseUpdated / WithdrawPauseUpdated, so user actions skip those three reads.
-  // Track completion independently from pause values, so partial failures retry
-  // even when another flag was successfully unpaused. safetyReserve has no event
-  // of its own and stays on the per-action refresh.
-  if (!market.governanceReady) governance = true;
-  const safetyReserve = contract.try_safetyReserve();
-  const collateral = contract.try_totalCollateralNusd();
-  const userCollateral = contract.try_totalUserCollateralNusd();
-  const reserveCollateral = contract.try_totalReserveCollateralNusd();
-  const debt = contract.try_totalDebtSynthetic();
-  const badDebt = contract.try_totalBadDebtSynthetic();
-  if (!safetyReserve.reverted) market.safetyReserve = safetyReserve.value;
-  if (!userCollateral.reverted && !reserveCollateral.reverted) {
-    market.totalUserCollateralNusd = userCollateral.value;
-    market.totalReserveCollateralNusd = reserveCollateral.value;
-    market.totalCollateralNusd = userCollateral.value.plus(reserveCollateral.value);
-  } else if (!collateral.reverted) {
-    // Legacy vaults expose only aggregate collateral, which was entirely user-owned.
-    market.totalUserCollateralNusd = collateral.value;
-    market.totalReserveCollateralNusd = ZERO_BI;
-    market.totalCollateralNusd = collateral.value;
-  }
-  if (!debt.reverted) market.totalDebtSynthetic = debt.value;
-  if (!badDebt.reverted) market.totalBadDebtSynthetic = badDebt.value;
-  if (governance) {
-    const ceiling = contract.try_debtCeilingSynthetic();
-    const mintPaused = contract.try_mintPaused();
-    const withdrawPaused = contract.try_withdrawPaused();
-    if (!ceiling.reverted) market.debtCeilingSynthetic = ceiling.value;
-    if (!mintPaused.reverted) market.mintPaused = mintPaused.value;
-    if (!withdrawPaused.reverted) market.withdrawPaused = withdrawPaused.value;
-    market.governanceReady = !ceiling.reverted && !mintPaused.reverted && !withdrawPaused.reverted;
-  }
-  market.updatedAt = timestamp;
+  market.updatedAt = event.block.timestamp;
+  return market;
+}
+
+function saveMarket(market: SyntheticMarket): void {
+  market.totalCollateralNusd = market.totalUserCollateralNusd.plus(market.totalReserveCollateralNusd);
   market.save();
 }

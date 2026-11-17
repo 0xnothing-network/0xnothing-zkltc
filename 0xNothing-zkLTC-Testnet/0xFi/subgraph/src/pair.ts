@@ -1,9 +1,8 @@
 import { Address, BigDecimal, BigInt } from "@graphprotocol/graph-ts";
 import { BootstrapCompleted, Burn, Mint, Swap as SwapEvent, Sync } from "../generated/templates/Pair/Pair";
 import { Candle, LiquidityEvent, Pool, Swap, Token } from "../generated/schema";
-import { decimalAmount, eventId, loadProtocol, ONE_BI, ZERO_BI } from "./helpers";
+import { decimalAmount, eventId, loadProtocol, NUSD, ONE_BI, ZERO_BI } from "./helpers";
 
-const NUSD = Address.fromString("0x5317e21aba902c6c7087a84457bc02ffe99604d1");
 const PERIODS: i32[] = [60, 300, 3_600, 14_400, 86_400];
 
 export function handleSync(event: Sync): void {

@@ -41,7 +41,7 @@ Public subgraphs (Goldsky, GraphQL over HTTPS POST). Endpoints are from
 
 | Subgraph | Endpoint | Schema |
 | --- | --- | --- |
-| 0xFi `zeroxfi-testnet/1.0.0` | `https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.0.0/gn` | `0xFi/subgraph/schema.graphql` |
+| 0xFi `zeroxfi-testnet/1.1.0` | `https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.1.0/gn` | `0xFi/subgraph/schema.graphql` |
 | 0xPump `zeroxpump-testnet/1.0.0` | `https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxpump-testnet/1.0.0/gn` | `subgraphs/0xpump/schema.graphql` |
 | NUSD marketplace `pixel-nusd-market/1.1.0` | `https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/pixel-nusd-market/1.1.0/gn` | `subgraphs/0xpixel-nusd-market/schema.graphql` |
 

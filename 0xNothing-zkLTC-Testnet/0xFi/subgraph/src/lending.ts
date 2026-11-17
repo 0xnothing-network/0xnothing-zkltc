@@ -1,4 +1,4 @@
-import { Address, BigInt, dataSource, ethereum } from "@graphprotocol/graph-ts";
+import { Address, BigInt, ethereum } from "@graphprotocol/graph-ts";
 import {
   BadDebtRecognized,
   BadDebtRepaid,
@@ -7,7 +7,6 @@ import {
   CollateralDeposited,
   CollateralWithdrawn,
   InterestAccrued,
-  LendingPool,
   Liquidated,
   PausesUpdated,
   Repaid,
@@ -15,17 +14,19 @@ import {
   Withdrawn,
 } from "../generated/LendingPool/LendingPool";
 import { LendingAction, LendingMarket } from "../generated/schema";
-import { eventId, ZERO_BI } from "./helpers";
+import { eventId, NUSD, ZERO_BI } from "./helpers";
 
-const NUSD = Address.fromString("0x5317e21aba902c6c7087a84457bc02ffe99604d1");
 const ZERO_ADDRESS = Address.zero();
-
-export function handleInitialize(block: ethereum.Block): void {
-  refreshMarket(dataSource.address(), block.timestamp, true);
-}
+// Constructor facts of the v3 pool (no eth_call while indexing; see helpers.ts). It was
+// deployed active, so the pause flags start false and the borrow index starts at WAD.
+const SUPPLY_CAP = BigInt.fromString("5000000000000000000000");
+const BORROW_CAP = BigInt.fromString("2500000000000000000000");
+const WAD = BigInt.fromString("1000000000000000000");
 
 export function handleInterestAccrued(event: InterestAccrued): void {
-  refreshMarket(event.address, event.block.timestamp, false);
+  const market = loadMarket(event);
+  market.borrowIndexWad = event.params.newBorrowIndexWad;
+  market.save();
 }
 
 export function handleSupplied(event: Supplied): void {
@@ -58,18 +59,31 @@ export function handleLiquidated(event: Liquidated): void {
 
 export function handleBadDebtRecognized(event: BadDebtRecognized): void {
   saveAction(event, "BAD_DEBT", event.transaction.from, event.params.account, ZERO_ADDRESS, NUSD, event.params.amountNusd, ZERO_BI, ZERO_BI);
+  const market = loadMarket(event);
+  market.totalBadDebtNusd = market.totalBadDebtNusd.plus(event.params.amountNusd);
+  market.save();
 }
 
 export function handleBadDebtRepaid(event: BadDebtRepaid): void {
   saveAction(event, "REPAY_BAD_DEBT", event.params.payer, event.params.account, ZERO_ADDRESS, NUSD, event.params.amountNusd, ZERO_BI, ZERO_BI);
+  const market = loadMarket(event);
+  market.totalBadDebtNusd = market.totalBadDebtNusd.minus(event.params.amountNusd);
+  market.save();
 }
 
 export function handleCapsUpdated(event: CapsUpdated): void {
-  refreshMarket(event.address, event.block.timestamp, true);
+  const market = loadMarket(event);
+  market.supplyCapNusd = event.params.supplyCapNusd;
+  market.borrowCapNusd = event.params.borrowCapNusd;
+  market.save();
 }
 
 export function handlePausesUpdated(event: PausesUpdated): void {
-  refreshMarket(event.address, event.block.timestamp, true);
+  const market = loadMarket(event);
+  market.supplyPaused = event.params.supplyPaused;
+  market.borrowPaused = event.params.borrowPaused;
+  market.collateralWithdrawalPaused = event.params.collateralWithdrawalPaused;
+  market.save();
 }
 
 function saveAction(
@@ -98,55 +112,22 @@ function saveAction(
   action.txHash = event.transaction.hash;
   action.logIndex = event.logIndex;
   action.save();
-  refreshMarket(event.address, event.block.timestamp, false);
+  loadMarket(event).save();
 }
 
-function refreshMarket(address: Address, timestamp: BigInt, includeGovernance: boolean): void {
-  const contract = LendingPool.bind(address);
-  let market = LendingMarket.load(address);
-  let governance = includeGovernance;
+function loadMarket(event: ethereum.Event): LendingMarket {
+  let market = LendingMarket.load(event.address);
   if (market == null) {
-    market = new LendingMarket(address);
-    market.totalSuppliedNusd = ZERO_BI;
-    market.totalBorrowedNusd = ZERO_BI;
+    market = new LendingMarket(event.address);
     market.totalBadDebtNusd = ZERO_BI;
-    market.borrowIndexWad = ZERO_BI;
-    market.supplyCapNusd = ZERO_BI;
-    market.borrowCapNusd = ZERO_BI;
-    market.supplyPaused = true;
-    market.borrowPaused = true;
-    market.collateralWithdrawalPaused = true;
-    market.governanceReady = false;
-    governance = true;
+    market.borrowIndexWad = WAD;
+    market.supplyCapNusd = SUPPLY_CAP;
+    market.borrowCapNusd = BORROW_CAP;
+    market.supplyPaused = false;
+    market.borrowPaused = false;
+    market.collateralWithdrawalPaused = false;
+    market.governanceReady = true;
   }
-  // Caps and pauses only move through CapsUpdated / PausesUpdated, so user actions
-  // skip those five eth_calls and read the four accounting values that actually
-  // change per event. Readiness tracks every governance read: a successful false
-  // pause flag cannot conceal another reverted read, and an intentionally paused
-  // market does not need five extra calls on every action.
-  if (!market.governanceReady) governance = true;
-  const supplied = contract.try_totalSupplied();
-  const borrowed = contract.try_totalBorrowed();
-  const badDebt = contract.try_totalBadDebtNusd();
-  const borrowIndex = contract.try_borrowIndexWad();
-  if (!supplied.reverted) market.totalSuppliedNusd = supplied.value;
-  if (!borrowed.reverted) market.totalBorrowedNusd = borrowed.value;
-  if (!badDebt.reverted) market.totalBadDebtNusd = badDebt.value;
-  if (!borrowIndex.reverted) market.borrowIndexWad = borrowIndex.value;
-  if (governance) {
-    const supplyCap = contract.try_supplyCapNusd();
-    const borrowCap = contract.try_borrowCapNusd();
-    const supplyPaused = contract.try_supplyPaused();
-    const borrowPaused = contract.try_borrowPaused();
-    const collateralPaused = contract.try_collateralWithdrawalPaused();
-    if (!supplyCap.reverted) market.supplyCapNusd = supplyCap.value;
-    if (!borrowCap.reverted) market.borrowCapNusd = borrowCap.value;
-    if (!supplyPaused.reverted) market.supplyPaused = supplyPaused.value;
-    if (!borrowPaused.reverted) market.borrowPaused = borrowPaused.value;
-    if (!collateralPaused.reverted) market.collateralWithdrawalPaused = collateralPaused.value;
-    market.governanceReady = !supplyCap.reverted && !borrowCap.reverted
-      && !supplyPaused.reverted && !borrowPaused.reverted && !collateralPaused.reverted;
-  }
-  market.updatedAt = timestamp;
-  market.save();
+  market.updatedAt = event.block.timestamp;
+  return market;
 }

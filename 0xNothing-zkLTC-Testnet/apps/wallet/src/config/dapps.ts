@@ -12,7 +12,7 @@ export const OFFICIAL_SITE_DOMAINS: readonly string[] = ["0xnothing.xyz", "0xnot
 export const PUMP_SUBGRAPH_URL =
   "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxpump-testnet/1.0.0/gn";
 export const FI_SUBGRAPH_URL =
-  "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.0.0/gn";
+  "https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.1.0/gn";
 
 export interface DappEntry {
   id: string;

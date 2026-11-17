@@ -457,15 +457,15 @@ STACK
 - Next.js (App Router) + TypeScript (strict). Fetch with plain fetch POST (or graphql-request). Treat every BigInt/BigDecimal field as a string and convert with BigInt() or a decimal library; never Number() on raw token amounts.
 
 DATA SOURCE
-- Public Goldsky subgraph: https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.0.0/gn
+- Public Goldsky subgraph: https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.1.0/gn
 - Load it from the `goldskyEndpoint` key of a copy of 0xNothing-zkLTC-Testnet/apps/web/features/fi/config/testnet.generated.json. Its data sources start at blocks 61141544 (factory) to 61141614 (lending pool) (0xFi/subgraph/subgraph.yaml:13,34,55,104,153); nothing 0xFi v3 exists before `deploymentBlock` 61141359.
 - Schema: 0xNothing-zkLTC-Testnet/0xFi/subgraph/schema.graphql (entities Pool, Swap, LiquidityEvent, Candle, Gauge, LendingMarket, SyntheticMarket).
 
 FACTS YOU MUST RESPECT
 - Pool.id is the pair address in lowercase hex. price0 = token1 per token0, decimal-adjusted.
-- Candle periods are 60, 300, 3600, 14400, 86400 seconds; bucket = floor(timestamp / period) * period (0xFi/subgraph/src/pair.ts:6,159-160). Candle price is price1 when token0 equals the mapping's NUSD constant, else price0 (pair.ts:82).
+- Candle periods are 60, 300, 3600, 14400, 86400 seconds; bucket = floor(timestamp / period) * period (0xFi/subgraph/src/pair.ts:6,158-159). Candle price is price1 when token0 equals the mapping's NUSD constant, else price0 (pair.ts:81).
 - Swap.sender is always the router; filter a wallet's swaps by `recipient`.
-- WARNING: the mapping source hard-codes the retired v1 NUSD 0x5317e21aba902c6c7087a84457bc02ffe99604d1 (pair.ts:5, lending.ts:20), not the v3 NUSD in the manifest. Built from this source, v3 pools report Swap.amountNusd = 0, volumeNusd fields that never grow, and candle price = price0 regardless of which side NUSD is on. Verify against RPC before showing NUSD volume; if it is zero, compute NUSD volume from amount0In/1In/0Out/1Out and the pool's token0/token1 against the manifest's nusd, and orient the price yourself.
+- WARNING: deployment zeroxfi-testnet/1.0.0 is frozen at block 70634530 and used the retired v1 NUSD, so its NUSD volume reads 0 and its candle price is unoriented. Use zeroxfi-testnet/1.1.0 (v3 NUSD, no eth_call). Its LendingMarket has no supplied/borrowed totals: read totalSupplied() and totalBorrowed() from the pool over RPC.
 - The subgraph lags the chain. Use it for history and charts only, never for quotes, minimums or balances that size a transaction.
 
 QUERY
