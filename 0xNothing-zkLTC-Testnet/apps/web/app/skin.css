@@ -60,7 +60,7 @@
 /* Navigation: neutral text; the active item gets the accent underline (accent use #2). */
 
 /* Surfaces: 1px line, silver top edge, soft depth. */
-.fi-root.fi-root :is(.fi-panel, .fi-market-list, .fi-metric-strip, .fi-points-stake-card, .fi-points-positions, .fi-points-redemption, .fi-empty-state),
+.fi-root.fi-root :is(.fi-panel, .fi-market-list, .fi-metric-strip, .fi-empty-state),
 .pump-shell.pump-shell :is(.pump-panel, .pump-token-card, .pump-empty-state),
 .pixel-product.pixel-product :is(.pixel-panel, .pixel-tools-panel, .pixel-mint-panel, .pixel-generator-panel, .nft-card, .pixel-collection-empty),
 .ox-docs-root.ox-docs-root .ox-docs-hero {
@@ -187,7 +187,7 @@
 
 /* Status tags: coloured text in a hairline box. No tinted pill, no dot. */
 .fi-root.fi-root :is(.fi-swap-asset-badge, .fi-status),
-.pump-shell.pump-shell :is(.pump-status, .pump-fee-chip, .pump-holder-badge, .pump-dev-badge) {
+.pump-shell.pump-shell :is(.pump-status, .pump-fee-chip, .pump-holder-badge) {
   display: inline-flex;
   align-items: center;
   min-height: 20px;

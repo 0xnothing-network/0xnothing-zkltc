@@ -309,15 +309,6 @@ input[type="range"]::-webkit-slider-thumb:hover {
   transform: translateY(0);
 }
 
-@media (max-width: 768px) {
-
-  .backdrop-blur-md,
-.backdrop-blur-sm {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-  }
-}
-
 /* Shared route loader. PageLoader and 0xPump render outside the 0xPixel
    stylesheet, so their core geometry and motion must live at app scope. */
 .pixel-shell {

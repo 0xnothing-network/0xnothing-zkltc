@@ -91,7 +91,7 @@
 
 /* Inset rings stay visible inside the terminal's clipped control groups. */
 .fi-root :is( .fi-segmented, .fi-mobile-dock) :is(a, button):focus-visible,
-.fi-root :is(.fi-settings-details, .fi-pool-details, .fi-points-program-details, .fi-chart-a11y) > summary:focus-visible,
+.fi-root :is(.fi-settings-details, .fi-pool-details, .fi-chart-a11y) > summary:focus-visible,
 .fi-root .fi-swap-asset-trigger:focus-visible {
   outline-offset: -3px;
 }
@@ -404,12 +404,10 @@
   animation: fi-loading-breathe 1.35s steps(4, end) infinite alternate;
 }
 
-.fi-swap-loading-card .fi-loading-amount:nth-of-type(2),
-.fi-swap-loading-card .fi-loading-details span:nth-child(2) {
+.fi-swap-loading-card .fi-loading-amount:nth-of-type(2) {
   animation-delay: 120ms;
 }
 
-.fi-swap-loading-card .fi-loading-details span:nth-child(3),
 .fi-swap-loading-card .fi-loading-button {
   animation-delay: 240ms;
 }
@@ -450,17 +448,6 @@
   border-radius: var(--r-md);
   background: var(--fi-panel);
 }
-
-.fi-loading-details {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  border-top: 1px solid var(--fi-line);
-  border-bottom: 1px solid var(--fi-line);
-  padding: 12px 0;
-}
-
-.fi-loading-details span { height: 9px; }
 .fi-loading-button { width: 100%; height: 48px; background: var(--line); }
 
 .fi-trade-workspace {
@@ -524,14 +511,6 @@
 .fi-position-row span {
   color: var(--fi-muted);
   font-size: 12px;
-}
-
-
-.fi-panel-copy {
-  margin-top: 8px;
-  color: var(--fi-muted);
-  font-size: 12px;
-  line-height: 1.6;
 }
 
 
@@ -2745,269 +2724,6 @@
 
 /* NUSD points workspace */
 
-.fi-points-dashboard {
-  display: grid;
-  gap: 20px;
-}
-
-.fi-points-overview {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 0.7fr);
-  overflow: hidden;
-  border-left: 1px solid var(--line-strong);
-  padding: 0;
-}
-
-.fi-points-overview-copy {
-  display: grid;
-  align-content: center;
-  gap: 8px;
-  padding: 18px 20px;
-}
-
-.fi-points-kicker-row {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.fi-points-kicker-row .fi-label {
-  margin: 0;
-}
-
-.fi-points-overview-copy > h2 {
-  margin: 0;
-  color: var(--fi-text);
-  font-size: 23px;
-  font-weight: 500;
-  letter-spacing: -0.035em;
-  line-height: 1.15;
-  text-wrap: balance;
-}
-
-.fi-points-card-heading h2 {
-  overflow: hidden;
-  color: var(--fi-text);
-  font-size: 17px;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.fi-points-overview-copy > p {
-  margin: 0;
-  max-width: 62ch;
-  color: var(--fi-muted);
-  font-size: 14px;
-  line-height: 1.6;
-  text-wrap: pretty;
-  font-family: inherit;
-}
-
-.fi-points-metrics {
-  margin: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1px;
-  border-left: 1px solid var(--fi-line);
-  background: var(--fi-line);
-}
-
-.fi-points-metrics > div {
-  display: grid;
-  min-width: 0;
-  min-height: 76px;
-  align-content: center;
-  gap: 4px;
-  padding: 14px;
-  background: var(--fi-panel-2);
-}
-
-.fi-points-metrics dt,
-.fi-points-estimate dt,
-.fi-points-program-details dt,
-.fi-points-redemption-quote dt {
-  color: var(--fi-muted);
-  font-size: 12px;
-  letter-spacing: 0;
-}
-
-.fi-points-metrics dd {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  color: var(--fi-text);
-  font-size: 22px;
-  font-weight: 500;
-  line-height: 1.2;
-}
-
-.fi-points-metrics dd[data-tone="positive"] {
-  color: var(--positive);
-}
-
-.fi-points-metrics dd small {
-  color: var(--fi-muted);
-  font-size: 12px;
-  font-weight: 400;
-}
-
-.fi-points-program-details {
-  grid-column: 1 / -1;
-  border-top: 1px solid var(--fi-line);
-  background: var(--fi-panel-2);
-}
-
-.fi-points-program-details > summary {
-  display: flex;
-  min-height: 38px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 16px;
-  color: var(--fi-muted);
-  cursor: pointer;
-  font-size: 12px;
-  letter-spacing: 0;
-  list-style: none;
-}
-
-.fi-points-program-details > summary::-webkit-details-marker {
-  display: none;
-}
-
-.fi-points-program-details > summary::after {
-  content: "+";
-  color: var(--accent-text);
-  font-size: 13px;
-}
-
-.fi-points-program-details[open] > summary::after {
-  content: "âˆ’";
-}
-
-.fi-points-program-details > div {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.45fr);
-  align-items: center;
-  gap: 16px;
-  border-top: 1px solid var(--fi-line);
-  padding: 13px 16px 15px;
-}
-
-.fi-points-program-details dl {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1px;
-  overflow: hidden;
-  border: 1px solid var(--fi-line);
-  background: var(--fi-line);
-}
-
-.fi-points-program-details dl > div {
-  display: grid;
-  min-width: 0;
-  gap: 4px;
-  padding: 10px;
-  background: var(--fi-input);
-}
-
-.fi-points-program-details dd {
-  overflow-wrap: anywhere;
-  color: var(--fi-text);
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.fi-points-program-details p {
-  color: var(--fi-muted);
-  font-size: 12px;
-  line-height: 1.6;
-  text-wrap: pretty;
-}
-
-.fi-points-workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
-  align-items: start;
-  gap: 20px;
-}
-
-.fi-points-stake-card,
-.fi-points-positions,
-.fi-points-redemption {
-  overflow: hidden;
-  padding: 0;
-}
-
-.fi-points-stake-card {
-  border-left: 1px solid var(--line-strong);
-}
-
-.fi-points-stake-card[data-program-state="ended"] {
-  border-left-color: var(--warning);
-}
-
-.fi-points-card-heading {
-  display: flex;
-  min-width: 0;
-  min-height: 76px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  border-bottom: 1px solid var(--fi-line);
-  padding: 18px 20px;
-}
-
-.fi-points-card-heading > div {
-  display: grid;
-  min-width: 0;
-  gap: 4px;
-}
-
-.fi-points-card-heading .fi-label {
-  margin: 0;
-}
-
-.fi-points-count {
-  flex: none;
-  border: 1px solid var(--fi-line-strong);
-  padding: 5px 7px;
-  color: var(--accent-text);
-  font-size: 12px;
-  letter-spacing: 0;
-}
-
-.fi-points-count {
-  display: grid;
-  min-width: 26px;
-  min-height: 26px;
-  place-items: center;
-  padding: 3px;
-  color: var(--fi-text);
-}
-
-.fi-points-stake-form,
-.fi-points-redemption-action {
-  display: grid;
-  min-width: 0;
-  align-content: start;
-  gap: 16px;
-  padding: 20px;
-}
-
-.fi-points-lock-field {
-  display: grid;
-  gap: 7px;
-}
-
-.fi-points-lock-field > .fi-label {
-  margin: 0;
-}
-
 .fi-points-locks button {
   display: grid;
   min-width: 0;
@@ -3031,225 +2747,11 @@
   opacity: 1;
 }
 
-.fi-points-stake-form .fi-field > small,
-.fi-points-redemption-action .fi-field > small {
-  overflow: visible;
-  line-height: 1.55;
-  text-overflow: clip;
-  white-space: normal;
-}
-
-.fi-points-estimate {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1px;
-  overflow: hidden;
-  border: 1px solid var(--fi-line);
-  background: var(--fi-line);
-}
-
-.fi-points-estimate > div,
-.fi-points-redemption-quote > div {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px;
-  background: var(--fi-input);
-}
-
-.fi-points-estimate dd,
-.fi-points-redemption-quote dd {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  color: var(--fi-text);
-  font-size: 12px;
-  font-weight: 500;
-  text-align: right;
-}
-
-.fi-points-estimate dd[data-tone="positive"],
-.fi-points-redemption-quote dd[data-tone="positive"] {
-  color: var(--positive);
-}
-
-.fi-points-account {
-  display: grid;
-  min-width: 0;
-  gap: 12px;
-}
-
-.fi-points-positions > .fi-inline-state {
-  margin: 12px 12px 0;
-}
-
-.fi-points-connect {
-  display: grid;
-  gap: 12px;
-  padding: 16px;
-}
-
-.fi-points-connect p {
-  color: var(--fi-muted);
-  font-size: 12px;
-  line-height: 1.55;
-  text-wrap: pretty;
-}
-
-.fi-points-empty-state {
-  min-height: 118px;
-  place-content: center;
-  border: 0;
-  padding: 20px 16px;
-  background: transparent;
-}
-
-.fi-points-position-list {
-  display: grid;
-  max-height: 360px;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-  scroll-padding-block: 8px;
-  scrollbar-color: var(--fi-line-strong) var(--fi-input);
-  scrollbar-width: thin;
-}
-
-.fi-points-position {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 14px;
-  border-bottom: 1px solid var(--fi-line);
-  padding: 18px 20px;
-}
-
-.fi-points-position:last-child {
-  border-bottom: 0;
-}
-
-.fi-points-position-copy {
-  display: grid;
-  min-width: 0;
-  gap: 4px;
-}
-
-.fi-points-position-copy .fi-label {
-  margin: 0;
-}
-
-.fi-points-position-copy > strong {
-  color: var(--fi-text);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.fi-points-position-copy > small {
-  overflow-wrap: anywhere;
-  color: var(--fi-muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.fi-points-position > .fi-button {
-  grid-column: 1 / -1;
-  width: 100%;
-  min-height: 34px;
-}
-
-.fi-points-redemption {
-  border-left: 1px solid var(--line-strong);
-}
-
-.fi-points-redemption-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.65fr);
-}
-
-.fi-points-redemption-quote {
-  display: grid;
-  align-content: start;
-  gap: 1px;
-  border-left: 1px solid var(--fi-line);
-  background: var(--fi-line);
-}
-
-.fi-points-redemption-quote > div {
-  padding: 12px;
-  background: var(--fi-panel-2);
-}
-
-@media (max-width: 1024px) {
-  .fi-points-workspace {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 860px) {
-  .fi-points-overview {
-    grid-template-columns: 1fr;
-  }
-
-  .fi-points-metrics {
-    border-top: 1px solid var(--fi-line);
-    border-left: 0;
-  }
-
-  .fi-points-redemption-body {
-    grid-template-columns: 1fr;
-  }
-
-  .fi-points-redemption-quote {
-    border-top: 1px solid var(--fi-line);
-    border-left: 0;
-  }
-}
-
-@media (max-width: 680px) {
-  .fi-points-overview-copy {
-    padding: 16px;
-  }
-
-  .fi-points-program-details > div {
-    grid-template-columns: 1fr;
-  }
-
-  .fi-points-program-details dl {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 480px) {
-  .fi-points-dashboard {
-    gap: 9px;
-  }
-
-  .fi-points-card-heading {
-    min-height: 60px;
-    padding: 12px;
-  }
-
-  .fi-points-stake-form,
-  .fi-points-redemption-action {
-    padding: 13px;
-  }
 
   .fi-points-locks button {
     min-height: 46px;
     padding-inline: 5px;
-  }
-
-  .fi-points-estimate > div {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .fi-points-estimate dd {
-    text-align: left;
-  }
-
-  .fi-points-redemption-quote {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -3339,8 +2841,6 @@
 .fi-root .fi-form-details > div { padding-block: 10px; }
 .fi-root .fi-inline-state { line-height: 1.7; }
 .fi-root .fi-transaction-status { padding: 14px 16px; line-height: 1.7; }
-.fi-root .fi-points-card-heading { background: var(--fi-panel-2); }
-.fi-root .fi-points-position { padding: 18px; }
 .fi-root .fi-points-locks button { transition: background-color 160ms ease, border-color 160ms ease; }
 @media (max-width: 760px) {
   .fi-root .fi-panel:not(.fi-panel-flush) { padding: 18px; }

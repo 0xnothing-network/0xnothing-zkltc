@@ -562,8 +562,6 @@
 .pump-empty-inline a { color: var(--accent-text); text-decoration: underline; text-underline-offset: 4px; }
 
 .pump-create-page { max-width: 1000px; }
-.pump-nusd-page { max-width: 1080px; }
-.pump-nusd-page .pump-vault { margin-top: 0; }
 .pump-stats-page { max-width: 1120px; }
 .pump-stats-heading { padding-top: 10px; }
 .pump-stats-source {
@@ -684,16 +682,6 @@
   background: color-mix(in srgb, var(--accent) 2.5%, transparent);
 }
 .pump-dev-fees-heading p { max-width: 620px; margin: 9px 0 0; color: var(--pump-muted); font-size: 12px; line-height: 1.6; }
-.pump-dev-badge {
-  display: inline-flex;
-  min-height: 28px;
-  flex: none;
-  align-items: center;
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  padding: 0 10px;
-  color: var(--accent-text);
-  font-size: 12px;
-}
 .pump-dev-fees-grid {
   display: grid;
   grid-template-columns: minmax(240px, 0.8fr) minmax(280px, 1.2fr) 190px;
@@ -708,14 +696,9 @@
 .pump-dev-fees-grid .pump-stats-list { margin: 0; }
 .pump-dev-fees-grid .pump-stats-list > div:first-child { border-top: 0; }
 .pump-stats-market-skeleton,
-.pump-skeleton-block,
-.pump-stats-metric-skeleton > * { background: var(--surface-2); animation: pump-pulse 1.4s ease-in-out infinite; }
+.pump-skeleton-block { background: var(--surface-2); animation: pump-pulse 1.4s ease-in-out infinite; }
 .pump-stats-market-skeleton { height: 180px; margin-top: 18px; }
 .pump-stats-loading .pump-stats-source { min-height: 42px; }
-.pump-stats-metric-skeleton > * { display: block; }
-.pump-stats-metric-skeleton span { width: 45%; height: 8px; }
-.pump-stats-metric-skeleton strong { width: 70%; height: 26px; }
-.pump-stats-metric-skeleton small { width: 85%; height: 8px; }
 .pump-stats-loading .pump-stats-detail-grid > div { min-height: 230px; }
 
 .pump-shell :where(a, button, input:not(.fi-root input), select:not(.fi-root select), textarea):focus-visible {
@@ -915,7 +898,6 @@
   .pump-stats-section-heading,
 .pump-dev-fees-heading { align-items: flex-start; flex-direction: column; gap: 12px; }
   .pump-dev-fees { padding: 16px; }
-  .pump-dev-badge { align-self: flex-start; }
   .pump-stat-strip > div,
 .pump-detail-stats > div,
 .pump-vault-metrics > div,
@@ -2118,8 +2100,8 @@
   --pump-page-gutter: clamp(14px, 2.4vw, 32px);
 }
 
-/* Status tag: a hairline box in the status colour. .pump-tag alone is the neutral tag. */
-.pump-shell.pump-shell :is(.pump-tag, .pump-status, .pump-fee-chip, .pump-holder-badge, .pump-dev-badge) {
+/* Status tag: a hairline box in the status colour. */
+.pump-shell.pump-shell :is(.pump-status, .pump-fee-chip, .pump-holder-badge) {
   display: inline-flex;
   width: fit-content;
   min-height: 20px;
@@ -2135,11 +2117,7 @@
   line-height: 1;
   text-transform: none;
 }
-.pump-shell.pump-shell :is(.pump-tag, .pump-fee-chip, .pump-holder-badge, .pump-dev-badge) { color: var(--text-2); }
-.pump-shell.pump-shell .pump-tag.is-positive { color: var(--positive); }
-.pump-shell.pump-shell .pump-tag.is-negative { color: var(--negative); }
-.pump-shell.pump-shell .pump-tag.is-warning { color: var(--warning); }
-.pump-shell.pump-shell .pump-tag.is-info { color: var(--info); }
+.pump-shell.pump-shell :is(.pump-fee-chip, .pump-holder-badge) { color: var(--text-2); }
 /* Curve names a role, not a status: the neutral tag like Creator. */
 .pump-shell.pump-shell .pump-holder-badge-system { color: var(--text-2); }
 
@@ -2165,9 +2143,6 @@
   transform: none !important;
   cursor: not-allowed;
 }
-
-/* Number face for any value the lists above do not reach. */
-.pump-shell .pump-num { font-family: var(--font-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* Card surface (skin.css): 1px line, silver top edge from the inset highlight, soft depth.
    --e-2 adds a 1px ring outside the border, which drew a 2px edge on these cards. */

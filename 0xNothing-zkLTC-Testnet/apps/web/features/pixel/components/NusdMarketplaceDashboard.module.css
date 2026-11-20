@@ -130,8 +130,6 @@
 .priceRow strong { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: 24px; font-weight: 600; line-height: 1.3; letter-spacing: -.025em; overflow-wrap: anywhere; }
 .priceRow small { font-size: 12px; font-weight: 400; color: var(--accent-text); letter-spacing: 0; }
 .cardBody > button, .cardActions > button { width: 100%; white-space: nowrap; }
-/* Status tag: a hairline box in the status colour, no fill, off the artwork. */
-.statusTag { margin-left: auto; max-width: 100%; padding: 2px 6px; border: 1px solid currentColor; border-radius: var(--r-xs); background: transparent; color: var(--positive); font-size: 12px; font-weight: 500; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* The gallery card reuses the marketplace primary: notched, hard bottom edge, one line. */
 .cardActions { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .offerLink { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 8px 16px; color: var(--market-muted); font-size: 12px; }
