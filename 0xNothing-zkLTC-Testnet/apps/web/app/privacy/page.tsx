@@ -4,7 +4,7 @@ import "./privacy.css";
 
 export const metadata: Metadata = {
   title: "0xWallet Privacy Policy | 0xNothing",
-  description: "Privacy policy for the 0xWallet Chrome extension.",
+  description: "Privacy policy for the 0xWallet Chrome extension and Android app.",
   alternates: {
     canonical: "/privacy",
   },
@@ -16,10 +16,12 @@ const sections = [
     body: (
       <>
         <p>
-          This Privacy Policy describes how the 0xWallet Chrome extension handles
-          information. 0xWallet is a self-custodial EVM wallet for LitVM LiteForge
-          testnet. The extension does not require a 0xNothing account. Assets on
-          this testnet are test assets and have no monetary value.
+          This Privacy Policy describes how the 0xWallet Chrome extension and the
+          0xWallet Android app (package xyz.zeroxnothing.wallet) handle
+          information. Both are built from the same code. 0xWallet is a
+          self-custodial EVM wallet for LitVM LiteForge testnet. Neither requires
+          a 0xNothing account. Assets on this testnet are test assets and have no
+          monetary value.
         </p>
       </>
     ),
@@ -202,12 +204,64 @@ const sections = [
     ),
   },
   {
+    title: "0xWallet on Android",
+    body: (
+      <>
+        <p>
+          0xWallet on Android keeps the recovery phrase and imported private
+          keys in an encrypted vault (PBKDF2-SHA256 with 600,000 iterations,
+          AES-GCM-256) in the app&apos;s private storage, together with public
+          account data, settings, saved recipients, and transaction history.
+          This data is excluded from Android cloud backup and device-to-device
+          transfer, and it is never sent to 0xNothing. The key that unlocks the
+          vault is held in the app&apos;s memory only while the wallet is
+          unlocked; it is removed when the wallet locks, when the auto-lock
+          time ends, and when Android ends the app.
+        </p>
+        <p>
+          The Android app asks for one Android permission, INTERNET. It does not
+          ask for location, camera, contacts, microphone, storage, phone, or
+          notification access, does not read the clipboard, and has no
+          advertising identifier. The app blocks screenshots, screen recording,
+          and the recent-apps preview.
+        </p>
+        <p>
+          The Android app sends requests to the LiteForge RPC (or an HTTPS RPC
+          the user adds), to public Goldsky indexes, and to the 0xNothing site
+          for token and market data and token images. These servers receive the
+          IP address and the data of the request: the RPC receives the wallet
+          addresses it is asked about and the signed transactions the user
+          approves; the market and image requests carry token contract addresses
+          and image identifiers, never the wallet address. To show the 24-hour
+          change, the app asks Goldsky and the 0xNothing site for the price
+          history of the 0xPump tokens the account holds, so those servers can
+          see which of those tokens are held from an IP address. In Google
+          Play&apos;s terms, this is how the Android app collects wallet
+          addresses (user IDs), the transactions a user makes (purchase
+          history), and the tokens an account holds (other financial info), for
+          the app&apos;s function only.
+        </p>
+        <p>
+          The Android app has no website provider and no notifications. A link
+          opens in the system browser, where that site&apos;s own policy applies.
+        </p>
+        <p>
+          All wallet data on the device can be deleted from Settings, under
+          Danger zone, with Erase for good, or by uninstalling the app. 0xNothing
+          keeps no copy of a wallet. Data held by the RPC and index operators is
+          governed by their own policies.
+        </p>
+      </>
+    ),
+  },
+  {
     title: "Remote code",
     body: (
       <p>
         0xWallet does not use remotely hosted code. All executable JavaScript is
-        bundled with the extension. Network responses are treated only as data and
-        are never evaluated or executed as JavaScript or WebAssembly.
+        bundled with the extension and with the Android app. Network responses
+        are treated only as data and are never evaluated or executed as
+        JavaScript or WebAssembly.
       </p>
     ),
   },
@@ -240,9 +294,10 @@ const sections = [
           Users can lock the wallet, revoke dApp connections, remove custom
           networks or tokens, rename or remove saved recipients, turn
           notifications off, return to the default RPC address, or reset the
-          wallet from its settings. Uninstalling
-          the extension removes its local Chrome storage. Information already
-          published to a blockchain cannot be altered or deleted by 0xNothing.
+          wallet from its settings. Uninstalling the extension removes its local
+          Chrome storage, and uninstalling the Android app removes its app data.
+          Information already published to a blockchain cannot be altered or
+          deleted by 0xNothing.
         </p>
       </>
     ),
@@ -254,7 +309,7 @@ const sections = [
         The website hosting this policy is delivered through Cloudflare, which
         processes request data such as IP addresses to serve and protect the
         site. The website runs no analytics script. It is separate from 0xWallet
-        and is not embedded in the extension.
+        and is not embedded in the extension or in the Android app.
       </p>
     ),
   },
@@ -305,9 +360,9 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
           <p className="mt-6 max-w-2xl text-sm leading-7 text-white/55">
-            Effective November 15, 2026. This policy explains what the extension
-            handles, what stays on the device, and what is sent to network
-            services when the user requests a wallet operation.
+            Effective November 20, 2026. This policy explains what the extension
+            and the Android app handle, what stays on the device, and what is
+            sent to network services when the user requests a wallet operation.
           </p>
         </div>
 
