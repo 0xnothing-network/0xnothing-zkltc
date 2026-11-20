@@ -1,5 +1,5 @@
 import { after, NextResponse } from "next/server";
-import { logsClient, publicClient } from "@/lib/contract";
+import { logsClient, publicClient, scanLogsClient } from "@/lib/contract";
 import { createBoundedCache } from "@/lib/boundedCache";
 import { CDN_STALE_SECONDS, isFreshRead, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
 import { NFT_NUSD_ADDRESS, NUSD_MARKETPLACE_ADDRESS, NUSD_SUBGRAPH_URL } from "@/lib/nusdMarketplaceConfig";
@@ -47,7 +47,10 @@ export async function GET(request: Request) {
     let laggingPage: NusdActivityPage | undefined;
     if (subgraphUrl) {
       try {
-        const latestBlock = cursor ? undefined : await publicClient.getBlockNumber();
+        // The head only feeds the reader's lag check, so a hung RPC may hold it for one
+        // 5 s attempt (publicClient waits through three of 15 s). Without a head the
+        // reader skips the check and the indexed page is served as it is.
+        const latestBlock = cursor ? undefined : await scanLogsClient.getBlockNumber().catch(() => undefined);
         return await readNusdActivityFromSubgraph(subgraphUrl, { filter, cursor, limit: Number(rawLimit), latestBlock });
       } catch (error) {
         laggingPage = (error as { laggingPage?: NusdActivityPage } | null)?.laggingPage;

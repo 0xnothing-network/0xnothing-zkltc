@@ -38,6 +38,14 @@
   "cache": {
     "enabled": true
   },
+  // What the Worker itself does is a chain of reads from the LiteForge RPC, which is
+  // hosted in London (OVH). Run next to it: from an Asian edge every read in the chain
+  // paid a ~190 ms round trip, which made an uncached data route take 2 to 3 s. Cached
+  // answers and static assets are still served at the visitor's edge, before placement
+  // is considered. If the RPC host moves, move this hint with it.
+  "placement": {
+    "region": "aws:eu-west-2"
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

@@ -11,7 +11,7 @@ const MARKET = "0x0000000000000000000000000000000000000011";
 const NUSD = "0x0000000000000000000000000000000000000022";
 const NFT = "0x0000000000000000000000000000000000000033";
 const history = evaluateModule<{ parseNusdActivityCursor: (cursor: string | null) => unknown }>(new URL("../../lib/nusdMarketplaceActivity.ts", import.meta.url), { viem, "./nusdMarketplace": marketplace }, { Error });
-function activityHarness(options: { configured?: boolean; fail?: boolean; subgraph?: "ok" | "fail" | "lag" } = {}) {
+function activityHarness(options: { configured?: boolean; fail?: boolean; subgraph?: "ok" | "fail" | "lag"; head?: "fail" } = {}) {
   const calls: Parameters<typeof readNusdMarketActivity>[1][] = [];
   const subgraphCalls: { url: string; options: { cursor?: string | null; latestBlock?: bigint } }[] = [];
   const background: Array<() => unknown> = [];
@@ -27,7 +27,7 @@ function activityHarness(options: { configured?: boolean; fail?: boolean; subgra
     return Object.assign(Object.create(cache) as BoundedCache<T>, { entry });
   };
   const route = evaluateModule<{ GET: (request: Request) => Promise<Response> }>(new URL("../../app/api/marketplace/activity/route.ts", import.meta.url), {
-    "next/server": { NextResponse: Response, after: (task: () => unknown) => { background.push(task); } }, "@/lib/contract": { publicClient: { getBlockNumber: async () => 5000n }, logsClient: {} },
+    "next/server": { NextResponse: Response, after: (task: () => unknown) => { background.push(task); } }, "@/lib/contract": { publicClient: {}, logsClient: {}, scanLogsClient: { getBlockNumber: async () => { if (options.head === "fail") throw new Error("RPC timed out"); return 5000n; } } },
     "@/lib/boundedCache": { createBoundedCache: agingCache }, "@/lib/server/cdnCache": { CDN_STALE_SECONDS, publicCdnCacheHeaders, isFreshRead },
     "@/lib/nusdMarketplaceConfig": { NUSD_MARKETPLACE_ADDRESS: options.configured === false ? undefined : MARKET, NFT_NUSD_ADDRESS: NUSD },
     "@/lib/pixelCollections": { PIXEL_COLLECTIONS: [{ address: NFT }] },
@@ -158,6 +158,15 @@ test("activity API prefers the NUSD subgraph and falls back to the verified RPC 
   const unconfigured = activityHarness();
   await unconfigured.get();
   assert.equal(unconfigured.subgraphCalls.length, 0);
+});
+
+test("activity API serves the indexed page without a lag check when the chain head cannot be read", async () => {
+  const api = activityHarness({ subgraph: "ok", head: "fail" });
+  const response = await api.get();
+  assert.equal(response.status, 200);
+  assert.equal(api.subgraphCalls.length, 1);
+  assert.equal(api.subgraphCalls[0].options.latestBlock, undefined);
+  assert.equal(api.calls.length, 0, "no RPC scan is started against an RPC that just failed");
 });
 
 test("activity API reuses a lagging subgraph page and keeps a retained page through a failed refresh", async () => {
