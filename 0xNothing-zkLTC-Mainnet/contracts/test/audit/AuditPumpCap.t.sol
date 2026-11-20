@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {TestBase} from "../TestBase.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {OracleNUSDv2} from "../../src/nusd/OracleNUSDv2.sol";
+import {OracleNv2} from "../../src/n/OracleNv2.sol";
 import {IPriceOracle} from "../../src/oracle/IPriceOracle.sol";
 import {ZeroXPumpV2} from "../../src/pump/ZeroXPumpV2.sol";
 import {GraduationRouter} from "../../src/graduation/GraduationRouter.sol";
@@ -16,7 +16,7 @@ import {MockPriceOracle, MockWrappedNative} from "../mocks/TokenomicsMocks.sol";
 /// Disposable evidence; every test passes. Wiring as in test/audit/AuditPump.t.sol.
 contract AuditPumpCapTest is TestBase {
     uint256 private constant SUPPLY = 1_000_000_000 ether;
-    uint256 private constant VIRTUAL_NUSD = 1_500 ether;
+    uint256 private constant VIRTUAL_N = 1_500 ether;
     uint256 private constant MARKET_CAP_TARGET = 6_000 ether;
     uint256 private constant RESERVE_TARGET = 1_500 ether;
     uint256 private constant CREATE_FEE = 1 ether;
@@ -34,7 +34,7 @@ contract AuditPumpCapTest is TestBase {
         uint256 tokenReserve;
         uint256 real;
         uint256 vToken;
-        uint256 vNusd;
+        uint256 vN;
         uint8 status;
     }
 
@@ -43,11 +43,11 @@ contract AuditPumpCapTest is TestBase {
         address token;
         uint256 fee;
         uint256 threshold;
-        uint256 initialVirtualNusd;
+        uint256 initialVirtualN;
         uint256 reservesBefore; // total real reserves of the markets created earlier in the test
     }
 
-    OracleNUSDv2 private nusd;
+    OracleNv2 private n;
     ZeroXPumpV2 private pump;
     uint256 private reservationNonce;
 
@@ -55,21 +55,21 @@ contract AuditPumpCapTest is TestBase {
 
     function setUp() public {
         vm.warp(1_000_000);
-        nusd = new OracleNUSDv2(IPriceOracle(address(new MockPriceOracle(100 ether))), address(this), 100_000_000 ether);
-        RewardStaking staking = new RewardStaking(IERC20(address(nusd)));
-        FeeSplitter splitter = new FeeSplitter(address(nusd), address(new MockWrappedNative()), TREASURY, address(this));
+        n = new OracleNv2(IPriceOracle(address(new MockPriceOracle(100 ether))), address(this), 100_000_000 ether);
+        RewardStaking staking = new RewardStaking(IERC20(address(n)));
+        FeeSplitter splitter = new FeeSplitter(address(n), address(new MockWrappedNative()), TREASURY, address(this));
         splitter.setRecipients(address(staking), TREASURY);
         PermanentLiquidityLocker locker = new PermanentLiquidityLocker(address(this));
         GraduationRouter router = new GraduationRouter(address(this), 1 hours, address(locker));
         pump = new ZeroXPumpV2(
-            address(nusd),
-            address(nusd),
+            address(n),
+            address(n),
             address(router),
             address(splitter),
             address(this),
             PARAM_ADMIN,
             SUPPLY,
-            VIRTUAL_NUSD,
+            VIRTUAL_N,
             MARKET_CAP_TARGET,
             CREATE_FEE,
             10
@@ -77,9 +77,9 @@ contract AuditPumpCapTest is TestBase {
         router.bindPump(address(pump));
         locker.bindRouter(address(router));
 
-        _fund(CREATOR, 100 ether); // 10,000 NUSD
+        _fund(CREATOR, 100 ether); // 10,000 N
         for (uint256 i; i < traders.length; ++i) {
-            _fund(traders[i], 200_000 ether); // 20,000,000 NUSD each
+            _fund(traders[i], 200_000 ether); // 20,000,000 N each
         }
     }
 
@@ -88,8 +88,8 @@ contract AuditPumpCapTest is TestBase {
     function _fund(address account, uint256 collateralWei) private {
         vm.deal(account, collateralWei);
         vm.startPrank(account);
-        nusd.mintAtOracle{value: collateralWei}(0, account);
-        nusd.approve(address(pump), type(uint256).max);
+        n.mintAtOracle{value: collateralWei}(0, account);
+        n.approve(address(pump), type(uint256).max);
         vm.stopPrank();
     }
 
@@ -110,16 +110,16 @@ contract AuditPumpCapTest is TestBase {
     }
 
     function _state(address token) private view returns (State memory s) {
-        (, s.tokenReserve, s.real, s.vToken, s.vNusd,,,,,,) = pump.markets(token);
+        (, s.tokenReserve, s.real, s.vToken, s.vN,,,,,,) = pump.markets(token);
         s.status = pump.status(token);
     }
 
-    function _buy(address trader, address token, uint256 maxNusdIn) private returns (uint256 tokenOut, uint256 paid) {
+    function _buy(address trader, address token, uint256 maxNIn) private returns (uint256 tokenOut, uint256 paid) {
         uint256 deadline = _deadline();
-        uint256 before = nusd.balanceOf(trader);
+        uint256 before = n.balanceOf(trader);
         vm.prank(trader);
-        (tokenOut, paid) = pump.buy(token, maxNusdIn, 0, deadline);
-        assertEq(before - nusd.balanceOf(trader), paid, "charged what the call reported");
+        (tokenOut, paid) = pump.buy(token, maxNIn, 0, deadline);
+        assertEq(before - n.balanceOf(trader), paid, "charged what the call reported");
     }
 
     function _largestHolder(address token) private view returns (address holder, uint256 balance) {
@@ -132,12 +132,12 @@ contract AuditPumpCapTest is TestBase {
         }
     }
 
-    /// From READY, sells exactly as many tokens as take `remainder` wei of NUSD out of the curve.
+    /// From READY, sells exactly as many tokens as take `remainder` wei of N out of the curve.
     function _sellDownTo(address token, address trader, uint256 remainder, uint256 threshold) private {
         State memory s = _state(token);
         assertEq(s.status, READY, "starts from READY");
         // Smallest tokenIn with floor(tokenIn * vN / (vT + tokenIn)) >= remainder.
-        uint256 tokenIn = (remainder * s.vToken + (s.vNusd - remainder) - 1) / (s.vNusd - remainder);
+        uint256 tokenIn = (remainder * s.vToken + (s.vN - remainder) - 1) / (s.vN - remainder);
         (uint256 curveOut,,) = pump.quoteSell(token, tokenIn);
         assertEq(curveOut, remainder, "the sell takes out exactly the remainder");
         uint256 deadline = _deadline();
@@ -150,11 +150,11 @@ contract AuditPumpCapTest is TestBase {
 
     /// With `remainder` wei missing: the quote, the wei below and above the cap, then the fill.
     function _checkQuoteAndFill(address token, address trader, uint256 fee, uint256 remainder, uint256 threshold) private {
-        (uint256 tokenOut, uint256 curve, uint256 user, uint256 feeNusd, bool ready) = pump.quoteBuy(token, HUGE);
+        (uint256 tokenOut, uint256 curve, uint256 user, uint256 feeN, bool ready) = pump.quoteBuy(token, HUGE);
         assertEq(curve, remainder, "the capped buy adds exactly the remainder");
         assertEq(user, remainder * D / (D - fee), "cap = R * 10000 / (10000 - fee)");
-        assertEq(feeNusd, user * fee / D, "fee on the capped payment");
-        assertEq(user - feeNusd, remainder, "payment minus fee is the remainder");
+        assertEq(feeN, user * fee / D, "fee on the capped payment");
+        assertEq(user - feeN, remainder, "payment minus fee is the remainder");
         assertTrue(ready, "the quote reports READY");
         assertGt(tokenOut, 0, "and pays out tokens");
 
@@ -194,7 +194,7 @@ contract AuditPumpCapTest is TestBase {
         address trader = traders[0];
         for (uint256 fee = firstFee; fee <= lastFee; ++fee) {
             vm.prank(PARAM_ADMIN);
-            pump.setMarketParams(CREATE_FEE, fee, VIRTUAL_NUSD, MARKET_CAP_TARGET);
+            pump.setMarketParams(CREATE_FEE, fee, VIRTUAL_N, MARKET_CAP_TARGET);
             address token = _createMarket();
             (, uint256 paid) = _buy(trader, token, HUGE);
             assertEq(paid, RESERVE_TARGET * D / (D - fee), "one buy from empty pays the cap");
@@ -231,14 +231,14 @@ contract AuditPumpCapTest is TestBase {
         s = _state(run.token);
         assertLe(s.real, run.threshold, "the reserve is above the target");
         assertTrue((s.status == READY) == (s.real == run.threshold), "READY and a full reserve go together");
-        assertEq(s.vNusd, run.initialVirtualNusd + s.real, "virtual NUSD = initial + real");
+        assertEq(s.vN, run.initialVirtualN + s.real, "virtual N = initial + real");
         assertEq(s.vToken, s.tokenReserve, "virtual tokens = token reserve");
         assertEq(IERC20(run.token).balanceOf(address(pump)), s.tokenReserve, "the Pump holds its token reserve");
-        assertEq(pump.totalRealNusdReserves() - run.reservesBefore, s.real, "total reserves track this market");
+        assertEq(pump.totalRealNReserves() - run.reservesBefore, s.real, "total reserves track this market");
         assertEq(
-            nusd.balanceOf(address(pump)),
-            pump.totalRealNusdReserves() + pump.accruedProtocolFeesNusd(),
-            "NUSD held = reserves + fees"
+            n.balanceOf(address(pump)),
+            pump.totalRealNReserves() + pump.accruedProtocolFeesN(),
+            "N held = reserves + fees"
         );
     }
 
@@ -246,17 +246,17 @@ contract AuditPumpCapTest is TestBase {
         run.fee = seed % 101;
         uint256 exponent = 15 + ((seed >> 8) % 7); // 1e15 .. 1e21 wei
         uint256 mantissa = 1_000 + ((seed >> 16) % 9_000); // 1.000 .. 9.999
-        run.initialVirtualNusd = mantissa * 10 ** (exponent - 3);
+        run.initialVirtualN = mantissa * 10 ** (exponent - 3);
         uint256 multiple = 1_001 + ((seed >> 32) % 24_000); // cap = 1.001x .. 25x the virtual reserve
-        uint256 marketCap = run.initialVirtualNusd * multiple / 1_000;
+        uint256 marketCap = run.initialVirtualN * multiple / 1_000;
         vm.prank(PARAM_ADMIN);
-        try pump.setMarketParams(CREATE_FEE, run.fee, run.initialVirtualNusd, marketCap) {
+        try pump.setMarketParams(CREATE_FEE, run.fee, run.initialVirtualN, marketCap) {
             accepted = true;
         } catch {
             return (false, run); // terms the Pump refuses (rounding in its own curve check)
         }
-        run.threshold = pump.graduationReserveThresholdNusd();
-        run.reservesBefore = pump.totalRealNusdReserves();
+        run.threshold = pump.graduationReserveThresholdN();
+        run.reservesBefore = pump.totalRealNReserves();
         run.token = _createMarket();
     }
 
@@ -296,7 +296,7 @@ contract AuditPumpCapTest is TestBase {
             assertEq(pump.status(run.token), TRADING, "any sell leaves the market TRADING");
             return 1;
         } catch {
-            return 0; // dust worth less than 1 wei of NUSD
+            return 0; // dust worth less than 1 wei of N
         }
     }
 
@@ -340,7 +340,7 @@ contract AuditPumpCapTest is TestBase {
             assertEq(end.status, READY, "READY again");
             assertEq(end.real, run.threshold, "on the target again");
         } catch {
-            // Dust worth less than 1 wei of NUSD: the sell is refused and READY stands.
+            // Dust worth less than 1 wei of N: the sell is refused and READY stands.
             assertEq(pump.status(run.token), READY, "still READY");
         }
     }

@@ -8,11 +8,11 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 import { EmergencyGuardian } from "../access/EmergencyGuardian.sol";
 
 interface ISyntheticVaultReserveTarget {
-    function nusd() external view returns (address);
+    function n() external view returns (address);
     function safetyReserve() external view returns (address);
 }
 
-/// @notice Irrevocable protocol-owned NUSD backstop shared by exactly two synthetic vaults.
+/// @notice Irrevocable protocol-owned N backstop shared by exactly two synthetic vaults.
 /// @dev Funds have no depositor claims and there is deliberately no sweep or withdrawal function.
 contract SynthSafetyReserve is EmergencyGuardian, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -27,35 +27,35 @@ contract SynthSafetyReserve is EmergencyGuardian, ReentrancyGuard {
     error InsufficientFreeReserve();
     error AllocationExceeded();
 
-    uint256 public constant ENTRY_TVL_NUSD = 100_000 ether;
-    uint256 public constant EXIT_TVL_NUSD = 90_000 ether;
+    uint256 public constant ENTRY_TVL_N = 100_000 ether;
+    uint256 public constant EXIT_TVL_N = 90_000 ether;
     uint256 public constant ACTIVATION_DELAY = 24 hours;
 
-    IERC20 public immutable nusd;
+    IERC20 public immutable n;
 
     address public vault0;
     address public vault1;
     bool public vaultsBound;
     bool public allocationsPaused;
     uint256 public eligibleSince;
-    uint256 public totalAllocatedNusd;
+    uint256 public totalAllocatedN;
 
     bool private _sponsorshipActivated;
     mapping(address => bool) public isVault;
-    mapping(address => uint256) public allocatedNusdByVault;
+    mapping(address => uint256) public allocatedNByVault;
 
-    event ReserveFunded(address indexed payer, uint256 amountNusd, uint256 totalReserveNusd);
+    event ReserveFunded(address indexed payer, uint256 amountN, uint256 totalReserveN);
     event VaultsBound(address indexed vault0, address indexed vault1);
-    event ReserveAllocated(address indexed vault, uint256 amountNusd, uint256 vaultAllocationNusd);
-    event ReserveReleased(address indexed vault, uint256 amountNusd, uint256 vaultAllocationNusd);
-    event ReserveLossRecorded(address indexed vault, uint256 amountNusd, uint256 vaultAllocationNusd);
-    event SponsorshipModeUpdated(bool active, uint256 totalReserveNusd);
+    event ReserveAllocated(address indexed vault, uint256 amountN, uint256 vaultAllocationN);
+    event ReserveReleased(address indexed vault, uint256 amountN, uint256 vaultAllocationN);
+    event ReserveLossRecorded(address indexed vault, uint256 amountN, uint256 vaultAllocationN);
+    event SponsorshipModeUpdated(bool active, uint256 totalReserveN);
     event SponsorshipEligibilityStarted(uint256 eligibleSince);
     event AllocationsPauseUpdated(bool paused);
 
-    constructor(address nusdAddress, address initialOwner) EmergencyGuardian(initialOwner) {
-        if (nusdAddress == address(0) || nusdAddress.code.length == 0) revert InvalidConfiguration();
-        nusd = IERC20(nusdAddress);
+    constructor(address nAddress, address initialOwner) EmergencyGuardian(initialOwner) {
+        if (nAddress == address(0) || nAddress.code.length == 0) revert InvalidConfiguration();
+        n = IERC20(nAddress);
     }
 
     /// @notice Permanently binds the only two vaults that may use this reserve.
@@ -76,11 +76,11 @@ contract SynthSafetyReserve is EmergencyGuardian, ReentrancyGuard {
     }
 
     /// @notice Adds irreversible protocol reserve capital. The payer receives no shares or withdrawal claim.
-    function fund(uint256 amountNusd) external nonReentrant {
-        if (amountNusd == 0) revert InvalidAmount();
-        _pullExact(nusd, msg.sender, amountNusd);
+    function fund(uint256 amountN) external nonReentrant {
+        if (amountN == 0) revert InvalidAmount();
+        _pullExact(n, msg.sender, amountN);
         _syncSponsorshipMode();
-        emit ReserveFunded(msg.sender, amountNusd, totalReserveNusd());
+        emit ReserveFunded(msg.sender, amountN, totalReserveN());
     }
 
     /// @notice Advances entry-delay and hysteresis state using current onchain backing.
@@ -100,90 +100,90 @@ contract SynthSafetyReserve is EmergencyGuardian, ReentrancyGuard {
     }
 
     /// @dev Called only by a bound vault. Transfers newly assigned reserve collateral to that vault.
-    function allocateToVault(uint256 amountNusd) external nonReentrant {
+    function allocateToVault(uint256 amountN) external nonReentrant {
         _requireVault();
-        if (amountNusd == 0) revert InvalidAmount();
+        if (amountN == 0) revert InvalidAmount();
         _syncSponsorshipMode();
         if (allocationsPaused) revert AllocationsPaused();
         if (!sponsorshipActive()) revert SponsorshipInactive();
-        if (amountNusd > freeReserveNusd()) revert InsufficientFreeReserve();
+        if (amountN > freeReserveN()) revert InsufficientFreeReserve();
 
-        allocatedNusdByVault[msg.sender] += amountNusd;
-        totalAllocatedNusd += amountNusd;
-        _pushExact(nusd, msg.sender, amountNusd);
-        emit ReserveAllocated(msg.sender, amountNusd, allocatedNusdByVault[msg.sender]);
+        allocatedNByVault[msg.sender] += amountN;
+        totalAllocatedN += amountN;
+        _pushExact(n, msg.sender, amountN);
+        emit ReserveAllocated(msg.sender, amountN, allocatedNByVault[msg.sender]);
     }
 
     /// @dev Pulls reserve-owned collateral back from a bound vault. Releases remain available while paused.
-    function releaseFromVault(uint256 amountNusd) external nonReentrant {
+    function releaseFromVault(uint256 amountN) external nonReentrant {
         _requireVault();
-        if (amountNusd == 0) revert InvalidAmount();
-        uint256 allocated = allocatedNusdByVault[msg.sender];
-        if (amountNusd > allocated) revert AllocationExceeded();
+        if (amountN == 0) revert InvalidAmount();
+        uint256 allocated = allocatedNByVault[msg.sender];
+        if (amountN > allocated) revert AllocationExceeded();
 
-        allocatedNusdByVault[msg.sender] = allocated - amountNusd;
-        totalAllocatedNusd -= amountNusd;
-        _pullExact(nusd, msg.sender, amountNusd);
+        allocatedNByVault[msg.sender] = allocated - amountN;
+        totalAllocatedN -= amountN;
+        _pullExact(n, msg.sender, amountN);
         _syncSponsorshipMode();
-        emit ReserveReleased(msg.sender, amountNusd, allocatedNusdByVault[msg.sender]);
+        emit ReserveReleased(msg.sender, amountN, allocatedNByVault[msg.sender]);
     }
 
     /// @dev Accounts reserve collateral transferred to a liquidator rather than returned to this contract.
-    function recordVaultLoss(uint256 amountNusd) external nonReentrant {
+    function recordVaultLoss(uint256 amountN) external nonReentrant {
         _requireVault();
-        if (amountNusd == 0) revert InvalidAmount();
-        uint256 allocated = allocatedNusdByVault[msg.sender];
-        if (amountNusd > allocated) revert AllocationExceeded();
+        if (amountN == 0) revert InvalidAmount();
+        uint256 allocated = allocatedNByVault[msg.sender];
+        if (amountN > allocated) revert AllocationExceeded();
 
-        allocatedNusdByVault[msg.sender] = allocated - amountNusd;
-        totalAllocatedNusd -= amountNusd;
+        allocatedNByVault[msg.sender] = allocated - amountN;
+        totalAllocatedN -= amountN;
         _syncSponsorshipMode();
-        emit ReserveLossRecorded(msg.sender, amountNusd, allocatedNusdByVault[msg.sender]);
+        emit ReserveLossRecorded(msg.sender, amountN, allocatedNByVault[msg.sender]);
     }
 
-    function totalReserveNusd() public view returns (uint256) {
-        return freeReserveNusd() + totalAllocatedNusd;
+    function totalReserveN() public view returns (uint256) {
+        return freeReserveN() + totalAllocatedN;
     }
 
-    function freeReserveNusd() public view returns (uint256) {
-        return nusd.balanceOf(address(this));
+    function freeReserveN() public view returns (uint256) {
+        return n.balanceOf(address(this));
     }
 
     function authorizedVault(address vault) external view returns (bool) {
         return isVault[vault];
     }
 
-    /// @notice Effective mode fails closed immediately if NUSD loses full reserve backing.
+    /// @notice Effective mode fails closed immediately if N loses full reserve backing.
     function sponsorshipActive() public view returns (bool) {
-        uint256 reserveNusd = totalReserveNusd();
-        bool backingHealthy = nusdBackingHealthy();
-        if (_sponsorshipActivated) return reserveNusd >= EXIT_TVL_NUSD && backingHealthy;
+        uint256 reserveN = totalReserveN();
+        bool backingHealthy = nBackingHealthy();
+        if (_sponsorshipActivated) return reserveN >= EXIT_TVL_N && backingHealthy;
         return eligibleSince != 0 && block.timestamp >= eligibleSince + ACTIVATION_DELAY
-            && reserveNusd >= ENTRY_TVL_NUSD && backingHealthy;
+            && reserveN >= ENTRY_TVL_N && backingHealthy;
     }
 
-    function nusdBackingHealthy() public view returns (bool) {
-        (bool supplyOk, bytes memory supplyData) = address(nusd).staticcall(abi.encodeWithSignature("totalSupply()"));
+    function nBackingHealthy() public view returns (bool) {
+        (bool supplyOk, bytes memory supplyData) = address(n).staticcall(abi.encodeWithSignature("totalSupply()"));
         (bool reserveOk, bytes memory reserveData) =
-            address(nusd).staticcall(abi.encodeWithSignature("reserveValueNusd()"));
+            address(n).staticcall(abi.encodeWithSignature("reserveValueN()"));
         if (!supplyOk || !reserveOk || supplyData.length < 32 || reserveData.length < 32) return false;
         return abi.decode(reserveData, (uint256)) >= abi.decode(supplyData, (uint256));
     }
 
     function _syncSponsorshipMode() internal {
-        uint256 reserveNusd = totalReserveNusd();
-        bool backingHealthy = nusdBackingHealthy();
+        uint256 reserveN = totalReserveN();
+        bool backingHealthy = nBackingHealthy();
 
         if (_sponsorshipActivated) {
-            if (reserveNusd < EXIT_TVL_NUSD || !backingHealthy) {
+            if (reserveN < EXIT_TVL_N || !backingHealthy) {
                 _sponsorshipActivated = false;
                 eligibleSince = 0;
-                emit SponsorshipModeUpdated(false, reserveNusd);
+                emit SponsorshipModeUpdated(false, reserveN);
             }
             return;
         }
 
-        if (reserveNusd < ENTRY_TVL_NUSD || !backingHealthy) {
+        if (reserveN < ENTRY_TVL_N || !backingHealthy) {
             eligibleSince = 0;
             return;
         }
@@ -197,13 +197,13 @@ contract SynthSafetyReserve is EmergencyGuardian, ReentrancyGuard {
         if (block.timestamp >= eligibleSince + ACTIVATION_DELAY) {
             _sponsorshipActivated = true;
             eligibleSince = 0;
-            emit SponsorshipModeUpdated(true, reserveNusd);
+            emit SponsorshipModeUpdated(true, reserveN);
         }
     }
 
     function _validVault(address vault) internal view returns (bool) {
-        try ISyntheticVaultReserveTarget(vault).nusd() returns (address vaultNusd) {
-            if (vaultNusd != address(nusd)) return false;
+        try ISyntheticVaultReserveTarget(vault).n() returns (address vaultN) {
+            if (vaultN != address(n)) return false;
         } catch {
             return false;
         }

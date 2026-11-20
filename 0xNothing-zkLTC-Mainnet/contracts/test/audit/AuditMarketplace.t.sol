@@ -2,10 +2,10 @@
 pragma solidity ^0.8.24;
 
 import {TestBase} from "../TestBase.sol";
-import {NusdNftMarketplaceV2} from "../../src/0xpixel/NusdNftMarketplaceV2.sol";
+import {NNftMarketplaceV2} from "../../src/0xpixel/NNftMarketplaceV2.sol";
 import {ZeroXPixelV2} from "../../src/0xpixel/ZeroXPixelV2.sol";
 import {PixelERC721} from "../../src/0xpixel/PixelERC721.sol";
-import {MarketplaceBurnableNusdMock} from "../mocks/NusdMarketplaceMocks.sol";
+import {MarketplaceBurnableNMock} from "../mocks/NMarketplaceMocks.sol";
 
 /// An ERC-721 that cannot tell a marketplace whether a token moved since it was listed.
 contract PlainNft is PixelERC721 {
@@ -17,7 +17,7 @@ contract PlainNft is PixelERC721 {
 /// As audited, a listing that had stopped being purchasable was purchasable again, at its old price,
 /// as soon as its seller owned and approved the token again: after the token went to another wallet
 /// and came back, or after the seller revoked the market's approval and later granted it again. In
-/// both cases a stranger bought a 5,000 NUSD token for the 100 NUSD of a forgotten listing, and the
+/// both cases a stranger bought a 5,000 N token for the 100 N of a forgotten listing, and the
 /// seller's own new listing was refused with AlreadyListed. A listing is now bound to the
 /// collection's listingEpoch, which moves on every transfer and approval change.
 contract AuditMarketplaceTest is TestBase {
@@ -25,20 +25,20 @@ contract AuditMarketplaceTest is TestBase {
     address private constant VAULT = address(0x7A017);
     address private constant MALLORY = address(0xBAD);
 
-    MarketplaceBurnableNusdMock private nusd;
+    MarketplaceBurnableNMock private n;
     ZeroXPixelV2 private pixel;
-    NusdNftMarketplaceV2 private market;
+    NNftMarketplaceV2 private market;
 
     function setUp() public {
         vm.warp(1_000_000);
-        nusd = new MarketplaceBurnableNusdMock();
+        n = new MarketplaceBurnableNMock();
         pixel = new ZeroXPixelV2();
         address[] memory collections = new address[](1);
         collections[0] = address(pixel);
-        market = new NusdNftMarketplaceV2(address(nusd), address(this), collections);
-        nusd.mint(MALLORY, 10_000 ether);
+        market = new NNftMarketplaceV2(address(n), address(this), collections);
+        n.mint(MALLORY, 10_000 ether);
         vm.prank(MALLORY);
-        nusd.approve(address(market), type(uint256).max);
+        n.approve(address(market), type(uint256).max);
     }
 
     function _mint(address owner, bytes memory pixels) private returns (uint256 id) {
@@ -59,7 +59,7 @@ contract AuditMarketplaceTest is TestBase {
         pixel.transferNFT(VAULT, id); // the approval is cleared; the listing stays in storage
         vm.stopPrank();
 
-        // Much later the token comes back and is worth 5,000 NUSD. To list it she must approve first.
+        // Much later the token comes back and is worth 5,000 N. To list it she must approve first.
         vm.prank(VAULT);
         pixel.transferNFT(ALICE, id);
         vm.prank(ALICE);
@@ -67,10 +67,10 @@ contract AuditMarketplaceTest is TestBase {
 
         // The old listing can be neither bought nor repriced ...
         vm.prank(MALLORY);
-        vm.expectRevert(NusdNftMarketplaceV2.NotPurchasable.selector);
+        vm.expectRevert(NNftMarketplaceV2.NotPurchasable.selector);
         market.buy(listingId, 100 ether, 100 ether);
         vm.prank(ALICE);
-        vm.expectRevert(NusdNftMarketplaceV2.NotPurchasable.selector);
+        vm.expectRevert(NNftMarketplaceV2.NotPurchasable.selector);
         market.updateListingPrice(listingId, 5_000 ether);
 
         // ... and her new listing replaces it instead of being refused.
@@ -82,7 +82,7 @@ contract AuditMarketplaceTest is TestBase {
         vm.prank(MALLORY);
         market.buy(newId, 5_000 ether, 5_000 ether);
         assertEq(pixel.ownerOf(id), MALLORY, "sold at the price she asked");
-        assertEq(market.credits(ALICE), 4_995 ether, "5,000 NUSD minus the 0.1% burn (she is also the creator)");
+        assertEq(market.credits(ALICE), 4_995 ether, "5,000 N minus the 0.1% burn (she is also the creator)");
     }
 
     /// With an approval for all tokens no second approval is needed: the listing used to be live
@@ -98,7 +98,7 @@ contract AuditMarketplaceTest is TestBase {
         pixel.transferNFT(ALICE, id);
 
         vm.prank(MALLORY);
-        vm.expectRevert(NusdNftMarketplaceV2.NotPurchasable.selector);
+        vm.expectRevert(NNftMarketplaceV2.NotPurchasable.selector);
         market.buy(listingId, 100 ether, 100 ether);
 
         // Anyone may remove it from the catalogue.
@@ -125,7 +125,7 @@ contract AuditMarketplaceTest is TestBase {
         vm.stopPrank();
 
         vm.prank(MALLORY);
-        vm.expectRevert(NusdNftMarketplaceV2.NotPurchasable.selector);
+        vm.expectRevert(NNftMarketplaceV2.NotPurchasable.selector);
         market.buy(listingId, 100 ether, 100 ether);
         assertEq(pixel.ownerOf(first), ALICE, "the forgotten listing stayed dead");
 
@@ -154,7 +154,7 @@ contract AuditMarketplaceTest is TestBase {
         // The same approval for all once more, and "no approved address" set again on a token.
         pixel.setApprovalForAll(address(market), true);
         pixel.approve(address(0), ids[0]);
-        vm.expectRevert(NusdNftMarketplaceV2.AlreadyListed.selector);
+        vm.expectRevert(NNftMarketplaceV2.AlreadyListed.selector);
         market.list(address(pixel), ids[1], 200 ether); // a live listing is repriced, not replaced
         market.updateListingPrice(listingIds[1], 150 ether);
         vm.stopPrank();
@@ -168,7 +168,7 @@ contract AuditMarketplaceTest is TestBase {
         pixel.approve(address(0), ids[1]);
         vm.stopPrank();
         vm.prank(MALLORY);
-        vm.expectRevert(NusdNftMarketplaceV2.NotPurchasable.selector);
+        vm.expectRevert(NNftMarketplaceV2.NotPurchasable.selector);
         market.buy(listingIds[1], 150 ether, 150 ether);
         vm.prank(ALICE);
         uint256 relisted = market.list(address(pixel), ids[1], 150 ether);
@@ -183,7 +183,7 @@ contract AuditMarketplaceTest is TestBase {
         vm.stopPrank();
         for (uint256 i = 2; i < 5; ++i) {
             vm.prank(MALLORY);
-            vm.expectRevert(NusdNftMarketplaceV2.NotPurchasable.selector);
+            vm.expectRevert(NNftMarketplaceV2.NotPurchasable.selector);
             market.buy(listingIds[i], 100 ether, 100 ether);
         }
     }
@@ -237,13 +237,13 @@ contract AuditMarketplaceTest is TestBase {
     /// A collection that cannot report the epoch cannot be listed here at all.
     function testAudit_E01_onlyCollectionsWithAnEpochAreAllowed() public {
         PlainNft plain = new PlainNft();
-        vm.expectRevert(NusdNftMarketplaceV2.InvalidConfiguration.selector);
+        vm.expectRevert(NNftMarketplaceV2.InvalidConfiguration.selector);
         market.setCollectionAllowed(address(plain), true);
 
         address[] memory collections = new address[](1);
         collections[0] = address(plain);
-        vm.expectRevert(NusdNftMarketplaceV2.InvalidConfiguration.selector);
-        new NusdNftMarketplaceV2(address(nusd), address(this), collections);
+        vm.expectRevert(NNftMarketplaceV2.InvalidConfiguration.selector);
+        new NNftMarketplaceV2(address(n), address(this), collections);
 
         market.setCollectionAllowed(address(plain), false); // disallowing never needs it
     }

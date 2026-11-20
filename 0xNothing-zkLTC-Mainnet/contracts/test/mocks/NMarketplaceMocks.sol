@@ -5,11 +5,11 @@ import { PixelERC721 } from "../../src/0xpixel/PixelERC721.sol";
 import { ListingEpochERC721 } from "../../src/0xpixel/ListingEpochERC721.sol";
 import { IERC2981 } from "@openzeppelin/contracts/interfaces/IERC2981.sol";
 
-contract MarketplaceNusdMock is ERC20 {
+contract MarketplaceNMock is ERC20 {
     bool public taxed;
     bool public rejectTransfer;
 
-    constructor() ERC20("NUSD", "NUSD") {}
+    constructor() ERC20("N", "N") {}
     function mint(address account, uint256 amount) external { _mint(account, amount); }
     function setTaxed(bool value) external { taxed = value; }
     function setRejectTransfer(bool value) external { rejectTransfer = value; }
@@ -44,7 +44,7 @@ contract MarketplaceNftMock is ListingEpochERC721 {
     }
 }
 
-/// @dev NUSD v2 exposes `burn`; the v2 marketplace burns its 0.1% share through it.
-contract MarketplaceBurnableNusdMock is MarketplaceNusdMock {
+/// @dev N v2 exposes `burn`; the v2 marketplace burns its 0.1% share through it.
+contract MarketplaceBurnableNMock is MarketplaceNMock {
     function burn(uint256 amount) external { _burn(msg.sender, amount); }
 }

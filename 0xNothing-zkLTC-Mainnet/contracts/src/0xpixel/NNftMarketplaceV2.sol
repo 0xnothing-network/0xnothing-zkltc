@@ -13,13 +13,13 @@ import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import { IListingEpoch } from "./ListingEpochERC721.sol";
 
-interface INusdBurnable {
+interface INBurnable {
     function burn(uint256 amount) external;
 }
 
-/// @title 0xPixel NUSD marketplace v2
+/// @title 0xPixel N marketplace v2
 /// @notice Same escrow/credit model as v1 with a fixed sale fee: 0.1% of the price is burned
-///         (NUSD supply really shrinks) and 0.4% is credited to the artwork's creator. There is
+///         (N supply really shrinks) and 0.4% is credited to the artwork's creator. There is
 ///         no platform fee and no separate royalty.
 ///         A listing is bound to the ownership and approval it was created under: every allowed
 ///         collection reports a number that changes when a token is transferred or approved, and
@@ -31,7 +31,7 @@ interface INusdBurnable {
 ///         through the market ends the offer its buyer or its seller still had on that token, so
 ///         nobody is left bidding on a token they have just held: the next owner could fill such
 ///         a bid against them.
-contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
+contract NNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
     using SafeERC20 for IERC20;
 
     struct Listing {
@@ -68,19 +68,19 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
     error InsufficientProceeds();
     error WalletPaymentExceeded();
 
-    bytes32 public constant IMPLEMENTATION_ID = keccak256("0xpixel.nusd.marketplace.v2");
+    bytes32 public constant IMPLEMENTATION_ID = keccak256("0xpixel.n.marketplace.v2");
     uint256 public constant MAX_PRICE = type(uint128).max;
     uint256 public constant MAX_OFFER_DURATION = 30 days;
     uint256 public constant MAX_PAGE_SIZE = 100;
     uint16 public constant BURN_BPS = 10;
     uint16 public constant CREATOR_BPS = 40;
 
-    IERC20 public immutable nusd;
+    IERC20 public immutable n;
     uint256 public listingCount;
     uint256 public offerCount;
-    uint256 public escrowedNusd;
-    uint256 public totalCreditsNusd;
-    uint256 public totalVolumeNusd;
+    uint256 public escrowedN;
+    uint256 public totalCreditsN;
+    uint256 public totalVolumeN;
     uint256 public totalSales;
     mapping(address => bool) public collectionAllowed;
     mapping(uint256 => Listing) public listings;
@@ -106,14 +106,14 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
     event OfferCancelled(uint256 indexed offerId, address indexed offerer, uint256 refund);
     event OfferAccepted(uint256 indexed offerId, address indexed seller, address indexed buyer, uint256 price);
     event SaleSettled(address indexed seller, address indexed buyer, address indexed collection, uint256 tokenId, uint256 price, uint256 burned, address creator, uint256 creatorFee);
-    event NusdWithdrawn(address indexed account, address indexed recipient, uint256 amount);
+    event NWithdrawn(address indexed account, address indexed recipient, uint256 amount);
 
     constructor(address token, address initialOwner, address[] memory collections)
         Ownable(initialOwner)
     {
         if (token.code.length == 0 || initialOwner == address(this) || collections.length == 0 || collections.length > 16
             || IERC20Metadata(token).decimals() != 18) revert InvalidConfiguration();
-        nusd = IERC20(token);
+        n = IERC20(token);
         for (uint256 index; index < collections.length; ++index) _allowCollection(collections[index], true);
     }
 
@@ -196,7 +196,7 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
         // new offer before the wallet does.
         _refundOwnOffer(collection, tokenId, msg.sender);
         _fund(msg.sender, price, maxWalletPayment);
-        escrowedNusd += price;
+        escrowedN += price;
         offerId = ++offerCount;
         offers[offerId] = Offer(collection, tokenId, msg.sender, price, expiresAt, true);
         offerIdOf[collection][tokenId][msg.sender] = offerId;
@@ -213,7 +213,7 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
         _requireCollection(offer.collection);
         if (!_ownsAndApproves(offer.collection, offer.tokenId, msg.sender)) revert NotPurchasable();
         _removeOffer(offerId);
-        escrowedNusd -= offer.price;
+        escrowedN -= offer.price;
         uint256 listingId = tokenToListingId[offer.collection][offer.tokenId];
         if (listingId != 0) {
             _removeListing(listingId);
@@ -233,16 +233,16 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
         _refundOffer(offerId);
     }
 
-    function withdrawNusd(address recipient) external nonReentrant {
+    function withdrawN(address recipient) external nonReentrant {
         if (recipient == address(0) || recipient == address(this)) revert InvalidConfiguration();
         uint256 amount = credits[msg.sender];
         if (amount == 0) revert NothingToWithdraw();
         credits[msg.sender] = 0;
-        totalCreditsNusd -= amount;
-        uint256 beforeBalance = nusd.balanceOf(recipient);
-        nusd.safeTransfer(recipient, amount);
-        if (nusd.balanceOf(recipient) != beforeBalance + amount) revert NonExactTransfer();
-        emit NusdWithdrawn(msg.sender, recipient, amount);
+        totalCreditsN -= amount;
+        uint256 beforeBalance = n.balanceOf(recipient);
+        n.safeTransfer(recipient, amount);
+        if (n.balanceOf(recipient) != beforeBalance + amount) revert NonExactTransfer();
+        emit NWithdrawn(msg.sender, recipient, amount);
     }
 
     /// @notice Splits a sale price into the burned amount, the creator fee and the seller's proceeds.
@@ -268,7 +268,7 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
         }
     }
 
-    function totalLiabilitiesNusd() external view returns (uint256) { return escrowedNusd + totalCreditsNusd; }
+    function totalLiabilitiesN() external view returns (uint256) { return escrowedN + totalCreditsN; }
     function activeListingCount() external view returns (uint256) { return _activeListings.length; }
     function activeOfferCount() external view returns (uint256) { return _activeOffers.length; }
 
@@ -290,22 +290,22 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
         if (sellerProceeds < minimumSellerProceeds) revert InsufficientProceeds();
         credits[seller] += sellerProceeds;
         if (creatorFee != 0) credits[creator] += creatorFee;
-        totalCreditsNusd += sellerProceeds + creatorFee;
-        totalVolumeNusd += price;
+        totalCreditsN += sellerProceeds + creatorFee;
+        totalVolumeN += price;
         ++totalSales;
         // An offer the seller made before the token was theirs ends with the sale. Left standing,
         // the buyer could put the token straight back to them at that old price.
         _refundOwnOffer(collection, tokenId, seller);
         // The sale price is already held here (wallet payment, buyer credit or offer escrow).
-        if (burnAmount != 0) INusdBurnable(address(nusd)).burn(burnAmount);
+        if (burnAmount != 0) INBurnable(address(n)).burn(burnAmount);
         IERC721(collection).safeTransferFrom(seller, buyer, tokenId);
         emit SaleSettled(seller, buyer, collection, tokenId, price, burnAmount, creator, creatorFee);
     }
 
     function _collect(address account, uint256 amount) private {
-        uint256 beforeBalance = nusd.balanceOf(address(this));
-        nusd.safeTransferFrom(account, address(this), amount);
-        if (nusd.balanceOf(address(this)) != beforeBalance + amount) revert NonExactTransfer();
+        uint256 beforeBalance = n.balanceOf(address(this));
+        n.safeTransferFrom(account, address(this), amount);
+        if (n.balanceOf(address(this)) != beforeBalance + amount) revert NonExactTransfer();
     }
 
     function _fund(address account, uint256 amount, uint256 maxWalletPayment) private {
@@ -314,7 +314,7 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
         if (walletPayment > maxWalletPayment) revert WalletPaymentExceeded();
         if (creditUsed != 0) {
             credits[account] -= creditUsed;
-            totalCreditsNusd -= creditUsed;
+            totalCreditsN -= creditUsed;
         }
         if (walletPayment != 0) _collect(account, walletPayment);
     }
@@ -323,9 +323,9 @@ contract NusdNftMarketplaceV2 is ReentrancyGuard, Ownable2Step, Pausable {
         Offer memory offer = offers[offerId];
         if (!offer.active) revert Inactive();
         _removeOffer(offerId);
-        escrowedNusd -= offer.price;
+        escrowedN -= offer.price;
         credits[offer.offerer] += offer.price;
-        totalCreditsNusd += offer.price;
+        totalCreditsN += offer.price;
         emit OfferCancelled(offerId, offer.offerer, offer.price);
     }
 

@@ -15,7 +15,7 @@ import {
 contract TokenMetadataRegistryTest is TestBase {
     address private constant ALICE = address(0xA11CE);
     address private constant BOB = address(0xB0B);
-    address private constant CORE_NUSD = address(0x1001);
+    address private constant CORE_N = address(0x1001);
     address private constant CORE_WZKLTC = address(0x1002);
 
     TokenMetadataRegistry private registry;
@@ -23,7 +23,7 @@ contract TokenMetadataRegistryTest is TestBase {
     function setUp() public {
         vm.warp(1_000_000);
         address[] memory protectedTokens = new address[](2);
-        protectedTokens[0] = CORE_NUSD;
+        protectedTokens[0] = CORE_N;
         protectedTokens[1] = CORE_WZKLTC;
         registry = new TokenMetadataRegistry(protectedTokens);
     }
@@ -71,22 +71,22 @@ contract TokenMetadataRegistryTest is TestBase {
         new TokenMetadataRegistry(zeroProtected);
 
         address[] memory duplicateProtected = new address[](2);
-        duplicateProtected[0] = CORE_NUSD;
-        duplicateProtected[1] = CORE_NUSD;
-        vm.expectRevert(abi.encodeWithSelector(TokenMetadataRegistry.DuplicateProtectedToken.selector, CORE_NUSD));
+        duplicateProtected[0] = CORE_N;
+        duplicateProtected[1] = CORE_N;
+        vm.expectRevert(abi.encodeWithSelector(TokenMetadataRegistry.DuplicateProtectedToken.selector, CORE_N));
         new TokenMetadataRegistry(duplicateProtected);
     }
 
     function testProtectedTokensArePermanentAndEnumerable() public {
-        assertTrue(registry.isProtectedToken(CORE_NUSD), "NUSD protected");
+        assertTrue(registry.isProtectedToken(CORE_N), "N protected");
         assertTrue(registry.isProtectedToken(CORE_WZKLTC), "wrapped native protected");
         assertEq(registry.protectedTokenCount(), 2, "protected count");
-        assertEq(registry.protectedToken(0), CORE_NUSD, "first protected token");
+        assertEq(registry.protectedToken(0), CORE_N, "first protected token");
         assertEq(registry.protectedToken(1), CORE_WZKLTC, "second protected token");
 
         vm.expectRevert(TokenMetadataRegistry.TokenNotContract.selector);
         vm.prank(ALICE);
-        registry.registerImage(CORE_NUSD, "ipfs://core");
+        registry.registerImage(CORE_N, "ipfs://core");
     }
 
     function testProtectedContractTokenIsRejected() public {

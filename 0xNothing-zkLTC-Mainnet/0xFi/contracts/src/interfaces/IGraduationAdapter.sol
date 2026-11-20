@@ -5,9 +5,9 @@ pragma solidity ^0.8.24;
 interface IGraduationAdapter {
     struct GraduationParams {
         address token;
-        address nusd;
+        address n;
         uint256 tokenAmount;
-        uint256 nusdAmount;
+        uint256 nAmount;
         uint256 minimumLp;
         uint256 deadline;
         address lpRecipient;
@@ -23,7 +23,7 @@ interface IGraduationAdapter {
 
     function preparePool(address token) external returns (address pair);
 
-    function lpTokenFor(address token, address nusd) external view returns (address lpToken);
+    function lpTokenFor(address token, address n) external view returns (address lpToken);
 
     function graduate(GraduationParams calldata params) external returns (GraduationResult memory result);
 }

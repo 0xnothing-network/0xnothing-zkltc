@@ -30,12 +30,12 @@ contract TwoStepAdminMock {
 }
 
 contract AdminPumpMock is TwoStepAdminMock {
-    address public immutable NUSD;
+    address public immutable N;
     address public graduationRouter;
     bool public paused;
 
-    constructor(address nusd) {
-        NUSD = nusd;
+    constructor(address n) {
+        N = n;
     }
 
     function setPaused(bool newPaused) external {
@@ -75,13 +75,13 @@ contract ControllerAuditTest is TestBase {
     PumpGraduationController private controller;
 
     function setUp() public {
-        MockERC20 nusd = new MockERC20("Nothing USD", "NUSD");
-        pump = new AdminPumpMock(address(nusd));
+        MockERC20 n = new MockERC20("N", "N");
+        pump = new AdminPumpMock(address(n));
         pumpRouter = new AdminRouterMock(address(pump));
         pump.setGraduationRouter(address(pumpRouter));
-        ZeroXFiFactoryV2 factory = new ZeroXFiFactoryV2(address(this), address(nusd), address(new WzkLTC()), address(pump));
+        ZeroXFiFactoryV2 factory = new ZeroXFiFactoryV2(address(this), address(n), address(new WzkLTC()), address(pump));
         ZeroXFiGraduationAdapter adapter =
-            new ZeroXFiGraduationAdapter(address(factory), address(pumpRouter), address(nusd), address(pump));
+            new ZeroXFiGraduationAdapter(address(factory), address(pumpRouter), address(n), address(pump));
         factory.bindGraduationAdapter(address(adapter));
         controller = new PumpGraduationController(address(pump), address(adapter), GOVERNANCE, GUARDIAN);
     }

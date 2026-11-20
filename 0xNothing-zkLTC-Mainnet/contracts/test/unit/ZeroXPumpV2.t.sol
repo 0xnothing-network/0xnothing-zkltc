@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {TestBase} from "../TestBase.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {OracleNUSDv2} from "../../src/nusd/OracleNUSDv2.sol";
+import {OracleNv2} from "../../src/n/OracleNv2.sol";
 import {IPriceOracle} from "../../src/oracle/IPriceOracle.sol";
 import {ZeroXPumpV2} from "../../src/pump/ZeroXPumpV2.sol";
 import {PumpToken} from "../../src/pump/PumpToken.sol";
@@ -16,7 +16,7 @@ import {MockPriceOracle, MockWrappedNative} from "../mocks/TokenomicsMocks.sol";
 
 contract ZeroXPumpV2Test is TestBase {
     uint256 private constant SUPPLY = 1_000_000_000 ether;
-    uint256 private constant VIRTUAL_NUSD = 1_500 ether;
+    uint256 private constant VIRTUAL_N = 1_500 ether;
     uint256 private constant MARKET_CAP_TARGET = 6_000 ether;
     uint256 private constant RESERVE_TARGET = 1_500 ether; // sqrt(1,500 x 6,000) - 1,500
     uint256 private constant CREATE_FEE = 1 ether;
@@ -28,7 +28,7 @@ contract ZeroXPumpV2Test is TestBase {
     address private constant PARAM_ADMIN = address(0x9A9A);
     address private constant STRANGER = address(0xBAD);
 
-    OracleNUSDv2 private nusd;
+    OracleNv2 private n;
     RewardStaking private staking;
     FeeSplitter private splitter;
     GraduationRouter private router;
@@ -37,34 +37,34 @@ contract ZeroXPumpV2Test is TestBase {
 
     function setUp() public {
         vm.warp(1_000_000);
-        nusd = new OracleNUSDv2(IPriceOracle(address(new MockPriceOracle(100 ether))), address(this), 1_000_000 ether);
-        staking = new RewardStaking(IERC20(address(nusd)));
-        splitter = new FeeSplitter(address(nusd), address(new MockWrappedNative()), TREASURY, address(this));
+        n = new OracleNv2(IPriceOracle(address(new MockPriceOracle(100 ether))), address(this), 1_000_000 ether);
+        staking = new RewardStaking(IERC20(address(n)));
+        splitter = new FeeSplitter(address(n), address(new MockWrappedNative()), TREASURY, address(this));
         splitter.setRecipients(address(staking), TREASURY);
 
         PermanentLiquidityLocker locker = new PermanentLiquidityLocker(address(this));
         router = new GraduationRouter(address(this), 1 hours, address(locker));
-        pump = _deployPump(address(splitter), PARAM_ADMIN, VIRTUAL_NUSD, MARKET_CAP_TARGET);
+        pump = _deployPump(address(splitter), PARAM_ADMIN, VIRTUAL_N, MARKET_CAP_TARGET);
         router.bindPump(address(pump));
         locker.bindRouter(address(router));
 
-        _fund(CREATOR, 1 ether); // 100 NUSD
-        _fund(TRADER, 100 ether); // 10,000 NUSD
+        _fund(CREATOR, 1 ether); // 100 N
+        _fund(TRADER, 100 ether); // 10,000 N
     }
 
-    function _deployPump(address feeRecipient, address paramAdmin, uint256 virtualNusd, uint256 marketCap)
+    function _deployPump(address feeRecipient, address paramAdmin, uint256 virtualN, uint256 marketCap)
         private
         returns (ZeroXPumpV2)
     {
         return new ZeroXPumpV2(
-            address(nusd),
-            address(nusd),
+            address(n),
+            address(n),
             address(router),
             feeRecipient,
             address(this),
             paramAdmin,
             SUPPLY,
-            virtualNusd,
+            virtualN,
             marketCap,
             CREATE_FEE,
             TRADE_FEE_BPS
@@ -74,8 +74,8 @@ contract ZeroXPumpV2Test is TestBase {
     function _fund(address account, uint256 collateralWei) private {
         vm.deal(account, collateralWei);
         vm.startPrank(account);
-        nusd.mintAtOracle{value: collateralWei}(0, account);
-        nusd.approve(address(pump), type(uint256).max);
+        n.mintAtOracle{value: collateralWei}(0, account);
+        n.approve(address(pump), type(uint256).max);
         vm.stopPrank();
     }
 
@@ -104,18 +104,18 @@ contract ZeroXPumpV2Test is TestBase {
         address token = _createMarket();
         vm.prank(TRADER);
         pump.buy(token, 1_000 ether, 0, _deadline());
-        uint256 reserves = pump.totalRealNusdReserves();
-        assertEq(pump.accruedProtocolFeesNusd(), 2 ether, "creation fee + 10 bps of 1,000");
+        uint256 reserves = pump.totalRealNReserves();
+        assertEq(pump.accruedProtocolFeesN(), 2 ether, "creation fee + 10 bps of 1,000");
 
-        uint256 supplyBefore = nusd.totalSupply();
+        uint256 supplyBefore = n.totalSupply();
         vm.prank(STRANGER);
         assertEq(pump.distributeFees(), 2 ether, "all fees");
-        assertEq(pump.accruedProtocolFeesNusd(), 0, "ledger cleared");
-        assertEq(nusd.balanceOf(address(pump)), reserves, "only curve reserves remain");
-        assertEq(nusd.balanceOf(address(splitter)), 0, "split in the same call");
-        assertEq(nusd.balanceOf(address(staking)), 1.4 ether, "70% stakers");
-        assertEq(nusd.balanceOf(TREASURY), 0.2 ether, "10% treasury");
-        assertEq(supplyBefore - nusd.totalSupply(), 0.4 ether, "20% burned");
+        assertEq(pump.accruedProtocolFeesN(), 0, "ledger cleared");
+        assertEq(n.balanceOf(address(pump)), reserves, "only curve reserves remain");
+        assertEq(n.balanceOf(address(splitter)), 0, "split in the same call");
+        assertEq(n.balanceOf(address(staking)), 1.4 ether, "70% stakers");
+        assertEq(n.balanceOf(TREASURY), 0.2 ether, "10% treasury");
+        assertEq(supplyBefore - n.totalSupply(), 0.4 ether, "20% burned");
 
         vm.expectRevert(ZeroXPumpV2.InsufficientProtocolFees.selector);
         pump.distributeFees();
@@ -139,13 +139,13 @@ contract ZeroXPumpV2Test is TestBase {
         pump.setMarketParams(2 ether, 50, 3_000 ether, 12_000 ether);
         assertEq(pump.createFee(), 2 ether, "next create fee");
         assertEq(pump.tradeFeeBps(), 50, "next trade fee");
-        assertEq(pump.initialVirtualNusdReserve(), 3_000 ether, "next virtual reserve");
-        assertEq(pump.graduationThresholdNusd(), 12_000 ether, "next market cap target");
-        assertEq(pump.graduationReserveThresholdNusd(), 3_000 ether, "sqrt(3,000 x 12,000) - 3,000");
+        assertEq(pump.initialVirtualNReserve(), 3_000 ether, "next virtual reserve");
+        assertEq(pump.graduationThresholdN(), 12_000 ether, "next market cap target");
+        assertEq(pump.graduationReserveThresholdN(), 3_000 ether, "sqrt(3,000 x 12,000) - 3,000");
 
-        uint256 creatorBefore = nusd.balanceOf(CREATOR);
+        uint256 creatorBefore = n.balanceOf(CREATOR);
         address late = _createMarket();
-        assertEq(creatorBefore - nusd.balanceOf(CREATOR), 2 ether, "new create fee charged");
+        assertEq(creatorBefore - n.balanceOf(CREATOR), 2 ether, "new create fee charged");
 
         (uint16 earlyFee, uint120 earlyCap, uint120 earlyReserve) = pump.marketParams(early);
         assertEq(earlyFee, TRADE_FEE_BPS, "early market keeps its fee");
@@ -158,7 +158,7 @@ contract ZeroXPumpV2Test is TestBase {
 
         (,,,, uint256 earlyVirtual,,,,,,) = pump.markets(early);
         (,,,, uint256 lateVirtual,,,,,,) = pump.markets(late);
-        assertEq(earlyVirtual, VIRTUAL_NUSD, "early curve");
+        assertEq(earlyVirtual, VIRTUAL_N, "early curve");
         assertEq(lateVirtual, 3_000 ether, "late curve");
 
         (,,, uint256 earlyTradeFee,) = pump.quoteBuy(early, 100 ether);
@@ -194,12 +194,12 @@ contract ZeroXPumpV2Test is TestBase {
     function testAReservationKeepsTheFeeItPaid() public {
         bytes32 commitment = _reserve();
         assertTrue(pump.creationReservations(CREATOR, commitment), "reserved");
-        assertEq(pump.accruedProtocolFeesNusd(), CREATE_FEE, "paid at reservation");
+        assertEq(pump.accruedProtocolFeesN(), CREATE_FEE, "paid at reservation");
 
         vm.prank(PARAM_ADMIN);
-        pump.setMarketParams(5 ether, TRADE_FEE_BPS, VIRTUAL_NUSD, MARKET_CAP_TARGET);
+        pump.setMarketParams(5 ether, TRADE_FEE_BPS, VIRTUAL_N, MARKET_CAP_TARGET);
 
-        uint256 creatorBefore = nusd.balanceOf(CREATOR);
+        uint256 creatorBefore = n.balanceOf(CREATOR);
         vm.expectEmit(false, true, true, true, address(pump));
         emit ZeroXPumpV2.TokenCreated(
             address(0),
@@ -211,14 +211,14 @@ contract ZeroXPumpV2Test is TestBase {
             "ipfs://bafybeiimage",
             SUPPLY,
             SUPPLY,
-            VIRTUAL_NUSD,
+            VIRTUAL_N,
             SUPPLY,
             MARKET_CAP_TARGET,
             RESERVE_TARGET,
             CREATE_FEE
         );
         address token = _create(commitment);
-        assertEq(nusd.balanceOf(CREATOR), creatorBefore, "nothing more charged");
+        assertEq(n.balanceOf(CREATOR), creatorBefore, "nothing more charged");
         assertFalse(pump.creationReservations(CREATOR, commitment), "reservation used");
         assertEq(pump.createdTokenByContentHash(CREATOR, commitment), token, "indexed");
 
@@ -229,13 +229,13 @@ contract ZeroXPumpV2Test is TestBase {
 
     function testCreationCanBeFree() public {
         vm.prank(PARAM_ADMIN);
-        pump.setMarketParams(0, TRADE_FEE_BPS, VIRTUAL_NUSD, MARKET_CAP_TARGET);
+        pump.setMarketParams(0, TRADE_FEE_BPS, VIRTUAL_N, MARKET_CAP_TARGET);
         vm.prank(CREATOR);
-        nusd.approve(address(pump), 0);
+        n.approve(address(pump), 0);
 
         bytes32 commitment = _reserve();
         assertTrue(pump.creationReservations(CREATOR, commitment), "a free reservation still counts");
-        assertEq(pump.accruedProtocolFeesNusd(), 0, "no fee");
+        assertEq(pump.accruedProtocolFeesN(), 0, "no fee");
         address token = _create(commitment);
         assertEq(pump.status(token), 1, "trading");
 
@@ -247,17 +247,17 @@ contract ZeroXPumpV2Test is TestBase {
     function testTermsAreCheckedLikeTheConstructor() public {
         vm.startPrank(PARAM_ADMIN);
         vm.expectRevert(ZeroXPumpV2.InvalidConfiguration.selector);
-        pump.setMarketParams(CREATE_FEE, 101, VIRTUAL_NUSD, MARKET_CAP_TARGET);
+        pump.setMarketParams(CREATE_FEE, 101, VIRTUAL_N, MARKET_CAP_TARGET);
         vm.expectRevert(ZeroXPumpV2.InvalidConfiguration.selector);
-        pump.setMarketParams(100 ether + 1, TRADE_FEE_BPS, VIRTUAL_NUSD, MARKET_CAP_TARGET);
+        pump.setMarketParams(100 ether + 1, TRADE_FEE_BPS, VIRTUAL_N, MARKET_CAP_TARGET);
         vm.expectRevert(ZeroXPumpV2.InvalidConfiguration.selector);
         pump.setMarketParams(CREATE_FEE, TRADE_FEE_BPS, 0, MARKET_CAP_TARGET);
         vm.expectRevert(ZeroXPumpV2.InvalidConfiguration.selector);
-        pump.setMarketParams(CREATE_FEE, TRADE_FEE_BPS, VIRTUAL_NUSD, VIRTUAL_NUSD);
+        pump.setMarketParams(CREATE_FEE, TRADE_FEE_BPS, VIRTUAL_N, VIRTUAL_N);
         vm.expectRevert(ZeroXPumpV2.InvalidConfiguration.selector);
-        pump.setMarketParams(CREATE_FEE, TRADE_FEE_BPS, VIRTUAL_NUSD, uint256(type(uint120).max) + 1);
+        pump.setMarketParams(CREATE_FEE, TRADE_FEE_BPS, VIRTUAL_N, uint256(type(uint120).max) + 1);
 
-        pump.setMarketParams(100 ether, 100, VIRTUAL_NUSD, MARKET_CAP_TARGET);
+        pump.setMarketParams(100 ether, 100, VIRTUAL_N, MARKET_CAP_TARGET);
         vm.stopPrank();
         assertEq(pump.createFee(), 100 ether, "upper bound accepted");
         assertEq(pump.tradeFeeBps(), 100, "1% accepted");
@@ -265,7 +265,7 @@ contract ZeroXPumpV2Test is TestBase {
 
     function testOnlyTheParamAdminTunesTermsAndHandsOverInTwoSteps() public {
         vm.expectRevert(TwoStepAdmin.Unauthorized.selector);
-        pump.setMarketParams(CREATE_FEE, TRADE_FEE_BPS, VIRTUAL_NUSD, MARKET_CAP_TARGET);
+        pump.setMarketParams(CREATE_FEE, TRADE_FEE_BPS, VIRTUAL_N, MARKET_CAP_TARGET);
         vm.prank(STRANGER);
         vm.expectRevert(TwoStepAdmin.Unauthorized.selector);
         pump.transferParamAdmin(STRANGER);
@@ -283,7 +283,7 @@ contract ZeroXPumpV2Test is TestBase {
         assertEq(pump.pendingParamAdmin(), address(0), "cleared");
         vm.prank(PARAM_ADMIN);
         vm.expectRevert(TwoStepAdmin.Unauthorized.selector);
-        pump.setMarketParams(CREATE_FEE, TRADE_FEE_BPS, VIRTUAL_NUSD, MARKET_CAP_TARGET);
+        pump.setMarketParams(CREATE_FEE, TRADE_FEE_BPS, VIRTUAL_N, MARKET_CAP_TARGET);
         assertEq(pump.admin(), address(this), "graduation admin untouched");
     }
 
@@ -305,20 +305,20 @@ contract ZeroXPumpV2Test is TestBase {
 
         vm.prank(TRADER);
         PumpToken(token).approve(address(pump), bought);
-        uint256 before = nusd.balanceOf(TRADER);
+        uint256 before = n.balanceOf(TRADER);
         vm.prank(TRADER);
         uint256 received = pump.sell(token, bought, 0, _deadline());
         assertGt(received, 0, "sell while paused");
-        assertEq(nusd.balanceOf(TRADER) - before, received, "paid out");
+        assertEq(n.balanceOf(TRADER) - before, received, "paid out");
     }
 
     // ---------------------------------------------------------------- deployment
 
     function testConstructorRejectsMissingWiring() public {
         vm.expectRevert(ZeroXPumpV2.InvalidConfiguration.selector);
-        _deployPump(address(0), PARAM_ADMIN, VIRTUAL_NUSD, MARKET_CAP_TARGET);
+        _deployPump(address(0), PARAM_ADMIN, VIRTUAL_N, MARKET_CAP_TARGET);
         vm.expectRevert(ZeroXPumpV2.InvalidConfiguration.selector);
-        _deployPump(address(splitter), address(0), VIRTUAL_NUSD, MARKET_CAP_TARGET);
+        _deployPump(address(splitter), address(0), VIRTUAL_N, MARKET_CAP_TARGET);
         vm.expectRevert(ZeroXPumpV2.InvalidConfiguration.selector);
         _deployPump(address(splitter), PARAM_ADMIN, MARKET_CAP_TARGET, MARKET_CAP_TARGET);
     }

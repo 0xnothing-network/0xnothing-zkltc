@@ -10,13 +10,13 @@ interface IRewardHarvester {
 }
 
 /// @title 0xPoints staking
-/// @notice Lock NUSD for 30/90/180/365 days (weight x1 / x1.2 / x1.5 / x3) and earn every NUSD
-///         that reaches this contract: protocol fees, NUSD surplus, donations. Income needs no
+/// @notice Lock N for 30/90/180/365 days (weight x1 / x1.2 / x1.5 / x3) and earn every N
+///         that reaches this contract: protocol fees, N surplus, donations. Income needs no
 ///         notification: anything held beyond principal and owed rewards is picked up on the next
 ///         interaction and streamed evenly over the following 7 days, pro rata to weight. While
 ///         nobody is staked the stream pauses instead of being lost.
 /// @dev No admin, no rounds, no thresholds. A position's principal can always be withdrawn after
-///      its unlock time, and withdrawal never runs the fee harvest, so nothing outside NUSD can block it.
+///      its unlock time, and withdrawal never runs the fee harvest, so nothing outside N can block it.
 contract RewardStaking is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -61,7 +61,7 @@ contract RewardStaking is ReentrancyGuard {
         uint64 checkpointAt;
     }
 
-    IERC20 public immutable nusd;
+    IERC20 public immutable n;
     address private immutable _binder;
 
     // Packed: read together on every interaction.
@@ -74,11 +74,11 @@ contract RewardStaking is ReentrancyGuard {
     /// @notice Lifetime 0xPoints of everyone, as of `lastUpdate`.
     uint256 public totalPoints;
     uint256 public rewardPerWeightStored;
-    /// @dev NUSD wei per second, scaled by PRECISION.
+    /// @dev N wei per second, scaled by PRECISION.
     uint256 public rewardRateScaled;
-    /// @dev NUSD wei committed to the stream but not streamed yet, scaled by PRECISION.
+    /// @dev N wei committed to the stream but not streamed yet, scaled by PRECISION.
     uint256 public unstreamedScaled;
-    /// @notice Every NUSD ever recognised as reward income, and every NUSD paid out of it.
+    /// @notice Every N ever recognised as reward income, and every N paid out of it.
     uint256 public rewardFunded;
     uint256 public rewardPaid;
     uint256 public nextPositionId = 1;
@@ -101,9 +101,9 @@ contract RewardStaking is ReentrancyGuard {
     event RewardsQueued(uint256 income, uint256 rewardRatePerSecond, uint256 periodFinish);
     event HarvesterBound(address indexed harvester);
 
-    constructor(IERC20 nusd_) {
-        if (address(nusd_).code.length == 0) revert InvalidAmount();
-        nusd = nusd_;
+    constructor(IERC20 n_) {
+        if (address(n_).code.length == 0) revert InvalidAmount();
+        n = n_;
         _binder = msg.sender;
         lastUpdate = uint64(block.timestamp);
         periodFinish = uint64(block.timestamp);
@@ -126,9 +126,9 @@ contract RewardStaking is ReentrancyGuard {
         _harvest();
         Account storage account = _checkpoint(msg.sender);
 
-        uint256 balanceBefore = nusd.balanceOf(address(this));
-        nusd.safeTransferFrom(msg.sender, address(this), amount);
-        if (nusd.balanceOf(address(this)) != balanceBefore + amount) revert NonExactTransfer();
+        uint256 balanceBefore = n.balanceOf(address(this));
+        n.safeTransferFrom(msg.sender, address(this), amount);
+        if (n.balanceOf(address(this)) != balanceBefore + amount) revert NonExactTransfer();
 
         positionId = _open(msg.sender, account, amount, lockDuration, multiplierBps);
     }
@@ -141,7 +141,7 @@ contract RewardStaking is ReentrancyGuard {
         uint256 amount = account.pendingReward;
         if (amount == 0) revert NothingToClaim();
         account.pendingReward = 0;
-        // Reward liability becomes principal: the NUSD never leaves the contract.
+        // Reward liability becomes principal: the N never leaves the contract.
         rewardPaid += amount;
         positionId = _open(msg.sender, account, amount, lockDuration, multiplierBps);
         emit RewardRestaked(msg.sender, positionId, amount);
@@ -161,7 +161,7 @@ contract RewardStaking is ReentrancyGuard {
         account.weight -= position.weight;
         totalWeight -= position.weight;
         totalPrincipal -= position.amount;
-        nusd.safeTransfer(msg.sender, position.amount);
+        n.safeTransfer(msg.sender, position.amount);
         emit Withdrawn(positionId, msg.sender, position.amount);
     }
 
@@ -173,7 +173,7 @@ contract RewardStaking is ReentrancyGuard {
         if (amount == 0) revert NothingToClaim();
         account.pendingReward = 0;
         rewardPaid += amount;
-        nusd.safeTransfer(recipient, amount);
+        n.safeTransfer(recipient, amount);
         emit RewardClaimed(msg.sender, recipient, amount);
     }
 
@@ -216,14 +216,14 @@ contract RewardStaking is ReentrancyGuard {
         return (_accounts[user].weight, pointsOf(user), earned(user));
     }
 
-    /// @notice NUSD streamed to stakers per second right now.
+    /// @notice N streamed to stakers per second right now.
     function rewardRate() external view returns (uint256) {
         // forge-lint: disable-next-line(block-timestamp)
         if (block.timestamp >= periodFinish || totalWeight == 0) return 0;
         return rewardRateScaled / PRECISION;
     }
 
-    /// @notice NUSD still to be streamed, including income not picked up yet.
+    /// @notice N still to be streamed, including income not picked up yet.
     function queuedRewards() external view returns (uint256) {
         uint256 pending = unstreamedScaled / PRECISION;
         uint256 finish = periodFinish;
@@ -319,7 +319,7 @@ contract RewardStaking is ReentrancyGuard {
     }
 
     function _unrecognisedIncome() private view returns (uint256) {
-        uint256 balance = nusd.balanceOf(address(this));
+        uint256 balance = n.balanceOf(address(this));
         uint256 accounted = totalPrincipal + rewardFunded - rewardPaid;
         return balance > accounted ? balance - accounted : 0;
     }

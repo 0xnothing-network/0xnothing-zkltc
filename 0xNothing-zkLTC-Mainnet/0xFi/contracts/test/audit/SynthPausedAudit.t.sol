@@ -6,11 +6,11 @@ import { SyntheticAsset } from "../../src/synth/SyntheticAsset.sol";
 import { SyntheticVault } from "../../src/synth/SyntheticVault.sol";
 import { TestBase } from "../helpers/TestBase.sol";
 import { FeeSplitterMock } from "../mocks/FeeSplitterMock.sol";
-import { MockNUSD, MockPriceOracle } from "../mocks/RiskMocks.sol";
+import { MockN, MockPriceOracle } from "../mocks/RiskMocks.sol";
 
 /// From the adversarial review of how the 2026-11 audit closed D-01, D-02 and D-06 (reserve
 /// allocations paused at deployment). Same wiring as test/audit/SynthAudit.t.sol. One walk through every vault
-/// path is run twice: with the Safety Reserve empty, and with 100,000 NUSD in it and the entry
+/// path is run twice: with the Safety Reserve empty, and with 100,000 N in it and the entry
 /// delay over, so that only the pause stands between a mint and the reserve.
 contract SynthPausedAuditTest is TestBase {
     address private constant ALICE = address(0xA11CE);
@@ -19,7 +19,7 @@ contract SynthPausedAuditTest is TestBase {
     address private constant STAKING = address(0xB001);
     address private constant TREASURY = address(0x7EA5);
 
-    MockNUSD private nusd;
+    MockN private n;
     MockPriceOracle private btcOracle;
     MockPriceOracle private ethOracle;
     SyntheticAsset private nbtc;
@@ -31,15 +31,15 @@ contract SynthPausedAuditTest is TestBase {
 
     function setUp() public {
         vm.warp(1_000_000);
-        nusd = new MockNUSD();
+        n = new MockN();
         btcOracle = new MockPriceOracle(100_000 ether);
         ethOracle = new MockPriceOracle(2000 ether);
-        reserve = new SynthSafetyReserve(address(nusd), address(this));
-        splitter = new FeeSplitterMock(address(nusd), STAKING, TREASURY);
+        reserve = new SynthSafetyReserve(address(n), address(this));
+        splitter = new FeeSplitterMock(address(n), STAKING, TREASURY);
         nbtc = new SyntheticAsset("0xFi Synthetic Bitcoin", "nBTC", address(this));
         neth = new SyntheticAsset("0xFi Synthetic Ether", "nETH", address(this));
         vault = new SyntheticVault(
-            address(nusd),
+            address(n),
             address(nbtc),
             address(btcOracle),
             address(reserve),
@@ -49,7 +49,7 @@ contract SynthPausedAuditTest is TestBase {
             true
         );
         secondVault = new SyntheticVault(
-            address(nusd),
+            address(n),
             address(neth),
             address(ethOracle),
             address(reserve),
@@ -66,9 +66,9 @@ contract SynthPausedAuditTest is TestBase {
 
         address[3] memory users = [ALICE, BOB, CAROL];
         for (uint256 i; i < users.length; ++i) {
-            nusd.mint(users[i], 1_000_000 ether);
+            n.mint(users[i], 1_000_000 ether);
             vm.prank(users[i]);
-            nusd.approve(address(vault), type(uint256).max);
+            n.approve(address(vault), type(uint256).max);
             vm.prank(users[i]);
             nbtc.approve(address(vault), type(uint256).max);
         }
@@ -80,14 +80,14 @@ contract SynthPausedAuditTest is TestBase {
     }
 
     function testAudit_D01_mitigation_everyPathWithAFundedReserveReadyToSponsor() public {
-        nusd.mint(address(this), 100_000 ether);
-        nusd.approve(address(reserve), type(uint256).max);
+        n.mint(address(this), 100_000 ether);
+        n.approve(address(reserve), type(uint256).max);
         reserve.fund(100_000 ether);
         vm.warp(1_000_000 + reserve.ACTIVATION_DELAY());
         btcOracle.setPrice(100_000 ether);
         assertTrue(reserve.sponsorshipActive(), "sponsorship is active; only the pause is in the way");
         assertTrue(reserve.syncSponsorshipMode(), "and stays active after a sync by anyone");
-        assertEq(reserve.freeReserveNusd(), 100_000 ether, "free reserve");
+        assertEq(reserve.freeReserveN(), 100_000 ether, "free reserve");
 
         // The pause is checked by the reserve itself, not only by the vault.
         vm.expectRevert(SynthSafetyReserve.UnauthorizedVault.selector);
@@ -100,14 +100,14 @@ contract SynthPausedAuditTest is TestBase {
     }
 
     /// Every user-facing vault path, with exact numbers at BTC = 100,000 / 125,000 / 160,000.
-    function _walkEveryPath(uint256 reserveNusd) private {
+    function _walkEveryPath(uint256 reserveN) private {
         // ---- quotes before any position
         (uint256 quoted, uint256 reserveRequired, bool oneToOne) = vault.quoteDepositAndMint(ALICE, 150_000 ether);
-        assertEq(quoted, 1 ether, "150,000 NUSD quotes 1 nBTC");
+        assertEq(quoted, 1 ether, "150,000 N quotes 1 nBTC");
         assertEq(reserveRequired, 0, "no reserve share quoted");
         assertFalse(oneToOne, "no 1:1 mode");
         (quoted,, oneToOne) = vault.quoteDepositAndMint(ALICE, 100_000 ether);
-        assertEq(quoted, 666_666_666_666_666_666, "100,000 NUSD quotes 0.666 nBTC, not 1");
+        assertEq(quoted, 666_666_666_666_666_666, "100,000 N quotes 0.666 nBTC, not 1");
         assertFalse(oneToOne, "no 1:1 mode for a 100% deposit either");
         assertEq(vault.maxMintableSynthetic(ALICE), 0, "nothing mintable without collateral");
 
@@ -120,8 +120,8 @@ contract SynthPausedAuditTest is TestBase {
         vault.depositAndMint(150_000 ether, 1 ether, type(uint256).max, ALICE);
         vm.stopPrank();
         _assertPosition(ALICE, 150_000 ether, 1 ether);
-        assertEq(nusd.balanceOf(ALICE), 1_000_000 ether - 150_100 ether, "collateral + 100 NUSD fee");
-        _assertInvariants(reserveNusd);
+        assertEq(n.balanceOf(ALICE), 1_000_000 ether - 150_100 ether, "collateral + 100 N fee");
+        _assertInvariants(reserveN);
 
         // ---- mint against existing collateral
         vm.startPrank(ALICE);
@@ -132,7 +132,7 @@ contract SynthPausedAuditTest is TestBase {
         vault.mint(0.1 ether, type(uint256).max, ALICE);
         vm.stopPrank();
         _assertPosition(ALICE, 165_000 ether, 1.1 ether);
-        _assertInvariants(reserveNusd);
+        _assertInvariants(reserveN);
 
         // ---- withdrawCollateral and its view
         assertEq(vault.maxUserCollateralWithdrawable(ALICE), 0, "nothing spare at exactly 150%");
@@ -145,7 +145,7 @@ contract SynthPausedAuditTest is TestBase {
         assertEq(vault.quoteCollateralForMint(0.1 ether), 15_000 ether, "0.1 nBTC more costs 15,000 of own collateral");
         vm.stopPrank();
         _assertPosition(ALICE, 165_000 ether, 1.1 ether);
-        _assertInvariants(reserveNusd);
+        _assertInvariants(reserveN);
 
         // ---- repay, repayAndWithdraw
         vm.startPrank(ALICE);
@@ -156,7 +156,7 @@ contract SynthPausedAuditTest is TestBase {
         assertEq(vault.repayAndWithdraw(0.5 ether, 90_000 ether, ALICE), 0.5 ether, "repaid half");
         vm.stopPrank();
         _assertPosition(ALICE, 75_000 ether, 0.5 ether);
-        _assertInvariants(reserveNusd);
+        _assertInvariants(reserveN);
 
         // ---- releaseExcessReserveCollateral by a stranger: nothing to release, at any price
         vm.prank(BOB);
@@ -167,14 +167,14 @@ contract SynthPausedAuditTest is TestBase {
         vault.depositAndMint(300_000 ether, 1 ether, type(uint256).max, BOB);
         vm.prank(CAROL);
         vault.depositAndMint(150_000 ether, 1 ether, type(uint256).max, CAROL);
-        _assertInvariants(reserveNusd);
+        _assertInvariants(reserveN);
 
         // ---- liquidate without bad debt: BTC 125,000, Alice holds 75,000 against 0.5 nBTC (120%)
         btcOracle.setPrice(125_000 ether);
         vm.prank(BOB);
         assertEq(vault.releaseExcessReserveCollateral(ALICE), 0, "no reserve share at 125k");
         assertTrue(vault.isLiquidatable(ALICE), "under 125%");
-        uint256 bobNusd = nusd.balanceOf(BOB);
+        uint256 bobN = n.balanceOf(BOB);
         vm.startPrank(BOB);
         (uint256 repaid, uint256 collateralOut) = vault.liquidate(ALICE, type(uint256).max, 0, BOB);
         assertEq(repaid, 0.25 ether, "close factor");
@@ -182,21 +182,21 @@ contract SynthPausedAuditTest is TestBase {
         vm.expectRevert(SyntheticVault.PositionHealthy.selector);
         vault.liquidate(ALICE, type(uint256).max, 0, BOB);
         vm.stopPrank();
-        assertEq(nusd.balanceOf(BOB) - bobNusd, 32_812.5 ether, "paid from the collateral Alice posted");
+        assertEq(n.balanceOf(BOB) - bobN, 32_812.5 ether, "paid from the collateral Alice posted");
         _assertPosition(ALICE, 42_187.5 ether, 0.25 ether);
-        _assertInvariants(reserveNusd);
+        _assertInvariants(reserveN);
 
         // ---- liquidate into bad debt: BTC 160,000, Carol holds 150,000 against 1 nBTC (93.75%)
         btcOracle.setPrice(160_000 ether);
-        uint256 carolNusd = nusd.balanceOf(CAROL);
+        uint256 carolN = n.balanceOf(CAROL);
         uint256[4] memory expectedOut = [uint256(84_000 ether), 42_000 ether, 21_000 ether, 3000 ether];
         for (uint256 round; round < 4; ++round) {
             vm.prank(CAROL);
             (, collateralOut) = vault.liquidate(CAROL, type(uint256).max, 0, CAROL);
             assertEq(collateralOut, expectedOut[round], "collateral paid in this round");
-            _assertInvariants(reserveNusd);
+            _assertInvariants(reserveN);
         }
-        assertEq(nusd.balanceOf(CAROL) - carolNusd, 150_000 ether, "exactly the collateral she posted, no more");
+        assertEq(n.balanceOf(CAROL) - carolN, 150_000 ether, "exactly the collateral she posted, no more");
         _assertPosition(CAROL, 0, 0);
         uint256 badDebt = vault.badDebtSyntheticByAccount(CAROL);
         assertApproxEqAbs(badDebt, 107_142_857_142_857_143, 1e6, "~0.107143 nBTC written off");
@@ -213,7 +213,7 @@ contract SynthPausedAuditTest is TestBase {
         assertEq(vault.coverBadDebt(CAROL, type(uint256).max), badDebt, "covered with her own nBTC");
         vm.stopPrank();
         assertEq(vault.totalBadDebtSynthetic(), 0, "bad debt gone");
-        _assertInvariants(reserveNusd);
+        _assertInvariants(reserveN);
 
         // ---- full exit of a healthy position needs no oracle and no reserve
         // (Bob spent 0.25 nBTC liquidating Alice; she passes him 0.25 of the 0.5 she still holds.)
@@ -225,7 +225,7 @@ contract SynthPausedAuditTest is TestBase {
         vm.stopPrank();
         btcOracle.setReadReverts(false);
         _assertPosition(BOB, 0, 0);
-        _assertInvariants(reserveNusd);
+        _assertInvariants(reserveN);
     }
 
     function _assertPosition(address account, uint256 userCollateral, uint256 debt) private view {
@@ -235,13 +235,13 @@ contract SynthPausedAuditTest is TestBase {
         assertEq(accountDebt, debt, "debt");
     }
 
-    function _assertInvariants(uint256 reserveNusd) private view {
-        assertEq(reserve.totalReserveNusd(), reserveNusd, "reserve total unchanged");
-        assertEq(reserve.freeReserveNusd(), reserveNusd, "all of it still free");
-        assertEq(reserve.totalAllocatedNusd(), 0, "nothing allocated");
-        assertEq(reserve.allocatedNusdByVault(address(vault)), 0, "nothing allocated to the vault");
-        assertEq(vault.totalReserveCollateralNusd(), 0, "vault holds no reserve collateral");
-        assertEq(nusd.balanceOf(address(vault)), vault.totalUserCollateralNusd(), "vault NUSD = user collateral");
+    function _assertInvariants(uint256 reserveN) private view {
+        assertEq(reserve.totalReserveN(), reserveN, "reserve total unchanged");
+        assertEq(reserve.freeReserveN(), reserveN, "all of it still free");
+        assertEq(reserve.totalAllocatedN(), 0, "nothing allocated");
+        assertEq(reserve.allocatedNByVault(address(vault)), 0, "nothing allocated to the vault");
+        assertEq(vault.totalReserveCollateralN(), 0, "vault holds no reserve collateral");
+        assertEq(n.balanceOf(address(vault)), vault.totalUserCollateralN(), "vault N = user collateral");
         assertEq(
             nbtc.totalSupply(),
             vault.totalDebtSynthetic() + vault.totalBadDebtSynthetic(),

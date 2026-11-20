@@ -21,7 +21,7 @@ contract WorthlessLp is ERC20 {
 
 /// Audit mock for B-04: satisfies every check GraduationRouter.executeGraduation makes (it names
 /// its own LP token, takes exactly the approved amounts, returns `minimumLp` of that token) while
-/// adding no liquidity anywhere. It keeps the market's tokens and NUSD for its owner.
+/// adding no liquidity anywhere. It keeps the market's tokens and N for its owner.
 contract EvilAdapter is IGraduationAdapter {
     address public immutable owner;
     WorthlessLp public immutable fakeLp;
@@ -37,7 +37,7 @@ contract EvilAdapter is IGraduationAdapter {
 
     function graduate(GraduationParams calldata params) external returns (GraduationResult memory result) {
         IERC20(params.token).transferFrom(msg.sender, address(this), params.tokenAmount);
-        IERC20(params.nusd).transferFrom(msg.sender, address(this), params.nusdAmount);
+        IERC20(params.n).transferFrom(msg.sender, address(this), params.nAmount);
         fakeLp.mint(params.lpRecipient, params.minimumLp);
         result = GraduationResult({
             dex: address(this),

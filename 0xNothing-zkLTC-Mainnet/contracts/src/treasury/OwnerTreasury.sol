@@ -7,7 +7,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 /// @title 0xNothing treasury
-/// @notice Receives the protocol's treasury share (NUSD, WzkLTC, native zkLTC and any other token).
+/// @notice Receives the protocol's treasury share (N, WzkLTC, native zkLTC and any other token).
 ///         Spending is controlled by the owner alone, by design; ownership moves in two steps.
 contract OwnerTreasury is Ownable2Step {
     using SafeERC20 for IERC20;

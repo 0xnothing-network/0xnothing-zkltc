@@ -2,9 +2,9 @@
 pragma solidity ^0.8.24;
 
 import {TestBase} from "../TestBase.sol";
-import {NusdNftMarketplaceV2} from "../../src/0xpixel/NusdNftMarketplaceV2.sol";
+import {NNftMarketplaceV2} from "../../src/0xpixel/NNftMarketplaceV2.sol";
 import {ZeroXPixelV2} from "../../src/0xpixel/ZeroXPixelV2.sol";
-import {MarketplaceBurnableNusdMock} from "../mocks/NusdMarketplaceMocks.sol";
+import {MarketplaceBurnableNMock} from "../mocks/NMarketplaceMocks.sol";
 import {
     EpochMutantNoOperatorEpoch,
     EpochMutantCountsOnlyChanges,
@@ -55,9 +55,9 @@ abstract contract AuditMarketplaceModel is TestBase {
         bool seenInactive;
     }
 
-    MarketplaceBurnableNusdMock internal nusd;
+    MarketplaceBurnableNMock internal n;
     IReviewNft internal pixel;
-    NusdNftMarketplaceV2 internal market;
+    NNftMarketplaceV2 internal market;
     Tracked[] internal tracked;
     uint256[2] internal tokens;
     bool internal countNoOps;
@@ -77,19 +77,19 @@ abstract contract AuditMarketplaceModel is TestBase {
 
     function setUp() public {
         vm.warp(1_000_000);
-        nusd = new MarketplaceBurnableNusdMock();
+        n = new MarketplaceBurnableNMock();
         (address nft, uint256 first, uint256 second) = _deployNft();
         pixel = IReviewNft(nft);
         tokens[0] = first;
         tokens[1] = second;
         address[] memory collections = new address[](1);
         collections[0] = nft;
-        market = new NusdNftMarketplaceV2(address(nusd), address(this), collections);
+        market = new NNftMarketplaceV2(address(n), address(this), collections);
         address[4] memory funded = [ALICE, BOB, CAROL, PROBER];
         for (uint256 i; i < funded.length; ++i) {
-            nusd.mint(funded[i], 1_000_000_000 ether);
+            n.mint(funded[i], 1_000_000_000 ether);
             vm.prank(funded[i]);
-            nusd.approve(address(market), type(uint256).max);
+            n.approve(address(market), type(uint256).max);
         }
     }
 
@@ -236,7 +236,7 @@ abstract contract AuditMarketplaceModel is TestBase {
             }
             tracked.push(Tracked(listingId, tokenId, owner, false, false));
         } catch (bytes memory reason) {
-            if (reason.length == 4 && bytes4(reason) == NusdNftMarketplaceV2.AlreadyListed.selector) {
+            if (reason.length == 4 && bytes4(reason) == NNftMarketplaceV2.AlreadyListed.selector) {
                 Tracked storage blocking = tracked[_find(previous)];
                 assertTrue(blocking.seller == owner && !blocking.moved, "AlreadyListed for a listing the model calls dead");
             }
@@ -366,7 +366,7 @@ abstract contract AuditMarketplaceModel is TestBase {
                 assertEq(market.tokenToListingId(address(pixel), t.tokenId), t.listingId, "token points elsewhere");
             }
         }
-        assertEq(nusd.balanceOf(address(market)), market.totalLiabilitiesNusd(), "liabilities not backed");
+        assertEq(n.balanceOf(address(market)), market.totalLiabilitiesN(), "liabilities not backed");
     }
 
     function probeBuy(uint256 listingId) external {

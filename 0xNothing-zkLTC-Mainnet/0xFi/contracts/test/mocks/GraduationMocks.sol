@@ -7,12 +7,12 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { IGraduationAdapter } from "../../src/interfaces/IGraduationAdapter.sol";
 
 contract MockPump {
-    address public immutable NUSD;
+    address public immutable N;
     address public graduationRouter;
     mapping(address => uint256) public status;
 
-    constructor(address nusd_) {
-        NUSD = nusd_;
+    constructor(address n_) {
+        N = n_;
     }
 
     function setGraduationRouter(address router) external {
@@ -36,26 +36,26 @@ contract MockPumpRouter {
     function execute(
         IGraduationAdapter adapter,
         address token,
-        address nusd,
+        address n,
         uint256 tokenAmount,
-        uint256 nusdAmount,
+        uint256 nAmount,
         uint256 minimumLp,
         uint256 deadline
     ) external returns (IGraduationAdapter.GraduationResult memory result) {
         IERC20(token).forceApprove(address(adapter), tokenAmount);
-        IERC20(nusd).forceApprove(address(adapter), nusdAmount);
+        IERC20(n).forceApprove(address(adapter), nAmount);
         result = adapter.graduate(
             IGraduationAdapter.GraduationParams({
                 token: token,
-                nusd: nusd,
+                n: n,
                 tokenAmount: tokenAmount,
-                nusdAmount: nusdAmount,
+                nAmount: nAmount,
                 minimumLp: minimumLp,
                 deadline: deadline,
                 lpRecipient: address(this)
             })
         );
         IERC20(token).forceApprove(address(adapter), 0);
-        IERC20(nusd).forceApprove(address(adapter), 0);
+        IERC20(n).forceApprove(address(adapter), 0);
     }
 }

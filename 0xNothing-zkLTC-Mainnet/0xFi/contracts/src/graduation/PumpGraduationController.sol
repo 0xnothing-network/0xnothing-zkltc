@@ -14,22 +14,22 @@ interface IControlledZeroXPump {
         uint256 lpAmount;
     }
 
-    function NUSD() external view returns (address);
+    function N() external view returns (address);
     function graduationRouter() external view returns (address);
     function admin() external view returns (address);
     function pendingAdmin() external view returns (address);
     function status(address token) external view returns (uint8);
-    function spotPriceNusdWad(address token) external view returns (uint256);
+    function spotPriceNWad(address token) external view returns (uint256);
     function markets(address token)
         external
         view
         returns (
             address creator,
             uint256 tokenReserve,
-            uint256 realNusdReserve,
+            uint256 realNReserve,
             uint256 virtualTokenReserve,
-            uint256 virtualNusdReserve,
-            uint256 totalNusdVolume,
+            uint256 virtualNReserve,
+            uint256 totalNVolume,
             uint64 createdAt,
             uint8 lifecycle,
             address dex,
@@ -47,13 +47,13 @@ interface IControlledZeroXPump {
 interface IZeroXFiGraduationAdapterTopology {
     function factory() external view returns (address);
     function pumpRouter() external view returns (address);
-    function nusd() external view returns (address);
+    function n() external view returns (address);
     function pump() external view returns (address);
 }
 
 interface IZeroXFiGraduationFactoryTopology {
     function graduationAdapter() external view returns (address);
-    function nusd() external view returns (address);
+    function n() external view returns (address);
     function pump() external view returns (address);
 }
 
@@ -92,7 +92,7 @@ contract PumpGraduationController is ReentrancyGuard {
     IGraduationAdapter public immutable adapter;
     IControlledGraduationRouter public immutable router;
     address public immutable governance;
-    address public immutable nusd;
+    address public immutable n;
 
     address public guardian;
     bool public graduationsPaused;
@@ -101,7 +101,7 @@ contract PumpGraduationController is ReentrancyGuard {
         bool ready;
         address pool;
         uint256 tokenAmount;
-        uint256 nusdAmount;
+        uint256 nAmount;
         uint256 expectedLp;
         uint256 minimumLp;
     }
@@ -122,7 +122,7 @@ contract PumpGraduationController is ReentrancyGuard {
         address indexed token,
         address indexed pool,
         uint256 tokenAmount,
-        uint256 nusdAmount,
+        uint256 nAmount,
         uint256 lpAmount
     );
 
@@ -139,21 +139,21 @@ contract PumpGraduationController is ReentrancyGuard {
 
         IControlledZeroXPump configuredPump = IControlledZeroXPump(pump_);
         IZeroXFiGraduationAdapterTopology configuredAdapter = IZeroXFiGraduationAdapterTopology(adapter_);
-        address configuredNusd = configuredPump.NUSD();
+        address configuredN = configuredPump.N();
         address configuredRouter = configuredPump.graduationRouter();
         address factory = configuredAdapter.factory();
-        if (configuredNusd.code.length == 0 || configuredRouter.code.length == 0 || factory.code.length == 0) {
+        if (configuredN.code.length == 0 || configuredRouter.code.length == 0 || factory.code.length == 0) {
             revert InvalidConfiguration();
         }
         if (
-            configuredAdapter.pump() != pump_ || configuredAdapter.nusd() != configuredNusd
+            configuredAdapter.pump() != pump_ || configuredAdapter.n() != configuredN
                 || configuredAdapter.pumpRouter() != configuredPump.graduationRouter()
         ) revert InvalidConfiguration();
 
         IZeroXFiGraduationFactoryTopology configuredFactory = IZeroXFiGraduationFactoryTopology(factory);
         if (
             configuredFactory.graduationAdapter() != adapter_ || configuredFactory.pump() != pump_
-                || configuredFactory.nusd() != configuredNusd
+                || configuredFactory.n() != configuredN
         ) revert InvalidConfiguration();
 
         pump = configuredPump;
@@ -161,28 +161,28 @@ contract PumpGraduationController is ReentrancyGuard {
         router = IControlledGraduationRouter(configuredRouter);
         governance = governance_;
         guardian = guardian_;
-        nusd = configuredNusd;
+        n = configuredN;
     }
 
     /// @notice Returns the exact initial LP amount expected from the empty protected pair.
     /// @dev The minimum equals the expected amount, so any reserve or implementation drift reverts atomically.
     function previewGraduation(address token) public view returns (GraduationPreview memory preview) {
         preview.ready = pump.status(token) == READY;
-        preview.pool = adapter.lpTokenFor(token, nusd);
+        preview.pool = adapter.lpTokenFor(token, n);
         if (!preview.ready) return preview;
 
-        (, uint256 tokenReserve, uint256 realNusdReserve,,,,,,,,) = pump.markets(token);
-        uint256 priceWad = pump.spotPriceNusdWad(token);
-        if (realNusdReserve == 0 || priceWad == 0) revert InvalidGraduationPreview();
+        (, uint256 tokenReserve, uint256 realNReserve,,,,,,,,) = pump.markets(token);
+        uint256 priceWad = pump.spotPriceNWad(token);
+        if (realNReserve == 0 || priceWad == 0) revert InvalidGraduationPreview();
 
-        uint256 tokenAmount = Math.mulDiv(realNusdReserve, WAD, priceWad);
+        uint256 tokenAmount = Math.mulDiv(realNReserve, WAD, priceWad);
         if (tokenAmount == 0 || tokenAmount > tokenReserve) revert InvalidGraduationPreview();
 
-        uint256 rootK = Math.sqrt(tokenAmount * realNusdReserve);
+        uint256 rootK = Math.sqrt(tokenAmount * realNReserve);
         if (rootK <= MINIMUM_LIQUIDITY) revert InvalidGraduationPreview();
 
         preview.tokenAmount = tokenAmount;
-        preview.nusdAmount = realNusdReserve;
+        preview.nAmount = realNReserve;
         preview.expectedLp = rootK - MINIMUM_LIQUIDITY;
         preview.minimumLp = preview.expectedLp;
     }
@@ -200,7 +200,7 @@ contract PumpGraduationController is ReentrancyGuard {
         if (!preview.ready) revert MarketNotReady();
 
         address pool = adapter.preparePool(token);
-        if (pool == address(0) || pool.code.length == 0 || adapter.lpTokenFor(token, nusd) != pool) {
+        if (pool == address(0) || pool.code.length == 0 || adapter.lpTokenFor(token, n) != pool) {
             revert InvalidGraduationResult();
         }
 
@@ -209,7 +209,7 @@ contract PumpGraduationController is ReentrancyGuard {
             revert InvalidGraduationResult();
         }
 
-        emit ReadyMarketGraduated(msg.sender, token, pool, preview.tokenAmount, preview.nusdAmount, result.lpAmount);
+        emit ReadyMarketGraduated(msg.sender, token, pool, preview.tokenAmount, preview.nAmount, result.lpAmount);
     }
 
     /// @notice Completes the Pump's two-step admin transfer once this controller is pending.

@@ -7,9 +7,9 @@ interface IGraduationRouter {
     function executeGraduation(
         address adapter,
         address token,
-        address nusd,
+        address n,
         uint256 tokenAmount,
-        uint256 nusdAmount,
+        uint256 nAmount,
         uint256 minimumLp,
         uint256 deadline
     ) external returns (IGraduationAdapter.GraduationResult memory result);

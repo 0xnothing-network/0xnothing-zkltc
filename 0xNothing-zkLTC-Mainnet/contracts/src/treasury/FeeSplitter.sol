@@ -6,10 +6,10 @@ import {ReentrancyGuard} from "../common/ReentrancyGuard.sol";
 import {IERC20Minimal, SafeTransferLib} from "../common/SafeTransferLib.sol";
 import {TwoStepAdmin} from "../common/TwoStepAdmin.sol";
 
-interface IFeeNusd is IERC20Minimal {
-    function burn(uint256 amountNusd) external;
+interface IFeeN is IERC20Minimal {
+    function burn(uint256 amountN) external;
     function coverReserve() external payable;
-    function releaseSurplus() external returns (uint256 amountNusd);
+    function releaseSurplus() external returns (uint256 amountN);
 }
 
 interface IFeeWrappedNative is IERC20Minimal {
@@ -20,8 +20,8 @@ interface IFeeWrappedNative is IERC20Minimal {
 /// @notice The one address every protocol fee is paid to, forever. What happens behind it is a
 ///         policy the admin (the owner wallet) can change, within bounds, without redeploying any
 ///         fee source:
-///         - NUSD: stakers / burn (raises NUSD backing) / treasury, default 70 / 20 / 10.
-///         - zkLTC (wrapped or native): NUSD reserve / treasury, default 90 / 10.
+///         - N: stakers / burn (raises N backing) / treasury, default 70 / 20 / 10.
+///         - zkLTC (wrapped or native): N reserve / treasury, default 90 / 10.
 ///         `harvest()` pulls the accrued fees out of every registered source first. Anyone may call
 ///         it; the staking contract does on every stake and claim.
 contract FeeSplitter is TwoStepAdmin, ReentrancyGuard {
@@ -42,7 +42,7 @@ contract FeeSplitter is TwoStepAdmin, ReentrancyGuard {
         bytes data;
     }
 
-    IFeeNusd public immutable nusd;
+    IFeeN public immutable n;
     IFeeWrappedNative public immutable wrappedNative;
 
     address public staking;
@@ -57,22 +57,22 @@ contract FeeSplitter is TwoStepAdmin, ReentrancyGuard {
     bool private _harvesting;
 
     event Distributed(
-        uint256 toStakersNusd, uint256 burnedNusd, uint256 toTreasuryNusd, uint256 toReserveWei, uint256 toTreasuryWei
+        uint256 toStakersN, uint256 burnedN, uint256 toTreasuryN, uint256 toReserveWei, uint256 toTreasuryWei
     );
     event Harvested(address indexed caller, uint256 sourcesSucceeded);
-    event FeeReceived(address indexed from, uint256 amountNusd);
+    event FeeReceived(address indexed from, uint256 amountN);
     event RecipientsUpdated(address indexed staking, address indexed treasury);
-    event NusdSplitUpdated(uint256 stakerBps, uint256 burnBps, uint256 treasuryBps);
+    event NSplitUpdated(uint256 stakerBps, uint256 burnBps, uint256 treasuryBps);
     event NativeSplitUpdated(uint256 reserveBps, uint256 treasuryBps);
     event SourcesUpdated(uint256 count);
 
-    constructor(address nusdAddress, address wrappedNativeAddress, address treasuryAddress, address initialAdmin)
+    constructor(address nAddress, address wrappedNativeAddress, address treasuryAddress, address initialAdmin)
         TwoStepAdmin(initialAdmin)
     {
-        if (nusdAddress.code.length == 0 || wrappedNativeAddress.code.length == 0 || treasuryAddress == address(0)) {
+        if (nAddress.code.length == 0 || wrappedNativeAddress.code.length == 0 || treasuryAddress == address(0)) {
             revert InvalidConfiguration();
         }
-        nusd = IFeeNusd(nusdAddress);
+        n = IFeeN(nAddress);
         wrappedNative = IFeeWrappedNative(wrappedNativeAddress);
         treasury = treasuryAddress;
     }
@@ -82,7 +82,7 @@ contract FeeSplitter is TwoStepAdmin, ReentrancyGuard {
 
     // ---------------------------------------------------------------- flows
 
-    /// @notice Pulls the accrued fees out of every registered source, releases any NUSD surplus,
+    /// @notice Pulls the accrued fees out of every registered source, releases any N surplus,
     ///         then splits what this contract holds. Sources that fail are skipped.
     function harvest() external returns (uint256 sourcesSucceeded) {
         // A source calls back into `distribute`; a source calling `harvest` again is a no-op.
@@ -103,25 +103,25 @@ contract FeeSplitter is TwoStepAdmin, ReentrancyGuard {
             if (ok) ++sourcesSucceeded;
         }
         // Mints straight to the staking pool and the treasury when the reserve allows it.
-        try nusd.releaseSurplus{gas: SOURCE_GAS}() {} catch {}
+        try n.releaseSurplus{gas: SOURCE_GAS}() {} catch {}
         _harvesting = false;
         _distribute();
         emit Harvested(msg.sender, sourcesSucceeded);
     }
 
-    /// @notice Splits the NUSD and zkLTC this contract holds. Never reverts for an empty balance:
+    /// @notice Splits the N and zkLTC this contract holds. Never reverts for an empty balance:
     ///         fee sources call it right after paying in.
-    function distribute() external nonReentrant returns (uint256 amountNusd) {
-        amountNusd = _distribute();
+    function distribute() external nonReentrant returns (uint256 amountN) {
+        amountN = _distribute();
     }
 
-    /// @notice Synth vault mint fees: pulled from the vault, then split like any other NUSD fee.
-    function routeMintFee(uint256 amountNusd) external nonReentrant returns (uint256 amountFlushedNusd) {
-        if (amountNusd != 0) {
-            SafeTransferLib.safeTransferFrom(address(nusd), msg.sender, address(this), amountNusd);
-            emit FeeReceived(msg.sender, amountNusd);
+    /// @notice Synth vault mint fees: pulled from the vault, then split like any other N fee.
+    function routeMintFee(uint256 amountN) external nonReentrant returns (uint256 amountFlushedN) {
+        if (amountN != 0) {
+            SafeTransferLib.safeTransferFrom(address(n), msg.sender, address(this), amountN);
+            emit FeeReceived(msg.sender, amountN);
         }
-        amountFlushedNusd = _distribute();
+        amountFlushedN = _distribute();
     }
 
     /// @dev Synth vaults bind to a fee distributor through this pair of lookups.
@@ -144,12 +144,12 @@ contract FeeSplitter is TwoStepAdmin, ReentrancyGuard {
         emit RecipientsUpdated(newStaking, newTreasury);
     }
 
-    function setNusdSplit(uint256 newStakerBps, uint256 newBurnBps, uint256 newTreasuryBps) external onlyAdmin {
+    function setNSplit(uint256 newStakerBps, uint256 newBurnBps, uint256 newTreasuryBps) external onlyAdmin {
         if (newStakerBps + newBurnBps + newTreasuryBps != BPS || newTreasuryBps > MAX_TREASURY_BPS) revert InvalidSplit();
         stakerBps = newStakerBps;
         burnBps = newBurnBps;
         treasuryBps = newTreasuryBps;
-        emit NusdSplitUpdated(newStakerBps, newBurnBps, newTreasuryBps);
+        emit NSplitUpdated(newStakerBps, newBurnBps, newTreasuryBps);
     }
 
     function setNativeSplit(uint256 newReserveBps, uint256 newTreasuryBps) external onlyAdmin {
@@ -167,7 +167,7 @@ contract FeeSplitter is TwoStepAdmin, ReentrancyGuard {
         for (uint256 index; index < newSources.length; ++index) {
             address target = newSources[index].target;
             if (
-                target.code.length == 0 || target == address(nusd) || target == address(wrappedNative)
+                target.code.length == 0 || target == address(n) || target == address(wrappedNative)
                     || target == staking || target == treasury || target == address(this)
                     || newSources[index].data.length < 4
             ) revert InvalidSource();
@@ -189,20 +189,20 @@ contract FeeSplitter is TwoStepAdmin, ReentrancyGuard {
 
     // ---------------------------------------------------------------- internals
 
-    /// @return amountNusd NUSD sent to stakers and treasury or burned.
-    function _distribute() private returns (uint256 amountNusd) {
+    /// @return amountN N sent to stakers and treasury or burned.
+    function _distribute() private returns (uint256 amountN) {
         uint256 toStakers;
         uint256 toBurn;
         uint256 toTreasury;
-        uint256 balance = nusd.balanceOf(address(this));
+        uint256 balance = n.balanceOf(address(this));
         // Until the staking pool is bound there is nowhere to send the staker share; it waits here.
         if (balance != 0 && staking != address(0)) {
             toStakers = MathX.mulDiv(balance, stakerBps, BPS);
             toTreasury = MathX.mulDiv(balance, treasuryBps, BPS);
             toBurn = balance - toStakers - toTreasury;
-            if (toStakers != 0) SafeTransferLib.safeTransfer(address(nusd), staking, toStakers);
-            if (toTreasury != 0) SafeTransferLib.safeTransfer(address(nusd), treasury, toTreasury);
-            if (toBurn != 0) nusd.burn(toBurn);
+            if (toStakers != 0) SafeTransferLib.safeTransfer(address(n), staking, toStakers);
+            if (toTreasury != 0) SafeTransferLib.safeTransfer(address(n), treasury, toTreasury);
+            if (toBurn != 0) n.burn(toBurn);
         }
 
         uint256 wrapped = wrappedNative.balanceOf(address(this));
@@ -213,12 +213,12 @@ contract FeeSplitter is TwoStepAdmin, ReentrancyGuard {
         if (native != 0) {
             toTreasuryWei = MathX.mulDiv(native, nativeTreasuryBps, BPS);
             toReserve = native - toTreasuryWei;
-            if (toReserve != 0) nusd.coverReserve{value: toReserve}();
+            if (toReserve != 0) n.coverReserve{value: toReserve}();
             if (toTreasuryWei != 0) SafeTransferLib.safeTransferNative(treasury, toTreasuryWei);
         }
 
-        amountNusd = toStakers + toBurn + toTreasury;
-        if (amountNusd != 0 || native != 0) {
+        amountN = toStakers + toBurn + toTreasury;
+        if (amountN != 0 || native != 0) {
             emit Distributed(toStakers, toBurn, toTreasury, toReserve, toTreasuryWei);
         }
     }

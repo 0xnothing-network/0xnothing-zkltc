@@ -5,7 +5,7 @@ import { SynthSafetyReserve } from "../../src/synth/SynthSafetyReserve.sol";
 import { SyntheticAsset } from "../../src/synth/SyntheticAsset.sol";
 import { SyntheticVault } from "../../src/synth/SyntheticVault.sol";
 import { TestBase } from "../helpers/TestBase.sol";
-import { MockMintFeeDistributor, MockNUSD, MockPriceOracle } from "../mocks/RiskMocks.sol";
+import { MockMintFeeDistributor, MockN, MockPriceOracle } from "../mocks/RiskMocks.sol";
 import { MockFeeOnTransferToken } from "../mocks/TokenMocks.sol";
 
 contract SyntheticVaultTest is TestBase {
@@ -14,7 +14,7 @@ contract SyntheticVaultTest is TestBase {
     address private constant LIQUIDATOR = address(0xB0B0);
     address private constant GUARDIAN = address(0xBEEF);
 
-    MockNUSD private nusd;
+    MockN private n;
     MockPriceOracle private btcOracle;
     MockPriceOracle private ethOracle;
     SyntheticAsset private nbtc;
@@ -26,15 +26,15 @@ contract SyntheticVaultTest is TestBase {
 
     function setUp() public {
         vm.warp(1_000_000);
-        nusd = new MockNUSD();
+        n = new MockN();
         btcOracle = new MockPriceOracle(100_000 ether);
         ethOracle = new MockPriceOracle(2000 ether);
-        reserve = new SynthSafetyReserve(address(nusd), address(this));
-        feeDistributor = new MockMintFeeDistributor(address(nusd));
+        reserve = new SynthSafetyReserve(address(n), address(this));
+        feeDistributor = new MockMintFeeDistributor(address(n));
         nbtc = new SyntheticAsset("0xFi Synthetic Bitcoin", "nBTC", address(this));
         neth = new SyntheticAsset("0xFi Synthetic Ether", "nETH", address(this));
         vault = new SyntheticVault(
-            address(nusd),
+            address(n),
             address(nbtc),
             address(btcOracle),
             address(reserve),
@@ -44,7 +44,7 @@ contract SyntheticVaultTest is TestBase {
             true
         );
         secondVault = new SyntheticVault(
-            address(nusd),
+            address(n),
             address(neth),
             address(ethOracle),
             address(reserve),
@@ -57,16 +57,16 @@ contract SyntheticVaultTest is TestBase {
         nbtc.bindVault(address(vault));
         neth.bindVault(address(secondVault));
 
-        nusd.mint(address(this), 500_000 ether);
-        nusd.approve(address(reserve), type(uint256).max);
-        nusd.mint(ALICE, 1_000_000 ether);
-        nusd.mint(BOB, 1_000_000 ether);
+        n.mint(address(this), 500_000 ether);
+        n.approve(address(reserve), type(uint256).max);
+        n.mint(ALICE, 1_000_000 ether);
+        n.mint(BOB, 1_000_000 ether);
         vm.prank(ALICE);
-        nusd.approve(address(vault), type(uint256).max);
+        n.approve(address(vault), type(uint256).max);
         vm.prank(ALICE);
         nbtc.approve(address(vault), type(uint256).max);
         vm.prank(BOB);
-        nusd.approve(address(vault), type(uint256).max);
+        n.approve(address(vault), type(uint256).max);
         vm.prank(BOB);
         nbtc.approve(address(vault), type(uint256).max);
         vm.prank(LIQUIDATOR);
@@ -74,12 +74,12 @@ contract SyntheticVaultTest is TestBase {
     }
 
     function testStagedVaultBlocksRiskUntilEveryPermanentBindingIsReady() public {
-        SynthSafetyReserve stagedReserve = new SynthSafetyReserve(address(nusd), address(this));
-        MockMintFeeDistributor stagedFeeDistributor = new MockMintFeeDistributor(address(nusd));
+        SynthSafetyReserve stagedReserve = new SynthSafetyReserve(address(n), address(this));
+        MockMintFeeDistributor stagedFeeDistributor = new MockMintFeeDistributor(address(n));
         SyntheticAsset stagedNbtc = new SyntheticAsset("Staged Bitcoin", "snBTC", address(this));
         SyntheticAsset stagedNeth = new SyntheticAsset("Staged Ether", "snETH", address(this));
         SyntheticVault stagedVault = new SyntheticVault(
-            address(nusd),
+            address(n),
             address(stagedNbtc),
             address(btcOracle),
             address(stagedReserve),
@@ -89,7 +89,7 @@ contract SyntheticVaultTest is TestBase {
             false
         );
         SyntheticVault stagedSecondVault = new SyntheticVault(
-            address(nusd),
+            address(n),
             address(stagedNeth),
             address(ethOracle),
             address(stagedReserve),
@@ -142,7 +142,7 @@ contract SyntheticVaultTest is TestBase {
         stagedVault.activateRiskOperations();
 
         vm.startPrank(ALICE);
-        nusd.approve(address(stagedVault), type(uint256).max);
+        n.approve(address(stagedVault), type(uint256).max);
         stagedVault.depositAndMint(150_000 ether, 1 ether, type(uint256).max, ALICE);
         vm.stopPrank();
         assertEq(stagedNbtc.balanceOf(ALICE), 1 ether, "activated vault can mint");
@@ -184,13 +184,13 @@ contract SyntheticVaultTest is TestBase {
         assertEq(userCollateral, 100_000 ether, "user owns 100 percent");
         assertEq(reserveCollateral, 50_000 ether, "reserve owns 50 percent");
         assertEq(debt, 1 ether, "debt");
-        assertEq(vault.totalUserCollateralNusd(), 100_000 ether, "user total");
-        assertEq(vault.totalReserveCollateralNusd(), 50_000 ether, "reserve total");
-        assertEq(vault.totalCollateralNusd(), 150_000 ether, "combined total");
-        assertEq(nusd.balanceOf(address(vault)), 150_000 ether, "vault balance identity");
-        assertEq(reserve.totalReserveNusd(), 100_000 ether, "reserve managed total conserved");
-        assertEq(reserve.freeReserveNusd(), 50_000 ether, "free reserve");
-        assertEq(reserve.totalAllocatedNusd(), 50_000 ether, "allocated reserve");
+        assertEq(vault.totalUserCollateralN(), 100_000 ether, "user total");
+        assertEq(vault.totalReserveCollateralN(), 50_000 ether, "reserve total");
+        assertEq(vault.totalCollateralN(), 150_000 ether, "combined total");
+        assertEq(n.balanceOf(address(vault)), 150_000 ether, "vault balance identity");
+        assertEq(reserve.totalReserveN(), 100_000 ether, "reserve managed total conserved");
+        assertEq(reserve.freeReserveN(), 50_000 ether, "free reserve");
+        assertEq(reserve.totalAllocatedN(), 50_000 ether, "allocated reserve");
     }
 
     function testWithdrawCanAtomicallyAllocateReserveToUnlockUserExcess() public {
@@ -206,7 +206,7 @@ contract SyntheticVaultTest is TestBase {
         assertEq(userCollateral, 100_000 ether, "only user collateral withdrawn");
         assertEq(reserveCollateral, 50_000 ether, "reserve allocated atomically");
         assertEq(debt, 1 ether, "debt unchanged");
-        assertEq(nusd.balanceOf(ALICE), 899_900 ether, "mint fee is paid outside collateral");
+        assertEq(n.balanceOf(ALICE), 899_900 ether, "mint fee is paid outside collateral");
     }
 
     function testPriceDropCannotShiftUserTrancheIntoReserve() public {
@@ -220,7 +220,7 @@ contract SyntheticVaultTest is TestBase {
         vm.prank(ALICE);
         vault.withdrawCollateral(75_000 ether, ALICE);
 
-        nusd.setReserveValueNusd(0);
+        n.setReserveValueN(0);
         reserve.syncSponsorshipMode();
         assertFalse(reserve.sponsorshipActive(), "sponsorship disabled");
         assertEq(vault.maxUserCollateralWithdrawable(ALICE), 50_000 ether, "inactive mode keeps the same tranche floor");
@@ -246,11 +246,11 @@ contract SyntheticVaultTest is TestBase {
         vault.withdrawCollateral(finalUserCollateral, ALICE);
 
         assertEq(
-            nusd.balanceOf(ALICE) + nusd.balanceOf(LIQUIDATOR),
+            n.balanceOf(ALICE) + n.balanceOf(LIQUIDATOR),
             999_900 ether,
             "price-drop withdrawal and rebound liquidation cannot extract reserve"
         );
-        assertEq(reserve.totalReserveNusd(), 100_000 ether, "reserve remains whole");
+        assertEq(reserve.totalReserveN(), 100_000 ether, "reserve remains whole");
     }
 
     function testInsufficientFreeReserveFallsBackTo150Percent() public {
@@ -294,13 +294,13 @@ contract SyntheticVaultTest is TestBase {
         vm.prank(ALICE);
         vault.depositAndMint(100_000 ether, 1 ether, type(uint256).max, ALICE);
 
-        nusd.setReserveValueNusd(0);
+        n.setReserveValueN(0);
         assertFalse(reserve.sponsorshipActive(), "underbacking fails closed");
         assertFalse(vault.isLiquidatable(ALICE), "no retroactive margin call");
         assertEq(vault.maxUserCollateralWithdrawable(ALICE), 0, "combined backing already exactly 150 percent");
         reserve.syncSponsorshipMode();
 
-        nusd.setReserveValueNusd(type(uint256).max);
+        n.setReserveValueN(type(uint256).max);
         reserve.syncSponsorshipMode();
         assertFalse(reserve.sponsorshipActive(), "fresh activation delay required");
 
@@ -323,7 +323,7 @@ contract SyntheticVaultTest is TestBase {
         (, uint256 reserveAfterPartial, uint256 debtAfterPartial) = vault.positions(ALICE);
         assertEq(reserveAfterPartial, 0, "user collateral alone covers remaining debt");
         assertEq(debtAfterPartial, 0.5 ether, "partial debt");
-        assertEq(reserve.totalAllocatedNusd(), 0, "excess returned automatically");
+        assertEq(reserve.totalAllocatedN(), 0, "excess returned automatically");
 
         vm.prank(ALICE);
         vault.mint(0.5 ether, type(uint256).max, ALICE);
@@ -337,7 +337,7 @@ contract SyntheticVaultTest is TestBase {
         (, uint256 reserveAfterFull, uint256 debtAfterFull) = vault.positions(ALICE);
         assertEq(reserveAfterFull, 0, "full repay releases without synth oracle");
         assertEq(debtAfterFull, 0, "fully repaid");
-        assertEq(reserve.totalAllocatedNusd(), 0, "release stays open while paused");
+        assertEq(reserve.totalAllocatedN(), 0, "release stays open while paused");
     }
 
     function testPartialRepayStillSucceedsWhenOracleReverts() public {
@@ -370,20 +370,20 @@ contract SyntheticVaultTest is TestBase {
         assertEq(userAfter, 31_750 ether, "user collateral absorbs liquidation first");
         assertEq(reserveAfter, 50_000 ether, "reserve remains until user collateral is exhausted");
         assertEq(debtAfter, 0.5 ether, "remaining debt");
-        assertEq(reserve.totalAllocatedNusd(), 50_000 ether, "reserve allocation remains assigned");
-        assertEq(reserve.totalReserveNusd(), 100_000 ether, "managed reserve is not extractable");
+        assertEq(reserve.totalAllocatedN(), 50_000 ether, "reserve allocation remains assigned");
+        assertEq(reserve.totalReserveN(), 100_000 ether, "managed reserve is not extractable");
 
         vm.prank(ALICE);
         vault.repay(type(uint256).max, ALICE);
         vm.prank(ALICE);
         vault.withdrawCollateral(31_750 ether, ALICE);
         assertEq(
-            nusd.balanceOf(ALICE) + nusd.balanceOf(LIQUIDATOR),
+            n.balanceOf(ALICE) + n.balanceOf(LIQUIDATOR),
             999_900 ether,
             "self-liquidation cannot profit from protocol reserve"
         );
-        assertEq(reserve.totalReserveNusd(), 100_000 ether, "full reserve returns after repay");
-        assertEq(reserve.totalAllocatedNusd(), 0, "allocation released after repay");
+        assertEq(reserve.totalReserveN(), 100_000 ether, "full reserve returns after repay");
+        assertEq(reserve.totalAllocatedN(), 0, "allocation released after repay");
     }
 
     function testExtremeGapRecognizesBadDebtAndReserveLoss() public {
@@ -428,71 +428,71 @@ contract SyntheticVaultTest is TestBase {
         btcOracle.setReadReverts(true);
         vm.prank(ALICE);
         vault.withdrawCollateral(150_000 ether, ALICE);
-        assertEq(nusd.balanceOf(ALICE), 999_900 ether, "debt-free exit preserves the paid mint fee");
+        assertEq(n.balanceOf(ALICE), 999_900 ether, "debt-free exit preserves the paid mint fee");
         assertTrue(vault.withdrawPaused(), "the pause was never lifted");
     }
 
     function testMintFeeIsExtraAndNeverBecomesCollateralOrReserve() public {
-        uint256 aliceBefore = nusd.balanceOf(ALICE);
-        uint256 feeNusd = vault.quoteMintFee(1 ether);
-        assertEq(feeNusd, 100 ether, "0.1 percent oracle notional fee");
+        uint256 aliceBefore = n.balanceOf(ALICE);
+        uint256 feeN = vault.quoteMintFee(1 ether);
+        assertEq(feeN, 100 ether, "0.1 percent oracle notional fee");
         assertEq(vault.quoteMintFee(1), 100, "small mints retain nonzero precision");
 
         vm.prank(ALICE);
-        vault.depositAndMint(150_000 ether, 1 ether, feeNusd, ALICE);
+        vault.depositAndMint(150_000 ether, 1 ether, feeN, ALICE);
 
         (uint256 userCollateral, uint256 reserveCollateral, uint256 debt) = vault.positions(ALICE);
-        assertEq(aliceBefore - nusd.balanceOf(ALICE), 150_000 ether + feeNusd, "fee is charged in addition");
+        assertEq(aliceBefore - n.balanceOf(ALICE), 150_000 ether + feeN, "fee is charged in addition");
         assertEq(userCollateral, 150_000 ether, "fee is not user collateral");
         assertEq(reserveCollateral, 0, "fee is not reserve collateral");
         assertEq(debt, 1 ether, "mint debt");
-        assertEq(nusd.balanceOf(address(vault)), 150_000 ether, "vault only retains collateral");
-        assertEq(vault.totalCollateralNusd(), 150_000 ether, "collateral accounting excludes fee");
-        assertEq(nusd.balanceOf(address(feeDistributor)), feeNusd, "distributor receives exact fee");
-        assertEq(feeDistributor.totalRoutedNusd(), feeNusd, "routed fee accounting");
-        assertEq(reserve.totalReserveNusd(), 0, "reserve is untouched");
-        assertEq(nusd.allowance(address(vault), address(feeDistributor)), 0, "transient allowance is reset");
+        assertEq(n.balanceOf(address(vault)), 150_000 ether, "vault only retains collateral");
+        assertEq(vault.totalCollateralN(), 150_000 ether, "collateral accounting excludes fee");
+        assertEq(n.balanceOf(address(feeDistributor)), feeN, "distributor receives exact fee");
+        assertEq(feeDistributor.totalRoutedN(), feeN, "routed fee accounting");
+        assertEq(reserve.totalReserveN(), 0, "reserve is untouched");
+        assertEq(n.allowance(address(vault), address(feeDistributor)), 0, "transient allowance is reset");
     }
 
     function testMintFeeMaximumAndDistributorFailureAreAtomic() public {
-        uint256 aliceBefore = nusd.balanceOf(ALICE);
-        uint256 feeNusd = vault.quoteMintFee(1 ether);
+        uint256 aliceBefore = n.balanceOf(ALICE);
+        uint256 feeN = vault.quoteMintFee(1 ether);
 
-        vm.expectRevert(abi.encodeWithSelector(SyntheticVault.MintFeeExceeded.selector, feeNusd, feeNusd - 1));
+        vm.expectRevert(abi.encodeWithSelector(SyntheticVault.MintFeeExceeded.selector, feeN, feeN - 1));
         vm.prank(ALICE);
-        vault.depositAndMint(150_000 ether, 1 ether, feeNusd - 1, ALICE);
+        vault.depositAndMint(150_000 ether, 1 ether, feeN - 1, ALICE);
 
-        assertEq(nusd.balanceOf(ALICE), aliceBefore, "slippage reverts the collateral pull");
-        assertEq(nusd.balanceOf(address(vault)), 0, "no collateral retained after slippage");
+        assertEq(n.balanceOf(ALICE), aliceBefore, "slippage reverts the collateral pull");
+        assertEq(n.balanceOf(address(vault)), 0, "no collateral retained after slippage");
         assertEq(vault.totalDebtSynthetic(), 0, "no debt after slippage");
         assertEq(nbtc.totalSupply(), 0, "no synthetic after slippage");
 
         feeDistributor.setShouldRevert(true);
         vm.expectRevert();
         vm.prank(ALICE);
-        vault.depositAndMint(150_000 ether, 1 ether, feeNusd, ALICE);
+        vault.depositAndMint(150_000 ether, 1 ether, feeN, ALICE);
 
         (uint256 userCollateral, uint256 reserveCollateral, uint256 debt) = vault.positions(ALICE);
-        assertEq(nusd.balanceOf(ALICE), aliceBefore, "routing failure rolls back every transfer");
+        assertEq(n.balanceOf(ALICE), aliceBefore, "routing failure rolls back every transfer");
         assertEq(userCollateral + reserveCollateral + debt, 0, "routing failure rolls back the position");
-        assertEq(vault.totalCollateralNusd(), 0, "routing failure leaves no accounting residue");
-        assertEq(feeDistributor.totalRoutedNusd(), 0, "routing failure leaves no fee residue");
-        assertEq(nusd.allowance(address(vault), address(feeDistributor)), 0, "failed allowance is rolled back");
+        assertEq(vault.totalCollateralN(), 0, "routing failure leaves no accounting residue");
+        assertEq(feeDistributor.totalRoutedN(), 0, "routing failure leaves no fee residue");
+        assertEq(n.allowance(address(vault), address(feeDistributor)), 0, "failed allowance is rolled back");
     }
 
     function testStandaloneMintFeeDoesNotChangeDepositedCollateral() public {
         vm.prank(ALICE);
         vault.depositCollateral(150_000 ether, ALICE);
-        uint256 vaultBalanceBefore = nusd.balanceOf(address(vault));
-        uint256 feeNusd = vault.quoteMintFee(1 ether);
+        uint256 vaultBalanceBefore = n.balanceOf(address(vault));
+        uint256 feeN = vault.quoteMintFee(1 ether);
 
         vm.prank(ALICE);
-        vault.mint(1 ether, feeNusd, ALICE);
+        vault.mint(1 ether, feeN, ALICE);
 
         (uint256 userCollateral, uint256 reserveCollateral,) = vault.positions(ALICE);
         assertEq(userCollateral, 150_000 ether, "existing user collateral unchanged");
         assertEq(reserveCollateral, 0, "reserve collateral unchanged");
-        assertEq(nusd.balanceOf(address(vault)), vaultBalanceBefore, "fee only transits the vault");
+        assertEq(n.balanceOf(address(vault)), vaultBalanceBefore, "fee only transits the vault");
     }
 
     function testGuardianCanPauseButCannotUnpauseOrChangeRisk() public {
@@ -549,8 +549,8 @@ contract SyntheticVaultTest is TestBase {
         vault.depositAndMint(collateral, amountSynthetic, type(uint256).max, ALICE);
         assertGe(vault.collateralRatioBps(ALICE), 15_000, "fuzz total ratio");
         assertEq(
-            nusd.balanceOf(address(vault)),
-            vault.totalUserCollateralNusd() + vault.totalReserveCollateralNusd(),
+            n.balanceOf(address(vault)),
+            vault.totalUserCollateralN() + vault.totalReserveCollateralN(),
             "fuzz exact ownership accounting"
         );
     }

@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import {TestBase} from "../TestBase.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {RewardStaking} from "../../src/rewards/RewardStaking.sol";
-import {MarketplaceNusdMock} from "../mocks/NusdMarketplaceMocks.sol";
+import {MarketplaceNMock} from "../mocks/NMarketplaceMocks.sol";
 import {MockHarvester, MockMintable} from "../mocks/TokenomicsMocks.sol";
 
 contract RewardStakingTest is TestBase {
@@ -20,22 +20,22 @@ contract RewardStakingTest is TestBase {
     address private constant CAROL = address(0xCA201);
     address private constant STRANGER = address(0xBAD);
 
-    MarketplaceNusdMock private nusd;
+    MarketplaceNMock private n;
     RewardStaking private staking;
 
     function setUp() public {
         vm.warp(1_000_000);
-        nusd = new MarketplaceNusdMock();
-        staking = new RewardStaking(IERC20(address(nusd)));
+        n = new MarketplaceNMock();
+        staking = new RewardStaking(IERC20(address(n)));
         _fund(ALICE);
         _fund(BOB);
         _fund(CAROL);
     }
 
     function _fund(address account) private {
-        nusd.mint(account, 1_000_000 ether);
+        n.mint(account, 1_000_000 ether);
         vm.prank(account);
-        nusd.approve(address(staking), type(uint256).max);
+        n.approve(address(staking), type(uint256).max);
     }
 
     function _stake(address account, uint256 amount, uint32 lock) private returns (uint256 positionId) {
@@ -44,7 +44,7 @@ contract RewardStakingTest is TestBase {
     }
 
     function _income(uint256 amount) private {
-        nusd.mint(address(staking), amount);
+        n.mint(address(staking), amount);
     }
 
     function _skip(uint256 seconds_) private {
@@ -52,7 +52,7 @@ contract RewardStakingTest is TestBase {
     }
 
     function _harvester() private returns (MockHarvester harvester) {
-        harvester = new MockHarvester(MockMintable(address(nusd)));
+        harvester = new MockHarvester(MockMintable(address(n)));
         harvester.setStaking(address(staking));
         staking.bindHarvester(address(harvester));
     }
@@ -90,11 +90,11 @@ contract RewardStakingTest is TestBase {
         assertApproxEq(staking.earned(ALICE), 70 ether, DUST, "nothing after the stream");
         assertEq(staking.rewardRate(), 0, "stream over");
 
-        uint256 before = nusd.balanceOf(ALICE);
+        uint256 before = n.balanceOf(ALICE);
         vm.prank(ALICE);
         uint256 claimed = staking.claim(ALICE);
         assertApproxEq(claimed, 70 ether, DUST, "claimed");
-        assertEq(nusd.balanceOf(ALICE) - before, claimed, "paid");
+        assertEq(n.balanceOf(ALICE) - before, claimed, "paid");
 
         vm.prank(ALICE);
         vm.expectRevert(RewardStaking.NothingToClaim.selector);
@@ -189,10 +189,10 @@ contract RewardStakingTest is TestBase {
         staking.claim(address(0));
         vm.prank(ALICE);
         uint256 claimed = staking.claim(STRANGER);
-        assertEq(nusd.balanceOf(STRANGER), claimed, "sent to recipient");
+        assertEq(n.balanceOf(STRANGER), claimed, "sent to recipient");
     }
 
-    function testClaimAndStakeCompoundsWithoutMovingNusd() public {
+    function testClaimAndStakeCompoundsWithoutMovingN() public {
         _stake(ALICE, 100 ether, D30);
         vm.prank(ALICE);
         vm.expectRevert(RewardStaking.NothingToClaim.selector);
@@ -201,7 +201,7 @@ contract RewardStakingTest is TestBase {
         _income(70 ether);
         staking.sync();
         _skip(7 days);
-        uint256 held = nusd.balanceOf(address(staking));
+        uint256 held = n.balanceOf(address(staking));
         uint256 reward = staking.earned(ALICE);
 
         vm.prank(ALICE);
@@ -209,7 +209,7 @@ contract RewardStakingTest is TestBase {
         RewardStaking.Position memory position = staking.getPosition(positionId);
         assertEq(position.amount, reward, "reward became principal");
         assertEq(position.weight, reward * 3, "x3 lock");
-        assertEq(nusd.balanceOf(address(staking)), held, "no NUSD moved");
+        assertEq(n.balanceOf(address(staking)), held, "no N moved");
         assertEq(staking.totalPrincipal(), 100 ether + reward, "principal");
         assertEq(staking.earned(ALICE), 0, "claimed");
         assertEq(staking.rewardPaid(), reward, "booked as paid");
@@ -233,10 +233,10 @@ contract RewardStakingTest is TestBase {
         _income(7 ether);
         staking.sync();
         vm.warp(unlock);
-        uint256 before = nusd.balanceOf(ALICE);
+        uint256 before = n.balanceOf(ALICE);
         vm.prank(ALICE);
         staking.withdraw(positionId);
-        assertEq(nusd.balanceOf(ALICE) - before, 100 ether, "principal in full");
+        assertEq(n.balanceOf(ALICE) - before, 100 ether, "principal in full");
         assertApproxEq(staking.earned(ALICE), 7 ether, DUST, "earned reward stays claimable");
 
         vm.prank(ALICE);
@@ -246,7 +246,7 @@ contract RewardStakingTest is TestBase {
     }
 
     function testFeeOnTransferStakeIsRejected() public {
-        nusd.setTaxed(true);
+        n.setTaxed(true);
         vm.prank(ALICE);
         vm.expectRevert(RewardStaking.NonExactTransfer.selector);
         staking.stake(100 ether, D30);
@@ -255,7 +255,7 @@ contract RewardStakingTest is TestBase {
     // ---------------------------------------------------------------- harvest
 
     function testHarvesterBindsOnceByTheDeployer() public {
-        MockHarvester harvester = new MockHarvester(MockMintable(address(nusd)));
+        MockHarvester harvester = new MockHarvester(MockMintable(address(n)));
         vm.prank(STRANGER);
         vm.expectRevert(RewardStaking.Unauthorized.selector);
         staking.bindHarvester(address(harvester));
@@ -363,7 +363,7 @@ contract RewardStakingTest is TestBase {
         vm.prank(BOB);
         staking.withdraw(2);
         assertEq(staking.totalPrincipal(), 0, "all principal returned");
-        assertLe(nusd.balanceOf(address(staking)), DUST, "only rounding dust remains");
+        assertLe(n.balanceOf(address(staking)), DUST, "only rounding dust remains");
     }
 
     /// Random stakes, income, claims and time: rewards paid never exceed income, and every
@@ -408,10 +408,10 @@ contract RewardStakingTest is TestBase {
             }
             uint256[] memory ids = staking.positionIdsOf(user);
             for (uint256 position; position < ids.length; ++position) {
-                uint256 before = nusd.balanceOf(user);
+                uint256 before = n.balanceOf(user);
                 vm.prank(user);
                 staking.withdraw(ids[position]);
-                withdrawn += nusd.balanceOf(user) - before;
+                withdrawn += n.balanceOf(user) - before;
             }
         }
 

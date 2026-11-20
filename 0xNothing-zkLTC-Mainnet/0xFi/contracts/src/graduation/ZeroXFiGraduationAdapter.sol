@@ -22,7 +22,7 @@ contract ZeroXFiGraduationAdapter is IGraduationAdapter, ReentrancyGuard {
 
     IZeroXFiFactory public immutable factory;
     address public immutable pumpRouter;
-    address public immutable nusd;
+    address public immutable n;
     address public immutable pump;
 
     event PumpPoolPrepared(address indexed token, address indexed pool, bytes32 indexed pairId);
@@ -30,45 +30,45 @@ contract ZeroXFiGraduationAdapter is IGraduationAdapter, ReentrancyGuard {
         address indexed token,
         address indexed pool,
         uint256 tokenAmount,
-        uint256 nusdAmount,
+        uint256 nAmount,
         uint256 lpAmount,
         address lpRecipient
     );
 
-    constructor(address factory_, address pumpRouter_, address nusd_, address pump_) {
+    constructor(address factory_, address pumpRouter_, address n_, address pump_) {
         if (
-            factory_.code.length == 0 || pumpRouter_.code.length == 0 || nusd_.code.length == 0
+            factory_.code.length == 0 || pumpRouter_.code.length == 0 || n_.code.length == 0
                 || pump_.code.length == 0
         ) {
             revert InvalidConfiguration();
         }
         IZeroXFiFactory configuredFactory = IZeroXFiFactory(factory_);
-        if (configuredFactory.nusd() != nusd_ || configuredFactory.pump() != pump_) revert InvalidConfiguration();
+        if (configuredFactory.n() != n_ || configuredFactory.pump() != pump_) revert InvalidConfiguration();
         if (_readAddress(pumpRouter_, bytes4(keccak256("pump()"))) != pump_) revert InvalidConfiguration();
         if (_readAddress(pump_, bytes4(keccak256("graduationRouter()"))) != pumpRouter_) {
             revert InvalidConfiguration();
         }
-        if (_readAddress(pump_, bytes4(keccak256("NUSD()"))) != nusd_) revert InvalidConfiguration();
+        if (_readAddress(pump_, bytes4(keccak256("N()"))) != n_) revert InvalidConfiguration();
 
         factory = configuredFactory;
         pumpRouter = pumpRouter_;
-        nusd = nusd_;
+        n = n_;
         pump = pump_;
     }
 
     function preparePool(address token) external returns (address pair) {
-        pair = factory.getPair(token, nusd);
+        pair = factory.getPair(token, n);
         if (pair == address(0)) pair = factory.preparePumpPair(token);
         if (
             !factory.isPair(pair) || IZeroXFiPair(pair).bootstrapper() != address(this)
                 || IZeroXFiPair(pair).totalSupply() != 0
         ) revert InvalidPoolState();
-        emit PumpPoolPrepared(token, pair, factory.pairId(token, nusd));
+        emit PumpPoolPrepared(token, pair, factory.pairId(token, n));
     }
 
-    function lpTokenFor(address token, address nusd_) external view returns (address lpToken) {
-        if (nusd_ != nusd || !factory.isPumpToken(token)) return address(0);
-        lpToken = factory.getPair(token, nusd_);
+    function lpTokenFor(address token, address n_) external view returns (address lpToken) {
+        if (n_ != n || !factory.isPumpToken(token)) return address(0);
+        lpToken = factory.getPair(token, n_);
         if (lpToken == address(0) || !factory.isPair(lpToken)) return address(0);
     }
 
@@ -78,11 +78,11 @@ contract ZeroXFiGraduationAdapter is IGraduationAdapter, ReentrancyGuard {
         // forge-lint: disable-next-line(block-timestamp)
         if (block.timestamp > params.deadline) revert DeadlineExpired();
         if (
-            params.token == address(0) || params.nusd != nusd || params.tokenAmount == 0 || params.nusdAmount == 0
+            params.token == address(0) || params.n != n || params.tokenAmount == 0 || params.nAmount == 0
                 || params.minimumLp == 0 || params.lpRecipient != pumpRouter
         ) revert InvalidConfiguration();
 
-        address pair = factory.getPair(params.token, params.nusd);
+        address pair = factory.getPair(params.token, params.n);
         if (
             pair == address(0) || !factory.isPair(pair) || IZeroXFiPair(pair).bootstrapper() != address(this)
                 || IZeroXFiPair(pair).totalSupply() != 0
@@ -91,14 +91,14 @@ contract ZeroXFiGraduationAdapter is IGraduationAdapter, ReentrancyGuard {
         // Direct ERC-20 transfers cannot be rejected. Sweep pre-bootstrap donations
         // to an unreachable sink so they cannot grief or alter the terminal price.
         IZeroXFiPair(pair).sweepBootstrapDonations(DONATION_SINK);
-        _requireEmptyPair(pair, params.token, params.nusd);
+        _requireEmptyPair(pair, params.token, params.n);
 
         uint256 tokenBalanceBefore = IERC20(params.token).balanceOf(address(this));
-        uint256 nusdBalanceBefore = IERC20(params.nusd).balanceOf(address(this));
+        uint256 nBalanceBefore = IERC20(params.n).balanceOf(address(this));
         _safeTransferFromExact(params.token, msg.sender, address(this), params.tokenAmount);
-        _safeTransferFromExact(params.nusd, msg.sender, address(this), params.nusdAmount);
+        _safeTransferFromExact(params.n, msg.sender, address(this), params.nAmount);
         _safeTransferExact(params.token, pair, params.tokenAmount);
-        _safeTransferExact(params.nusd, pair, params.nusdAmount);
+        _safeTransferExact(params.n, pair, params.nAmount);
 
         uint256 lpBalanceBefore = IERC20(pair).balanceOf(params.lpRecipient);
         uint256 lpAmount = IZeroXFiPair(pair).mint(params.lpRecipient);
@@ -106,33 +106,33 @@ contract ZeroXFiGraduationAdapter is IGraduationAdapter, ReentrancyGuard {
         if (IERC20(pair).balanceOf(params.lpRecipient) != lpBalanceBefore + lpAmount) revert AssetTransferMismatch();
         if (
             IERC20(params.token).balanceOf(address(this)) != tokenBalanceBefore
-                || IERC20(params.nusd).balanceOf(address(this)) != nusdBalanceBefore
+                || IERC20(params.n).balanceOf(address(this)) != nBalanceBefore
         ) revert AssetTransferMismatch();
 
-        _requireExactSeededReserves(pair, params.token, params.tokenAmount, params.nusdAmount);
+        _requireExactSeededReserves(pair, params.token, params.tokenAmount, params.nAmount);
 
-        bytes32 id = factory.pairId(params.token, params.nusd);
+        bytes32 id = factory.pairId(params.token, params.n);
         result = GraduationResult({ dex: address(factory), pairId: id, pool: pair, lpToken: pair, lpAmount: lpAmount });
         emit PumpLiquidityBootstrapped(
-            params.token, pair, params.tokenAmount, params.nusdAmount, lpAmount, params.lpRecipient
+            params.token, pair, params.tokenAmount, params.nAmount, lpAmount, params.lpRecipient
         );
     }
 
-    function _requireEmptyPair(address pair, address token, address nusd_) private view {
+    function _requireEmptyPair(address pair, address token, address n_) private view {
         (uint112 reserve0, uint112 reserve1,) = IZeroXFiPair(pair).getReserves();
         if (
             reserve0 != 0 || reserve1 != 0 || IZeroXFiPair(pair).totalSupply() != 0
-                || IERC20(token).balanceOf(pair) != 0 || IERC20(nusd_).balanceOf(pair) != 0
+                || IERC20(token).balanceOf(pair) != 0 || IERC20(n_).balanceOf(pair) != 0
         ) revert InvalidPoolState();
     }
 
-    function _requireExactSeededReserves(address pair, address token, uint256 tokenAmount, uint256 nusdAmount)
+    function _requireExactSeededReserves(address pair, address token, uint256 tokenAmount, uint256 nAmount)
         private
         view
     {
         (uint112 reserve0, uint112 reserve1,) = IZeroXFiPair(pair).getReserves();
-        uint256 expected0 = IZeroXFiPair(pair).token0() == token ? tokenAmount : nusdAmount;
-        uint256 expected1 = IZeroXFiPair(pair).token0() == token ? nusdAmount : tokenAmount;
+        uint256 expected0 = IZeroXFiPair(pair).token0() == token ? tokenAmount : nAmount;
+        uint256 expected1 = IZeroXFiPair(pair).token0() == token ? nAmount : tokenAmount;
         if (
             reserve0 != expected0 || reserve1 != expected1
                 || IERC20(IZeroXFiPair(pair).token0()).balanceOf(pair) != expected0

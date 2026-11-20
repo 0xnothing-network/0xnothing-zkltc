@@ -12,12 +12,12 @@ interface AuditVm {
     function revertToState(uint256 snapshotId) external returns (bool success);
 }
 
-/// @dev NUSD stand-in whose `reserveValueNusd()` can revert, the way the real NUSD does when the
+/// @dev N stand-in whose `reserveValueN()` can revert, the way the real N does when the
 ///      LTC oracle it reads is stale or out of bounds.
-contract AuditOracleGatedNUSD is ERC20 {
+contract AuditOracleGatedN is ERC20 {
     bool public reserveReadReverts;
 
-    constructor() ERC20("Nothing USD", "NUSD") { }
+    constructor() ERC20("N", "N") { }
 
     function mint(address recipient, uint256 amount) external {
         _mint(recipient, amount);
@@ -28,7 +28,7 @@ contract AuditOracleGatedNUSD is ERC20 {
     }
 
     /// @dev Fully backed whenever the oracle read works.
-    function reserveValueNusd() external view returns (uint256) {
+    function reserveValueN() external view returns (uint256) {
         require(!reserveReadReverts, "STALE_LTC_PRICE");
         return type(uint256).max;
     }

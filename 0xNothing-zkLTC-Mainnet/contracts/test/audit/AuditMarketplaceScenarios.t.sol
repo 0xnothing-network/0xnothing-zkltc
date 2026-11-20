@@ -2,10 +2,10 @@
 pragma solidity ^0.8.24;
 
 import {TestBase} from "../TestBase.sol";
-import {NusdNftMarketplaceV2} from "../../src/0xpixel/NusdNftMarketplaceV2.sol";
+import {NNftMarketplaceV2} from "../../src/0xpixel/NNftMarketplaceV2.sol";
 import {ZeroXPixelV2} from "../../src/0xpixel/ZeroXPixelV2.sol";
 import {IListingEpoch} from "../../src/0xpixel/ListingEpochERC721.sol";
-import {MarketplaceBurnableNusdMock} from "../mocks/NusdMarketplaceMocks.sol";
+import {MarketplaceBurnableNMock} from "../mocks/NMarketplaceMocks.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
@@ -23,9 +23,9 @@ contract AuditMarketplaceScenariosTest is TestBase {
     address private constant STRANGER = address(0x57A6E7);
     uint256 private constant PRICE = 100 ether;
 
-    MarketplaceBurnableNusdMock private nusd;
+    MarketplaceBurnableNMock private n;
     ZeroXPixelV2 private pixel;
-    NusdNftMarketplaceV2 private market;
+    NNftMarketplaceV2 private market;
     uint256 private mintNonce;
 
     error ProbeResult(bool bought);
@@ -34,11 +34,11 @@ contract AuditMarketplaceScenariosTest is TestBase {
 
     function setUp() public {
         vm.warp(1_000_000);
-        nusd = new MarketplaceBurnableNusdMock();
+        n = new MarketplaceBurnableNMock();
         pixel = new ZeroXPixelV2();
         address[] memory collections = new address[](1);
         collections[0] = address(pixel);
-        market = new NusdNftMarketplaceV2(address(nusd), address(this), collections);
+        market = new NNftMarketplaceV2(address(n), address(this), collections);
         _fund(MALLORY);
         _fund(BOB);
         _fund(ALICE);
@@ -47,15 +47,15 @@ contract AuditMarketplaceScenariosTest is TestBase {
     // ------------------------------------------------------------------ helpers
 
     function _fund(address account) private {
-        nusd.mint(account, 1_000_000 ether);
+        n.mint(account, 1_000_000 ether);
         vm.prank(account);
-        nusd.approve(address(market), type(uint256).max);
+        n.approve(address(market), type(uint256).max);
     }
 
     function _mint(address owner) private returns (uint256 id) {
-        uint256 n = mintNonce++;
+        uint256 nonce = mintNonce++;
         // One 1-pixel run at a position and colour no other mint used.
-        bytes memory pixels = abi.encodePacked(uint8(n % 8), uint8((n / 8) % 8), uint8(0), bytes3(uint24(n + 1)));
+        bytes memory pixels = abi.encodePacked(uint8(nonce % 8), uint8((nonce / 8) % 8), uint8(0), bytes3(uint24(nonce + 1)));
         vm.prank(owner);
         id = pixel.mintPacked("art", "", 8, pixels);
     }
@@ -127,7 +127,7 @@ contract AuditMarketplaceScenariosTest is TestBase {
         assertFalse(_canBuy(listingId), why);
         if (_active(listingId)) {
             vm.prank(seller);
-            vm.expectRevert(NusdNftMarketplaceV2.NotPurchasable.selector);
+            vm.expectRevert(NNftMarketplaceV2.NotPurchasable.selector);
             market.updateListingPrice(listingId, PRICE);
         }
         if (pixel.ownerOf(id) == seller) {
@@ -250,7 +250,7 @@ contract AuditMarketplaceScenariosTest is TestBase {
 
         assertFalse(_canBuy(listingId), "the old listing is gone");
         vm.prank(MALLORY);
-        vm.expectRevert(NusdNftMarketplaceV2.Inactive.selector);
+        vm.expectRevert(NNftMarketplaceV2.Inactive.selector);
         market.buy(listingId, PRICE, PRICE);
         assertFalse(_canBuy(bobListing), "the listing Bob made was consumed");
         assertEq(market.tokenToListingId(address(pixel), id), 0, "nothing is listed until she lists");
@@ -330,10 +330,10 @@ contract AuditMarketplaceScenariosTest is TestBase {
             vm.expectRevert();
             pixel.safeTransferFrom(ALICE, ALICE, id);
             vm.prank(outsider);
-            vm.expectRevert(NusdNftMarketplaceV2.NotPurchasable.selector);
+            vm.expectRevert(NNftMarketplaceV2.NotPurchasable.selector);
             market.invalidateListing(listingId);
             vm.prank(outsider);
-            vm.expectRevert(NusdNftMarketplaceV2.Unauthorized.selector);
+            vm.expectRevert(NNftMarketplaceV2.Unauthorized.selector);
             market.cancelListing(listingId);
         }
 

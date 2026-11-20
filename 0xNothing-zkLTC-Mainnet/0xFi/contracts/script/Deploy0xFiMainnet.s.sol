@@ -7,7 +7,7 @@ import { EmergencyGuardian } from "../src/access/EmergencyGuardian.sol";
 import { GaugeFactory } from "../src/farming/GaugeFactory.sol";
 import { ZeroXFiGraduationAdapter } from "../src/graduation/ZeroXFiGraduationAdapter.sol";
 import { PumpGraduationController } from "../src/graduation/PumpGraduationController.sol";
-import { PooledNUSDLendingPoolV2 } from "../src/lending/PooledNUSDLendingPoolV2.sol";
+import { PooledNLendingPoolV2 } from "../src/lending/PooledNLendingPoolV2.sol";
 import { CommunityLiquidityLocker } from "../src/locking/CommunityLiquidityLocker.sol";
 import { TokenMetadataRegistry } from "../src/metadata/TokenMetadataRegistry.sol";
 import { SyntheticAsset } from "../src/synth/SyntheticAsset.sol";
@@ -35,13 +35,13 @@ interface VmDeploy0xFiMainnet {
 
 interface IV3Pump {
     function feeRecipient() external view returns (address);
-    function NUSD() external view returns (address);
+    function N() external view returns (address);
     function graduationRouter() external view returns (address);
     function admin() external view returns (address);
     function transferAdmin(address newAdmin) external;
 }
 
-interface IV3Nusd {
+interface IV3N {
     function oracle() external view returns (address);
 }
 
@@ -52,7 +52,7 @@ interface IV3FeeSplitter {
         bytes data;
     }
 
-    function nusd() external view returns (address);
+    function n() external view returns (address);
     function wrappedNative() external view returns (address);
     function treasury() external view returns (address);
     function admin() external view returns (address);
@@ -100,7 +100,7 @@ contract PairAndGaugeEnsurer {
 ///         `contracts/script/DeployMainnetCore.s.sol` first). Same code and wiring as testnet v3;
 ///         chain-specific addresses come from the environment. Every price comes through the
 ///         core's oracle routers, every fee ends in the core fee splitter (router WzkLTC fees
-///         included, which back NUSD), and the splitter learns where to harvest from.
+///         included, which back N), and the splitter learns where to harvest from.
 ///
 ///         Following the 2026-11 audit (docs/AUDIT_2026-11.md) this differs from testnet: the
 ///         graduation controller takes the Pump and router admin in this run; governance and the
@@ -137,7 +137,7 @@ contract Deploy0xFiMainnet {
     }
 
     struct Core {
-        address nusd;
+        address n;
         address pump;
         address pumpRouter;
         address feeSplitter;
@@ -158,12 +158,12 @@ contract Deploy0xFiMainnet {
         SyntheticAsset neth;
         SyntheticVault nbtcVault;
         SyntheticVault nethVault;
-        PooledNUSDLendingPoolV2 lendingPool;
+        PooledNLendingPoolV2 lendingPool;
         CommunityLiquidityLocker lpLocker;
         TokenMetadataRegistry tokenMetadataRegistry;
-        address wzkLtcNusdPair;
-        address nbtcNusdPair;
-        address nethNusdPair;
+        address wzkLtcNPair;
+        address nbtcNPair;
+        address nethNPair;
     }
 
     // ---------------------------------------------------------------- entry points
@@ -241,24 +241,24 @@ contract Deploy0xFiMainnet {
     // ---------------------------------------------------------------- deployment
 
     function _deployDex(Deployment memory d, Core memory core, Roles memory roles) private {
-        d.dexFactory = new ZeroXFiFactoryV2(roles.deployer, core.nusd, WZKLTC, core.pump);
-        // WzkLTC router fees go to the splitter too, which unwraps them into the NUSD reserve.
+        d.dexFactory = new ZeroXFiFactoryV2(roles.deployer, core.n, WZKLTC, core.pump);
+        // WzkLTC router fees go to the splitter too, which unwraps them into the N reserve.
         d.dexRouter = new ZeroXFiRouterV2(address(d.dexFactory), WZKLTC, core.feeSplitter, core.feeSplitter);
         d.dexFactory.bindRouter(address(d.dexRouter));
         d.graduationAdapter =
-            new ZeroXFiGraduationAdapter(address(d.dexFactory), core.pumpRouter, core.nusd, core.pump);
+            new ZeroXFiGraduationAdapter(address(d.dexFactory), core.pumpRouter, core.n, core.pump);
         d.dexFactory.bindGraduationAdapter(address(d.graduationAdapter));
         d.graduationController =
             new PumpGraduationController(core.pump, address(d.graduationAdapter), roles.governance, roles.guardian);
-        d.gaugeFactory = new GaugeFactory(roles.deployer, core.nusd, address(d.dexFactory));
+        d.gaugeFactory = new GaugeFactory(roles.deployer, core.n, address(d.dexFactory));
     }
 
     function _deploySynths(Deployment memory d, Core memory core, address deployer) private {
-        d.synthSafetyReserve = new SynthSafetyReserve(core.nusd, deployer);
+        d.synthSafetyReserve = new SynthSafetyReserve(core.n, deployer);
         d.nbtc = new SyntheticAsset("0xFi Synthetic Bitcoin", "nBTC", deployer);
         d.neth = new SyntheticAsset("0xFi Synthetic Ether", "nETH", deployer);
         d.nbtcVault = new SyntheticVault(
-            core.nusd,
+            core.n,
             address(d.nbtc),
             core.btcOracle,
             address(d.synthSafetyReserve),
@@ -268,7 +268,7 @@ contract Deploy0xFiMainnet {
             true
         );
         d.nethVault = new SyntheticVault(
-            core.nusd,
+            core.n,
             address(d.neth),
             core.ethOracle,
             address(d.synthSafetyReserve),
@@ -292,8 +292,8 @@ contract Deploy0xFiMainnet {
     }
 
     function _deployLending(Deployment memory d, Core memory core, address deployer) private {
-        d.lendingPool = new PooledNUSDLendingPoolV2(
-            core.nusd, core.feeSplitter, deployer, LENDING_SUPPLY_CAP, LENDING_BORROW_CAP, true
+        d.lendingPool = new PooledNLendingPoolV2(
+            core.n, core.feeSplitter, deployer, LENDING_SUPPLY_CAP, LENDING_BORROW_CAP, true
         );
         d.lendingPool.configureCollateral(WZKLTC, core.ltcOracle, WZKLTC_COLLATERAL_CAP, 8000, 8500, 9000, 500, true);
         // nBTC and nETH are not listed as collateral: lending would value them at the feed price
@@ -303,9 +303,9 @@ contract Deploy0xFiMainnet {
 
     function _deployPairsAndPeriphery(Deployment memory d, Core memory core) private {
         PairAndGaugeEnsurer ensurer = new PairAndGaugeEnsurer();
-        (d.wzkLtcNusdPair,) = ensurer.ensure(d.dexFactory, d.gaugeFactory, WZKLTC, core.nusd);
-        (d.nbtcNusdPair,) = ensurer.ensure(d.dexFactory, d.gaugeFactory, address(d.nbtc), core.nusd);
-        (d.nethNusdPair,) = ensurer.ensure(d.dexFactory, d.gaugeFactory, address(d.neth), core.nusd);
+        (d.wzkLtcNPair,) = ensurer.ensure(d.dexFactory, d.gaugeFactory, WZKLTC, core.n);
+        (d.nbtcNPair,) = ensurer.ensure(d.dexFactory, d.gaugeFactory, address(d.nbtc), core.n);
+        (d.nethNPair,) = ensurer.ensure(d.dexFactory, d.gaugeFactory, address(d.neth), core.n);
 
         d.lpLocker = new CommunityLiquidityLocker(address(d.dexFactory));
         d.tokenMetadataRegistry = new TokenMetadataRegistry(_protectedTokens(d, core));
@@ -313,7 +313,7 @@ contract Deploy0xFiMainnet {
 
     function _protectedTokens(Deployment memory d, Core memory core) private view returns (address[] memory tokens) {
         tokens = new address[](4);
-        tokens[0] = core.nusd;
+        tokens[0] = core.n;
         tokens[1] = WZKLTC;
         tokens[2] = address(d.nbtc);
         tokens[3] = address(d.neth);
@@ -327,7 +327,7 @@ contract Deploy0xFiMainnet {
         sources = new IV3FeeSplitter.Source[](4);
         sources[0] = IV3FeeSplitter.Source(core.pump, abi.encodeWithSignature("distributeFees()"));
         sources[1] = IV3FeeSplitter.Source(
-            address(d.dexRouter), abi.encodeWithSignature("distributeFees(address)", core.nusd)
+            address(d.dexRouter), abi.encodeWithSignature("distributeFees(address)", core.n)
         );
         sources[2] =
             IV3FeeSplitter.Source(address(d.dexRouter), abi.encodeWithSignature("distributeFees(address)", WZKLTC));
@@ -363,7 +363,7 @@ contract Deploy0xFiMainnet {
 
     function _core() private returns (Core memory core) {
         core = Core({
-            nusd: vm.envAddress("MAINNET_NUSD"),
+            n: vm.envAddress("MAINNET_N"),
             pump: vm.envAddress("MAINNET_PUMP"),
             pumpRouter: vm.envAddress("MAINNET_PUMP_GRADUATION_ROUTER"),
             feeSplitter: vm.envAddress("MAINNET_FEE_SPLITTER"),
@@ -381,16 +381,16 @@ contract Deploy0xFiMainnet {
     ///      else would notice until someone traded against it.
     function _checkCore(Core memory core) private view {
         if (
-            IV3Pump(core.pump).feeRecipient() != core.feeSplitter || IV3Pump(core.pump).NUSD() != core.nusd
+            IV3Pump(core.pump).feeRecipient() != core.feeSplitter || IV3Pump(core.pump).N() != core.n
                 || IV3Pump(core.pump).graduationRouter() != core.pumpRouter
                 || IPumpGraduationRouterV3(core.pumpRouter).pump() != core.pump
         ) revert UnexpectedConfiguration("pump core");
         IV3FeeSplitter splitter = IV3FeeSplitter(core.feeSplitter);
-        if (splitter.nusd() != core.nusd || splitter.wrappedNative() != WZKLTC || splitter.treasury() != core.treasury) {
+        if (splitter.n() != core.n || splitter.wrappedNative() != WZKLTC || splitter.treasury() != core.treasury) {
             revert UnexpectedConfiguration("fee splitter");
         }
-        if (IV3Nusd(core.nusd).oracle() != core.ltcOracle) {
-            revert UnexpectedConfiguration("NUSD does not price with the LTC router");
+        if (IV3N(core.n).oracle() != core.ltcOracle) {
+            revert UnexpectedConfiguration("N does not price with the LTC router");
         }
         _checkOracle(core.ltcOracle, "LTC/USD");
         _checkOracle(core.btcOracle, "BTC/USD");
@@ -435,19 +435,19 @@ contract Deploy0xFiMainnet {
 
     function _validateDex(Deployment memory d, Core memory core) private view {
         if (
-            d.dexFactory.nusd() != core.nusd || d.dexFactory.wzkLTC() != WZKLTC || d.dexFactory.pump() != core.pump
+            d.dexFactory.n() != core.n || d.dexFactory.wzkLTC() != WZKLTC || d.dexFactory.pump() != core.pump
                 || d.dexFactory.router() != address(d.dexRouter)
                 || d.dexFactory.graduationAdapter() != address(d.graduationAdapter)
         ) revert UnexpectedConfiguration("factory");
         if (
-            address(d.dexRouter.factory()) != address(d.dexFactory) || d.dexRouter.nusd() != core.nusd
+            address(d.dexRouter.factory()) != address(d.dexFactory) || d.dexRouter.n() != core.n
                 || d.dexRouter.feeSplitter() != core.feeSplitter || d.dexRouter.treasury() != core.feeSplitter
                 || d.dexRouter.DIRECT_FEE_BPS() != 10 || d.dexRouter.CROSS_FEE_BPS() != 30
                 || d.dexRouter.LP_FEE_BPS() != 50
         ) revert UnexpectedConfiguration("router");
         if (
             address(d.graduationAdapter.factory()) != address(d.dexFactory)
-                || d.graduationAdapter.pumpRouter() != core.pumpRouter || d.graduationAdapter.nusd() != core.nusd
+                || d.graduationAdapter.pumpRouter() != core.pumpRouter || d.graduationAdapter.n() != core.n
                 || d.graduationAdapter.pump() != core.pump
         ) revert UnexpectedConfiguration("graduation adapter");
         if (
@@ -455,7 +455,7 @@ contract Deploy0xFiMainnet {
                 || address(d.graduationController.adapter()) != address(d.graduationAdapter)
                 || address(d.graduationController.router()) != core.pumpRouter
         ) revert UnexpectedConfiguration("graduation controller wiring");
-        if (address(d.gaugeFactory.nusd()) != core.nusd || address(d.gaugeFactory.dexFactory()) != address(d.dexFactory)) {
+        if (address(d.gaugeFactory.n()) != core.n || address(d.gaugeFactory.dexFactory()) != address(d.dexFactory)) {
             revert UnexpectedConfiguration("gauge factory");
         }
     }
@@ -479,14 +479,14 @@ contract Deploy0xFiMainnet {
             !d.synthSafetyReserve.vaultsBound() || !d.synthSafetyReserve.allocationsPaused()
                 || !d.synthSafetyReserve.isVault(address(d.nbtcVault))
                 || !d.synthSafetyReserve.isVault(address(d.nethVault))
-                || address(d.synthSafetyReserve.nusd()) != core.nusd
+                || address(d.synthSafetyReserve.n()) != core.n
         ) revert UnexpectedConfiguration("safety reserve");
     }
 
     function _validateLending(Deployment memory d, Core memory core) private view {
         if (
-            d.lendingPool.feeSplitter() != core.feeSplitter || d.lendingPool.supplyCapNusd() != LENDING_SUPPLY_CAP
-                || d.lendingPool.borrowCapNusd() != LENDING_BORROW_CAP || !d.lendingPool.activated()
+            d.lendingPool.feeSplitter() != core.feeSplitter || d.lendingPool.supplyCapN() != LENDING_SUPPLY_CAP
+                || d.lendingPool.borrowCapN() != LENDING_BORROW_CAP || !d.lendingPool.activated()
                 || d.lendingPool.collateralAssetCount() != 1 || d.lendingPool.MAX_COLLATERAL_ASSETS() != 1
         ) revert UnexpectedConfiguration("lending");
         (
@@ -508,15 +508,15 @@ contract Deploy0xFiMainnet {
 
     function _validatePairsAndPeriphery(Deployment memory d, Core memory core) private view {
         if (
-            d.wzkLtcNusdPair == address(0) || d.nbtcNusdPair == address(0) || d.nethNusdPair == address(0)
-                || d.dexFactory.getPair(WZKLTC, core.nusd) != d.wzkLtcNusdPair
-                || d.dexFactory.getPair(address(d.nbtc), core.nusd) != d.nbtcNusdPair
-                || d.dexFactory.getPair(address(d.neth), core.nusd) != d.nethNusdPair
+            d.wzkLtcNPair == address(0) || d.nbtcNPair == address(0) || d.nethNPair == address(0)
+                || d.dexFactory.getPair(WZKLTC, core.n) != d.wzkLtcNPair
+                || d.dexFactory.getPair(address(d.nbtc), core.n) != d.nbtcNPair
+                || d.dexFactory.getPair(address(d.neth), core.n) != d.nethNPair
         ) revert UnexpectedConfiguration("pairs");
         if (
-            d.gaugeFactory.gaugeForPair(d.wzkLtcNusdPair) == address(0)
-                || d.gaugeFactory.gaugeForPair(d.nbtcNusdPair) == address(0)
-                || d.gaugeFactory.gaugeForPair(d.nethNusdPair) == address(0)
+            d.gaugeFactory.gaugeForPair(d.wzkLtcNPair) == address(0)
+                || d.gaugeFactory.gaugeForPair(d.nbtcNPair) == address(0)
+                || d.gaugeFactory.gaugeForPair(d.nethNPair) == address(0)
         ) revert UnexpectedConfiguration("gauges");
         if (address(d.lpLocker.factory()) != address(d.dexFactory)) revert UnexpectedConfiguration("LP locker");
         address[] memory tokens = _protectedTokens(d, core);
@@ -596,7 +596,7 @@ contract Deploy0xFiMainnet {
         vm.serializeAddress(key, "deployer", roles.deployer);
         vm.serializeAddress(key, "governance", roles.governance);
         vm.serializeAddress(key, "guardian", roles.guardian);
-        vm.serializeAddress(key, "nusd", core.nusd);
+        vm.serializeAddress(key, "n", core.n);
         vm.serializeAddress(key, "pump", core.pump);
         vm.serializeAddress(key, "wzkLTC", WZKLTC);
         vm.serializeAddress(key, "ltcOracle", core.ltcOracle);
@@ -617,9 +617,9 @@ contract Deploy0xFiMainnet {
         vm.serializeAddress(key, "tokenMetadataRegistry", address(d.tokenMetadataRegistry));
         // Gauge addresses depend on who created them and in which order, so they are not recorded:
         // read `GaugeFactory.gaugeForPair(pair)`.
-        vm.serializeAddress(key, "wzkLtcNusdPair", d.wzkLtcNusdPair);
-        vm.serializeAddress(key, "nBTCNusdPair", d.nbtcNusdPair);
-        string memory json = vm.serializeAddress(key, "nETHNusdPair", d.nethNusdPair);
+        vm.serializeAddress(key, "wzkLtcNPair", d.wzkLtcNPair);
+        vm.serializeAddress(key, "nBTCNPair", d.nbtcNPair);
+        string memory json = vm.serializeAddress(key, "nETHNPair", d.nethNPair);
         vm.writeJson(json, _manifestPath());
     }
 
@@ -635,12 +635,12 @@ contract Deploy0xFiMainnet {
         d.neth = SyntheticAsset(vm.parseJsonAddress(json, ".nETH"));
         d.nbtcVault = SyntheticVault(vm.parseJsonAddress(json, ".nBTCVault"));
         d.nethVault = SyntheticVault(vm.parseJsonAddress(json, ".nETHVault"));
-        d.lendingPool = PooledNUSDLendingPoolV2(vm.parseJsonAddress(json, ".lendingPool"));
+        d.lendingPool = PooledNLendingPoolV2(vm.parseJsonAddress(json, ".lendingPool"));
         d.lpLocker = CommunityLiquidityLocker(vm.parseJsonAddress(json, ".lpLocker"));
         d.tokenMetadataRegistry = TokenMetadataRegistry(vm.parseJsonAddress(json, ".tokenMetadataRegistry"));
-        d.wzkLtcNusdPair = vm.parseJsonAddress(json, ".wzkLtcNusdPair");
-        d.nbtcNusdPair = vm.parseJsonAddress(json, ".nBTCNusdPair");
-        d.nethNusdPair = vm.parseJsonAddress(json, ".nETHNusdPair");
+        d.wzkLtcNPair = vm.parseJsonAddress(json, ".wzkLtcNPair");
+        d.nbtcNPair = vm.parseJsonAddress(json, ".nBTCNPair");
+        d.nethNPair = vm.parseJsonAddress(json, ".nETHNPair");
         if (address(d.dexFactory).code.length == 0 || address(d.lendingPool).code.length == 0) {
             revert UnexpectedConfiguration("the manifest does not describe this chain");
         }

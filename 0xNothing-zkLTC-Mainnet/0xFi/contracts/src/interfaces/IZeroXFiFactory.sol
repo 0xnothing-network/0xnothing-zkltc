@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 interface IZeroXFiFactory {
     function owner() external view returns (address);
-    function nusd() external view returns (address);
+    function n() external view returns (address);
     function pump() external view returns (address);
     function router() external view returns (address);
     function pendingRouter() external view returns (address);

@@ -17,7 +17,7 @@ contract AmmRouterV2Test is TestBase {
     address private constant POOL = address(0xB001);
     address private constant TREASURY = address(0x7EA5);
 
-    MockERC20 private nusd;
+    MockERC20 private n;
     MockERC20 private tokenA;
     MockERC20 private tokenB;
     MockERC20 private pumpToken;
@@ -29,19 +29,19 @@ contract AmmRouterV2Test is TestBase {
 
     function setUp() public {
         vm.warp(1_000_000);
-        nusd = new MockERC20("Nothing USD", "NUSD");
+        n = new MockERC20("N", "N");
         tokenA = new MockERC20("Token A", "TKA");
         tokenB = new MockERC20("Token B", "TKB");
         pumpToken = new MockERC20("Pump token", "PUMP");
-        pump = new MockPump(address(nusd));
+        pump = new MockPump(address(n));
         pump.setStatus(address(pumpToken), 2);
         wrapped = new WzkLTC();
-        factory = new ZeroXFiFactoryV2(address(this), address(nusd), address(wrapped), address(pump));
-        splitter = new FeeSplitterMock(address(nusd), POOL, TREASURY);
+        factory = new ZeroXFiFactoryV2(address(this), address(n), address(wrapped), address(pump));
+        splitter = new FeeSplitterMock(address(n), POOL, TREASURY);
         router = new ZeroXFiRouterV2(address(factory), address(wrapped), address(splitter), TREASURY);
         factory.bindRouter(address(router));
 
-        MockERC20[3] memory tokens = [nusd, tokenA, tokenB];
+        MockERC20[3] memory tokens = [n, tokenA, tokenB];
         for (uint256 i; i < tokens.length; ++i) {
             _fundAndApprove(ALICE, tokens[i], 10_000_000 ether);
             _fundAndApprove(BOB, tokens[i], 10_000_000 ether);
@@ -51,22 +51,22 @@ contract AmmRouterV2Test is TestBase {
         vm.prank(BOB);
         IERC20(address(wrapped)).approve(address(router), type(uint256).max);
 
-        _add(address(tokenA), address(nusd), 100_000 ether, 200_000 ether);
-        _add(address(tokenB), address(nusd), 100_000 ether, 100_000 ether);
+        _add(address(tokenA), address(n), 100_000 ether, 200_000 ether);
+        _add(address(tokenB), address(n), 100_000 ether, 100_000 ether);
         _addNative(address(tokenA), 10_000 ether, 100 ether);
-        _addNative(address(nusd), 50_000 ether, 500 ether);
+        _addNative(address(n), 50_000 ether, 500 ether);
     }
 
     // ---------------------------------------------------------------- factory
 
-    function testEveryPairNeedsNusdOrWzkLTC() public {
+    function testEveryPairNeedsNOrWzkLTC() public {
         vm.expectRevert(ZeroXFiFactoryV2.BaseAssetRequired.selector);
         factory.createPair(address(tokenA), address(tokenB));
-        assertTrue(factory.isBaseToken(address(nusd)) && factory.isBaseToken(address(wrapped)), "bases");
+        assertTrue(factory.isBaseToken(address(n)) && factory.isBaseToken(address(wrapped)), "bases");
         assertFalse(factory.isBaseToken(address(tokenA)), "token is not a base");
 
         vm.expectRevert(ZeroXFiFactoryV2.ProtectedPumpPair.selector);
-        factory.createPair(address(pumpToken), address(nusd));
+        factory.createPair(address(pumpToken), address(n));
 
         vm.prank(ALICE);
         vm.expectRevert(ZeroXFiFactoryV2.BaseAssetRequired.selector);
@@ -76,7 +76,7 @@ contract AmmRouterV2Test is TestBase {
     // ---------------------------------------------------------------- fee schedule
 
     function testBaseInputPaysTenBpsOutOfTheInput() public {
-        address[] memory path = _path2(address(nusd), address(tokenA));
+        address[] memory path = _path2(address(n), address(tokenA));
         (uint256 reserveIn, uint256 reserveOut) = router.getReserves(path[0], path[1]);
         ZeroXFiRouterV2.SwapQuote memory q = router.quoteSwap(1_000 ether, path);
 
@@ -87,12 +87,12 @@ contract AmmRouterV2Test is TestBase {
 
         uint256 out = _swap(path, 1_000 ether, q.amounts[1]);
         assertEq(out, q.amounts[1], "exact quote");
-        assertEq(router.accruedRouterFees(address(nusd)), 1 ether, "accrued NUSD");
-        assertEq(nusd.balanceOf(address(router)), 1 ether, "fee backed");
+        assertEq(router.accruedRouterFees(address(n)), 1 ether, "accrued N");
+        assertEq(n.balanceOf(address(router)), 1 ether, "fee backed");
     }
 
     function testTokenToBasePaysTenBpsOutOfTheOutput() public {
-        address[] memory path = _path2(address(tokenA), address(nusd));
+        address[] memory path = _path2(address(tokenA), address(n));
         (uint256 reserveIn, uint256 reserveOut) = router.getReserves(path[0], path[1]);
         uint256 gross = router.getAmountOut(1_000 ether, reserveIn, reserveOut);
         ZeroXFiRouterV2.SwapQuote memory q = router.quoteSwap(1_000 ether, path);
@@ -107,7 +107,7 @@ contract AmmRouterV2Test is TestBase {
 
         uint256 out = _swap(path, 1_000 ether, q.amounts[1]);
         assertEq(out, q.amounts[1], "min-out holds after the fee");
-        assertEq(router.accruedRouterFees(address(nusd)), q.fee, "accrued NUSD");
+        assertEq(router.accruedRouterFees(address(n)), q.fee, "accrued N");
         assertEq(tokenA.balanceOf(address(router)), 0, "no token fee");
         (uint256 reserveInAfter, uint256 reserveOutAfter) = router.getReserves(path[0], path[1]);
         assertEq(reserveInAfter, reserveIn + 1_000 ether, "pair got the full input");
@@ -115,26 +115,26 @@ contract AmmRouterV2Test is TestBase {
     }
 
     function testCrossSwapPaysThirtyBpsOnTheIntermediateBase() public {
-        address[] memory path = _path3(address(tokenA), address(nusd), address(tokenB));
+        address[] memory path = _path3(address(tokenA), address(n), address(tokenB));
         (uint256 r0In, uint256 r0Out) = router.getReserves(path[0], path[1]);
         (uint256 r1In, uint256 r1Out) = router.getReserves(path[1], path[2]);
         uint256 gross = router.getAmountOut(500 ether, r0In, r0Out);
         ZeroXFiRouterV2.SwapQuote memory q = router.quoteSwap(500 ether, path);
 
         assertEq(q.feeBps, 30, "cross rate");
-        assertEq(q.feeIndex, 1, "fee on NUSD leg");
-        assertEq(q.fee, gross * 30 / 10_000, "0.3% of the NUSD leg");
-        assertEq(q.amounts[2], router.getAmountOut(gross - q.fee, r1In, r1Out), "second hop on net NUSD");
+        assertEq(q.feeIndex, 1, "fee on N leg");
+        assertEq(q.fee, gross * 30 / 10_000, "0.3% of the N leg");
+        assertEq(q.amounts[2], router.getAmountOut(gross - q.fee, r1In, r1Out), "second hop on net N");
 
         uint256 out = _swap(path, 500 ether, q.amounts[2]);
         assertEq(out, q.amounts[2], "exact output");
-        assertEq(router.accruedRouterFees(address(nusd)), q.fee, "accrued once");
-        assertEq(nusd.balanceOf(address(router)), q.fee, "no residue beyond the fee");
+        assertEq(router.accruedRouterFees(address(n)), q.fee, "accrued once");
+        assertEq(n.balanceOf(address(router)), q.fee, "no residue beyond the fee");
     }
 
     function testCrossSwapThroughWzkLTCPaysTheFeeInWzkLTC() public {
         address[] memory path = new address[](4);
-        (path[0], path[1], path[2], path[3]) = (address(tokenA), address(wrapped), address(nusd), address(tokenB));
+        (path[0], path[1], path[2], path[3]) = (address(tokenA), address(wrapped), address(n), address(tokenB));
         ZeroXFiRouterV2.SwapQuote memory q = router.quoteSwap(100 ether, path);
         assertEq(q.feeBps, 30, "cross rate");
         assertEq(q.feeIndex, 1, "fee on the WzkLTC leg");
@@ -142,19 +142,19 @@ contract AmmRouterV2Test is TestBase {
         uint256 out = _swap(path, 100 ether, q.amounts[3]);
         assertEq(out, q.amounts[3], "exact output");
         assertEq(router.accruedRouterFees(address(wrapped)), q.fee, "accrued WzkLTC");
-        assertEq(router.accruedRouterFees(address(nusd)), 0, "no NUSD fee");
+        assertEq(router.accruedRouterFees(address(n)), 0, "no N fee");
         assertEq(IERC20(address(wrapped)).balanceOf(address(router)), q.fee, "fee backed");
     }
 
     function testRoutesWithABaseAtEitherEndStayAtTenBps() public {
-        address[] memory path = _path3(address(nusd), address(tokenA), address(wrapped));
+        address[] memory path = _path3(address(n), address(tokenA), address(wrapped));
         assertEq(router.routerFeeBpsForPath(path), 10, "base to base via a token");
-        path = _path3(address(tokenB), address(nusd), address(wrapped));
+        path = _path3(address(tokenB), address(n), address(wrapped));
         ZeroXFiRouterV2.SwapQuote memory q = router.quoteSwap(100 ether, path);
         assertEq(q.feeBps, 10, "token to base via a base");
         assertEq(q.feeIndex, 1, "first base leg");
         _swap(path, 100 ether, q.amounts[2]);
-        assertEq(router.accruedRouterFees(address(nusd)), q.fee, "fee in the first base");
+        assertEq(router.accruedRouterFees(address(n)), q.fee, "fee in the first base");
     }
 
     function testNativeInAndOutChargeTheWzkLTCLeg() public {
@@ -184,33 +184,33 @@ contract AmmRouterV2Test is TestBase {
 
     // ---------------------------------------------------------------- distribution
 
-    function testAnyoneDistributesNusdThroughTheSplitterAndWzkLTCToItsRecipient() public {
-        _swap(_path2(address(tokenA), address(nusd)), 10_000 ether, 0);
+    function testAnyoneDistributesNThroughTheSplitterAndWzkLTCToItsRecipient() public {
+        _swap(_path2(address(tokenA), address(n)), 10_000 ether, 0);
         _swap(_path2(address(tokenA), address(wrapped)), 1_000 ether, 0);
-        uint256 nusdFees = router.accruedRouterFees(address(nusd));
+        uint256 nFees = router.accruedRouterFees(address(n));
         uint256 wzkFees = router.accruedRouterFees(address(wrapped));
 
         vm.prank(address(0xCAFE));
-        router.distributeFees(address(nusd));
-        assertEq(nusd.balanceOf(POOL), nusdFees * 7_000 / 10_000, "70% to stakers");
-        assertEq(nusd.balanceOf(TREASURY), nusdFees * 1_000 / 10_000, "10% to treasury");
-        assertEq(nusd.balanceOf(address(splitter)), 0, "split immediately");
+        router.distributeFees(address(n));
+        assertEq(n.balanceOf(POOL), nFees * 7_000 / 10_000, "70% to stakers");
+        assertEq(n.balanceOf(TREASURY), nFees * 1_000 / 10_000, "10% to treasury");
+        assertEq(n.balanceOf(address(splitter)), 0, "split immediately");
 
         router.distributeFees(address(wrapped));
         assertEq(IERC20(address(wrapped)).balanceOf(TREASURY), wzkFees, "all WzkLTC to the native recipient");
-        assertEq(IERC20(address(wrapped)).balanceOf(POOL), 0, "stakers only take NUSD");
+        assertEq(IERC20(address(wrapped)).balanceOf(POOL), 0, "stakers only take N");
 
         vm.expectRevert(ZeroXFiRouterV2.NothingToDistribute.selector);
-        router.distributeFees(address(nusd));
+        router.distributeFees(address(n));
         vm.expectRevert(ZeroXFiRouterV2.NothingToDistribute.selector);
         router.distributeFees(address(tokenA));
     }
 
-    /// v3 wiring: the splitter is also the native-fee recipient, so WzkLTC fees back NUSD.
+    /// v3 wiring: the splitter is also the native-fee recipient, so WzkLTC fees back N.
     function testTheSplitterCanAlsoReceiveWzkLTCFees() public {
         ZeroXFiRouterV2 wired =
             new ZeroXFiRouterV2(address(factory), address(wrapped), address(splitter), address(splitter));
-        assertEq(wired.feeSplitter(), address(splitter), "NUSD fees");
+        assertEq(wired.feeSplitter(), address(splitter), "N fees");
         assertEq(wired.treasury(), address(splitter), "WzkLTC fees");
     }
 
@@ -221,7 +221,7 @@ contract AmmRouterV2Test is TestBase {
         vm.expectRevert(ZeroXFiRouterV2.InvalidConfiguration.selector);
         new ZeroXFiRouterV2(address(factory), address(wrapped), address(splitter), address(0));
         vm.expectRevert(ZeroXFiFactoryV2.InvalidContract.selector);
-        new ZeroXFiFactoryV2(address(this), address(nusd), address(nusd), address(pump));
+        new ZeroXFiFactoryV2(address(this), address(n), address(n), address(pump));
     }
 
     /// Every route: the user gets exactly the quote, the fee is 10/30 bps of the first base leg,
@@ -259,13 +259,13 @@ contract AmmRouterV2Test is TestBase {
     // ---------------------------------------------------------------- helpers
 
     function _route(uint256 index) private view returns (address[] memory path) {
-        if (index == 0) return _path2(address(nusd), address(tokenA));
-        if (index == 1) return _path2(address(tokenA), address(nusd));
-        if (index == 2) return _path3(address(tokenA), address(nusd), address(tokenB));
-        if (index == 3) return _path3(address(nusd), address(tokenA), address(wrapped));
-        if (index == 4) return _path3(address(tokenB), address(nusd), address(wrapped));
+        if (index == 0) return _path2(address(n), address(tokenA));
+        if (index == 1) return _path2(address(tokenA), address(n));
+        if (index == 2) return _path3(address(tokenA), address(n), address(tokenB));
+        if (index == 3) return _path3(address(n), address(tokenA), address(wrapped));
+        if (index == 4) return _path3(address(tokenB), address(n), address(wrapped));
         path = new address[](4);
-        (path[0], path[1], path[2], path[3]) = (address(tokenA), address(wrapped), address(nusd), address(tokenB));
+        (path[0], path[1], path[2], path[3]) = (address(tokenA), address(wrapped), address(n), address(tokenB));
     }
 
     function _swap(address[] memory path, uint256 amountIn, uint256 minOut) private returns (uint256 out) {

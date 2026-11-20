@@ -11,7 +11,7 @@ interface IListingEpoch {
     ///         unchanged, nothing has happened to the token or to `operator`'s right to move it.
     /// @dev It is a sum of a per-token and a per-owner count, so it can go down when the token moves
     ///      to another owner. Only the pair (owner, number) identifies a state: compare the owner
-    ///      first, as NusdNftMarketplaceV2 does.
+    ///      first, as NNftMarketplaceV2 does.
     function listingEpoch(uint256 tokenId, address operator) external view returns (uint256);
 }
 

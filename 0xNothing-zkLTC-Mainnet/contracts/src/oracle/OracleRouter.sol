@@ -5,7 +5,7 @@ import {TwoStepAdmin} from "../common/TwoStepAdmin.sol";
 import {IPriceOracle} from "./IPriceOracle.sol";
 
 /// @title Oracle router
-/// @notice A stable price address for one asset. NUSD, the synth vaults and lending bind to this
+/// @notice A stable price address for one asset. N, the synth vaults and lending bind to this
 ///         router once; the source behind it can be replaced by the admin (the owner wallet), so a
 ///         new or failed DIA feed never forces those contracts to be redeployed.
 contract OracleRouter is TwoStepAdmin, IPriceOracle {

@@ -52,7 +52,7 @@ interface IDistributor {
     function harvest() external returns (uint256);
 }
 
-/// Behaves like the Pump or the router: pays its accrued NUSD to the splitter, then asks it to split.
+/// Behaves like the Pump or the router: pays its accrued N to the splitter, then asks it to split.
 contract MockFeeSource {
     IERC20 public immutable token;
     address public immutable splitter;

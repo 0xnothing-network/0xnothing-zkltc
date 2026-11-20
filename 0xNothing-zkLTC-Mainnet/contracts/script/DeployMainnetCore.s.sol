@@ -5,7 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {DIAOracleAdapter} from "../src/oracle/DIAOracleAdapter.sol";
 import {OracleRouter} from "../src/oracle/OracleRouter.sol";
 import {IPriceOracle} from "../src/oracle/IPriceOracle.sol";
-import {OracleNUSDv2} from "../src/nusd/OracleNUSDv2.sol";
+import {OracleNv2} from "../src/n/OracleNv2.sol";
 import {ZeroXPumpV2} from "../src/pump/ZeroXPumpV2.sol";
 import {GraduationRouter} from "../src/graduation/GraduationRouter.sol";
 import {PermanentLiquidityLocker} from "../src/graduation/PermanentLiquidityLocker.sol";
@@ -13,7 +13,7 @@ import {OwnerTreasury} from "../src/treasury/OwnerTreasury.sol";
 import {FeeSplitter} from "../src/treasury/FeeSplitter.sol";
 import {RewardStaking} from "../src/rewards/RewardStaking.sol";
 import {ZeroXPixelV2} from "../src/0xpixel/ZeroXPixelV2.sol";
-import {NusdNftMarketplaceV2} from "../src/0xpixel/NusdNftMarketplaceV2.sol";
+import {NNftMarketplaceV2} from "../src/0xpixel/NNftMarketplaceV2.sol";
 
 interface VmDeployMainnet {
     function addr(uint256 privateKey) external returns (address keyAddress);
@@ -76,8 +76,8 @@ contract WrappedNativeProbe {
 ///                       checks inside run() only ever see the local simulation, so run this after
 ///                       the broadcast, and again with MAINNET_VERIFY_HANDOVER=true at the end.
 ///         - handover()  after the 0xFi script: offers every role to MAINNET_GOVERNANCE (two-step
-///                       transfers, which governance accepts) and grants it the NUSD roles.
-///         - renounce()  once governance holds everything: the deployer gives up its NUSD roles.
+///                       transfers, which governance accepts) and grants it the N roles.
+///         - renounce()  once governance holds everything: the deployer gives up its N roles.
 contract DeployMainnetCore {
     error WrongChain(uint256 expectedChainId, uint256 actualChainId);
     error UnexpectedConfiguration(string what);
@@ -94,17 +94,17 @@ contract DeployMainnetCore {
     uint256 private constant ETH_MIN_PRICE = 250 ether;
     uint256 private constant ETH_MAX_PRICE = 50_000 ether;
     // Economics settled for v3 (docs/TOKENOMICS.md in the testnet tree).
-    uint256 private constant NUSD_SUPPLY_CEILING = 1_000_000 ether;
+    uint256 private constant N_SUPPLY_CEILING = 1_000_000 ether;
     uint256 private constant SURPLUS_TREASURY_BPS = 2_000;
     uint256 private constant GRADUATION_DELAY = 1 hours;
     uint256 private constant PUMP_TOKEN_SUPPLY = 1_000_000_000 ether;
-    uint256 private constant INITIAL_VIRTUAL_NUSD_RESERVE = 1_500 ether;
-    uint256 private constant GRADUATION_MARKET_CAP_TARGET_NUSD = 6_000 ether;
-    uint256 private constant PUMP_CREATE_FEE_NUSD = 1 ether;
+    uint256 private constant INITIAL_VIRTUAL_N_RESERVE = 1_500 ether;
+    uint256 private constant GRADUATION_MARKET_CAP_TARGET_N = 6_000 ether;
+    uint256 private constant PUMP_CREATE_FEE_N = 1 ether;
     uint256 private constant PUMP_TRADE_FEE_BPS = 10;
     /// @dev The mint budget is what one wrong price can mint at once: at most this share of the ceiling.
     uint256 private constant MAX_MINT_BUDGET_SHARE_BPS = 1_000;
-    /// @dev NUSD's handling of an oracle failure assumes that reading a price is cheap: a transfer
+    /// @dev N's handling of an oracle failure assumes that reading a price is cheap: a transfer
     ///      probes the oracle with 200,000 gas, and from roughly 100,000 gas per read a caller could
     ///      starve a read and report a working oracle as failed. This is measured with warm
     ///      storage, so it leaves room for what a first, cold read costs on top.
@@ -141,7 +141,7 @@ contract DeployMainnetCore {
         OracleRouter ltcOracle;
         OracleRouter btcOracle;
         OracleRouter ethOracle;
-        OracleNUSDv2 nusd;
+        OracleNv2 n;
         OwnerTreasury treasury;
         RewardStaking rewardStaking;
         FeeSplitter feeSplitter;
@@ -149,7 +149,7 @@ contract DeployMainnetCore {
         GraduationRouter graduationRouter;
         ZeroXPumpV2 pump;
         ZeroXPixelV2 pixel;
-        NusdNftMarketplaceV2 marketplace;
+        NNftMarketplaceV2 marketplace;
     }
 
     // ---------------------------------------------------------------- entry points
@@ -170,29 +170,29 @@ contract DeployMainnetCore {
         d.btcOracle = new OracleRouter("BTC/USD", address(d.btcAdapter), c.deployer);
         d.ethOracle = new OracleRouter("ETH/USD", address(d.ethAdapter), c.deployer);
 
-        d.nusd = new OracleNUSDv2(IPriceOracle(address(d.ltcOracle)), c.deployer, NUSD_SUPPLY_CEILING);
+        d.n = new OracleNv2(IPriceOracle(address(d.ltcOracle)), c.deployer, N_SUPPLY_CEILING);
         d.treasury = new OwnerTreasury(c.deployer);
-        d.rewardStaking = new RewardStaking(IERC20(address(d.nusd)));
-        d.feeSplitter = new FeeSplitter(address(d.nusd), c.wzkltc, address(d.treasury), c.deployer);
+        d.rewardStaking = new RewardStaking(IERC20(address(d.n)));
+        d.feeSplitter = new FeeSplitter(address(d.n), c.wzkltc, address(d.treasury), c.deployer);
         d.feeSplitter.setRecipients(address(d.rewardStaking), address(d.treasury));
         d.rewardStaking.bindHarvester(address(d.feeSplitter));
-        d.nusd.setSurplusRecipients(address(d.rewardStaking), address(d.treasury), SURPLUS_TREASURY_BPS);
-        d.nusd.setMintGuards(g.mintMaxPriceAge, g.mintLimitPerHour);
-        d.nusd.setFees(g.mintFeeBps, g.redeemFeeBps);
+        d.n.setSurplusRecipients(address(d.rewardStaking), address(d.treasury), SURPLUS_TREASURY_BPS);
+        d.n.setMintGuards(g.mintMaxPriceAge, g.mintLimitPerHour);
+        d.n.setFees(g.mintFeeBps, g.redeemFeeBps);
 
         d.locker = new PermanentLiquidityLocker(c.deployer);
         d.graduationRouter = new GraduationRouter(c.deployer, GRADUATION_DELAY, address(d.locker));
         d.pump = new ZeroXPumpV2(
-            address(d.nusd),
-            address(d.nusd),
+            address(d.n),
+            address(d.n),
             address(d.graduationRouter),
             address(d.feeSplitter),
             c.deployer,
             c.deployer,
             PUMP_TOKEN_SUPPLY,
-            INITIAL_VIRTUAL_NUSD_RESERVE,
-            GRADUATION_MARKET_CAP_TARGET_NUSD,
-            PUMP_CREATE_FEE_NUSD,
+            INITIAL_VIRTUAL_N_RESERVE,
+            GRADUATION_MARKET_CAP_TARGET_N,
+            PUMP_CREATE_FEE_N,
             PUMP_TRADE_FEE_BPS
         );
         d.graduationRouter.bindPump(address(d.pump));
@@ -201,7 +201,7 @@ contract DeployMainnetCore {
         d.pixel = new ZeroXPixelV2();
         address[] memory collections = new address[](1);
         collections[0] = address(d.pixel);
-        d.marketplace = new NusdNftMarketplaceV2(address(d.nusd), c.deployer, collections);
+        d.marketplace = new NNftMarketplaceV2(address(d.n), c.deployer, collections);
 
         vm.stopBroadcast();
         _validateWiring(d, c, g);
@@ -226,7 +226,7 @@ contract DeployMainnetCore {
 
     /// @notice Offers every core role the deployer holds to MAINNET_GOVERNANCE. The transfers are
     ///         two-step: nothing changes hands until governance accepts each one, and the deployer
-    ///         can point them elsewhere until then. NUSD roles are granted, not transferred; the
+    ///         can point them elsewhere until then. N roles are granted, not transferred; the
     ///         deployer keeps its own until renounce(). When governance is the deployer itself
     ///         nothing is offered and only the guardian receives its pause role.
     function handover() external {
@@ -254,10 +254,10 @@ contract DeployMainnetCore {
             d.treasury.transferOwnership(governance);
             d.marketplace.transferOwnership(governance);
             d.pump.transferParamAdmin(governance);
-            d.nusd.grantRole(d.nusd.DEFAULT_ADMIN_ROLE(), governance);
-            d.nusd.grantRole(d.nusd.PAUSER_ROLE(), governance);
+            d.n.grantRole(d.n.DEFAULT_ADMIN_ROLE(), governance);
+            d.n.grantRole(d.n.PAUSER_ROLE(), governance);
         }
-        d.nusd.grantRole(d.nusd.PAUSER_ROLE(), guardian);
+        d.n.grantRole(d.n.PAUSER_ROLE(), guardian);
         vm.stopBroadcast();
 
         if (
@@ -270,13 +270,13 @@ contract DeployMainnetCore {
                 )
         ) revert UnexpectedConfiguration("handover was not recorded");
         if (
-            !d.nusd.hasRole(d.nusd.DEFAULT_ADMIN_ROLE(), governance) || !d.nusd.hasRole(d.nusd.PAUSER_ROLE(), governance)
-                || !d.nusd.hasRole(d.nusd.PAUSER_ROLE(), guardian)
-        ) revert UnexpectedConfiguration("NUSD roles were not recorded");
+            !d.n.hasRole(d.n.DEFAULT_ADMIN_ROLE(), governance) || !d.n.hasRole(d.n.PAUSER_ROLE(), governance)
+                || !d.n.hasRole(d.n.PAUSER_ROLE(), guardian)
+        ) revert UnexpectedConfiguration("N roles were not recorded");
     }
 
     /// @notice The last step: once governance has accepted everything, the deployer gives up its
-    ///         two NUSD roles. It refuses to run while governance does not yet hold every role.
+    ///         two N roles. It refuses to run while governance does not yet hold every role.
     function renounce() external {
         _requireChain();
         uint256 privateKey = vm.envUint("PRIVATE_KEY");
@@ -289,8 +289,8 @@ contract DeployMainnetCore {
 
         vm.startBroadcast(privateKey);
         // A deployer that is also the guardian keeps the pause role and nothing else.
-        if (guardian != deployer) d.nusd.renounceRole(d.nusd.PAUSER_ROLE());
-        d.nusd.renounceRole(d.nusd.DEFAULT_ADMIN_ROLE());
+        if (guardian != deployer) d.n.renounceRole(d.n.PAUSER_ROLE());
+        d.n.renounceRole(d.n.DEFAULT_ADMIN_ROLE());
         vm.stopBroadcast();
 
         _validateHandedOver(d, deployer, governance, guardian);
@@ -319,7 +319,7 @@ contract DeployMainnetCore {
         g = Guards({
             oracleMaxAge: vm.envUint("MAINNET_ORACLE_MAX_AGE_SECONDS"),
             mintMaxPriceAge: vm.envUint("MAINNET_MINT_MAX_PRICE_AGE_SECONDS"),
-            mintLimitPerHour: vm.envUint("MAINNET_MINT_LIMIT_PER_HOUR_NUSD") * 1 ether,
+            mintLimitPerHour: vm.envUint("MAINNET_MINT_LIMIT_PER_HOUR_N") * 1 ether,
             mintFeeBps: vm.envUint("MAINNET_MINT_FEE_BPS"),
             redeemFeeBps: vm.envUint("MAINNET_REDEEM_FEE_BPS"),
             feedDeviationBps: vm.envUint("MAINNET_FEED_DEVIATION_BPS"),
@@ -330,12 +330,12 @@ contract DeployMainnetCore {
             revert UnexpectedConfiguration("mint price age below the feed's heartbeat");
         }
         if (g.feedDeviationBps == 0 || g.mintFeeBps < g.feedDeviationBps || g.redeemFeeBps < g.feedDeviationBps) {
-            revert UnexpectedConfiguration("each NUSD fee must be at least the feed's deviation threshold");
+            revert UnexpectedConfiguration("each N fee must be at least the feed's deviation threshold");
         }
         if (
             g.mintLimitPerHour == 0
-                || g.mintLimitPerHour > NUSD_SUPPLY_CEILING * MAX_MINT_BUDGET_SHARE_BPS / 10_000
-        ) revert UnexpectedConfiguration("mint budget must be between 1 NUSD and a tenth of the supply ceiling");
+                || g.mintLimitPerHour > N_SUPPLY_CEILING * MAX_MINT_BUDGET_SHARE_BPS / 10_000
+        ) revert UnexpectedConfiguration("mint budget must be between 1 N and a tenth of the supply ceiling");
     }
 
     /// @dev Runs in the local simulation; nothing is sent.
@@ -361,25 +361,25 @@ contract DeployMainnetCore {
         _validateLivePrice(d.btcOracle, BTC_MIN_PRICE, BTC_MAX_PRICE);
         _validateLivePrice(d.ethOracle, ETH_MIN_PRICE, ETH_MAX_PRICE);
         if (
-            address(d.nusd.oracle()) != address(d.ltcOracle) || d.nusd.supplyCeilingNusd() != NUSD_SUPPLY_CEILING
-                || d.nusd.surplusStaking() != address(d.rewardStaking) || d.nusd.surplusTreasury() != address(d.treasury)
-                || d.nusd.surplusTreasuryBps() != SURPLUS_TREASURY_BPS || d.nusd.mintPaused()
-        ) revert UnexpectedConfiguration("nusd");
+            address(d.n.oracle()) != address(d.ltcOracle) || d.n.supplyCeilingN() != N_SUPPLY_CEILING
+                || d.n.surplusStaking() != address(d.rewardStaking) || d.n.surplusTreasury() != address(d.treasury)
+                || d.n.surplusTreasuryBps() != SURPLUS_TREASURY_BPS || d.n.mintPaused()
+        ) revert UnexpectedConfiguration("n");
         if (
-            d.nusd.mintMaxPriceAge() != g.mintMaxPriceAge || d.nusd.mintLimitPerWindow() != g.mintLimitPerHour
-                || d.nusd.mintFeeBps() != g.mintFeeBps || d.nusd.redeemFeeBps() != g.redeemFeeBps
+            d.n.mintMaxPriceAge() != g.mintMaxPriceAge || d.n.mintLimitPerWindow() != g.mintLimitPerHour
+                || d.n.mintFeeBps() != g.mintFeeBps || d.n.redeemFeeBps() != g.redeemFeeBps
         ) revert UnexpectedConfiguration("oracle-lag guards");
         if (
-            d.rewardStaking.harvester() != address(d.feeSplitter) || address(d.rewardStaking.nusd()) != address(d.nusd)
+            d.rewardStaking.harvester() != address(d.feeSplitter) || address(d.rewardStaking.n()) != address(d.n)
                 || d.feeSplitter.staking() != address(d.rewardStaking) || d.feeSplitter.treasury() != address(d.treasury)
-                || address(d.feeSplitter.wrappedNative()) != c.wzkltc || address(d.feeSplitter.nusd()) != address(d.nusd)
+                || address(d.feeSplitter.wrappedNative()) != c.wzkltc || address(d.feeSplitter.n()) != address(d.n)
         ) revert UnexpectedConfiguration("fees and staking");
         if (
-            d.pump.feeRecipient() != address(d.feeSplitter) || d.pump.NUSD() != address(d.nusd)
+            d.pump.feeRecipient() != address(d.feeSplitter) || d.pump.N() != address(d.n)
                 || address(d.pump.graduationRouter()) != address(d.graduationRouter)
-                || d.pump.createFee() != PUMP_CREATE_FEE_NUSD || d.pump.tradeFeeBps() != PUMP_TRADE_FEE_BPS
-                || d.pump.initialVirtualNusdReserve() != INITIAL_VIRTUAL_NUSD_RESERVE
-                || d.pump.graduationThresholdNusd() != GRADUATION_MARKET_CAP_TARGET_NUSD
+                || d.pump.createFee() != PUMP_CREATE_FEE_N || d.pump.tradeFeeBps() != PUMP_TRADE_FEE_BPS
+                || d.pump.initialVirtualNReserve() != INITIAL_VIRTUAL_N_RESERVE
+                || d.pump.graduationThresholdN() != GRADUATION_MARKET_CAP_TARGET_N
                 || d.pump.tokenTotalSupply() != PUMP_TOKEN_SUPPLY
         ) revert UnexpectedConfiguration("pump");
         if (
@@ -387,7 +387,7 @@ contract DeployMainnetCore {
                 || d.graduationRouter.lpRecipient() != address(d.locker)
                 || d.locker.router() != address(d.graduationRouter)
         ) revert UnexpectedConfiguration("graduation router and locker");
-        if (!d.marketplace.collectionAllowed(address(d.pixel)) || address(d.marketplace.nusd()) != address(d.nusd)) {
+        if (!d.marketplace.collectionAllowed(address(d.pixel)) || address(d.marketplace.n()) != address(d.n)) {
             revert UnexpectedConfiguration("marketplace");
         }
     }
@@ -428,8 +428,8 @@ contract DeployMainnetCore {
             d.ltcOracle.admin() != deployer || d.btcOracle.admin() != deployer || d.ethOracle.admin() != deployer
                 || d.feeSplitter.admin() != deployer || d.treasury.owner() != deployer
                 || d.marketplace.owner() != deployer || d.pump.paramAdmin() != deployer
-                || !d.nusd.hasRole(d.nusd.DEFAULT_ADMIN_ROLE(), deployer)
-                || !d.nusd.hasRole(d.nusd.PAUSER_ROLE(), deployer)
+                || !d.n.hasRole(d.n.DEFAULT_ADMIN_ROLE(), deployer)
+                || !d.n.hasRole(d.n.PAUSER_ROLE(), deployer)
         ) revert UnexpectedConfiguration("a core role is not with the deployer");
         _validatePumpAdmins(d, deployer);
     }
@@ -447,8 +447,8 @@ contract DeployMainnetCore {
             d.ltcOracle.admin() != governance || d.btcOracle.admin() != governance || d.ethOracle.admin() != governance
                 || d.feeSplitter.admin() != governance || d.treasury.owner() != governance
                 || d.marketplace.owner() != governance || d.pump.paramAdmin() != governance
-                || !d.nusd.hasRole(d.nusd.DEFAULT_ADMIN_ROLE(), governance)
-                || !d.nusd.hasRole(d.nusd.PAUSER_ROLE(), governance)
+                || !d.n.hasRole(d.n.DEFAULT_ADMIN_ROLE(), governance)
+                || !d.n.hasRole(d.n.PAUSER_ROLE(), governance)
         ) revert UnexpectedConfiguration("governance does not hold every core role yet");
     }
 
@@ -465,14 +465,14 @@ contract DeployMainnetCore {
                 || d.treasury.pendingOwner() != address(0) || d.marketplace.pendingOwner() != address(0)
                 || d.pump.pendingParamAdmin() != address(0)
         ) revert UnexpectedConfiguration("a transfer is still pending");
-        if (!d.nusd.hasRole(d.nusd.PAUSER_ROLE(), guardian)) revert UnexpectedConfiguration("guardian cannot pause NUSD minting");
+        if (!d.n.hasRole(d.n.PAUSER_ROLE(), guardian)) revert UnexpectedConfiguration("guardian cannot pause N minting");
         if (
             deployer != governance
                 && (
-                    d.nusd.hasRole(d.nusd.DEFAULT_ADMIN_ROLE(), deployer)
-                        || (deployer != guardian && d.nusd.hasRole(d.nusd.PAUSER_ROLE(), deployer))
+                    d.n.hasRole(d.n.DEFAULT_ADMIN_ROLE(), deployer)
+                        || (deployer != guardian && d.n.hasRole(d.n.PAUSER_ROLE(), deployer))
                 )
-        ) revert UnexpectedConfiguration("the deployer still holds a NUSD role");
+        ) revert UnexpectedConfiguration("the deployer still holds a N role");
         address pumpAdmin = d.pump.admin();
         if (pumpAdmin != d.graduationRouter.admin() || pumpAdmin.code.length == 0 || pumpAdmin == governance) {
             revert UnexpectedConfiguration("pump and graduation router admin");
@@ -500,7 +500,7 @@ contract DeployMainnetCore {
         vm.serializeUint(key, "feedDeviationBps", g.feedDeviationBps);
         vm.serializeUint(key, "oracleMaxAgeSeconds", g.oracleMaxAge);
         vm.serializeUint(key, "mintMaxPriceAgeSeconds", g.mintMaxPriceAge);
-        vm.serializeUint(key, "mintLimitPerHourNusd", g.mintLimitPerHour / 1 ether);
+        vm.serializeUint(key, "mintLimitPerHourN", g.mintLimitPerHour / 1 ether);
         vm.serializeUint(key, "mintFeeBps", g.mintFeeBps);
         vm.serializeUint(key, "redeemFeeBps", g.redeemFeeBps);
         vm.serializeAddress(key, "ltcAdapter", address(d.ltcAdapter));
@@ -509,7 +509,7 @@ contract DeployMainnetCore {
         vm.serializeAddress(key, "ltcOracle", address(d.ltcOracle));
         vm.serializeAddress(key, "btcOracle", address(d.btcOracle));
         vm.serializeAddress(key, "ethOracle", address(d.ethOracle));
-        vm.serializeAddress(key, "nusd", address(d.nusd));
+        vm.serializeAddress(key, "n", address(d.n));
         vm.serializeAddress(key, "treasury", address(d.treasury));
         vm.serializeAddress(key, "rewardStaking", address(d.rewardStaking));
         vm.serializeAddress(key, "feeSplitter", address(d.feeSplitter));
@@ -517,7 +517,7 @@ contract DeployMainnetCore {
         vm.serializeAddress(key, "pumpGraduationRouter", address(d.graduationRouter));
         vm.serializeAddress(key, "pump", address(d.pump));
         vm.serializeAddress(key, "pixel", address(d.pixel));
-        string memory json = vm.serializeAddress(key, "nusdMarketplace", address(d.marketplace));
+        string memory json = vm.serializeAddress(key, "nMarketplace", address(d.marketplace));
         vm.writeJson(json, _manifestPath());
     }
 
@@ -529,7 +529,7 @@ contract DeployMainnetCore {
         d.ltcOracle = OracleRouter(vm.parseJsonAddress(json, ".ltcOracle"));
         d.btcOracle = OracleRouter(vm.parseJsonAddress(json, ".btcOracle"));
         d.ethOracle = OracleRouter(vm.parseJsonAddress(json, ".ethOracle"));
-        d.nusd = OracleNUSDv2(payable(vm.parseJsonAddress(json, ".nusd")));
+        d.n = OracleNv2(payable(vm.parseJsonAddress(json, ".n")));
         d.treasury = OwnerTreasury(payable(vm.parseJsonAddress(json, ".treasury")));
         d.rewardStaking = RewardStaking(vm.parseJsonAddress(json, ".rewardStaking"));
         d.feeSplitter = FeeSplitter(payable(vm.parseJsonAddress(json, ".feeSplitter")));
@@ -537,8 +537,8 @@ contract DeployMainnetCore {
         d.graduationRouter = GraduationRouter(vm.parseJsonAddress(json, ".pumpGraduationRouter"));
         d.pump = ZeroXPumpV2(vm.parseJsonAddress(json, ".pump"));
         d.pixel = ZeroXPixelV2(vm.parseJsonAddress(json, ".pixel"));
-        d.marketplace = NusdNftMarketplaceV2(vm.parseJsonAddress(json, ".nusdMarketplace"));
-        if (address(d.nusd).code.length == 0 || address(d.pump).code.length == 0) {
+        d.marketplace = NNftMarketplaceV2(vm.parseJsonAddress(json, ".nMarketplace"));
+        if (address(d.n).code.length == 0 || address(d.pump).code.length == 0) {
             revert UnexpectedConfiguration("the manifest does not describe this chain");
         }
     }

@@ -10,20 +10,20 @@ import { IZeroXFiPair } from "../interfaces/IZeroXFiPair.sol";
 import { IWzkLTC } from "../interfaces/IWzkLTC.sol";
 
 interface IFeeSplitter {
-    function distribute() external returns (uint256 amountNusd);
+    function distribute() external returns (uint256 amountN);
 }
 
 /// @title 0xFi router v2
 /// @notice Pairs keep their 0.5% LP fee. On top, the router charges a protocol fee that is always
-///         paid in a base asset (NUSD or WzkLTC), at the first base asset on the path:
-///         - 0.1% when either end of the path is a base asset (TOKEN/NUSD, TOKEN/zkLTC, NUSD/zkLTC);
+///         paid in a base asset (N or WzkLTC), at the first base asset on the path:
+///         - 0.1% when either end of the path is a base asset (TOKEN/N, TOKEN/zkLTC, N/zkLTC);
 ///         - 0.3% for a cross swap, where both ends are ordinary tokens (TOKEN1 -> base -> TOKEN2).
 ///         If the input is a base asset the fee comes out of the input. Otherwise the router takes
 ///         delivery of the base asset after the first hop, keeps the fee and forwards the rest, so
 ///         `amountOutMin` is always checked against what the user really receives.
-///         Accrued NUSD fees go to the fee splitter, which splits them in the same call, and WzkLTC
+///         Accrued N fees go to the fee splitter, which splits them in the same call, and WzkLTC
 ///         fees to the `treasury` address, through a permissionless call. (The mainnet deployment
-///         passes the fee splitter as `treasury` too: it unwraps WzkLTC fees into the NUSD reserve.)
+///         passes the fee splitter as `treasury` too: it unwraps WzkLTC fees into the N reserve.)
 ///         There is no admin.
 contract ZeroXFiRouterV2 is ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -51,7 +51,7 @@ contract ZeroXFiRouterV2 is ReentrancyGuard {
 
     IZeroXFiFactoryV2 public immutable factory;
     IWzkLTC public immutable wzkLTC;
-    address public immutable nusd;
+    address public immutable n;
     address public immutable feeSplitter;
     address public immutable treasury;
     mapping(address => uint256) public accruedRouterFees;
@@ -118,7 +118,7 @@ contract ZeroXFiRouterV2 is ReentrancyGuard {
         ) revert InvalidConfiguration();
         factory = IZeroXFiFactoryV2(factory_);
         wzkLTC = IWzkLTC(wzkLTC_);
-        nusd = IZeroXFiFactoryV2(factory_).nusd();
+        n = IZeroXFiFactoryV2(factory_).n();
         feeSplitter = feeSplitter_;
         treasury = treasury_;
     }
@@ -129,14 +129,14 @@ contract ZeroXFiRouterV2 is ReentrancyGuard {
 
     // ---------------------------------------------------------------- fees
 
-    /// @notice Sends accrued fees out: NUSD to the fee splitter (split in the same call), WzkLTC to
+    /// @notice Sends accrued fees out: N to the fee splitter (split in the same call), WzkLTC to
     ///         the treasury. Permissionless.
     function distributeFees(address token) external nonReentrant returns (uint256 amount) {
         amount = accruedRouterFees[token];
         if (amount == 0) revert NothingToDistribute();
         accruedRouterFees[token] = 0;
         address recipient;
-        if (token == nusd) {
+        if (token == n) {
             recipient = feeSplitter;
             _safeTransferExact(token, recipient, amount);
             IFeeSplitter(recipient).distribute();
@@ -358,7 +358,7 @@ contract ZeroXFiRouterV2 is ReentrancyGuard {
         }
     }
 
-    /// @notice Router fee rate for a path: 10 bps if either end is NUSD or WzkLTC, else 30 bps.
+    /// @notice Router fee rate for a path: 10 bps if either end is N or WzkLTC, else 30 bps.
     function routerFeeBpsForPath(address[] calldata path) external view returns (uint256) {
         _validatePath(path);
         return factory.isBaseToken(path[0]) || factory.isBaseToken(path[path.length - 1])

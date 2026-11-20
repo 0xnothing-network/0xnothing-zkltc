@@ -2,9 +2,9 @@
 pragma solidity ^0.8.24;
 
 import {TestBase} from "../TestBase.sol";
-import {NusdNftMarketplaceV2} from "../../src/0xpixel/NusdNftMarketplaceV2.sol";
+import {NNftMarketplaceV2} from "../../src/0xpixel/NNftMarketplaceV2.sol";
 import {ZeroXPixelV2} from "../../src/0xpixel/ZeroXPixelV2.sol";
-import {MarketplaceBurnableNusdMock} from "../mocks/NusdMarketplaceMocks.sol";
+import {MarketplaceBurnableNMock} from "../mocks/NMarketplaceMocks.sol";
 
 /// Tests for finding R2-M-01 of the second review of the 2026-11 audit (docs/AUDIT_2026-11.md).
 ///
@@ -20,23 +20,23 @@ contract AuditMarketplaceOffersTest is TestBase {
     address private constant CAROL = address(0xCA201);
     address private constant MALLORY = address(0xBAD);
 
-    MarketplaceBurnableNusdMock private nusd;
+    MarketplaceBurnableNMock private n;
     ZeroXPixelV2 private pixel;
-    NusdNftMarketplaceV2 private market;
+    NNftMarketplaceV2 private market;
     uint256 private id;
 
     function setUp() public {
         vm.warp(1_000_000);
-        nusd = new MarketplaceBurnableNusdMock();
+        n = new MarketplaceBurnableNMock();
         pixel = new ZeroXPixelV2();
         address[] memory collections = new address[](1);
         collections[0] = address(pixel);
-        market = new NusdNftMarketplaceV2(address(nusd), address(this), collections);
+        market = new NNftMarketplaceV2(address(n), address(this), collections);
         address[3] memory buyers = [BOB, CAROL, MALLORY];
         for (uint256 i; i < buyers.length; ++i) {
-            nusd.mint(buyers[i], 1_000 ether);
+            n.mint(buyers[i], 1_000 ether);
             vm.prank(buyers[i]);
-            nusd.approve(address(market), type(uint256).max);
+            n.approve(address(market), type(uint256).max);
         }
         vm.prank(ALICE);
         id = pixel.mintPacked("art", "", 8, hex"000000ff0000");
@@ -52,7 +52,7 @@ contract AuditMarketplaceOffersTest is TestBase {
     }
 
     function _assertSolvent() private view {
-        assertEq(nusd.balanceOf(address(market)), market.totalLiabilitiesNusd(), "the market holds exactly what it owes");
+        assertEq(n.balanceOf(address(market)), market.totalLiabilitiesN(), "the market holds exactly what it owes");
     }
 
     /// The scenario of the finding: bid, buy the listing instead, resell below the old bid.
@@ -69,8 +69,8 @@ contract AuditMarketplaceOffersTest is TestBase {
         assertEq(pixel.ownerOf(id), BOB, "Bob owns the token he bid on");
         assertFalse(_offerActive(offerId), "and the purchase ended his bid on it");
         assertEq(market.offerIdOf(address(pixel), id, BOB), 0, "no bid left");
-        assertEq(market.escrowedNusd(), 0, "nothing escrowed");
-        assertEq(nusd.balanceOf(BOB), 500 ether, "the escrow of the bid paid for the purchase, not the wallet");
+        assertEq(market.escrowedN(), 0, "nothing escrowed");
+        assertEq(n.balanceOf(BOB), 500 ether, "the escrow of the bid paid for the purchase, not the wallet");
         assertEq(market.credits(BOB), 20 ether, "and the 20 it had over is credit");
         _assertSolvent();
 
@@ -82,7 +82,7 @@ contract AuditMarketplaceOffersTest is TestBase {
         vm.startPrank(MALLORY);
         market.buy(bobListing, 450 ether, 450 ether);
         pixel.approve(address(market), id);
-        vm.expectRevert(NusdNftMarketplaceV2.Inactive.selector);
+        vm.expectRevert(NNftMarketplaceV2.Inactive.selector);
         market.acceptOffer(offerId, 0);
         vm.stopPrank();
         assertEq(pixel.ownerOf(id), MALLORY, "an ordinary sale");
@@ -106,12 +106,12 @@ contract AuditMarketplaceOffersTest is TestBase {
         market.buy(listingId, 450 ether, 450 ether);
         assertFalse(_offerActive(offerId), "the sale ended the seller's own bid");
         pixel.approve(address(market), id);
-        vm.expectRevert(NusdNftMarketplaceV2.Inactive.selector);
+        vm.expectRevert(NNftMarketplaceV2.Inactive.selector);
         market.acceptOffer(offerId, 0);
         vm.stopPrank();
         assertEq(pixel.ownerOf(id), MALLORY, "an ordinary sale");
         assertEq(market.credits(BOB), 500 ether + 447.75 ether, "his refund, and 450 minus 0.5%");
-        assertEq(market.escrowedNusd(), 0, "nothing escrowed");
+        assertEq(market.escrowedN(), 0, "nothing escrowed");
         _assertSolvent();
     }
 
@@ -130,12 +130,12 @@ contract AuditMarketplaceOffersTest is TestBase {
         assertFalse(_offerActive(bobOffer), "his own bid ended with the sale");
         assertEq(market.offerIdOf(address(pixel), id, BOB), 0, "no bid of Bob's left");
         assertEq(market.offerIdOf(address(pixel), id, CAROL), 0, "nor of Carol's");
-        assertEq(market.escrowedNusd(), 0, "nothing escrowed");
+        assertEq(market.escrowedN(), 0, "nothing escrowed");
         assertEq(market.credits(BOB), 500 ether + 517.4 ether, "his refund, and 520 minus 0.5%");
 
         vm.startPrank(CAROL);
         pixel.approve(address(market), id);
-        vm.expectRevert(NusdNftMarketplaceV2.Inactive.selector);
+        vm.expectRevert(NNftMarketplaceV2.Inactive.selector);
         market.acceptOffer(bobOffer, 0);
         vm.stopPrank();
         _assertSolvent();
@@ -151,18 +151,18 @@ contract AuditMarketplaceOffersTest is TestBase {
         assertTrue(_offerActive(second), "the second stands");
         assertEq(market.offerIdOf(address(pixel), id, BOB), second, "one bid per token");
         assertEq(market.activeOfferCount(), 1, "one live offer");
-        assertEq(market.escrowedNusd(), 300 ether, "the escrow follows the live bid");
+        assertEq(market.escrowedN(), 300 ether, "the escrow follows the live bid");
         assertEq(market.credits(BOB), 200 ether, "the difference is credit");
-        assertEq(nusd.balanceOf(BOB), 500 ether, "lowering a bid takes nothing from the wallet");
+        assertEq(n.balanceOf(BOB), 500 ether, "lowering a bid takes nothing from the wallet");
         _assertSolvent();
 
         vm.prank(BOB);
         uint256 third =
             market.makeOffer(address(pixel), id, 700 ether, uint64(vm.getBlockTimestamp() + 1 days), 200 ether);
         assertEq(market.offerIdOf(address(pixel), id, BOB), third, "the third is the live one");
-        assertEq(market.escrowedNusd(), 700 ether, "escrow");
+        assertEq(market.escrowedN(), 700 ether, "escrow");
         assertEq(market.credits(BOB), 0, "raising it used the credit first");
-        assertEq(nusd.balanceOf(BOB), 300 ether, "and 200 from the wallet");
+        assertEq(n.balanceOf(BOB), 300 ether, "and 200 from the wallet");
 
         // Another account's bid on the same token is its own.
         uint256 carolOffer = _bid(CAROL, 100 ether);
@@ -172,7 +172,7 @@ contract AuditMarketplaceOffersTest is TestBase {
 
         vm.startPrank(ALICE);
         pixel.approve(address(market), id);
-        vm.expectRevert(NusdNftMarketplaceV2.Inactive.selector);
+        vm.expectRevert(NNftMarketplaceV2.Inactive.selector);
         market.acceptOffer(first, 0);
         market.acceptOffer(third, 0);
         vm.stopPrank();
@@ -202,7 +202,7 @@ contract AuditMarketplaceOffersTest is TestBase {
         market.expireOffer(newer);
         assertEq(market.offerIdOf(address(pixel), id, BOB), 0, "expired by anyone");
         assertEq(market.credits(BOB), 500 ether, "all of it is credit again");
-        assertEq(market.escrowedNusd(), 0, "nothing escrowed");
+        assertEq(market.escrowedN(), 0, "nothing escrowed");
         assertEq(market.activeOfferCount(), 0, "no live offer");
         _assertSolvent();
     }

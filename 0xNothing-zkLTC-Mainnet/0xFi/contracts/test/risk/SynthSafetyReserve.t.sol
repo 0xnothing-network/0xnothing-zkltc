@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import { SynthSafetyReserve } from "../../src/synth/SynthSafetyReserve.sol";
 import { TestBase } from "../helpers/TestBase.sol";
-import { MockNUSD } from "../mocks/RiskMocks.sol";
+import { MockN } from "../mocks/RiskMocks.sol";
 import { MockReserveVault } from "../mocks/SynthSafetyReserveMocks.sol";
 import { MockFeeOnTransferToken } from "../mocks/TokenMocks.sol";
 
@@ -12,27 +12,27 @@ contract SynthSafetyReserveTest is TestBase {
     address private constant GUARDIAN = address(0xBEEF);
     address private constant LOSS_RECIPIENT = address(0x1055);
 
-    MockNUSD private nusd;
+    MockN private n;
     SynthSafetyReserve private reserve;
     MockReserveVault private firstVault;
     MockReserveVault private secondVault;
 
     function setUp() public {
         vm.warp(1_000_000);
-        nusd = new MockNUSD();
-        reserve = new SynthSafetyReserve(address(nusd), address(this));
-        firstVault = new MockReserveVault(nusd, reserve);
-        secondVault = new MockReserveVault(nusd, reserve);
+        n = new MockN();
+        reserve = new SynthSafetyReserve(address(n), address(this));
+        firstVault = new MockReserveVault(n, reserve);
+        secondVault = new MockReserveVault(n, reserve);
         reserve.bindVaults(address(firstVault), address(secondVault));
 
-        nusd.mint(FUNDER, 500_000 ether);
+        n.mint(FUNDER, 500_000 ether);
         vm.prank(FUNDER);
-        nusd.approve(address(reserve), type(uint256).max);
+        n.approve(address(reserve), type(uint256).max);
     }
 
     function testConstantsAndExactlyTwoVaultBinding() public {
-        assertEq(reserve.ENTRY_TVL_NUSD(), 100_000 ether, "entry threshold");
-        assertEq(reserve.EXIT_TVL_NUSD(), 90_000 ether, "exit threshold");
+        assertEq(reserve.ENTRY_TVL_N(), 100_000 ether, "entry threshold");
+        assertEq(reserve.EXIT_TVL_N(), 90_000 ether, "exit threshold");
         assertEq(reserve.ACTIVATION_DELAY(), 24 hours, "activation delay");
         assertTrue(reserve.vaultsBound(), "vault set bound");
         assertTrue(reserve.authorizedVault(address(firstVault)), "first vault authorized");
@@ -43,13 +43,13 @@ contract SynthSafetyReserveTest is TestBase {
     }
 
     function testBindingRejectsWrongReserveAndDuplicateVaults() public {
-        SynthSafetyReserve otherReserve = new SynthSafetyReserve(address(nusd), address(this));
-        MockReserveVault wrongTarget = new MockReserveVault(nusd, otherReserve);
+        SynthSafetyReserve otherReserve = new SynthSafetyReserve(address(n), address(this));
+        MockReserveVault wrongTarget = new MockReserveVault(n, otherReserve);
 
         vm.expectRevert(SynthSafetyReserve.InvalidConfiguration.selector);
         otherReserve.bindVaults(address(wrongTarget), address(wrongTarget));
 
-        MockReserveVault anotherWrongTarget = new MockReserveVault(nusd, reserve);
+        MockReserveVault anotherWrongTarget = new MockReserveVault(n, reserve);
         vm.expectRevert(SynthSafetyReserve.InvalidConfiguration.selector);
         otherReserve.bindVaults(address(wrongTarget), address(anotherWrongTarget));
     }
@@ -77,27 +77,27 @@ contract SynthSafetyReserveTest is TestBase {
         firstVault.allocate(30_000 ether);
         secondVault.allocate(20_000 ether);
 
-        assertEq(reserve.freeReserveNusd(), 50_000 ether, "free funds");
-        assertEq(reserve.totalAllocatedNusd(), 50_000 ether, "allocated funds");
-        assertEq(reserve.allocatedNusdByVault(address(firstVault)), 30_000 ether, "first allocation");
-        assertEq(reserve.allocatedNusdByVault(address(secondVault)), 20_000 ether, "second allocation");
-        assertEq(reserve.totalReserveNusd(), 100_000 ether, "free plus allocated identity");
+        assertEq(reserve.freeReserveN(), 50_000 ether, "free funds");
+        assertEq(reserve.totalAllocatedN(), 50_000 ether, "allocated funds");
+        assertEq(reserve.allocatedNByVault(address(firstVault)), 30_000 ether, "first allocation");
+        assertEq(reserve.allocatedNByVault(address(secondVault)), 20_000 ether, "second allocation");
+        assertEq(reserve.totalReserveN(), 100_000 ether, "free plus allocated identity");
 
         firstVault.release(10_000 ether);
-        assertEq(reserve.freeReserveNusd(), 60_000 ether, "released funds free");
-        assertEq(reserve.totalAllocatedNusd(), 40_000 ether, "released allocation deducted");
-        assertEq(reserve.totalReserveNusd(), 100_000 ether, "release preserves managed total");
+        assertEq(reserve.freeReserveN(), 60_000 ether, "released funds free");
+        assertEq(reserve.totalAllocatedN(), 40_000 ether, "released allocation deducted");
+        assertEq(reserve.totalReserveN(), 100_000 ether, "release preserves managed total");
     }
 
     function testExitThresholdAfterRealizedLossAndFreshReentryDelay() public {
         _activate();
         firstVault.allocate(20_000 ether);
         firstVault.realizeLoss(10_000 ether, LOSS_RECIPIENT);
-        assertEq(reserve.totalReserveNusd(), 90_000 ether, "exit boundary remains eligible");
+        assertEq(reserve.totalReserveN(), 90_000 ether, "exit boundary remains eligible");
         assertTrue(reserve.sponsorshipActive(), "inclusive exit boundary");
 
         firstVault.realizeLoss(1, LOSS_RECIPIENT);
-        assertEq(reserve.totalReserveNusd(), 90_000 ether - 1, "loss reflected");
+        assertEq(reserve.totalReserveN(), 90_000 ether - 1, "loss reflected");
         assertFalse(reserve.sponsorshipActive(), "below exit threshold stops allocations");
 
         vm.expectRevert(SynthSafetyReserve.SponsorshipInactive.selector);
@@ -110,18 +110,18 @@ contract SynthSafetyReserveTest is TestBase {
         assertTrue(reserve.sponsorshipActive(), "reentry after full delay");
     }
 
-    function testUnderlyingNusdUnderbackingFailsClosedImmediately() public {
+    function testUnderlyingNUnderbackingFailsClosedImmediately() public {
         _activate();
-        assertTrue(reserve.nusdBackingHealthy(), "healthy backing");
-        nusd.setReserveValueNusd(nusd.totalSupply() - 1);
+        assertTrue(reserve.nBackingHealthy(), "healthy backing");
+        n.setReserveValueN(n.totalSupply() - 1);
 
-        assertFalse(reserve.nusdBackingHealthy(), "underbacking detected");
+        assertFalse(reserve.nBackingHealthy(), "underbacking detected");
         assertFalse(reserve.sponsorshipActive(), "effective mode fails closed");
         reserve.syncSponsorshipMode();
         vm.expectRevert(SynthSafetyReserve.SponsorshipInactive.selector);
         firstVault.allocate(1 ether);
 
-        nusd.setReserveValueNusd(type(uint256).max);
+        n.setReserveValueN(type(uint256).max);
         reserve.syncSponsorshipMode();
         assertFalse(reserve.sponsorshipActive(), "restored backing starts a new delay");
         assertEq(reserve.eligibleSince(), block.timestamp, "new eligibility timer");
@@ -137,7 +137,7 @@ contract SynthSafetyReserveTest is TestBase {
         vm.expectRevert(SynthSafetyReserve.AllocationsPaused.selector);
         secondVault.allocate(1 ether);
         firstVault.release(10_000 ether);
-        assertEq(reserve.totalAllocatedNusd(), 0, "release remains open");
+        assertEq(reserve.totalAllocatedN(), 0, "release remains open");
 
         vm.expectRevert();
         vm.prank(GUARDIAN);
@@ -169,17 +169,17 @@ contract SynthSafetyReserveTest is TestBase {
 
     function testDirectDonationIsProtocolOwnedFreeReserve() public {
         vm.prank(FUNDER);
-        assertTrue(nusd.transfer(address(reserve), 100_000 ether), "donation transfer");
-        assertEq(reserve.freeReserveNusd(), 100_000 ether, "direct donation recognized");
-        assertEq(reserve.totalReserveNusd(), 100_000 ether, "managed TVL includes donation");
+        assertTrue(n.transfer(address(reserve), 100_000 ether), "donation transfer");
+        assertEq(reserve.freeReserveN(), 100_000 ether, "direct donation recognized");
+        assertEq(reserve.totalReserveN(), 100_000 ether, "managed TVL includes donation");
 
         reserve.syncSponsorshipMode();
         assertEq(reserve.eligibleSince(), block.timestamp, "anyone can start synchronization");
     }
 
-    function _fund(uint256 amountNusd) private {
+    function _fund(uint256 amountN) private {
         vm.prank(FUNDER);
-        reserve.fund(amountNusd);
+        reserve.fund(amountN);
     }
 
     function _activate() private {

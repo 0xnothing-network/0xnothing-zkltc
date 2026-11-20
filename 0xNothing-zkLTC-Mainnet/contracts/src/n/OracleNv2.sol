@@ -7,9 +7,9 @@ import {RoleControl} from "../common/RoleControl.sol";
 import {SafeTransferLib} from "../common/SafeTransferLib.sol";
 import {IPriceOracle} from "../oracle/IPriceOracle.sol";
 
-/// @title NUSD
-/// @notice Nothing USD, backed by native zkLTC and priced through an oracle router.
-///         - Mint: zkLTC worth $1 at the oracle mints 1 NUSD, minus an optional fee that stays in
+/// @title N
+/// @notice N, backed by native zkLTC and priced through an oracle router.
+///         - Mint: zkLTC worth $1 at the oracle mints 1 N, minus an optional fee that stays in
 ///           the reserve. The supply ceiling doubles by itself once 80% of it is used, at most once
 ///           every 7 days, so growth never waits for an admin while a bad price stays bounded.
 ///         - Redeem: pays the lower of the oracle value and the holder's proportional share of the
@@ -23,7 +23,7 @@ import {IPriceOracle} from "../oracle/IPriceOracle.sol";
 ///           than that step. A release the ceiling has no room for waits; it is never cut down,
 ///           and it lifts the ceiling when a mint of one wei would (80% used, a week since the
 ///           last raise).
-///           NUSD redeemed in the last one to two weeks still counts as supply for the 3.3x test
+///           N redeemed in the last one to two weeks still counts as supply for the 3.3x test
 ///           (not for the size of the step), so redeeming and minting back cannot force a release
 ///           that the lasting supply would not have earned.
 ///         - Oracle lag: a price is only exact when it is fresh, so minting (and the surplus
@@ -33,12 +33,12 @@ import {IPriceOracle} from "../oracle/IPriceOracle.sol";
 ///           above the feed's deviation threshold. Together they bound what anyone can extract
 ///           from a lagging feed.
 ///         - Oracle failure: anyone can report an oracle that cannot price. If no mint, redemption,
-///           surplus release or transfer of NUSD finds it pricing during the next 7 days, holders
+///           surplus release or transfer of N finds it pricing during the next 7 days, holders
 ///           can leave with their proportional share of the reserve for as long as it stays down.
 ///         The admin of this contract changes bounded parameters only: it cannot pause
 ///         redemption, move the reserve or mint outside these rules. The price itself is the
 ///         oracle's, so whoever chooses the oracle's source is trusted with it.
-contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
+contract OracleNv2 is RoleControl, ReentrancyGuard {
     error InvalidOracle();
     error InvalidSupplyCeiling();
     error InvalidAmount();
@@ -48,23 +48,23 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
     error InvalidSurplusSplit();
     error InvalidMintGuards();
     error StaleMintPrice(uint256 updatedAt, uint256 maxAge);
-    error MintRateLimited(uint256 requestedAmountNusd, uint256 availableAmountNusd);
+    error MintRateLimited(uint256 requestedAmountN, uint256 availableAmountN);
     error MintPaused();
     error SlippageExceeded(uint256 minimumAmount, uint256 actualAmount);
-    error SupplyCeilingExceeded(uint256 requestedAmountNusd, uint256 availableAmountNusd);
+    error SupplyCeilingExceeded(uint256 requestedAmountN, uint256 availableAmountN);
     error OracleHealthy();
     error OracleFailureNotReported();
     error OracleUnavailable();
     error OracleFailureGracePending(uint256 availableAt);
     error SurplusRecipientUnset();
     error SurplusTooSoon(uint256 availableAt);
-    error SurplusBelowTrigger(uint256 reserveValueNusd, uint256 supplyNusd);
+    error SurplusBelowTrigger(uint256 reserveValueN, uint256 supplyN);
     error ERC20InvalidAddress();
     error ERC20InsufficientBalance(address account, uint256 balance, uint256 requiredAmount);
     error ERC20InsufficientAllowance(address owner, address spender, uint256 allowance, uint256 requiredAmount);
 
-    string public constant name = "Nothing USD";
-    string public constant symbol = "NUSD";
+    string public constant name = "N";
+    string public constant symbol = "N";
     uint8 public constant decimals = 18;
     uint256 public constant WAD = 1e18;
     uint256 public constant BPS = 10_000;
@@ -96,7 +96,7 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
     uint256 public totalCollateralWei;
 
     // One slot: the ceiling and the clocks.
-    uint96 public supplyCeilingNusd;
+    uint96 public supplyCeilingN;
     uint40 public lastCeilingRaiseAt;
     uint40 public lastSurplusReleaseAt;
     /// @notice First time anyone observed the oracle failing; zero while it is healthy.
@@ -114,10 +114,10 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
     uint16 public surplusTreasuryBps = 2_000;
 
     // One slot: the oracle-lag guards.
-    /// @notice The mint budget: at most this much NUSD at once, refilled evenly over MINT_WINDOW
+    /// @notice The mint budget: at most this much N at once, refilled evenly over MINT_WINDOW
     ///         (unlimited until the admin sets it).
     uint96 public mintLimitPerWindow = type(uint96).max;
-    /// @notice NUSD counted against the budget as of `mintWindowStart`; it drains as time passes.
+    /// @notice N counted against the budget as of `mintWindowStart`; it drains as time passes.
     uint96 public mintedInWindow;
     uint40 public mintWindowStart;
     /// @notice Oldest price, in seconds, a mint or surplus release accepts. A redemption against
@@ -135,40 +135,40 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
 
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
-    event MintedAtOracle(address indexed payer, address indexed recipient, uint256 collateralInWei, uint256 amountNusd);
+    event MintedAtOracle(address indexed payer, address indexed recipient, uint256 collateralInWei, uint256 amountN);
     event RedeemedAtOracle(
-        address indexed account, address indexed recipient, uint256 amountNusd, uint256 collateralOutWei
+        address indexed account, address indexed recipient, uint256 amountN, uint256 collateralOutWei
     );
     event ReserveCovered(address indexed payer, uint256 amountWei, uint256 totalCollateralWei);
     event OracleFailureReported(address indexed reporter, uint256 reportedAt);
     event OracleFailureCleared(address indexed caller);
     event EmergencyRedeemed(
-        address indexed account, address indexed recipient, uint256 amountNusd, uint256 collateralOutWei
+        address indexed account, address indexed recipient, uint256 amountN, uint256 collateralOutWei
     );
     event SurplusReleased(
         address indexed caller,
-        uint256 toStakingNusd,
-        uint256 toTreasuryNusd,
-        uint256 reserveValueNusd,
-        uint256 supplyAfterNusd
+        uint256 toStakingN,
+        uint256 toTreasuryN,
+        uint256 reserveValueN,
+        uint256 supplyAfterN
     );
-    event Burned(address indexed account, uint256 amountNusd);
+    event Burned(address indexed account, uint256 amountN);
     event MintPauseUpdated(bool paused);
     event FeesUpdated(uint256 mintFeeBps, uint256 redeemFeeBps);
-    event SupplyCeilingUpdated(uint256 supplyCeilingNusd, bool automatic);
+    event SupplyCeilingUpdated(uint256 supplyCeilingN, bool automatic);
     event SurplusRecipientsUpdated(address indexed staking, address indexed treasury, uint256 treasuryBps);
     event SurplusRatiosUpdated(uint256 floorBps, uint256 triggerBps);
     event MintGuardsUpdated(uint256 maxPriceAge, uint256 limitPerWindow);
 
-    constructor(IPriceOracle priceOracle, address initialAdmin, uint256 supplyCeilingNusd_)
+    constructor(IPriceOracle priceOracle, address initialAdmin, uint256 supplyCeilingN_)
         RoleControl(initialAdmin)
     {
         if (address(priceOracle).code.length == 0) revert InvalidOracle();
-        if (supplyCeilingNusd_ == 0 || supplyCeilingNusd_ > type(uint96).max) revert InvalidSupplyCeiling();
+        if (supplyCeilingN_ == 0 || supplyCeilingN_ > type(uint96).max) revert InvalidSupplyCeiling();
 
         oracle = priceOracle;
         // forge-lint: disable-next-line(unsafe-typecast)
-        supplyCeilingNusd = uint96(supplyCeilingNusd_);
+        supplyCeilingN = uint96(supplyCeilingN_);
         _grantRole(PAUSER_ROLE, initialAdmin);
     }
 
@@ -203,16 +203,16 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
 
     // ---------------------------------------------------------------- mint and redeem
 
-    function quoteMint(uint256 collateralWei) public view returns (uint256 amountNusd) {
-        uint256 grossNusd = _valueOf(collateralWei);
-        amountNusd = grossNusd - MathX.mulDiv(grossNusd, mintFeeBps, BPS);
+    function quoteMint(uint256 collateralWei) public view returns (uint256 amountN) {
+        uint256 grossN = _valueOf(collateralWei);
+        amountN = grossN - MathX.mulDiv(grossN, mintFeeBps, BPS);
     }
 
-    function mintAtOracle(uint256 minNusdOut, address recipient)
+    function mintAtOracle(uint256 minNOut, address recipient)
         external
         payable
         nonReentrant
-        returns (uint256 amountNusd)
+        returns (uint256 amountN)
     {
         if (mintPaused) revert MintPaused();
         if (msg.value == 0) revert InvalidAmount();
@@ -220,59 +220,59 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
 
         _requireFreshPrice();
         _clearOracleFailure();
-        amountNusd = quoteMint(msg.value);
-        if (amountNusd == 0) revert InvalidAmount();
-        if (amountNusd < minNusdOut) revert SlippageExceeded(minNusdOut, amountNusd);
+        amountN = quoteMint(msg.value);
+        if (amountN == 0) revert InvalidAmount();
+        if (amountN < minNOut) revert SlippageExceeded(minNOut, amountN);
 
         uint256 supply = totalSupply;
-        uint256 ceiling = _raiseCeilingIfDue(supply + amountNusd);
-        uint256 availableAmountNusd = ceiling > supply ? ceiling - supply : 0;
-        if (amountNusd > availableAmountNusd) revert SupplyCeilingExceeded(amountNusd, availableAmountNusd);
+        uint256 ceiling = _raiseCeilingIfDue(supply + amountN);
+        uint256 availableAmountN = ceiling > supply ? ceiling - supply : 0;
+        if (amountN > availableAmountN) revert SupplyCeilingExceeded(amountN, availableAmountN);
 
-        _consumeMintBudget(amountNusd);
+        _consumeMintBudget(amountN);
 
-        // The whole deposit joins the reserve; the fee is the NUSD that was not minted for it.
+        // The whole deposit joins the reserve; the fee is the N that was not minted for it.
         totalCollateralWei += msg.value;
-        _mint(recipient, amountNusd);
+        _mint(recipient, amountN);
 
-        emit MintedAtOracle(msg.sender, recipient, msg.value, amountNusd);
+        emit MintedAtOracle(msg.sender, recipient, msg.value, amountN);
     }
 
-    /// @notice zkLTC paid for `amountNusd`: the lower of its oracle value and its share of the
+    /// @notice zkLTC paid for `amountN`: the lower of its oracle value and its share of the
     ///         reserve, minus the redeem fee (which stays in the reserve). The fee is
     ///         `redeemFeeBps`, or MAX_FEE_BPS while the price is older than `mintMaxPriceAge`:
     ///         redemption never waits for a fresher price, it pays for the risk of an old one.
-    function quoteRedeem(uint256 amountNusd) public view returns (uint256 collateralOutWei) {
+    function quoteRedeem(uint256 amountN) public view returns (uint256 collateralOutWei) {
         uint256 supply = totalSupply;
-        if (amountNusd == 0 || amountNusd > supply) return 0;
+        if (amountN == 0 || amountN > supply) return 0;
         (uint256 priceWad, uint256 updatedAt,) = oracle.readPriceWad();
-        uint256 atOracle = MathX.mulDiv(amountNusd, WAD, priceWad);
-        uint256 proRata = MathX.mulDiv(amountNusd, totalCollateralWei, supply);
+        uint256 atOracle = MathX.mulDiv(amountN, WAD, priceWad);
+        uint256 proRata = MathX.mulDiv(amountN, totalCollateralWei, supply);
         uint256 gross = MathX.min(atOracle, proRata);
         // forge-lint: disable-next-line(block-timestamp)
         bool fresh = updatedAt <= block.timestamp && block.timestamp - updatedAt <= mintMaxPriceAge;
         collateralOutWei = gross - MathX.mulDiv(gross, fresh ? redeemFeeBps : MAX_FEE_BPS, BPS);
     }
 
-    function redeemAtOracle(uint256 amountNusd, uint256 minCollateralOutWei, address recipient)
+    function redeemAtOracle(uint256 amountN, uint256 minCollateralOutWei, address recipient)
         external
         nonReentrant
         returns (uint256 collateralOutWei)
     {
-        if (amountNusd == 0) revert InvalidAmount();
+        if (amountN == 0) revert InvalidAmount();
         if (recipient == address(0)) revert InvalidRecipient();
 
-        collateralOutWei = quoteRedeem(amountNusd);
+        collateralOutWei = quoteRedeem(amountN);
         if (collateralOutWei == 0) revert InvalidAmount();
         if (collateralOutWei < minCollateralOutWei) revert SlippageExceeded(minCollateralOutWei, collateralOutWei);
 
         _clearOracleFailure();
         _recordSupplyPeak(totalSupply);
-        _burn(msg.sender, amountNusd);
+        _burn(msg.sender, amountN);
         totalCollateralWei -= collateralOutWei;
         SafeTransferLib.safeTransferNative(recipient, collateralOutWei);
 
-        emit RedeemedAtOracle(msg.sender, recipient, amountNusd, collateralOutWei);
+        emit RedeemedAtOracle(msg.sender, recipient, amountN, collateralOutWei);
     }
 
     // ---------------------------------------------------------------- oracle failure exit
@@ -288,7 +288,7 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
     }
 
     /// @notice Stops the failure clock once the oracle prices again. Permissionless, and every
-    ///         mint, redemption, surplus release and transfer of NUSD does the same: each one that
+    ///         mint, redemption, surplus release and transfer of N does the same: each one that
     ///         finds the oracle pricing proves it works, so the report it meets is void.
     function clearOracleFailure() external {
         if (!_oracleUsable()) revert OracleUnavailable();
@@ -304,7 +304,7 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
 
     /// @notice Price-free exit once the oracle has been unusable for ORACLE_FAILURE_GRACE: pays each
     ///         holder their proportional share of the reserve, so the order of exits does not matter.
-    function emergencyRedeem(uint256 amountNusd, uint256 minCollateralOutWei, address recipient)
+    function emergencyRedeem(uint256 amountN, uint256 minCollateralOutWei, address recipient)
         external
         nonReentrant
         returns (uint256 collateralOutWei)
@@ -314,36 +314,36 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
         // forge-lint: disable-next-line(block-timestamp)
         if (block.timestamp < availableAt) revert OracleFailureGracePending(availableAt);
         if (_oracleUsable()) revert OracleHealthy();
-        if (amountNusd == 0) revert InvalidAmount();
+        if (amountN == 0) revert InvalidAmount();
         if (recipient == address(0)) revert InvalidRecipient();
-        collateralOutWei = MathX.mulDiv(amountNusd, totalCollateralWei, totalSupply);
+        collateralOutWei = MathX.mulDiv(amountN, totalCollateralWei, totalSupply);
         if (collateralOutWei == 0) revert InvalidAmount();
         if (collateralOutWei < minCollateralOutWei) revert SlippageExceeded(minCollateralOutWei, collateralOutWei);
         _recordSupplyPeak(totalSupply);
-        _burn(msg.sender, amountNusd);
+        _burn(msg.sender, amountN);
         totalCollateralWei -= collateralOutWei;
         SafeTransferLib.safeTransferNative(recipient, collateralOutWei);
-        emit EmergencyRedeemed(msg.sender, recipient, amountNusd, collateralOutWei);
+        emit EmergencyRedeemed(msg.sender, recipient, amountN, collateralOutWei);
     }
 
     // ---------------------------------------------------------------- reserve and surplus
 
-    function reserveValueNusd() public view returns (uint256 valueNusd) {
-        valueNusd = _valueOf(totalCollateralWei);
+    function reserveValueN() public view returns (uint256 valueN) {
+        valueN = _valueOf(totalCollateralWei);
     }
 
     /// @notice Reserve value over supply, in WAD (1e18 = fully backed). Max uint while nothing is minted.
     function backingRatioWad() external view returns (uint256) {
         uint256 supply = totalSupply;
         if (supply == 0) return type(uint256).max;
-        return MathX.mulDiv(reserveValueNusd(), WAD, supply);
+        return MathX.mulDiv(reserveValueN(), WAD, supply);
     }
 
-    /// @notice Burns the caller's NUSD. The collateral stays, so every burn raises the reserve ratio.
-    function burn(uint256 amountNusd) external {
-        if (amountNusd == 0) revert InvalidAmount();
-        _burn(msg.sender, amountNusd);
-        emit Burned(msg.sender, amountNusd);
+    /// @notice Burns the caller's N. The collateral stays, so every burn raises the reserve ratio.
+    function burn(uint256 amountN) external {
+        if (amountN == 0) revert InvalidAmount();
+        _burn(msg.sender, amountN);
+        emit Burned(msg.sender, amountN);
     }
 
     function coverReserve() external payable {
@@ -370,14 +370,14 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
         if (peak > basis) basis = peak;
     }
 
-    /// @notice NUSD a release would mint now and whether its surplus conditions hold.
-    /// @dev `amountNusd` is the reserve's excess over the floor, at most one step, and zero when the
+    /// @notice N a release would mint now and whether its surplus conditions hold.
+    /// @dev `amountN` is the reserve's excess over the floor, at most one step, and zero when the
     ///      ceiling (doubled first if the supply uses 80% of it and the last raise is a week old)
     ///      has no room for all of it. Below the trigger it only shows how much is above the floor. `ready` covers the trigger, the weekly timer, the pause and the recipients.
     ///      A release also needs a price fresh enough to mint against (`mintMaxPriceAge`), which
     ///      this view does not check. Reverts while the oracle cannot price, like every other
     ///      price-dependent path.
-    function surplusMintCapacity() public view returns (uint256 amountNusd, bool ready) {
+    function surplusMintCapacity() public view returns (uint256 amountN, bool ready) {
         uint256 supply = totalSupply;
         uint256 basis = surplusSupplyBasis();
         uint256 reserveValue = _valueOf(totalCollateralWei);
@@ -385,7 +385,7 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
         uint256 triggerBps = surplusTriggerBps;
         bool triggered = reserveValue * BPS >= basis * triggerBps && reserveValue != 0;
         uint256 target = MathX.mulDiv(reserveValue, BPS, floorBps);
-        amountNusd = target > basis ? target - basis : 0;
+        amountN = target > basis ? target - basis : 0;
         // One release mints at most a step: what a release exactly at the trigger mints, a tenth of
         // the supply at 3.3x over 3.0x. The price a release trusts can be wrong, or a peak that is
         // gone an hour later, and unlike a mint the release draws on no hourly budget; this bounds
@@ -393,7 +393,7 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
         // remembered one: supply that was redeemed must not make a release larger, and with no
         // supply there is nothing to release into. A real surplus beyond it follows in later weeks.
         uint256 step = MathX.mulDiv(supply, triggerBps - floorBps, floorBps);
-        if (amountNusd > step) amountNusd = step;
+        if (amountN > step) amountN = step;
         // A release is whole or it waits. Cut down to the last of the ceiling's headroom it would
         // use up the week for dust and leave minting closed until the ceiling can rise. It lifts
         // the ceiling exactly when a mint of one wei would: when the supply already uses 80% of it
@@ -401,10 +401,10 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
         // the supply is past 90% of the ceiling, so a release never waits for somebody to mint.
         (uint256 ceiling,) = _ceilingFor(supply);
         uint256 headroom = ceiling > supply ? ceiling - supply : 0;
-        if (amountNusd > headroom) amountNusd = 0;
+        if (amountN > headroom) amountN = 0;
         // forge-lint: disable-next-line(block-timestamp)
         bool due = block.timestamp >= uint256(lastSurplusReleaseAt) + SURPLUS_INTERVAL;
-        ready = triggered && due && amountNusd != 0 && !mintPaused && surplusStaking != address(0)
+        ready = triggered && due && amountN != 0 && !mintPaused && surplusStaking != address(0)
             && surplusTreasury != address(0);
     }
 
@@ -412,7 +412,7 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
     ///         80% to the staking pool, 20% to the treasury by default. Permissionless, at most
     ///         once per SURPLUS_INTERVAL, only above the trigger, always against a fresh price,
     ///         never while minting is paused.
-    function releaseSurplus() external nonReentrant returns (uint256 amountNusd) {
+    function releaseSurplus() external nonReentrant returns (uint256 amountN) {
         if (mintPaused) revert MintPaused();
         address staking = surplusStaking;
         address treasury = surplusTreasury;
@@ -424,14 +424,14 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
         bool ready;
         _requireFreshPrice();
         _clearOracleFailure();
-        (amountNusd, ready) = surplusMintCapacity();
+        (amountN, ready) = surplusMintCapacity();
         uint256 reserveValue = _valueOf(totalCollateralWei);
         if (!ready) revert SurplusBelowTrigger(reserveValue, surplusSupplyBasis());
 
         _raiseCeilingIfDue(totalSupply);
         lastSurplusReleaseAt = uint40(block.timestamp);
-        uint256 toTreasury = MathX.mulDiv(amountNusd, surplusTreasuryBps, BPS);
-        uint256 toStaking = amountNusd - toTreasury;
+        uint256 toTreasury = MathX.mulDiv(amountN, surplusTreasuryBps, BPS);
+        uint256 toStaking = amountN - toTreasury;
         if (toStaking != 0) _mint(staking, toStaking);
         if (toTreasury != 0) _mint(treasury, toTreasury);
         emit SurplusReleased(msg.sender, toStaking, toTreasury, reserveValue, totalSupply);
@@ -439,7 +439,7 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
 
     // ---------------------------------------------------------------- pauser and admin
 
-    /// @notice Stops minting and the surplus release, the two paths that create NUSD against the
+    /// @notice Stops minting and the surplus release, the two paths that create N against the
     ///         oracle price. Redemption is not affected. Any pauser can stop them; only the admin
     ///         can start them again, so a pause-only key cannot lift a pause. With no admin left a
     ///         pause is permanent: revoke every pauser before the admin role is ever given up.
@@ -465,7 +465,7 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
             revert InvalidSupplyCeiling();
         }
         // forge-lint: disable-next-line(unsafe-typecast)
-        supplyCeilingNusd = uint96(newCeiling);
+        supplyCeilingN = uint96(newCeiling);
         emit SupplyCeilingUpdated(newCeiling, false);
     }
 
@@ -495,7 +495,7 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
         emit MintGuardsUpdated(maxPriceAge, limitPerWindow);
     }
 
-    /// @notice NUSD that can be minted right now. The budget refills evenly, so no more than
+    /// @notice N that can be minted right now. The budget refills evenly, so no more than
     ///         `mintLimitPerWindow` can be minted at once and no more than twice that in any hour.
     function mintAvailableInWindow() public view returns (uint256) {
         uint256 limit = mintLimitPerWindow;
@@ -520,7 +520,7 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
     /// @dev The ceiling that applies to a supply of `supplyAfter`: doubled when that supply uses
     ///      80% of it and the last raise is a week old.
     function _ceilingFor(uint256 supplyAfter) private view returns (uint256 ceiling, bool raised) {
-        ceiling = supplyCeilingNusd;
+        ceiling = supplyCeilingN;
         if (
             supplyAfter * BPS >= ceiling * CEILING_RAISE_USAGE_BPS
             // forge-lint: disable-next-line(block-timestamp)
@@ -538,7 +538,7 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
         (ceiling, raised) = _ceilingFor(supplyAfter);
         if (raised) {
             // forge-lint: disable-next-line(unsafe-typecast)
-            supplyCeilingNusd = uint96(ceiling);
+            supplyCeilingN = uint96(ceiling);
             lastCeilingRaiseAt = uint40(block.timestamp);
             emit SupplyCeilingUpdated(ceiling, true);
         }
@@ -551,7 +551,7 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
         if (updatedAt > block.timestamp || block.timestamp - updatedAt > maxAge) revert StaleMintPrice(updatedAt, maxAge);
     }
 
-    /// @dev NUSD still counted against the mint budget: what was counted at the last mint, less
+    /// @dev N still counted against the mint budget: what was counted at the last mint, less
     ///      what has refilled since.
     function _mintBudgetUsed(uint256 limit) private view returns (uint256 used) {
         used = mintedInWindow;
@@ -563,14 +563,14 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
     }
 
     /// @dev Counts a mint against the budget.
-    function _consumeMintBudget(uint256 amountNusd) private {
+    function _consumeMintBudget(uint256 amountN) private {
         uint256 limit = mintLimitPerWindow;
         uint256 used = _mintBudgetUsed(limit);
         uint256 available = used >= limit ? 0 : limit - used;
-        if (amountNusd > available) revert MintRateLimited(amountNusd, available);
-        // used + amountNusd is at most the limit, which fits 96 bits.
+        if (amountN > available) revert MintRateLimited(amountN, available);
+        // used + amountN is at most the limit, which fits 96 bits.
         // forge-lint: disable-next-line(unsafe-typecast)
-        mintedInWindow = uint96(used + amountNusd);
+        mintedInWindow = uint96(used + amountN);
         mintWindowStart = uint40(block.timestamp);
     }
 
@@ -610,7 +610,7 @@ contract OracleNUSDv2 is RoleControl, ReentrancyGuard {
         }
         emit Transfer(from, to, amount);
 
-        // NUSD changing hands while the oracle prices shows the oracle works, so a standing failure
+        // N changing hands while the oracle prices shows the oracle works, so a standing failure
         // report is void. The read gets a fixed amount of gas: a broken oracle cannot make
         // transfers unaffordable, and a read that fails for any reason leaves the report in place.
         if (oracleFailureReportedAt != 0) {

@@ -9,7 +9,7 @@ import { IZeroXFiFactory } from "../interfaces/IZeroXFiFactory.sol";
 import { LiquidityGauge } from "./LiquidityGauge.sol";
 
 interface ISynthMintFeeVault {
-    function nusd() external view returns (address);
+    function n() external view returns (address);
     function syntheticAsset() external view returns (address);
     function mintFeeDistributor() external view returns (address);
 }
@@ -31,26 +31,26 @@ contract GaugeFactory is EmergencyGuardian, ReentrancyGuard {
 
     uint256 public constant MINT_FEE_REWARD_DURATION = 7 days;
 
-    IERC20 public immutable nusd;
+    IERC20 public immutable n;
     IZeroXFiFactory public immutable dexFactory;
 
     mapping(address => address) public gaugeForPair;
     address[] public allGauges;
     mapping(address => address) public mintFeePairForVault;
     mapping(address => address) public mintFeeVaultForPair;
-    mapping(address => uint256) public pendingMintFeesNusd;
-    uint256 public totalPendingMintFeesNusd;
+    mapping(address => uint256) public pendingMintFeesN;
+    uint256 public totalPendingMintFeesN;
 
     event GaugeCreated(address indexed pair, address indexed gauge, uint256 gaugeCount);
     event GaugeFunded(address indexed pair, address indexed gauge, uint256 amount, uint256 duration);
     event MintFeeVaultBound(address indexed vault, address indexed pair, address indexed syntheticAsset);
-    event MintFeeQueued(address indexed vault, address indexed pair, uint256 amountNusd, uint256 pendingNusd);
-    event MintFeesFlushed(address indexed pair, address indexed gauge, uint256 amountNusd, uint256 duration);
+    event MintFeeQueued(address indexed vault, address indexed pair, uint256 amountN, uint256 pendingN);
+    event MintFeesFlushed(address indexed pair, address indexed gauge, uint256 amountN, uint256 duration);
 
-    constructor(address initialOwner, address nusd_, address dexFactory_) EmergencyGuardian(initialOwner) {
-        if (nusd_.code.length == 0 || dexFactory_.code.length == 0) revert InvalidPair();
-        if (IZeroXFiFactory(dexFactory_).nusd() != nusd_) revert InvalidPair();
-        nusd = IERC20(nusd_);
+    constructor(address initialOwner, address n_, address dexFactory_) EmergencyGuardian(initialOwner) {
+        if (n_.code.length == 0 || dexFactory_.code.length == 0) revert InvalidPair();
+        if (IZeroXFiFactory(dexFactory_).n() != n_) revert InvalidPair();
+        n = IERC20(n_);
         dexFactory = IZeroXFiFactory(dexFactory_);
     }
 
@@ -61,7 +61,7 @@ contract GaugeFactory is EmergencyGuardian, ReentrancyGuard {
     function createGauge(address pair) public returns (address gauge) {
         if (!dexFactory.isPair(pair)) revert InvalidPair();
         if (gaugeForPair[pair] != address(0)) revert GaugeAlreadyExists();
-        gauge = address(new LiquidityGauge(pair, address(nusd), address(this)));
+        gauge = address(new LiquidityGauge(pair, address(n), address(this)));
         gaugeForPair[pair] = gauge;
         allGauges.push(gauge);
         emit GaugeCreated(pair, gauge, allGauges.length);
@@ -70,14 +70,14 @@ contract GaugeFactory is EmergencyGuardian, ReentrancyGuard {
     function fundGauge(address pair, uint256 amount, uint256 duration) external onlyOwner nonReentrant {
         address gauge = gaugeForPair[pair];
         if (gauge == address(0)) revert GaugeNotFound();
-        uint256 balanceBefore = nusd.balanceOf(gauge);
-        nusd.safeTransferFrom(msg.sender, gauge, amount);
-        if (nusd.balanceOf(gauge) != balanceBefore + amount) revert FeeOnTransferUnsupported();
+        uint256 balanceBefore = n.balanceOf(gauge);
+        n.safeTransferFrom(msg.sender, gauge, amount);
+        if (n.balanceOf(gauge) != balanceBefore + amount) revert FeeOnTransferUnsupported();
         LiquidityGauge(gauge).notifyRewardAmount(amount, duration);
         emit GaugeFunded(pair, gauge, amount, duration);
     }
 
-    /// @notice Permanently binds a synth vault's mint fees to its canonical synth/NUSD gauge.
+    /// @notice Permanently binds a synth vault's mint fees to its canonical synth/N gauge.
     function bindMintFeeVault(address vault, address pair) external onlyOwner {
         if (vault == address(0) || pair == address(0) || vault.code.length == 0) revert InvalidPair();
         if (mintFeePairForVault[vault] != address(0) || mintFeeVaultForPair[pair] != address(0)) {
@@ -88,10 +88,10 @@ contract GaugeFactory is EmergencyGuardian, ReentrancyGuard {
         ISynthMintFeeVault source = ISynthMintFeeVault(vault);
         address syntheticAsset = source.syntheticAsset();
         if (
-            source.nusd() != address(nusd) || source.mintFeeDistributor() != address(this)
+            source.n() != address(n) || source.mintFeeDistributor() != address(this)
                 || syntheticAsset == address(0) || syntheticAsset.code.length == 0
                 || ISyntheticAssetVaultBinding(syntheticAsset).vault() != vault
-                || dexFactory.getPair(syntheticAsset, address(nusd)) != pair
+                || dexFactory.getPair(syntheticAsset, address(n)) != pair
         ) revert InvalidPair();
 
         mintFeePairForVault[vault] = pair;
@@ -99,27 +99,27 @@ contract GaugeFactory is EmergencyGuardian, ReentrancyGuard {
         emit MintFeeVaultBound(vault, pair, syntheticAsset);
     }
 
-    /// @dev Called by a bound vault after it has charged an exact NUSD mint fee.
-    function routeMintFee(uint256 amountNusd) external nonReentrant returns (uint256 amountFlushedNusd) {
+    /// @dev Called by a bound vault after it has charged an exact N mint fee.
+    function routeMintFee(uint256 amountN) external nonReentrant returns (uint256 amountFlushedN) {
         address pair = mintFeePairForVault[msg.sender];
         if (pair == address(0) || mintFeeVaultForPair[pair] != msg.sender) revert UnauthorizedMintFeeVault();
-        if (amountNusd == 0) revert InvalidAmount();
+        if (amountN == 0) revert InvalidAmount();
 
-        uint256 balanceBefore = nusd.balanceOf(address(this));
-        nusd.safeTransferFrom(msg.sender, address(this), amountNusd);
-        if (nusd.balanceOf(address(this)) != balanceBefore + amountNusd) revert FeeOnTransferUnsupported();
+        uint256 balanceBefore = n.balanceOf(address(this));
+        n.safeTransferFrom(msg.sender, address(this), amountN);
+        if (n.balanceOf(address(this)) != balanceBefore + amountN) revert FeeOnTransferUnsupported();
 
-        uint256 pendingAfter = pendingMintFeesNusd[pair] + amountNusd;
-        pendingMintFeesNusd[pair] = pendingAfter;
-        totalPendingMintFeesNusd += amountNusd;
-        emit MintFeeQueued(msg.sender, pair, amountNusd, pendingAfter);
-        amountFlushedNusd = _flushMintFees(pair);
+        uint256 pendingAfter = pendingMintFeesN[pair] + amountN;
+        pendingMintFeesN[pair] = pendingAfter;
+        totalPendingMintFeesN += amountN;
+        emit MintFeeQueued(msg.sender, pair, amountN, pendingAfter);
+        amountFlushedN = _flushMintFees(pair);
     }
 
     /// @notice Starts queued fee rewards once the canonical gauge has active stake and a nonzero rate.
-    function flushMintFees(address pair) external nonReentrant returns (uint256 amountFlushedNusd) {
+    function flushMintFees(address pair) external nonReentrant returns (uint256 amountFlushedN) {
         if (mintFeeVaultForPair[pair] == address(0)) revert GaugeNotFound();
-        amountFlushedNusd = _flushMintFees(pair);
+        amountFlushedN = _flushMintFees(pair);
     }
 
     function setGaugeDepositsPaused(address pair, bool paused) external onlyOwner {
@@ -136,24 +136,24 @@ contract GaugeFactory is EmergencyGuardian, ReentrancyGuard {
         LiquidityGauge(gauge).setDepositsPaused(paused);
     }
 
-    function _flushMintFees(address pair) private returns (uint256 amountFlushedNusd) {
-        amountFlushedNusd = pendingMintFeesNusd[pair];
-        if (amountFlushedNusd == 0) return 0;
+    function _flushMintFees(address pair) private returns (uint256 amountFlushedN) {
+        amountFlushedN = pendingMintFeesN[pair];
+        if (amountFlushedN == 0) return 0;
 
         address gaugeAddress = gaugeForPair[pair];
         if (gaugeAddress == address(0)) revert GaugeNotFound();
         LiquidityGauge gauge = LiquidityGauge(gaugeAddress);
-        if (gauge.totalSupply() == 0 || !_producesRewardRate(gauge, amountFlushedNusd)) return 0;
+        if (gauge.totalSupply() == 0 || !_producesRewardRate(gauge, amountFlushedN)) return 0;
 
-        pendingMintFeesNusd[pair] = 0;
-        totalPendingMintFeesNusd -= amountFlushedNusd;
-        uint256 balanceBefore = nusd.balanceOf(gaugeAddress);
-        nusd.safeTransfer(gaugeAddress, amountFlushedNusd);
-        if (nusd.balanceOf(gaugeAddress) != balanceBefore + amountFlushedNusd) {
+        pendingMintFeesN[pair] = 0;
+        totalPendingMintFeesN -= amountFlushedN;
+        uint256 balanceBefore = n.balanceOf(gaugeAddress);
+        n.safeTransfer(gaugeAddress, amountFlushedN);
+        if (n.balanceOf(gaugeAddress) != balanceBefore + amountFlushedN) {
             revert FeeOnTransferUnsupported();
         }
-        gauge.notifyRewardAmount(amountFlushedNusd, MINT_FEE_REWARD_DURATION);
-        emit MintFeesFlushed(pair, gaugeAddress, amountFlushedNusd, MINT_FEE_REWARD_DURATION);
+        gauge.notifyRewardAmount(amountFlushedN, MINT_FEE_REWARD_DURATION);
+        emit MintFeesFlushed(pair, gaugeAddress, amountFlushedN, MINT_FEE_REWARD_DURATION);
     }
 
     function _producesRewardRate(LiquidityGauge gauge, uint256 newRewards) private view returns (bool) {

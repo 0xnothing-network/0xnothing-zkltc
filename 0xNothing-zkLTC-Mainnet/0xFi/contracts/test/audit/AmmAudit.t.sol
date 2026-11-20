@@ -23,7 +23,7 @@ contract AmmAuditTest is TestBase {
     address private constant POOL = address(0xB001);
     address private constant TREASURY = address(0x7EA5);
 
-    MockERC20 private nusd;
+    MockERC20 private n;
     MockERC20 private tokenA;
     MockERC20 private tokenB;
     MockERC20 private tokenC;
@@ -36,20 +36,20 @@ contract AmmAuditTest is TestBase {
 
     function setUp() public {
         vm.warp(1_000_000);
-        nusd = new MockERC20("Nothing USD", "NUSD");
+        n = new MockERC20("N", "N");
         tokenA = new MockERC20("Token A", "TKA");
         tokenB = new MockERC20("Token B", "TKB");
         tokenC = new MockERC20("Token C", "TKC");
         pumpToken = new MockERC20("Pump token", "PUMP");
-        pump = new MockPump(address(nusd));
+        pump = new MockPump(address(n));
         pump.setStatus(address(pumpToken), 2);
         wrapped = new WzkLTC();
-        factory = new ZeroXFiFactoryV2(address(this), address(nusd), address(wrapped), address(pump));
-        splitter = new FeeSplitterMock(address(nusd), POOL, TREASURY);
+        factory = new ZeroXFiFactoryV2(address(this), address(n), address(wrapped), address(pump));
+        splitter = new FeeSplitterMock(address(n), POOL, TREASURY);
         router = new ZeroXFiRouterV2(address(factory), address(wrapped), address(splitter), TREASURY);
         factory.bindRouter(address(router));
 
-        MockERC20[4] memory tokens = [nusd, tokenA, tokenB, tokenC];
+        MockERC20[4] memory tokens = [n, tokenA, tokenB, tokenC];
         for (uint256 i; i < tokens.length; ++i) {
             _fundAndApprove(ALICE, tokens[i], 10_000_000 ether);
             _fundAndApprove(BOB, tokens[i], 10_000_000 ether);
@@ -58,39 +58,39 @@ contract AmmAuditTest is TestBase {
         vm.deal(BOB, 100_000 ether);
 
         vm.startPrank(ALICE);
-        router.addLiquidity(_addParams(address(tokenA), address(nusd), 100_000 ether, 200_000 ether, 1, 1));
-        router.addLiquidity(_addParams(address(tokenB), address(nusd), 100_000 ether, 100_000 ether, 1, 1));
+        router.addLiquidity(_addParams(address(tokenA), address(n), 100_000 ether, 200_000 ether, 1, 1));
+        router.addLiquidity(_addParams(address(tokenB), address(n), 100_000 ether, 100_000 ether, 1, 1));
         vm.stopPrank();
     }
 
     // C-1 (a) (fixed). A pair created empty with a bare factory.createPair (what
-    // Deploy0xFiMainnet.s.sol does for WzkLTC/NUSD, nBTC/NUSD, nETH/NUSD) has no bootstrapper, and
+    // Deploy0xFiMainnet.s.sol does for WzkLTC/N, nBTC/N, nETH/N) has no bootstrapper, and
     // anyone could sync() it before the first mint. Donating 1 wei of one token and syncing set the
     // reserves to (1, 0), after which router.addLiquidity and addLiquidityNative reverted
     // InsufficientLiquidity. A pair without liquidity can no longer be synced, so its reserves
     // stay (0, 0) until the first mint.
     function testAudit_C1_emptyPairCannotBeSynced() public {
-        ZeroXFiPair pair = ZeroXFiPair(factory.createPair(address(tokenC), address(nusd)));
+        ZeroXFiPair pair = ZeroXFiPair(factory.createPair(address(tokenC), address(n)));
         ZeroXFiPair nativePair = ZeroXFiPair(factory.createPair(address(tokenC), address(wrapped)));
         assertEq(pair.bootstrapper(), address(0), "bare createPair leaves no bootstrapper");
 
         vm.startPrank(BOB);
-        nusd.transfer(address(pair), 1);
+        n.transfer(address(pair), 1);
         vm.expectRevert(ZeroXFiPair.Forbidden.selector);
         pair.sync();
         tokenC.transfer(address(nativePair), 1);
         vm.expectRevert(ZeroXFiPair.Forbidden.selector);
         nativePair.sync();
         vm.stopPrank();
-        (uint256 reserveC, uint256 reserveNusd) = router.getReserves(address(tokenC), address(nusd));
-        assertEq(reserveC + reserveNusd, 0, "reserves stay empty");
+        (uint256 reserveC, uint256 reserveN) = router.getReserves(address(tokenC), address(n));
+        assertEq(reserveC + reserveN, 0, "reserves stay empty");
 
         // The router's first deposit goes through in both pairs; the donated wei joins it.
         vm.startPrank(ALICE);
-        (uint256 amountC, uint256 amountNusd,) =
-            router.addLiquidity(_addParams(address(tokenC), address(nusd), 1 ether, 100 ether, 1 ether, 100 ether));
+        (uint256 amountC, uint256 amountN,) =
+            router.addLiquidity(_addParams(address(tokenC), address(n), 1 ether, 100 ether, 1 ether, 100 ether));
         assertEq(amountC, 1 ether, "tokenC in");
-        assertEq(amountNusd, 100 ether, "NUSD in");
+        assertEq(amountN, 100 ether, "N in");
         router.addLiquidityNative{ value: 1 ether }(
             ZeroXFiRouterV2.AddLiquidityNativeParams({
                 token: address(tokenC),
@@ -105,9 +105,9 @@ contract AmmAuditTest is TestBase {
         vm.stopPrank();
         assertGt(pair.balanceOf(ALICE), 0, "liquidity minted");
         assertGt(nativePair.balanceOf(ALICE), 0, "liquidity minted in the native pair");
-        (reserveC, reserveNusd) = router.getReserves(address(tokenC), address(nusd));
+        (reserveC, reserveN) = router.getReserves(address(tokenC), address(n));
         assertEq(reserveC, 1 ether, "tokenC reserve");
-        assertEq(reserveNusd, 100 ether + 1, "NUSD reserve: the deposit and the donated wei");
+        assertEq(reserveN, 100 ether + 1, "N reserve: the deposit and the donated wei");
 
         // With liquidity in place, skim and sync are open to everyone again.
         vm.startPrank(BOB);
@@ -119,49 +119,49 @@ contract AmmAuditTest is TestBase {
 
     // C-1 (b) (fixed). Donating 1 wei of each token and syncing set the reserves to (1, 1) while
     // supply was 0. The router then treated 1:1 raw units as the pool price, so a first deposit
-    // meant to be 1 tokenC : 100 NUSD with loose minimums went in as 1 : 1 and the attacker bought
-    // 0.9 tokenC for 9 NUSD. The sync now reverts and the deposit goes in at the ratio asked for.
+    // meant to be 1 tokenC : 100 N with loose minimums went in as 1 : 1 and the attacker bought
+    // 0.9 tokenC for 9 N. The sync now reverts and the deposit goes in at the ratio asked for.
     // A dust first mint can still set a starting price: see AmmPairAudit.t.sol.
     function testAudit_C1_syncCannotPresetTheStartingPrice() public {
-        ZeroXFiPair pair = ZeroXFiPair(factory.createPair(address(tokenC), address(nusd)));
+        ZeroXFiPair pair = ZeroXFiPair(factory.createPair(address(tokenC), address(n)));
         vm.startPrank(BOB);
         tokenC.transfer(address(pair), 1);
-        nusd.transfer(address(pair), 1);
+        n.transfer(address(pair), 1);
         vm.expectRevert(ZeroXFiPair.Forbidden.selector);
         pair.sync();
         vm.stopPrank();
 
-        uint256 aliceNusdBefore = nusd.balanceOf(ALICE);
+        uint256 aliceNBefore = n.balanceOf(ALICE);
         vm.prank(ALICE);
-        (uint256 amountC, uint256 amountNusd,) =
-            router.addLiquidity(_addParams(address(tokenC), address(nusd), 1 ether, 100 ether, 0, 0));
+        (uint256 amountC, uint256 amountN,) =
+            router.addLiquidity(_addParams(address(tokenC), address(n), 1 ether, 100 ether, 0, 0));
         assertEq(amountC, 1 ether, "all of the tokenC went in");
-        assertEq(amountNusd, 100 ether, "and all 100 NUSD, even with zero minimums");
-        assertEq(aliceNusdBefore - nusd.balanceOf(ALICE), 100 ether, "pool priced at 100 NUSD per tokenC");
+        assertEq(amountN, 100 ether, "and all 100 N, even with zero minimums");
+        assertEq(aliceNBefore - n.balanceOf(ALICE), 100 ether, "pool priced at 100 N per tokenC");
 
         address[] memory path = new address[](2);
-        (path[0], path[1]) = (address(nusd), address(tokenC));
+        (path[0], path[1]) = (address(n), address(tokenC));
         uint256 bobBefore = tokenC.balanceOf(BOB);
         vm.prank(BOB);
         router.swapExactTokensForTokens(9 ether, 0, path, BOB, block.timestamp);
-        assertLe(tokenC.balanceOf(BOB) - bobBefore, 0.09 ether, "9 NUSD now buys under 0.09 tokenC, not 0.9");
+        assertLe(tokenC.balanceOf(BOB) - bobBefore, 0.09 ether, "9 N now buys under 0.09 tokenC, not 0.9");
     }
 
-    // C-2 (accepted). A token -> token route through NUSD is charged 30 bps of the NUSD leg, but the same
-    // trade done as two direct swaps (token -> NUSD, NUSD -> token) is charged 10 bps twice, and a
+    // C-2 (accepted). A token -> token route through N is charged 30 bps of the N leg, but the same
+    // trade done as two direct swaps (token -> N, N -> token) is charged 10 bps twice, and a
     // wrapper contract can do both in one transaction.
-    // Numbers: 1,000 tokenA through [tokenA, NUSD, tokenB]. Cross route: fee = 30 bps of the gross
-    // NUSD leg (5.911 NUSD). Split route: 10 bps of the gross NUSD out + 10 bps of the NUSD back in
-    // (3.939 NUSD, 19.99 bps, 66.6% of the cross fee), and the trader receives more tokenB.
+    // Numbers: 1,000 tokenA through [tokenA, N, tokenB]. Cross route: fee = 30 bps of the gross
+    // N leg (5.911 N). Split route: 10 bps of the gross N out + 10 bps of the N back in
+    // (3.939 N, 19.99 bps, 66.6% of the cross fee), and the trader receives more tokenB.
     function testAudit_C2_splitRoutePaysTwentyBpsInsteadOfThirty() public {
         AuditSplitRouteWrapper wrapper = new AuditSplitRouteWrapper();
         vm.prank(BOB);
         tokenA.approve(address(wrapper), type(uint256).max);
 
         address[] memory path = new address[](3);
-        (path[0], path[1], path[2]) = (address(tokenA), address(nusd), address(tokenB));
-        (uint256 reserveIn, uint256 reserveOut) = router.getReserves(address(tokenA), address(nusd));
-        uint256 grossNusd = router.getAmountOut(1000 ether, reserveIn, reserveOut);
+        (path[0], path[1], path[2]) = (address(tokenA), address(n), address(tokenB));
+        (uint256 reserveIn, uint256 reserveOut) = router.getReserves(address(tokenA), address(n));
+        uint256 grossN = router.getAmountOut(1000 ether, reserveIn, reserveOut);
         uint256 bobBefore = tokenB.balanceOf(BOB);
         uint256 snapshotId = avm.snapshotState();
 
@@ -169,23 +169,23 @@ contract AmmAuditTest is TestBase {
         vm.prank(BOB);
         router.swapExactTokensForTokens(1000 ether, 0, path, BOB, block.timestamp);
         uint256 crossOut = tokenB.balanceOf(BOB) - bobBefore;
-        uint256 crossFee = router.accruedRouterFees(address(nusd));
+        uint256 crossFee = router.accruedRouterFees(address(n));
 
         // Route B: identical starting state, two direct swaps in one transaction.
         assertTrue(avm.revertToState(snapshotId), "state restored");
-        assertEq(router.accruedRouterFees(address(nusd)), 0, "fees back to zero");
+        assertEq(router.accruedRouterFees(address(n)), 0, "fees back to zero");
         vm.prank(BOB);
-        uint256 splitOut = wrapper.splitSwap(router, address(tokenA), address(nusd), address(tokenB), 1000 ether, BOB);
-        uint256 splitFee = router.accruedRouterFees(address(nusd));
+        uint256 splitOut = wrapper.splitSwap(router, address(tokenA), address(n), address(tokenB), 1000 ether, BOB);
+        uint256 splitFee = router.accruedRouterFees(address(n));
         assertEq(tokenB.balanceOf(BOB) - bobBefore, splitOut, "bob received the split output");
 
-        uint256 firstLegFee = grossNusd * 10 / 10_000;
-        assertEq(crossFee, grossNusd * 30 / 10_000, "cross route pays 30 bps of the NUSD leg");
-        assertEq(splitFee, firstLegFee + (grossNusd - firstLegFee) * 10 / 10_000, "split route pays 10 bps twice");
-        assertApproxEqAbs(crossFee, 5.911 ether, 0.001 ether, "5.911 NUSD");
-        assertApproxEqAbs(splitFee, 3.939 ether, 0.001 ether, "3.939 NUSD");
+        uint256 firstLegFee = grossN * 10 / 10_000;
+        assertEq(crossFee, grossN * 30 / 10_000, "cross route pays 30 bps of the N leg");
+        assertEq(splitFee, firstLegFee + (grossN - firstLegFee) * 10 / 10_000, "split route pays 10 bps twice");
+        assertApproxEqAbs(crossFee, 5.911 ether, 0.001 ether, "5.911 N");
+        assertApproxEqAbs(splitFee, 3.939 ether, 0.001 ether, "3.939 N");
         assertEq(splitFee * 10_000 / crossFee, 6663, "split fee is 66.6% of the cross fee");
-        assertEq(splitFee * 100_000 / grossNusd, 199, "19.99 bps instead of 30");
+        assertEq(splitFee * 100_000 / grossN, 199, "19.99 bps instead of 30");
         assertGt(splitOut, crossOut, "and the trader gets more tokenB");
     }
 

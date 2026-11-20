@@ -101,9 +101,9 @@ contract GraduationRouter is TwoStepAdmin, ReentrancyGuard {
     function executeGraduation(
         address adapter,
         address token,
-        address nusd,
+        address n,
         uint256 tokenAmount,
-        uint256 nusdAmount,
+        uint256 nAmount,
         uint256 minimumLp,
         uint256 deadline
     ) external nonReentrant returns (IGraduationAdapter.GraduationResult memory result) {
@@ -111,46 +111,46 @@ contract GraduationRouter is TwoStepAdmin, ReentrancyGuard {
         if (!enabled) revert RouterDisabled();
         if (!isAdapterAllowed[adapter]) revert AdapterNotAllowed();
         if (
-            token == address(0) || nusd == address(0) || tokenAmount == 0 || nusdAmount == 0 || minimumLp == 0
+            token == address(0) || n == address(0) || tokenAmount == 0 || nAmount == 0 || minimumLp == 0
                 || block.timestamp > deadline
         ) revert InvalidConfiguration();
 
-        address expectedLpToken = IGraduationAdapter(adapter).lpTokenFor(token, nusd);
+        address expectedLpToken = IGraduationAdapter(adapter).lpTokenFor(token, n);
         if (expectedLpToken == address(0) || expectedLpToken.code.length == 0) {
             revert InvalidGraduationResult();
         }
         uint256 lpBalanceBefore = IERC20Minimal(expectedLpToken).balanceOf(address(this));
 
         uint256 tokenBalanceBefore = IERC20Minimal(token).balanceOf(address(this));
-        uint256 nusdBalanceBefore = IERC20Minimal(nusd).balanceOf(address(this));
+        uint256 nBalanceBefore = IERC20Minimal(n).balanceOf(address(this));
         SafeTransferLib.safeTransferFrom(token, msg.sender, address(this), tokenAmount);
-        SafeTransferLib.safeTransferFrom(nusd, msg.sender, address(this), nusdAmount);
+        SafeTransferLib.safeTransferFrom(n, msg.sender, address(this), nAmount);
         if (
             IERC20Minimal(token).balanceOf(address(this)) != tokenBalanceBefore + tokenAmount
-                || IERC20Minimal(nusd).balanceOf(address(this)) != nusdBalanceBefore + nusdAmount
+                || IERC20Minimal(n).balanceOf(address(this)) != nBalanceBefore + nAmount
         ) revert AssetTransferMismatch();
 
         SafeTransferLib.forceApprove(token, adapter, tokenAmount);
-        SafeTransferLib.forceApprove(nusd, adapter, nusdAmount);
+        SafeTransferLib.forceApprove(n, adapter, nAmount);
         result = IGraduationAdapter(adapter)
             .graduate(
                 IGraduationAdapter.GraduationParams({
                 token: token,
-                nusd: nusd,
+                n: n,
                 tokenAmount: tokenAmount,
-                nusdAmount: nusdAmount,
+                nAmount: nAmount,
                 minimumLp: minimumLp,
                 deadline: deadline,
                 lpRecipient: address(this)
             })
             );
         SafeTransferLib.forceApprove(token, adapter, 0);
-        SafeTransferLib.forceApprove(nusd, adapter, 0);
+        SafeTransferLib.forceApprove(n, adapter, 0);
 
         if (
             result.dex == address(0) || result.pool == address(0) || result.lpToken != expectedLpToken
                 || result.lpAmount < minimumLp || IERC20Minimal(token).balanceOf(address(this)) != tokenBalanceBefore
-                || IERC20Minimal(nusd).balanceOf(address(this)) != nusdBalanceBefore
+                || IERC20Minimal(n).balanceOf(address(this)) != nBalanceBefore
                 || IERC20Minimal(expectedLpToken).balanceOf(address(this)) != lpBalanceBefore + result.lpAmount
         ) revert InvalidGraduationResult();
 

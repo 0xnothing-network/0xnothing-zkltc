@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {TestBase} from "../TestBase.sol";
-import {OracleNUSDv2} from "../../src/nusd/OracleNUSDv2.sol";
+import {OracleNv2} from "../../src/n/OracleNv2.sol";
 import {DIAOracleAdapter} from "../../src/oracle/DIAOracleAdapter.sol";
 import {IPriceOracle} from "../../src/oracle/IPriceOracle.sol";
 import {MockDIAFeed} from "../mocks/MockDIAFeed.sol";
@@ -17,20 +17,20 @@ contract AuditOracleAdapterTest is TestBase {
 
     MockDIAFeed private feed;
     DIAOracleAdapter private adapter;
-    OracleNUSDv2 private nusd;
+    OracleNv2 private n;
 
     function setUp() public {
         vm.warp(1_000_000);
         feed = new MockDIAFeed(8);
         feed.setRound(1, 80e8, 1_000_000, 1);
         adapter = new DIAOracleAdapter(address(feed), "Mock LTC/USD", 1 hours, 1e18, 1000e18);
-        nusd = new OracleNUSDv2(IPriceOracle(address(adapter)), address(this), 1_000_000 ether);
+        n = new OracleNv2(IPriceOracle(address(adapter)), address(this), 1_000_000 ether);
         vm.deal(ALICE, 10 ether);
     }
 
     function testAudit_S01_aRoundStampedAFewSecondsAheadIsReadAsFresh() public {
         vm.prank(ALICE);
-        uint256 minted = nusd.mintAtOracle{value: 1 ether}(0, ALICE);
+        uint256 minted = n.mintAtOracle{value: 1 ether}(0, ALICE);
         assertEq(minted, 80 ether, "1 zkLTC at $80");
 
         feed.setRound(2, 80e8, 1_000_005, 2); // the clock of the feeder is five seconds ahead
@@ -41,9 +41,9 @@ contract AuditOracleAdapterTest is TestBase {
 
         // As reviewed, both of these reverted FutureOracleTimestamp until the chain caught up.
         vm.prank(ALICE);
-        assertEq(nusd.redeemAtOracle(40 ether, 0, ALICE), 0.5 ether, "redemption is not blocked");
+        assertEq(n.redeemAtOracle(40 ether, 0, ALICE), 0.5 ether, "redemption is not blocked");
         vm.prank(ALICE);
-        assertEq(nusd.mintAtOracle{value: 1 ether}(0, ALICE), 80 ether, "nor is minting");
+        assertEq(n.mintAtOracle{value: 1 ether}(0, ALICE), 80 ether, "nor is minting");
     }
 
     function testAudit_S01_aRoundFurtherAheadIsStillRejected() public {

@@ -5,7 +5,7 @@ import {TestBase} from "../TestBase.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {FeeSplitter} from "../../src/treasury/FeeSplitter.sol";
 import {OwnerTreasury} from "../../src/treasury/OwnerTreasury.sol";
-import {OracleNUSDv2} from "../../src/nusd/OracleNUSDv2.sol";
+import {OracleNv2} from "../../src/n/OracleNv2.sol";
 import {IPriceOracle} from "../../src/oracle/IPriceOracle.sol";
 import {RewardStaking} from "../../src/rewards/RewardStaking.sol";
 import {MockFeeSource, MockPriceOracle, MockWrappedNative} from "../mocks/TokenomicsMocks.sol";
@@ -39,15 +39,15 @@ contract AuditFeeSplitterTest is TestBase {
         vm.warp(1_000_000);
         vm.deal(address(this), 100 ether);
         MockPriceOracle oracle = new MockPriceOracle(100 ether);
-        OracleNUSDv2 nusd = new OracleNUSDv2(IPriceOracle(address(oracle)), address(this), 1_000_000 ether);
+        OracleNv2 n = new OracleNv2(IPriceOracle(address(oracle)), address(this), 1_000_000 ether);
         MockWrappedNative wrapped = new MockWrappedNative();
         OwnerTreasury treasury = new OwnerTreasury(OWNER);
-        RewardStaking staking = new RewardStaking(IERC20(address(nusd)));
-        FeeSplitter splitter = new FeeSplitter(address(nusd), address(wrapped), address(treasury), address(this));
+        RewardStaking staking = new RewardStaking(IERC20(address(n)));
+        FeeSplitter splitter = new FeeSplitter(address(n), address(wrapped), address(treasury), address(this));
         splitter.setRecipients(address(staking), address(treasury));
         staking.bindHarvester(address(splitter));
 
-        MockFeeSource honest = new MockFeeSource(IERC20(address(nusd)), address(splitter));
+        MockFeeSource honest = new MockFeeSource(IERC20(address(n)), address(splitter));
         FeeSplitter.Source[] memory list = new FeeSplitter.Source[](3);
         for (uint256 index; index < 2; ++index) {
             LargeAnswerSource large = new LargeAnswerSource();
@@ -57,11 +57,11 @@ contract AuditFeeSplitterTest is TestBase {
         list[2] = FeeSplitter.Source(address(honest), abi.encodeWithSignature("distributeFees()"));
         splitter.setSources(list);
 
-        nusd.mintAtOracle{value: 1 ether}(0, address(honest)); // 100 NUSD of fees wait in the honest source
+        n.mintAtOracle{value: 1 ether}(0, address(honest)); // 100 N of fees wait in the honest source
         uint256 before = gasleft();
         staking.sync();
         uint256 used = before - gasleft();
-        assertEq(nusd.balanceOf(address(staking)), 70 ether, "the fees reach the stakers through the pool harvest");
+        assertEq(n.balanceOf(address(staking)), 70 ether, "the fees reach the stakers through the pool harvest");
         assertLe(used, 2_000_000, "a large answer costs the gas cap of its source and nothing more");
     }
 
@@ -71,23 +71,23 @@ contract AuditFeeSplitterTest is TestBase {
         vm.warp(1_000_000);
         vm.deal(address(this), 100 ether);
         MockPriceOracle oracle = new MockPriceOracle(100 ether);
-        OracleNUSDv2 nusd = new OracleNUSDv2(IPriceOracle(address(oracle)), address(this), 1_000_000 ether);
+        OracleNv2 n = new OracleNv2(IPriceOracle(address(oracle)), address(this), 1_000_000 ether);
         MockWrappedNative wrapped = new MockWrappedNative();
         OwnerTreasury treasury = new OwnerTreasury(OWNER);
-        RewardStaking staking = new RewardStaking(IERC20(address(nusd)));
-        FeeSplitter splitter = new FeeSplitter(address(nusd), address(wrapped), address(treasury), address(this));
+        RewardStaking staking = new RewardStaking(IERC20(address(n)));
+        FeeSplitter splitter = new FeeSplitter(address(n), address(wrapped), address(treasury), address(this));
         splitter.setRecipients(address(staking), address(treasury));
         staking.bindHarvester(address(splitter));
 
-        MockFeeSource honest = new MockFeeSource(IERC20(address(nusd)), address(splitter));
+        MockFeeSource honest = new MockFeeSource(IERC20(address(n)), address(splitter));
         FeeSplitter.Source[] memory list = new FeeSplitter.Source[](2);
         list[0] = FeeSplitter.Source(address(new GasBurningSource()), abi.encodeWithSignature("distributeFees()"));
         list[1] = FeeSplitter.Source(address(honest), abi.encodeWithSignature("distributeFees()"));
         splitter.setSources(list);
 
-        nusd.mintAtOracle{value: 1 ether}(0, address(honest));
+        n.mintAtOracle{value: 1 ether}(0, address(honest));
         staking.sync();
-        assertEq(nusd.balanceOf(address(staking)), 70 ether, "the honest source is still harvested");
+        assertEq(n.balanceOf(address(staking)), 70 ether, "the honest source is still harvested");
     }
 }
 

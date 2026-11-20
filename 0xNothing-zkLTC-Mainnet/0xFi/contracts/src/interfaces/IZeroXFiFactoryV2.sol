@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 interface IZeroXFiFactoryV2 {
     function owner() external view returns (address);
-    function nusd() external view returns (address);
+    function n() external view returns (address);
     function wzkLTC() external view returns (address);
     function isBaseToken(address token) external view returns (bool);
     function pump() external view returns (address);

@@ -6,7 +6,7 @@ import { SyntheticAsset } from "../../src/synth/SyntheticAsset.sol";
 import { SyntheticVault } from "../../src/synth/SyntheticVault.sol";
 import { TestBase } from "../helpers/TestBase.sol";
 import { FeeSplitterMock } from "../mocks/FeeSplitterMock.sol";
-import { MockNUSD, MockPriceOracle } from "../mocks/RiskMocks.sol";
+import { MockN, MockPriceOracle } from "../mocks/RiskMocks.sol";
 
 /// Tests for the two changes the second review of the 2026-11 audit made to the synth vault
 /// (docs/AUDIT_2026-11.md, R2-L-01 and R2-L-03). The vault is deployed as Deploy0xFiMainnet.s.sol
@@ -19,22 +19,22 @@ contract SynthVaultAuditTest is TestBase {
     address private constant STAKING = address(0xB001);
     address private constant TREASURY = address(0x7EA5);
 
-    MockNUSD private nusd;
+    MockN private n;
     MockPriceOracle private btcOracle;
     SyntheticAsset private nbtc;
     SyntheticVault private vault;
 
     function setUp() public {
         vm.warp(1_000_000);
-        nusd = new MockNUSD();
+        n = new MockN();
         btcOracle = new MockPriceOracle(100_000 ether);
         MockPriceOracle ethOracle = new MockPriceOracle(2000 ether);
-        SynthSafetyReserve reserve = new SynthSafetyReserve(address(nusd), address(this));
-        FeeSplitterMock splitter = new FeeSplitterMock(address(nusd), STAKING, TREASURY);
+        SynthSafetyReserve reserve = new SynthSafetyReserve(address(n), address(this));
+        FeeSplitterMock splitter = new FeeSplitterMock(address(n), STAKING, TREASURY);
         nbtc = new SyntheticAsset("0xFi Synthetic Bitcoin", "nBTC", address(this));
         SyntheticAsset neth = new SyntheticAsset("0xFi Synthetic Ether", "nETH", address(this));
         vault = new SyntheticVault(
-            address(nusd),
+            address(n),
             address(nbtc),
             address(btcOracle),
             address(reserve),
@@ -44,7 +44,7 @@ contract SynthVaultAuditTest is TestBase {
             true
         );
         SyntheticVault secondVault = new SyntheticVault(
-            address(nusd),
+            address(n),
             address(neth),
             address(ethOracle),
             address(reserve),
@@ -61,9 +61,9 @@ contract SynthVaultAuditTest is TestBase {
 
         address[2] memory users = [ALICE, BOB];
         for (uint256 i; i < users.length; ++i) {
-            nusd.mint(users[i], 1_000_000 ether);
+            n.mint(users[i], 1_000_000 ether);
             vm.prank(users[i]);
-            nusd.approve(address(vault), type(uint256).max);
+            n.approve(address(vault), type(uint256).max);
             vm.prank(users[i]);
             nbtc.approve(address(vault), type(uint256).max);
         }
@@ -75,7 +75,7 @@ contract SynthVaultAuditTest is TestBase {
     /// leave dust that no later liquidation could take: the debt behind it was never written off,
     /// the account was never flagged, and coverBadDebt did not apply. One unit of the synthetic
     /// now takes the dust, and the write-off follows.
-    /// Numbers: the whole ceiling in one position, 0.01 nBTC on 1,500 NUSD at 100,000, then BTC at
+    /// Numbers: the whole ceiling in one position, 0.01 nBTC on 1,500 N at 100,000, then BTC at
     /// 160,000.5.
     function testAudit_R2L01_dustCollateralNoLongerParksBadDebt() public {
         vm.prank(ALICE);
@@ -96,7 +96,7 @@ contract SynthVaultAuditTest is TestBase {
         nbtc.transfer(BOB, 1_071_456_473_127_093);
         vm.stopPrank();
         (user,, debt) = vault.positions(ALICE);
-        assertEq(user, 168_000, "168,000 wei of NUSD left as collateral");
+        assertEq(user, 168_000, "168,000 wei of N left as collateral");
         assertEq(debt, 1_071_456_473_127_093, "about 0.00107 nBTC of debt behind it");
         assertEq(vault.totalBadDebtSynthetic(), 0, "nothing written off yet");
         assertTrue(vault.isLiquidatable(ALICE), "and the position is liquidatable");
@@ -104,12 +104,12 @@ contract SynthVaultAuditTest is TestBase {
         // As reviewed, every liquidation from here on reverted with InsufficientCollateral, at this
         // price and at any higher one.
         btcOracle.setPrice(1_000_000 ether);
-        uint256 bobNusd = nusd.balanceOf(BOB);
+        uint256 bobN = n.balanceOf(BOB);
         vm.prank(BOB);
         (uint256 repaid, uint256 collateralOut) = vault.liquidate(ALICE, type(uint256).max, 0, BOB);
         assertEq(repaid, 1, "one unit of nBTC");
         assertEq(collateralOut, 168_000, "takes the dust");
-        assertEq(nusd.balanceOf(BOB) - bobNusd, 168_000, "paid to the liquidator");
+        assertEq(n.balanceOf(BOB) - bobN, 168_000, "paid to the liquidator");
 
         (user,, debt) = vault.positions(ALICE);
         assertEq(user + debt, 0, "the position is closed");
@@ -117,7 +117,7 @@ contract SynthVaultAuditTest is TestBase {
         assertEq(vault.totalBadDebtSynthetic(), 1_071_456_473_127_092, "the rest of the debt is written off");
         assertEq(vault.badDebtSyntheticByAccount(ALICE), 1_071_456_473_127_092, "against the account");
         assertEq(nbtc.totalSupply(), vault.totalBadDebtSynthetic(), "nBTC supply = debt + bad debt");
-        assertEq(nusd.balanceOf(address(vault)), vault.totalUserCollateralNusd(), "vault NUSD = user collateral");
+        assertEq(n.balanceOf(address(vault)), vault.totalUserCollateralN(), "vault N = user collateral");
 
         vm.prank(BOB);
         assertEq(vault.coverBadDebt(ALICE, type(uint256).max), 1_071_456_473_127_092, "which can now be covered");
@@ -154,7 +154,7 @@ contract SynthVaultAuditTest is TestBase {
         vault.depositCollateral(50 ether, BOB);
         vault.withdrawCollateral(150 ether, BOB);
         vm.stopPrank();
-        assertEq(nusd.balanceOf(BOB), 1_000_000 ether, "Bob has everything back");
+        assertEq(n.balanceOf(BOB), 1_000_000 ether, "Bob has everything back");
 
         // Repaying everything and leaving is one call and needs no oracle.
         btcOracle.setReadReverts(true);
@@ -162,7 +162,7 @@ contract SynthVaultAuditTest is TestBase {
         vault.repayAndWithdraw(type(uint256).max, 1500 ether, ALICE);
         (user,, debt) = vault.positions(ALICE);
         assertEq(user + debt, 0, "Alice is out");
-        assertEq(nusd.balanceOf(address(vault)), 0, "the vault is empty");
+        assertEq(n.balanceOf(address(vault)), 0, "the vault is empty");
         assertTrue(vault.withdrawPaused(), "while the pause still stands");
 
         // The guardian can pause and nothing else; the owner lifts it.
@@ -174,9 +174,9 @@ contract SynthVaultAuditTest is TestBase {
     }
 
     /// R3-F-01 (third review). After R2-L-03 the withdrawal pause alone no longer held collateral
-    /// behind debt while minting stayed open. As reviewed, Alice with 3,000 NUSD behind 0.01 nBTC
-    /// repaid everything, withdrew everything and minted the same 0.01 nBTC again on 1,500 NUSD:
-    /// 1,500 NUSD left the vault during the pause with the debt unchanged, for 1 NUSD of mint fee.
+    /// behind debt while minting stayed open. As reviewed, Alice with 3,000 N behind 0.01 nBTC
+    /// repaid everything, withdrew everything and minted the same 0.01 nBTC again on 1,500 N:
+    /// 1,500 N left the vault during the pause with the debt unchanged, for 1 N of mint fee.
     /// No debt is opened while withdrawals are held, so collateral behind debt can only grow.
     function testAudit_R3F01_noDebtIsOpenedWhileWithdrawalsAreHeld() public {
         vm.prank(ALICE);
@@ -211,7 +211,7 @@ contract SynthVaultAuditTest is TestBase {
         vault.withdrawCollateral(1500 ether, BOB);
         vm.stopPrank();
         assertEq(vault.totalDebtSynthetic(), 0, "no debt in the vault");
-        assertEq(nusd.balanceOf(address(vault)), 0, "and none of the collateral that left was behind debt");
+        assertEq(n.balanceOf(address(vault)), 0, "and none of the collateral that left was behind debt");
 
         // One switch lifts it; a mint pause that was set on its own stays until it is lifted too.
         vault.pauseMinting();

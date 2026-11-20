@@ -5,7 +5,7 @@ import { EmergencyGuardian } from "../access/EmergencyGuardian.sol";
 import { ZeroXFiPair } from "./ZeroXFiPair.sol";
 
 /// @title 0xFi factory v2 (hub and spoke)
-/// @notice Same as v1, except every pair must contain a base asset (NUSD or WzkLTC). A token is
+/// @notice Same as v1, except every pair must contain a base asset (N or WzkLTC). A token is
 ///         therefore tradable, and "valid" for cross swaps, only once it has liquidity against a base.
 contract ZeroXFiFactoryV2 is EmergencyGuardian {
     error AdapterAlreadyBound();
@@ -22,7 +22,7 @@ contract ZeroXFiFactoryV2 is EmergencyGuardian {
 
     uint256 public constant ROUTER_UPDATE_DELAY = 48 hours;
 
-    address public immutable nusd;
+    address public immutable n;
     address public immutable wzkLTC;
     address public immutable pump;
     address public router;
@@ -50,18 +50,18 @@ contract ZeroXFiFactoryV2 is EmergencyGuardian {
     event RouterUpdateActivated(address indexed previousRouter, address indexed newRouter);
     event SwapsPauseUpdated(bool paused);
 
-    constructor(address initialOwner, address nusd_, address wzkLTC_, address pump_) EmergencyGuardian(initialOwner) {
-        if (nusd_.code.length == 0 || wzkLTC_.code.length == 0 || pump_.code.length == 0 || nusd_ == wzkLTC_) {
+    constructor(address initialOwner, address n_, address wzkLTC_, address pump_) EmergencyGuardian(initialOwner) {
+        if (n_.code.length == 0 || wzkLTC_.code.length == 0 || pump_.code.length == 0 || n_ == wzkLTC_) {
             revert InvalidContract();
         }
-        nusd = nusd_;
+        n = n_;
         wzkLTC = wzkLTC_;
         pump = pump_;
     }
 
-    /// @notice NUSD and WzkLTC are the two base assets every pair is quoted against.
+    /// @notice N and WzkLTC are the two base assets every pair is quoted against.
     function isBaseToken(address token) public view returns (bool) {
-        return token == nusd || token == wzkLTC;
+        return token == n || token == wzkLTC;
     }
 
     function allPairsLength() external view returns (uint256) {
@@ -136,7 +136,7 @@ contract ZeroXFiFactoryV2 is EmergencyGuardian {
     function preparePumpPair(address pumpToken) external returns (address pair) {
         if (msg.sender != graduationAdapter || graduationAdapter == address(0)) revert Forbidden();
         if (!isPumpToken(pumpToken)) revert ProtectedPumpPair();
-        (address token0, address token1) = _sortTokens(pumpToken, nusd);
+        (address token0, address token1) = _sortTokens(pumpToken, n);
         pair = _createPair(token0, token1, graduationAdapter, true);
     }
 
@@ -168,8 +168,8 @@ contract ZeroXFiFactoryV2 is EmergencyGuardian {
     }
 
     function _isProtectedPumpPair(address token0, address token1) private view returns (bool) {
-        if (token0 == nusd) return isPumpToken(token1);
-        if (token1 == nusd) return isPumpToken(token0);
+        if (token0 == n) return isPumpToken(token1);
+        if (token1 == n) return isPumpToken(token0);
         return false;
     }
 

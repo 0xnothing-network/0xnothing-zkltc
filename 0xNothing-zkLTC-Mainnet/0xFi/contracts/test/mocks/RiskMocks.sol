@@ -7,18 +7,18 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 
 import { IPriceOracle } from "../../src/oracle/interfaces/IPriceOracle.sol";
 
-/// @dev Plain ERC20 mock representing NUSD for risk tests.
-contract MockNUSD is ERC20 {
-    uint256 public reserveValueNusd = type(uint256).max;
+/// @dev Plain ERC20 mock representing N for risk tests.
+contract MockN is ERC20 {
+    uint256 public reserveValueN = type(uint256).max;
 
-    constructor() ERC20("Nothing USD", "NUSD") { }
+    constructor() ERC20("N", "N") { }
 
     function mint(address recipient, uint256 amount) external {
         _mint(recipient, amount);
     }
 
-    function setReserveValueNusd(uint256 valueNusd) external {
-        reserveValueNusd = valueNusd;
+    function setReserveValueN(uint256 valueN) external {
+        reserveValueN = valueN;
     }
 }
 
@@ -41,14 +41,14 @@ contract MockCollateralToken is ERC20 {
 contract MockMintFeeDistributor {
     using SafeERC20 for IERC20;
 
-    IERC20 public immutable nusd;
-    uint256 public totalRoutedNusd;
+    IERC20 public immutable n;
+    uint256 public totalRoutedN;
     bool public shouldRevert;
     mapping(address => address) public mintFeePairForVault;
     mapping(address => address) public mintFeeVaultForPair;
 
-    constructor(address nusdAddress) {
-        nusd = IERC20(nusdAddress);
+    constructor(address nAddress) {
+        n = IERC20(nAddress);
     }
 
     function setShouldRevert(bool value) external {
@@ -60,12 +60,12 @@ contract MockMintFeeDistributor {
         mintFeeVaultForPair[pair] = vault;
     }
 
-    function routeMintFee(uint256 amountNusd) external returns (uint256 amountFlushedNusd) {
+    function routeMintFee(uint256 amountN) external returns (uint256 amountFlushedN) {
         require(!shouldRevert, "FEE_ROUTE_FAILED");
-        uint256 balanceBefore = nusd.balanceOf(address(this));
-        nusd.safeTransferFrom(msg.sender, address(this), amountNusd);
-        require(nusd.balanceOf(address(this)) == balanceBefore + amountNusd, "EXACT_TRANSFER_REQUIRED");
-        totalRoutedNusd += amountNusd;
+        uint256 balanceBefore = n.balanceOf(address(this));
+        n.safeTransferFrom(msg.sender, address(this), amountN);
+        require(n.balanceOf(address(this)) == balanceBefore + amountN, "EXACT_TRANSFER_REQUIRED");
+        totalRoutedN += amountN;
         return 0;
     }
 }

@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {TestBase} from "../TestBase.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {OracleNUSDv2} from "../../src/nusd/OracleNUSDv2.sol";
+import {OracleNv2} from "../../src/n/OracleNv2.sol";
 import {IPriceOracle} from "../../src/oracle/IPriceOracle.sol";
 import {ZeroXPumpV2} from "../../src/pump/ZeroXPumpV2.sol";
 import {GraduationRouter} from "../../src/graduation/GraduationRouter.sol";
@@ -20,7 +20,7 @@ import {EvilAdapter} from "./mocks/EvilAdapter.sol";
 /// router admin, PARAM_ADMIN sets the terms of new markets.
 contract AuditPumpTest is TestBase {
     uint256 private constant SUPPLY = 1_000_000_000 ether;
-    uint256 private constant VIRTUAL_NUSD = 1_500 ether;
+    uint256 private constant VIRTUAL_N = 1_500 ether;
     uint256 private constant MARKET_CAP_TARGET = 6_000 ether;
     uint256 private constant RESERVE_TARGET = 1_500 ether; // sqrt(1,500 x 6,000) - 1,500
     uint256 private constant CREATE_FEE = 1 ether;
@@ -37,7 +37,7 @@ contract AuditPumpTest is TestBase {
     address private constant PARAM_ADMIN = address(0x9A9A);
     address private constant OWNER_WALLET = address(0x0A11);
 
-    OracleNUSDv2 private nusd;
+    OracleNv2 private n;
     GraduationRouter private router;
     PermanentLiquidityLocker private locker;
     ZeroXPumpV2 private pump;
@@ -45,22 +45,22 @@ contract AuditPumpTest is TestBase {
 
     function setUp() public {
         vm.warp(1_000_000);
-        nusd = new OracleNUSDv2(IPriceOracle(address(new MockPriceOracle(100 ether))), address(this), 1_000_000 ether);
-        RewardStaking staking = new RewardStaking(IERC20(address(nusd)));
-        FeeSplitter splitter = new FeeSplitter(address(nusd), address(new MockWrappedNative()), TREASURY, address(this));
+        n = new OracleNv2(IPriceOracle(address(new MockPriceOracle(100 ether))), address(this), 1_000_000 ether);
+        RewardStaking staking = new RewardStaking(IERC20(address(n)));
+        FeeSplitter splitter = new FeeSplitter(address(n), address(new MockWrappedNative()), TREASURY, address(this));
         splitter.setRecipients(address(staking), TREASURY);
 
         locker = new PermanentLiquidityLocker(address(this));
         router = new GraduationRouter(address(this), 1 hours, address(locker));
         pump = new ZeroXPumpV2(
-            address(nusd),
-            address(nusd),
+            address(n),
+            address(n),
             address(router),
             address(splitter),
             address(this),
             PARAM_ADMIN,
             SUPPLY,
-            VIRTUAL_NUSD,
+            VIRTUAL_N,
             MARKET_CAP_TARGET,
             CREATE_FEE,
             TRADE_FEE_BPS
@@ -68,16 +68,16 @@ contract AuditPumpTest is TestBase {
         router.bindPump(address(pump));
         locker.bindRouter(address(router));
 
-        _fund(CREATOR, 1 ether); // 100 NUSD
-        _fund(TRADER, 100 ether); // 10,000 NUSD
-        _fund(MALLORY, 1 ether); // 100 NUSD
+        _fund(CREATOR, 1 ether); // 100 N
+        _fund(TRADER, 100 ether); // 10,000 N
+        _fund(MALLORY, 1 ether); // 100 N
     }
 
     function _fund(address account, uint256 collateralWei) private {
         vm.deal(account, collateralWei);
         vm.startPrank(account);
-        nusd.mintAtOracle{value: collateralWei}(0, account);
-        nusd.approve(address(pump), type(uint256).max);
+        n.mintAtOracle{value: collateralWei}(0, account);
+        n.approve(address(pump), type(uint256).max);
         vm.stopPrank();
     }
 
@@ -93,8 +93,8 @@ contract AuditPumpTest is TestBase {
         return vm.getBlockTimestamp() + 1;
     }
 
-    function _realReserve(address token) private view returns (uint256 realNusdReserve) {
-        (,, realNusdReserve,,,,,,,,) = pump.markets(token);
+    function _realReserve(address token) private view returns (uint256 realNReserve) {
+        (,, realNReserve,,,,,,,,) = pump.markets(token);
     }
 
     /// B-02 (fixed): with tradeFeeBps = 0 the final-buy cap was (R * 10000 - 1) / 10000 = R - 1, so
@@ -103,18 +103,18 @@ contract AuditPumpTest is TestBase {
     /// fee), which reaches the target exactly for every fee the Pump accepts.
     function testAudit_B02_zeroFeeMarketBecomesReady() public {
         vm.prank(PARAM_ADMIN);
-        pump.setMarketParams(CREATE_FEE, 0, VIRTUAL_NUSD, MARKET_CAP_TARGET);
+        pump.setMarketParams(CREATE_FEE, 0, VIRTUAL_N, MARKET_CAP_TARGET);
         address token = _createMarket();
         (uint16 fee,, uint120 reserveTarget) = pump.marketParams(token);
         assertEq(fee, 0, "zero-fee market");
-        assertEq(reserveTarget, RESERVE_TARGET, "needs 1,500 NUSD of reserve");
+        assertEq(reserveTarget, RESERVE_TARGET, "needs 1,500 N of reserve");
 
         (,,,, bool readyAfter) = pump.quoteBuy(token, 5_000 ether);
         assertTrue(readyAfter, "the quote reports ready");
-        uint256 nusdBefore = nusd.balanceOf(TRADER);
+        uint256 nBefore = n.balanceOf(TRADER);
         vm.prank(TRADER);
         pump.buy(token, 5_000 ether, 0, _deadline()); // far more than the curve needs
-        assertEq(nusdBefore - nusd.balanceOf(TRADER), RESERVE_TARGET, "charged exactly the target");
+        assertEq(nBefore - n.balanceOf(TRADER), RESERVE_TARGET, "charged exactly the target");
         assertEq(_realReserve(token), RESERVE_TARGET, "reserve reaches the target");
         assertEq(pump.status(token), READY, "READY");
     }
@@ -123,7 +123,7 @@ contract AuditPumpTest is TestBase {
     function testFuzzAudit_B02_finalBuyLandsExactlyOnTheTarget(uint256 rawFee, uint256 rawFirst) public {
         uint256 feeBps = bound(rawFee, 0, 100);
         vm.prank(PARAM_ADMIN);
-        pump.setMarketParams(CREATE_FEE, feeBps, VIRTUAL_NUSD, MARKET_CAP_TARGET);
+        pump.setMarketParams(CREATE_FEE, feeBps, VIRTUAL_N, MARKET_CAP_TARGET);
         address token = _createMarket();
 
         vm.startPrank(TRADER);
@@ -136,8 +136,8 @@ contract AuditPumpTest is TestBase {
     }
 
     /// B-03 (accepted): a sell from READY sets the market back to TRADING whatever its size. Mallory sells
-    /// 400,000 token-wei (4e-13 of a token), receives 2 wei of NUSD, and the market that held the
-    /// full 1,500 NUSD is TRADING at 1,500e18 - 2, so graduate() reverts MarketNotReady. Someone
+    /// 400,000 token-wei (4e-13 of a token), receives 2 wei of N, and the market that held the
+    /// full 1,500 N is TRADING at 1,500e18 - 2, so graduate() reverts MarketNotReady. Someone
     /// buys the 2 wei back, she repeats: two rounds cost her 800,000 token-wei and gas.
     function testAudit_B03_dustSellReopensReadyMarket() public {
         address token = _createMarket();
@@ -146,7 +146,7 @@ contract AuditPumpTest is TestBase {
         IERC20(token).approve(address(pump), type(uint256).max);
         vm.stopPrank();
         uint256 malloryTokens = IERC20(token).balanceOf(MALLORY);
-        uint256 malloryNusd = nusd.balanceOf(MALLORY);
+        uint256 malloryN = n.balanceOf(MALLORY);
 
         vm.prank(TRADER);
         pump.buy(token, 5_000 ether, 0, _deadline());
@@ -156,7 +156,7 @@ contract AuditPumpTest is TestBase {
         for (uint256 round = 1; round <= 2; ++round) {
             vm.prank(MALLORY);
             uint256 received = pump.sell(token, 400_000, 1, _deadline());
-            assertEq(received, 2, "2 wei of NUSD for the dust");
+            assertEq(received, 2, "2 wei of N for the dust");
             assertEq(pump.status(token), TRADING, "back to TRADING");
             assertEq(_realReserve(token), RESERVE_TARGET - 2, "reserve 2 wei short");
 
@@ -165,29 +165,29 @@ contract AuditPumpTest is TestBase {
             pump.graduate(token, address(0xADA), 1, _deadline());
 
             // Someone has to buy the 2 wei back before graduation is possible again.
-            uint256 traderNusd = nusd.balanceOf(TRADER);
+            uint256 traderN = n.balanceOf(TRADER);
             vm.prank(TRADER);
             pump.buy(token, 1 ether, 0, _deadline());
-            assertEq(traderNusd - nusd.balanceOf(TRADER), 2, "2 wei restores it");
+            assertEq(traderN - n.balanceOf(TRADER), 2, "2 wei restores it");
             assertEq(pump.status(token), READY, "ready again, until the next dust sell");
         }
 
         assertEq(malloryTokens - IERC20(token).balanceOf(MALLORY), 800_000, "her whole cost in tokens");
-        assertEq(nusd.balanceOf(MALLORY) - malloryNusd, 4, "and she was paid 4 wei for it");
+        assertEq(n.balanceOf(MALLORY) - malloryN, 4, "and she was paid 4 wei for it");
     }
 
     /// B-04 (accepted, documented owner power): the router admin can allowlist any contract as an adapter after the 1 hour delay, and
     /// the Pump admin picks the adapter on each graduate() call. A market is READY with 1,500
-    /// NUSD; an adapter scheduled then is live one hour later and graduate() hands it the whole
-    /// reserve (1,500 NUSD) and 250,000,000 tokens. The locker receives 1 wei of a token the
+    /// N; an adapter scheduled then is live one hour later and graduate() hands it the whole
+    /// reserve (1,500 N) and 250,000,000 tokens. The locker receives 1 wei of a token the
     /// adapter printed, the market reads GRADUATED, and holders can no longer sell on the curve.
     function testAudit_B04_newAdapterTakesReadyReserve() public {
         address token = _createMarket();
         vm.prank(TRADER);
         pump.buy(token, 5_000 ether, 0, _deadline());
         assertEq(pump.status(token), READY, "ready");
-        assertEq(_realReserve(token), RESERVE_TARGET, "1,500 NUSD of buyers' money in the curve");
-        uint256 feesHeld = pump.accruedProtocolFeesNusd();
+        assertEq(_realReserve(token), RESERVE_TARGET, "1,500 N of buyers' money in the curve");
+        uint256 feesHeld = pump.accruedProtocolFeesN();
 
         // Router admin: allowlist a new adapter and enable the router. Both wait one hour.
         EvilAdapter evil = new EvilAdapter(OWNER_WALLET);
@@ -203,10 +203,10 @@ contract AuditPumpTest is TestBase {
         // Pump admin: graduate through it.
         pump.graduate(token, address(evil), 1, _deadline());
 
-        assertEq(nusd.balanceOf(address(evil)), RESERVE_TARGET, "the adapter holds the whole reserve");
+        assertEq(n.balanceOf(address(evil)), RESERVE_TARGET, "the adapter holds the whole reserve");
         assertEq(IERC20(token).balanceOf(address(evil)), 250_000_000 ether, "and the 250M liquidity tokens");
-        assertEq(nusd.balanceOf(address(pump)), feesHeld, "the Pump keeps only its accrued fees");
-        assertEq(pump.totalRealNusdReserves(), 0, "no curve reserve left");
+        assertEq(n.balanceOf(address(pump)), feesHeld, "the Pump keeps only its accrued fees");
+        assertEq(pump.totalRealNReserves(), 0, "no curve reserve left");
         assertEq(pump.status(token), GRADUATED, "the market reads graduated");
         assertEq(evil.fakeLp().balanceOf(address(locker)), 1, "the locker locked 1 wei of a made-up token");
         (address lockedLp, uint256 lockedAmount,,,) = locker.locks(token);
@@ -220,8 +220,8 @@ contract AuditPumpTest is TestBase {
         pump.sell(token, 1 ether, 0, _deadline());
         vm.stopPrank();
 
-        // The adapter's owner walks away with the NUSD.
-        evil.sweep(address(nusd));
-        assertEq(nusd.balanceOf(OWNER_WALLET), RESERVE_TARGET, "1,500 NUSD in the owner's wallet");
+        // The adapter's owner walks away with the N.
+        evil.sweep(address(n));
+        assertEq(n.balanceOf(OWNER_WALLET), RESERVE_TARGET, "1,500 N in the owner's wallet");
     }
 }

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { PooledNUSDLendingPoolV2 } from "../../src/lending/PooledNUSDLendingPoolV2.sol";
+import { PooledNLendingPoolV2 } from "../../src/lending/PooledNLendingPoolV2.sol";
 import { DIAOracleV2Adapter } from "../../src/oracle/DIAOracleV2Adapter.sol";
 import { TestBase } from "../helpers/TestBase.sol";
 import { FeeSplitterMock } from "../mocks/FeeSplitterMock.sol";
-import { MockCollateralToken, MockDIAAggregatorV3, MockNUSD, MockPriceOracle } from "../mocks/RiskMocks.sol";
+import { MockCollateralToken, MockDIAAggregatorV3, MockN, MockPriceOracle } from "../mocks/RiskMocks.sol";
 
 /// Tests for findings D-04, D-05 (variant B) and D-09 of the 2026-11 audit (docs/AUDIT_2026-11.md).
 /// D-04 is closed in the pool since the second review; D-05 and D-09 are accepted and reproduced.
@@ -20,28 +20,28 @@ contract LendingAuditTest is TestBase {
     address private constant STAKING = address(0xB001);
     address private constant TREASURY = address(0x7EA5);
 
-    MockNUSD private nusd;
+    MockN private n;
     MockCollateralToken private wzkltc;
     MockPriceOracle private ltcOracle;
     FeeSplitterMock private splitter;
-    PooledNUSDLendingPoolV2 private lending;
+    PooledNLendingPoolV2 private lending;
 
     function setUp() public {
         vm.warp(1_000_000);
-        nusd = new MockNUSD();
+        n = new MockN();
         wzkltc = new MockCollateralToken("Wrapped zkLTC", "WzkLTC", 18);
         ltcOracle = new MockPriceOracle(100 ether);
-        splitter = new FeeSplitterMock(address(nusd), STAKING, TREASURY);
-        lending = new PooledNUSDLendingPoolV2(
-            address(nusd), address(splitter), address(this), 10_000_000 ether, 8_000_000 ether, true
+        splitter = new FeeSplitterMock(address(n), STAKING, TREASURY);
+        lending = new PooledNLendingPoolV2(
+            address(n), address(splitter), address(this), 10_000_000 ether, 8_000_000 ether, true
         );
         lending.configureCollateral(address(wzkltc), address(ltcOracle), 1_000_000 ether, 8000, 8500, 9000, 500, true);
 
-        address[5] memory nusdHolders = [SUPPLIER, EVE, LIQUIDATOR, PAYER, ALICE];
-        for (uint256 i; i < nusdHolders.length; ++i) {
-            nusd.mint(nusdHolders[i], 3_000_000 ether);
-            vm.prank(nusdHolders[i]);
-            nusd.approve(address(lending), type(uint256).max);
+        address[5] memory nHolders = [SUPPLIER, EVE, LIQUIDATOR, PAYER, ALICE];
+        for (uint256 i; i < nHolders.length; ++i) {
+            n.mint(nHolders[i], 3_000_000 ether);
+            vm.prank(nHolders[i]);
+            n.approve(address(lending), type(uint256).max);
         }
         address[2] memory borrowers = [ALICE, CAROL];
         for (uint256 i; i < borrowers.length; ++i) {
@@ -67,7 +67,7 @@ contract LendingAuditTest is TestBase {
         DIAOracleV2Adapter ethOracle =
             new DIAOracleV2Adapter(address(ethFeed), "ETH/USD Oracle", 90 minutes, 1 ether, 1_000_000 ether);
 
-        vm.expectRevert(PooledNUSDLendingPoolV2.TooManyCollateralAssets.selector);
+        vm.expectRevert(PooledNLendingPoolV2.TooManyCollateralAssets.selector);
         lending.configureCollateral(address(neth), address(ethOracle), 1000 ether, 8000, 8500, 9000, 500, true);
         assertEq(lending.collateralAssetCount(), 1, "still one");
         assertEq(lending.collateralAssetAt(0), address(wzkltc), "the one the deployment listed");
@@ -75,7 +75,7 @@ contract LendingAuditTest is TestBase {
         neth.mint(ALICE, 1);
         vm.startPrank(ALICE);
         neth.approve(address(lending), 1);
-        vm.expectRevert(PooledNUSDLendingPoolV2.UnsupportedCollateral.selector);
+        vm.expectRevert(PooledNLendingPoolV2.UnsupportedCollateral.selector);
         lending.depositCollateral(address(neth), 1, ALICE);
         vm.stopPrank();
 
@@ -121,24 +121,24 @@ contract LendingAuditTest is TestBase {
         lending.liquidate(ALICE, address(wzkltc), type(uint256).max, 0, LIQUIDATOR);
         vm.stopPrank();
 
-        uint256 badDebt = lending.badDebtNusdByAccount(ALICE);
+        uint256 badDebt = lending.badDebtNByAccount(ALICE);
         assertApproxEqAbs(badDebt, 323.809523809523809523 ether, 1e6, "323.81 of bad debt recognised");
-        assertEq(lending.totalBadDebtNusd(), badDebt, "pool bad debt");
+        assertEq(lending.totalBadDebtN(), badDebt, "pool bad debt");
         assertApproxEqAbs(lending.supplyBalance(SUPPLIER), 676.190476190476190476 ether, 1e6, "supplier took the loss");
 
         // Eve front-runs the repayment.
-        uint256 eveBefore = nusd.balanceOf(EVE);
+        uint256 eveBefore = n.balanceOf(EVE);
         vm.prank(EVE);
         uint256 eveShares = lending.supply(4000 ether, EVE);
 
         vm.prank(PAYER);
         uint256 repaid = lending.repayBadDebt(ALICE, type(uint256).max);
         assertEq(repaid, badDebt, "treasury repaid the whole bad debt");
-        assertEq(lending.totalBadDebtNusd(), 0, "bad debt cleared");
+        assertEq(lending.totalBadDebtN(), 0, "bad debt cleared");
 
         vm.prank(EVE);
         lending.redeem(eveShares, EVE);
-        uint256 eveProfit = nusd.balanceOf(EVE) - eveBefore;
+        uint256 eveProfit = n.balanceOf(EVE) - eveBefore;
 
         assertApproxEqAbs(eveProfit, 276.99 ether, 0.01 ether, "eve took 276.99 in one block");
         assertGt(eveProfit * 100, badDebt * 85, "more than 85% of the recovery went to eve");
@@ -148,26 +148,26 @@ contract LendingAuditTest is TestBase {
     }
 
     // D-09. The owner sets the oracle of the collateral with no delay, so one owner key drains
-    // every supplied NUSD against collateral worth next to nothing (the borrow cap is owner-set
+    // every supplied N against collateral worth next to nothing (the borrow cap is owner-set
     // too). As audited the owner could also list any new token; the pool now takes one collateral
     // asset, so that way is closed and the oracle of the listed asset is what is left.
     // Numbers, pool built with the Deploy0xFiMainnet.s.sol caps (supply 5,000 / borrow 2,500):
-    // SUPPLIER supplies 5,000; the owner points WzkLTC at an oracle answering 1e30 NUSD, deposits
+    // SUPPLIER supplies 5,000; the owner points WzkLTC at an oracle answering 1e30 N, deposits
     // 1 WzkLTC, raises the borrow cap to 5,000 and borrows 5,000. Pool cash is 0, the supplier
-    // cannot withdraw 1 NUSD, and the pool reports the loan as healthy.
+    // cannot withdraw 1 N, and the pool reports the loan as healthy.
     function testAudit_D09_ownerRepointsTheOracleAndDrainsSuppliers() public {
-        PooledNUSDLendingPoolV2 pool =
-            new PooledNUSDLendingPoolV2(address(nusd), address(splitter), address(this), 5000 ether, 2500 ether, true);
+        PooledNLendingPoolV2 pool =
+            new PooledNLendingPoolV2(address(n), address(splitter), address(this), 5000 ether, 2500 ether, true);
         pool.configureCollateral(address(wzkltc), address(ltcOracle), 50 ether, 8000, 8500, 9000, 500, true);
         vm.startPrank(SUPPLIER);
-        nusd.approve(address(pool), type(uint256).max);
+        n.approve(address(pool), type(uint256).max);
         pool.supply(5000 ether, SUPPLIER);
         vm.stopPrank();
 
         // Everything below is sent by the owner (this contract); no timelock, no second party.
         MockCollateralToken fake = new MockCollateralToken("Fake", "FAKE", 18);
         MockPriceOracle fakeOracle = new MockPriceOracle(1e30 ether);
-        vm.expectRevert(PooledNUSDLendingPoolV2.TooManyCollateralAssets.selector);
+        vm.expectRevert(PooledNLendingPoolV2.TooManyCollateralAssets.selector);
         pool.configureCollateral(address(fake), address(fakeOracle), type(uint256).max, 8000, 8500, 9000, 500, true);
         pool.configureCollateral(address(wzkltc), address(fakeOracle), 50 ether, 8000, 8500, 9000, 500, true);
         wzkltc.mint(address(this), 1 ether);
@@ -175,19 +175,19 @@ contract LendingAuditTest is TestBase {
         pool.depositCollateral(address(wzkltc), 1 ether, address(this));
 
         // The only brake is the borrow cap, and the owner sets that as well.
-        vm.expectRevert(PooledNUSDLendingPoolV2.BorrowCapExceeded.selector);
+        vm.expectRevert(PooledNLendingPoolV2.BorrowCapExceeded.selector);
         pool.borrow(5000 ether, address(this));
         pool.setCaps(5000 ether, 5000 ether);
 
-        uint256 ownerBefore = nusd.balanceOf(address(this));
+        uint256 ownerBefore = n.balanceOf(address(this));
         pool.borrow(pool.availableLiquidity(), address(this));
 
-        assertEq(nusd.balanceOf(address(this)) - ownerBefore, 5000 ether, "owner took all supplied NUSD");
+        assertEq(n.balanceOf(address(this)) - ownerBefore, 5000 ether, "owner took all supplied N");
         assertEq(pool.availableLiquidity(), 0, "pool has no cash");
         assertFalse(pool.isLiquidatable(address(this)), "the loan looks healthy to the pool");
         assertEq(pool.supplyBalance(SUPPLIER), 5000 ether - 1000, "supplier still shown a full balance");
         vm.prank(SUPPLIER);
-        vm.expectRevert(PooledNUSDLendingPoolV2.InsufficientLiquidity.selector);
+        vm.expectRevert(PooledNLendingPoolV2.InsufficientLiquidity.selector);
         pool.withdraw(1 ether, SUPPLIER);
     }
 
@@ -197,13 +197,13 @@ contract LendingAuditTest is TestBase {
     /// then repaid everything, took 87.4 of 100 WzkLTC out and borrowed the same amount again, at
     /// no cost. That combination is refused; the guardian's pause sets all three, as before.
     function testAudit_R4F04_collateralIsNeverHeldWhileBorrowingIsOpen() public {
-        PooledNUSDLendingPoolV2 pool =
-            new PooledNUSDLendingPoolV2(address(nusd), address(splitter), address(this), 5000 ether, 2500 ether, true);
+        PooledNLendingPoolV2 pool =
+            new PooledNLendingPoolV2(address(n), address(splitter), address(this), 5000 ether, 2500 ether, true);
         pool.setGuardian(EVE);
 
-        vm.expectRevert(PooledNUSDLendingPoolV2.InvalidConfiguration.selector);
+        vm.expectRevert(PooledNLendingPoolV2.InvalidConfiguration.selector);
         pool.setPauses(false, false, true);
-        vm.expectRevert(PooledNUSDLendingPoolV2.InvalidConfiguration.selector);
+        vm.expectRevert(PooledNLendingPoolV2.InvalidConfiguration.selector);
         pool.setPauses(true, false, true);
         assertFalse(pool.collateralWithdrawalPaused(), "nothing changed");
 
@@ -211,9 +211,9 @@ contract LendingAuditTest is TestBase {
         vm.prank(EVE);
         pool.pauseRiskOperations();
         assertTrue(pool.supplyPaused() && pool.borrowPaused() && pool.collateralWithdrawalPaused(), "all three");
-        vm.expectRevert(PooledNUSDLendingPoolV2.InvalidConfiguration.selector);
+        vm.expectRevert(PooledNLendingPoolV2.InvalidConfiguration.selector);
         pool.setPauses(false, false, true);
-        vm.expectRevert(PooledNUSDLendingPoolV2.InvalidConfiguration.selector);
+        vm.expectRevert(PooledNLendingPoolV2.InvalidConfiguration.selector);
         pool.setPauses(true, false, true);
         assertTrue(pool.supplyPaused() && pool.borrowPaused() && pool.collateralWithdrawalPaused(), "still all three");
 
