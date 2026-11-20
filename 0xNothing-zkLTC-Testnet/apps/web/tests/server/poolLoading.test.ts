@@ -31,6 +31,8 @@ function fixture(options: { unconfigured?: boolean; failFirstDiscovery?: boolean
   const candles = deferred<{ data: unknown[] }>();
   const oracle = deferred<{ snapshots: Map<string, unknown>; failed: number }>();
   const calls: string[] = [];
+  // How many boundary calls had been made each time the load opened its RPC budget.
+  const budgetStarts: number[] = [];
   const load = runInNewContext(code, {
     QUERY: "pools",
     CANDLES_24H_QUERY: "candles",
@@ -55,10 +57,11 @@ function fixture(options: { unconfigured?: boolean; failFirstDiscovery?: boolean
     enrichRegistryImages: async () => { calls.push("registry-images"); },
     enrichLockBurnBadges: async () => {},
     deployment: { contracts: {} },
+    rpcBudget: { start() { budgetStarts.push(calls.length); }, remainingMs: () => 1 },
     console: { warn() {} },
   }) as () => Promise<Envelope>;
   const resolvePools = () => pools.resolve({ data: [], meta: { source: options.unconfigured ? "unconfigured" : "goldsky", indexedBlock: 1, rpcTail: {} } });
-  return { load, resolvePools, candles, oracle, calls };
+  return { load, resolvePools, candles, oracle, calls, budgetStarts };
 }
 
 test("pool API starts market reads before discovery completes and preserves enrichment order", async () => {
@@ -71,6 +74,8 @@ test("pool API starts market reads before discovery completes and preserves enri
   const envelope = await result;
   assert.equal(envelope.meta.rpcTail.status, "merged");
   assert.ok(f.calls.indexOf("reserves") < f.calls.indexOf("tail"));
+  // One budget before the first RPC read, a fresh one once the pool query has settled.
+  assert.deepEqual(f.budgetStarts, [0, 3]);
   assert.ok(f.calls.indexOf("pump-images") < f.calls.indexOf("registry-images"));
 });
 

@@ -23,6 +23,7 @@ import { createBoundedCache } from "@/lib/boundedCache";
 import { logRanges } from "@/lib/logRanges";
 import { hasPositiveBigInt, nonNegativeBigInt } from "@/lib/integer";
 import { CDN_STALE_SECONDS, isFreshRead, publicCdnCacheHeaders } from "@/lib/server/cdnCache";
+import { createRpcBudget } from "@/lib/server/rpcBudget";
 
 type PoolRow = Omit<PoolPoint, "id" | "token0" | "token1" | "totalSupply"> & {
   id: string;
@@ -64,9 +65,14 @@ const tokenImageAbi = [{
 const pairCreatedEvent = parseAbiItem(
   "event PairCreated(address indexed token0, address indexed token1, address pair, bytes32 indexed pairId, bool protectedBootstrap, uint256 pairCount)",
 );
+// All the RPC reads of one load may wait this long in total (lib/server/rpcBudget.ts).
+// A healthy load needs well under 1 s of it; one hung read alone times out after 5 s.
+const RPC_BUDGET_MS = 8_000;
+const rpcBudget = createRpcBudget(RPC_BUDGET_MS);
 const client = createPublicClient({
   transport: litvmTransport({
     batch: { batchSize: 100, wait: 10 },
+    fetchFn: rpcBudget.fetch,
     // Indexed values and existing warnings are the fallback for display reads.
     // A refresh must not stall through multiple long RPC retry windows: one retry,
     // so a single dropped request does not turn a token into its placeholder.
@@ -541,6 +547,7 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
   // while the pool branch runs, then preserve the oracle's failure semantics
   // when its result is consumed below.
   const since24h = Math.floor(Date.now() / 1000) - 86_400;
+  rpcBudget.start();
   const marketReads = Promise.allSettled([
     loadCanonicalOracleSnapshots(),
     queryGoldsky<CandlesResult, CandleRow[]>(
@@ -577,6 +584,9 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
         "Goldsky is temporarily unavailable.",
       );
     }
+    // The pool query has its own 10 s timeout. The stages below get a full budget of
+    // their own, so a slow indexer cannot spend it before factory discovery starts.
+    rpcBudget.start();
 
     if (envelope.meta.source === "unconfigured") {
       try {
@@ -716,7 +726,8 @@ async function loadPoolsEnvelope(): Promise<DataEnvelope<PoolPoint[]>> {
       const poolsNeedingTailVol = envelope.data.filter(
         (p) => p.volume24hNusd === undefined && hasPositiveBigInt(p.totalSupply),
       );
-      if (poolsNeedingTailVol.length > 0 && nusd) {
+      // The pair tails read through their own client: skip them once the budget is spent.
+      if (poolsNeedingTailVol.length > 0 && nusd && rpcBudget.remainingMs() > 0) {
         let incompleteTailVolume = false;
         await mapWithConcurrency(poolsNeedingTailVol, 6, async (pool) => {
           try {
