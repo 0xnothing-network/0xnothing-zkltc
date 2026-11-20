@@ -123,7 +123,7 @@ lock assumptions before this testnet topology is reused.
 
 - Live balances, allowances, quotes, and market state come from RPC (`lib/rpcTransport.ts` falls back from `LITVM_RPC_URL` to `LITVM_RPC_FALLBACK_URL`).
 - Freshness: `components/LiveSync.tsx` subscribes over WebSocket (`LITVM_WS_URLS`, tried in order) to logs from every protocol contract in the active set plus the contracts the mounted views read, and refetches the affected live queries as soon as an event arrives. A block sweep (`BLOCK_SYNC_MS = 10_000` plus jitter, `lib/liveData.ts`) still refreshes time-dependent reads, and is the whole mechanism while the socket is down.
-- Token discovery, trades, candles, and aggregate history come from the Goldsky subgraphs (0xPump `zeroxpump-testnet/1.0.0`, 0xFi `zeroxfi-testnet/1.0.0`, NUSD marketplace `pixel-nusd-market/1.1.0`).
+- Token discovery, trades, candles, and aggregate history come from the Goldsky subgraphs (0xPump `zeroxpump-testnet/1.0.0`, 0xFi `zeroxfi-testnet/1.1.0`, NUSD marketplace `pixel-nusd-market/1.1.0`).
 - API responses retain an RPC fallback shape when indexing is unavailable.
 - 0xPixel keeps its existing subgraph-first and onchain-fallback behavior.
 

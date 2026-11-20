@@ -756,11 +756,10 @@ lower-case pair address (`0xFi/subgraph/src/factory.ts:10`). In this pool
 }
 ```
 
-**Do not rely on these fields for v3 pools:** `Swap.amountNusd`,
-`Pool.volumeNusd`, `Candle.volumeNusd` and `Protocol.totalVolumeNusd` read `0`,
-and the candle price for the WzkLTC/NUSD pool is WzkLTC per NUSD. The mappings
-(`0xFi/subgraph/src/pair.ts:6,82`, `src/lending.ts:20`) still use the legacy
-NUSD address. Compute NUSD volume from `amount0In`/`amount0Out` yourself.
+`Swap.amountNusd`, `Pool.volumeNusd`, `Candle.volumeNusd` and
+`Protocol.totalVolumeNusd` count the v3 NUSD side of each swap, and candle
+prices are NUSD per token (`0xFi/subgraph/src/helpers.ts:12`,
+`src/pair.ts:81,87-88`).
 
 Subgraph data is history only. Never size a mint, redeem or stake from it.
 

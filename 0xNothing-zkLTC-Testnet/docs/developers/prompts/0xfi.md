@@ -458,14 +458,14 @@ STACK
 
 DATA SOURCE
 - Public Goldsky subgraph: https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.1.0/gn
-- Load it from the `goldskyEndpoint` key of a copy of 0xNothing-zkLTC-Testnet/apps/web/features/fi/config/testnet.generated.json. Its data sources start at blocks 61141544 (factory) to 61141614 (lending pool) (0xFi/subgraph/subgraph.yaml:13,34,55,104,153); nothing 0xFi v3 exists before `deploymentBlock` 61141359.
+- Load it from the `goldskyEndpoint` key of a copy of 0xNothing-zkLTC-Testnet/apps/web/features/fi/config/testnet.generated.json. Its data sources start at blocks 61141544 (factory) to 61141614 (lending pool) (0xFi/subgraph/subgraph.yaml:13,34,55,100,145); nothing 0xFi v3 exists before `deploymentBlock` 61141359.
 - Schema: 0xNothing-zkLTC-Testnet/0xFi/subgraph/schema.graphql (entities Pool, Swap, LiquidityEvent, Candle, Gauge, LendingMarket, SyntheticMarket).
 
 FACTS YOU MUST RESPECT
 - Pool.id is the pair address in lowercase hex. price0 = token1 per token0, decimal-adjusted.
 - Candle periods are 60, 300, 3600, 14400, 86400 seconds; bucket = floor(timestamp / period) * period (0xFi/subgraph/src/pair.ts:6,158-159). Candle price is price1 when token0 equals the mapping's NUSD constant, else price0 (pair.ts:81).
 - Swap.sender is always the router; filter a wallet's swaps by `recipient`.
-- WARNING: deployment zeroxfi-testnet/1.0.0 is frozen at block 70634530 and used the retired v1 NUSD, so its NUSD volume reads 0 and its candle price is unoriented. Use zeroxfi-testnet/1.1.0 (v3 NUSD, no eth_call). Its LendingMarket has no supplied/borrowed totals: read totalSupplied() and totalBorrowed() from the pool over RPC.
+- The mappings use the v3 NUSD and make no eth_call, so NUSD volume and candle prices are correct. LendingMarket has no supplied/borrowed totals: read totalSupplied() and totalBorrowed() from the pool over RPC. A token outside NUSD, WzkLTC, nBTC and nETH gets a placeholder symbol and 18 decimals in Token: read its metadata over RPC.
 - The subgraph lags the chain. Use it for history and charts only, never for quotes, minimums or balances that size a transaction.
 
 QUERY

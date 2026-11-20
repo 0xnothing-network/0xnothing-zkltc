@@ -1090,32 +1090,35 @@ Endpoint (`testnet.generated.json:3`):
 `https://api.goldsky.com/api/public/project_cmqmpust19i8v01t595z8hpq4/subgraphs/zeroxfi-testnet/1.1.0/gn`.
 Its data sources start at the v3 contracts' own blocks: factory `61141544`,
 gauge factory `61141569`, nBTC vault `61141585`, nETH vault `61141589`,
-lending pool `61141614` (`0xFi/subgraph/subgraph.yaml:13,34,55,104,153`;
+lending pool `61141614` (`0xFi/subgraph/subgraph.yaml:13,34,55,100,145`;
 `subgraph.config.json:10-14`). Schema: `0xFi/subgraph/schema.graphql`.
 
-**Deployment `zeroxfi-testnet/1.0.0` is frozen and wrong on NUSD fields.** It
-compared against the retired v1 NUSD `0x5317e21a…`, so its `Swap.amountNusd`,
-`volumeNusd` fields read 0 and its candle price is `price0` whatever side NUSD
-is on; it also stopped at block 70,634,530 because its handlers made
-`eth_call`s and the LiteForge RPC keeps only ~64 blocks of state. Use
-`zeroxfi-testnet/1.1.0`: it matches the v3 NUSD (`0xFi/subgraph/src/helpers.ts`)
-and makes no `eth_call`, so every value comes from event data. For the same
-reason `LendingMarket` has no supplied or borrowed totals there: read
-`totalSupplied()` and `totalBorrowed()` from the pool.
+The mappings make no `eth_call`: the LiteForge RPC keeps only about 64 blocks
+of state, so a call made while the indexer catches up would fail. Token
+metadata and the vault and pool constructor values are constants
+(`0xFi/subgraph/src/helpers.ts:12-15,36-54`, `syntheticVault.ts:22-26`,
+`lending.ts:22-24`), checked against the deployment config by
+`0xFi/subgraph/tests/eventAccounting.test.mjs`; every synth and lending total
+follows the events that change it. NUSD is the v3 address `0x69320A82…`, so
+the NUSD volume fields and candle prices are correct. Two limits follow:
+`LendingMarket` has no supplied or borrowed totals (read `totalSupplied()` and
+`totalBorrowed()` from the pool over RPC), and a token outside the four v3
+tokens gets a placeholder symbol and 18 decimals (read its metadata over RPC).
+The earlier `zeroxfi-testnet/1.0.0` is deleted.
 
 | Entity | Lines | Notes |
 | --- | --- | --- |
 | `Protocol` | 1-10 | pairCount, swapCount, mintCount, burnCount, gaugeCount, totalVolumeNusd, updatedAt |
 | `Token` | 12-18 | id (address), symbol, name, decimals, createdAt |
 | `Pool` | 20-45 | id = pair address; token0, token1, reserve0, reserve1, price0, price1, volumeNusd, counts, protectedBootstrap, bootstrapped; derived swaps, liquidityEvents, candles, gauge. `price0` = token1 per token0, decimal-adjusted (`0xFi/subgraph/src/pair.ts:16-20`) |
-| `Swap` | 47-65 | sender (always the router), recipient, amount0In/1In/0Out/1Out, amountNusd (the NUSD side's in+out volume, 0 when neither token matches the mapping's NUSD constant, `pair.ts:87-88`; see the warning above), prices, reserves after, timestamp, blockNumber, txHash, logIndex |
+| `Swap` | 47-65 | sender (always the router), recipient, amount0In/1In/0Out/1Out, amountNusd (the NUSD side's in+out volume, 0 when neither token matches the mapping's NUSD constant, `pair.ts:87-88`), prices, reserves after, timestamp, blockNumber, txHash, logIndex |
 | `LiquidityEvent` | 72-85 | action `MINT` or `BURN`, sender, recipient, amount0, amount1, liquidity, timestamp |
-| `Candle` | 87-101 | period 60, 300, 3600, 14400 or 86400 s (`pair.ts:6`); id `<pool>-<period>-<bucket>`, bucket = floor(ts/period)·period (`pair.ts:158-159`); price is `price1` when token0 equals the mapping's NUSD constant, else `price0` (`pair.ts:81`; see the warning above) |
+| `Candle` | 87-101 | period 60, 300, 3600, 14400 or 86400 s (`pair.ts:6`); id `<pool>-<period>-<bucket>`, bucket = floor(ts/period)·period (`pair.ts:158-159`); price is `price1` when token0 equals the mapping's NUSD constant, else `price0` (`pair.ts:81`) |
 | `Gauge`, `GaugeAction` | 103-115, 124-135 | actions STAKE, WITHDRAW, REWARD, FUND |
 | `SyntheticMarket`, `SyntheticAction` | 137-153, 168-181 | |
 | `LendingMarket`, `LendingAction` | 186-198, 212-227 | |
 
-Event entity ids are `txHash.concatI32(logIndex)` (`0xFi/subgraph/src/helpers.ts:10`).
+Event entity ids are `txHash.concatI32(logIndex)` (`0xFi/subgraph/src/helpers.ts:17`).
 `BigInt` and `BigDecimal` fields arrive as strings: convert with `BigInt(s)`.
 
 ```graphql

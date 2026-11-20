@@ -1122,7 +1122,7 @@ export default function DocsPage() {
               <div className="ox-docs-indexers">
                 <div><strong>0xPixel marketplace</strong><code>{testnet.nusdMarketGoldskyEndpoint}</code><p>Listings, offers, activity, and market totals, plus mints from both collections from block 61141428. Re-read a listing over RPC before buying.</p></div>
                 <div><strong>0xPump</strong><code>{PUMP_SUBGRAPH_URL}</code><p>Markets, trades, candles, holders, and totals. Check _meta.block.number for lag.</p></div>
-                <div><strong>0xFi</strong><code>{testnet.goldskyEndpoint}</code><p>Pools, swaps, liquidity events, candles, and gauge and lending activity. The mappings match NUSD against the retired v1 address, so check NUSD-denominated volume fields against RPC; if they read 0, derive volume from the token amounts.</p></div>
+                <div><strong>0xFi</strong><code>{testnet.goldskyEndpoint}</code><p>Pools, swaps, liquidity events, candles, and gauge and lending activity, built from events only. Read lending supplied and borrowed totals from the pool over RPC.</p></div>
                 <div><strong>NUSD</strong><code>No public subgraph</code><p>Read mint, redeem, and RewardStaking events with getLogs from block 61141328, in bounded block ranges.</p></div>
               </div>
               <DocsCodeBlock code={INDEXER_CODE} label="indexers.ts" />

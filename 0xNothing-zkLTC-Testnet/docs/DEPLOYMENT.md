@@ -91,7 +91,7 @@ npm --prefix 0xNothing-zkLTC-Testnet/subgraphs/0xpump run deploy
 ```
 
 The live Goldsky versions are `zeroxpump-testnet/1.0.0`,
-`zeroxfi-testnet/1.0.0` and `pixel-nusd-market/1.1.0`; their endpoints are in
+`zeroxfi-testnet/1.1.0` and `pixel-nusd-market/1.1.0`; their endpoints are in
 `testnet.generated.json`. Do not redeploy the 0xPixel subgraph.
 
 ## 6. Smoke test
